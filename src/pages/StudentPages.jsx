@@ -92,6 +92,44 @@ const feedbackResults = [
   { label: 'Program exits successfully', status: 'Passed' },
 ]
 
+const workspaceCode = `/*
+ * Author: ( Last Name, First Name, Middle Initial )
+ * Programming Date:
+ * Activity Name and Number: Prelim Exercise Number 1
+ */
+// This source code should be saved in a file called Exercise1.java
+package exercises.prelim;
+
+import java.lang.*;
+
+public class Exercise1 {
+    public static void main(String[] args) {
+        System.out.println("*******************************");
+        System.out.println("*                             *");
+        System.out.println("*         hello world         *");
+        System.out.println("*                             *");
+        System.out.println("*******************************");
+        System.exit(0);
+    }
+}`
+
+const workspaceObjectives = [
+  'Create a Java source code/program using IntelliJ IDEA',
+  'Compile a Java program into bytecode using IntelliJ IDEA',
+  'Run a compiled Java program using IntelliJ IDEA',
+  'Describe the structure of a Java program with a main method',
+  'Apply the output statement System.out.println()',
+  'Explain why Java is case-sensitive',
+]
+
+const workspaceActivities = [
+  'Open/run IntelliJ IDEA and open the workspace folder',
+  'Create a file named Exercise1.java and type the program',
+  'Save, compile, and run the program; fix errors until there are none',
+  'Modify the output from hello world in a box to a calling-card style output',
+  'Back up the file in a personal device or online repository',
+]
+
 function ClassHeader({ activeTab }) {
   const tabs = [
     { label: 'Stream', path: '/student', key: 'stream' },
@@ -270,7 +308,7 @@ function ActivitiesPage() {
 }
 
 function ActivityDetailPage({ initialSubmitted = false, openFeedback = false }) {
-  const [submitted, setSubmitted] = useState(initialSubmitted)
+  const submitted = initialSubmitted
   const [feedbackOpen, setFeedbackOpen] = useState(openFeedback)
 
   return (
@@ -377,13 +415,9 @@ function ActivityDetailPage({ initialSubmitted = false, openFeedback = false }) 
                     <span>You can do this activity in the platform.</span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="student-primary-action"
-                  onClick={() => setSubmitted(true)}
-                >
-                  Preview submitted
-                </button>
+                <NavLink to="/student/activity/act-loops-01/workspace" className="student-primary-action">
+                  Do Activity in Platform
+                </NavLink>
                 <button type="button" className="student-outline-action">
                   View Submission Guide
                 </button>
@@ -402,6 +436,212 @@ function ActivityDetailPage({ initialSubmitted = false, openFeedback = false }) 
 
       {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </StudentClassPage>
+  )
+}
+
+function CodingWorkspacePage() {
+  const [resultState, setResultState] = useState('success')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const failed = resultState === 'error'
+
+  if (submitted) {
+    return <ActivityDetailPage initialSubmitted />
+  }
+
+  return (
+    <div className="student-coding-page">
+      <header className="student-coding-topbar">
+        <NavLink to="/student/activity/act-loops-01" className="student-coding-brand">
+          PROJEX
+        </NavLink>
+        <nav className="student-coding-breadcrumb" aria-label="Coding workspace breadcrumb">
+          <NavLink to="/student/activity">Activities</NavLink>
+          <span>Lab Activity 1</span>
+          <strong>Do Activity</strong>
+        </nav>
+        <div className="student-coding-user">
+          <span>Student</span>
+          <strong>Julius Teodoro</strong>
+          <span className="student-user-avatar" aria-hidden="true" />
+        </div>
+      </header>
+
+      <main className="student-coding-shell">
+        <aside className="student-coding-instructions">
+          <div className="student-coding-activity-title">
+            <span>Lab Activity 1</span>
+            <h1>Prelim Programming Exercise 1</h1>
+            <p>Hello World in Java</p>
+            <small>Due Aug 27, 2027, 10:30 AM</small>
+            <strong>5/5 Points</strong>
+          </div>
+
+          <div className="student-coding-tabs">
+            <button type="button" className="is-active">Instructions</button>
+            <button type="button">Resources</button>
+          </div>
+
+          <section className="student-coding-scroll">
+            <h2>Objectives</h2>
+            <ol>
+              {workspaceObjectives.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ol>
+
+            <h2>Activities</h2>
+            <ol>
+              {workspaceActivities.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ol>
+
+            <div className="student-coding-tip">
+              <strong>Tip</strong>
+              <p>Use System.out.println() to print each line and match the required output format.</p>
+            </div>
+          </section>
+
+          <div className="student-autosave">
+            <span className="student-success-dot" aria-hidden="true" />
+            <strong>Auto-save</strong>
+            <span>Saved a few seconds ago</span>
+          </div>
+        </aside>
+
+        <section className="student-editor-area">
+          <div className="student-editor-tabs">
+            <span>Exercise1.java</span>
+            <button type="button" aria-label="Add file">+</button>
+          </div>
+          <pre className="student-code-editor">{workspaceCode}</pre>
+          <footer className="student-editor-status">
+            <span>Line 13, Col 42</span>
+            <span>Spaces: 4</span>
+            <span>Java</span>
+          </footer>
+        </section>
+
+        <section className="student-output-area">
+          <div className="student-output-header">
+            <strong>Output</strong>
+            <button type="button">Clear</button>
+          </div>
+          <pre className="student-output-panel">{`*******************************
+*                             *
+*         hello world         *
+*                             *
+*******************************
+
+Process finished with exit code 0`}</pre>
+          {failed && (
+            <div className="student-result-details">
+              <button type="button" aria-label="Close result details" />
+              <h2>Result Details</h2>
+              <strong>Wrong Answer</strong>
+              <span>Testcase 2</span>
+              <h3>Your Input</h3>
+              <p>(no input)</p>
+              <h3>Expected Output</h3>
+              <p>Hello World box output exactly as shown above</p>
+              <h3>Your Output</h3>
+              <p>hello world</p>
+            </div>
+          )}
+        </section>
+
+        <section className="student-tests-area">
+          <div className="student-tests-tabs">
+            <button type="button" className="is-active">Sample Input Testcases</button>
+            <button type="button">Custom Input Testcase</button>
+            <span className={failed ? 'student-test-summary is-error' : 'student-test-summary'}>
+              {failed ? '1 of 2 sample tests failed' : 'All sample tests passed'}
+            </span>
+          </div>
+
+          <div className="student-tests-table">
+            <div className="student-tests-row student-tests-row--head">
+              <span>#</span>
+              <span>Input</span>
+              <span>Expected Output</span>
+              <span>Status</span>
+            </div>
+            <div className="student-tests-row">
+              <span>1</span>
+              <span>-</span>
+              <span>Hello World box output exactly as shown above</span>
+              <strong className="is-passed">Passed</strong>
+            </div>
+            <div className={failed ? 'student-tests-row is-failed' : 'student-tests-row'}>
+              <span>2</span>
+              <span>(no input)</span>
+              <span>Hello World box output exactly as shown above</span>
+              <strong className={failed ? 'is-failed' : 'is-passed'}>
+                {failed ? 'Failed' : 'Passed'}
+              </strong>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="student-coding-actions">
+        <div className="student-state-switch">
+          <button
+            type="button"
+            className={!failed ? 'is-active' : undefined}
+            onClick={() => setResultState('success')}
+          >
+            Pass state
+          </button>
+          <button
+            type="button"
+            className={failed ? 'is-active' : undefined}
+            onClick={() => setResultState('error')}
+          >
+            Failed testcase
+          </button>
+        </div>
+        {failed && <span className="student-coding-failure">1 of 2 sample tests failed</span>}
+        <button type="button" className="student-run-tests" onClick={() => setResultState('success')}>
+          Run Tests
+        </button>
+        <button type="button" className="student-submit-code" onClick={() => setConfirmOpen(true)}>
+          Submit
+        </button>
+      </footer>
+
+      {confirmOpen && (
+        <SubmitConfirmationModal
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={() => {
+            setConfirmOpen(false)
+            setSubmitted(true)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function SubmitConfirmationModal({ onCancel, onConfirm }) {
+  return (
+    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="submit-activity-title">
+      <section className="student-submit-modal">
+        <span className="student-submit-icon" aria-hidden="true" />
+        <h2 id="submit-activity-title">Submit activity?</h2>
+        <p>This will record your final work.</p>
+        <p>You can submit only once.</p>
+        <div className="student-submit-modal-actions">
+          <button type="button" className="student-outline-action" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="button" className="student-primary-action" onClick={onConfirm}>
+            Submit final
+          </button>
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -563,6 +803,7 @@ function StudentRoutePage({ pagePath }) {
     activity: <ActivitiesPage />,
     submissions: <ActivitiesPage />,
     'activity/act-loops-01': <ActivityDetailPage />,
+    'activity/act-loops-01/workspace': <CodingWorkspacePage />,
     'activity/act-loops-01/submission-record': <ActivityDetailPage initialSubmitted />,
     'activity/act-loops-01/feedback': <ActivityDetailPage initialSubmitted openFeedback />,
     projects: <GroupProjectsPage />,

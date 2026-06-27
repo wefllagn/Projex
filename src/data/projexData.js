@@ -174,11 +174,19 @@ export const routeCatalog = [
       },
       {
         path: 'activity/act-loops-01',
-        label: 'Activity Workspace',
+        label: 'Selected Activity',
         group: 'Activity Mode',
         status: 'Placeholder',
         summary:
-          'Detailed workspace later: instructions, deadline, file tree, code editor, mock tests, and locked submit state.',
+          'Selected individual activity detail with deadline, instructions, work state, and student-safe feedback access.',
+      },
+      {
+        path: 'activity/act-loops-01/workspace',
+        label: 'Coding Workspace',
+        group: 'Activity Mode',
+        status: 'Placeholder',
+        summary:
+          'In-platform coding workspace with simulated editor, output, sample tests, submit confirmation, and locked final submission.',
       },
       {
         path: 'activity/act-loops-01/submission-record',

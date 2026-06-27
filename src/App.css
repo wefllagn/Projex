@@ -1926,6 +1926,7 @@ textarea:focus-visible {
   border-radius: 7px;
   font-size: 14px;
   font-weight: 800;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -2154,6 +2155,575 @@ textarea:focus-visible {
   gap: 10px;
 }
 
+.student-coding-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr) 64px;
+  color: #d7e2f0;
+  background: #0c1320;
+}
+
+.student-coding-topbar {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) auto;
+  align-items: center;
+  border-bottom: 1px solid #243043;
+  background: #111925;
+}
+
+.student-coding-brand {
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: #070b12;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.student-coding-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 0 18px;
+  color: #8795aa;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.student-coding-breadcrumb a,
+.student-coding-breadcrumb strong {
+  color: #d9e4f4;
+  text-decoration: none;
+}
+
+.student-coding-breadcrumb span::before,
+.student-coding-breadcrumb strong::before {
+  content: ">";
+  margin-right: 12px;
+  color: #59687e;
+}
+
+.student-coding-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  color: #d9e4f4;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.student-coding-user > span:first-child {
+  padding: 6px 22px;
+  border-radius: 999px;
+  background: #1f66ff;
+  color: #ffffff;
+}
+
+.student-coding-user .student-user-avatar {
+  width: 32px;
+  height: 32px;
+}
+
+.student-coding-shell {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 300px minmax(360px, 1.25fr) minmax(320px, 0.9fr);
+  grid-template-rows: minmax(0, 1fr) 132px;
+  overflow: hidden;
+}
+
+.student-coding-instructions {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  border-right: 1px solid #263246;
+  background: #ffffff;
+  color: #14233d;
+}
+
+.student-coding-activity-title {
+  position: relative;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #dce5f1;
+}
+
+.student-coding-activity-title span,
+.student-coding-activity-title p,
+.student-coding-activity-title small {
+  display: block;
+  color: #607089;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.student-coding-activity-title h1 {
+  margin: 7px 0 7px;
+  color: #11203d;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.student-coding-activity-title strong {
+  position: absolute;
+  top: 24px;
+  right: 18px;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #305fff;
+  background: #eef3ff;
+  font-size: 14px;
+}
+
+.student-coding-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #dce5f1;
+}
+
+.student-coding-tabs button {
+  min-height: 44px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #607089;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.student-coding-tabs button.is-active {
+  color: #1b63ff;
+  border-bottom-color: #1b63ff;
+}
+
+.student-coding-scroll {
+  min-height: 0;
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
+.student-coding-scroll h2 {
+  margin: 0 0 8px;
+  color: #14233d;
+  font-size: 13px;
+}
+
+.student-coding-scroll ol {
+  display: grid;
+  gap: 9px;
+  margin: 0 0 18px;
+  padding-left: 22px;
+}
+
+.student-coding-scroll li {
+  color: #263a5a;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.student-coding-tip {
+  padding: 12px;
+  border-radius: 8px;
+  color: #264166;
+  background: #eff5ff;
+}
+
+.student-coding-tip strong,
+.student-coding-tip p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.student-autosave {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-top: 1px solid #dce5f1;
+  color: #6c7b91;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.student-autosave .student-success-dot {
+  width: 16px;
+  height: 16px;
+}
+
+.student-editor-area,
+.student-output-area {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr) 34px;
+  border-right: 1px solid #263246;
+  background: #101824;
+}
+
+.student-output-area {
+  position: relative;
+  grid-template-rows: 44px minmax(0, 1fr);
+  border-right: 0;
+}
+
+.student-editor-tabs,
+.student-output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-bottom: 1px solid #263246;
+  background: #141d2a;
+  color: #dbe7f7;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.student-editor-tabs span::before {
+  content: "";
+  width: 12px;
+  height: 14px;
+  display: inline-block;
+  margin-right: 8px;
+  border: 1.5px solid #d3b86b;
+  border-radius: 2px;
+  vertical-align: -2px;
+}
+
+.student-editor-tabs button,
+.student-output-header button {
+  border: 0;
+  color: #a9b7ca;
+  background: transparent;
+  cursor: pointer;
+}
+
+.student-code-editor,
+.student-output-panel {
+  min-height: 0;
+  margin: 0;
+  padding: 16px 22px;
+  overflow: auto;
+  color: #d7e2f0;
+  background: #101824;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+.student-code-editor {
+  color: #9de36b;
+}
+
+.student-output-panel {
+  color: #f3f4f7;
+}
+
+.student-editor-status {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding: 0 16px;
+  border-top: 1px solid #263246;
+  color: #aebbd0;
+  background: #141d2a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.student-result-details {
+  position: absolute;
+  right: 12px;
+  bottom: 16px;
+  width: min(330px, calc(100% - 24px));
+  max-height: 270px;
+  overflow-y: auto;
+  padding: 18px;
+  border-radius: 8px;
+  color: #14233d;
+  background: #ffffff;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+}
+
+.student-result-details button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  background: transparent;
+}
+
+.student-result-details button::before,
+.student-result-details button::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  width: 10px;
+  height: 2px;
+  background: #50617a;
+}
+
+.student-result-details button::before {
+  transform: rotate(45deg);
+}
+
+.student-result-details button::after {
+  transform: rotate(-45deg);
+}
+
+.student-result-details h2,
+.student-result-details h3,
+.student-result-details p,
+.student-result-details span {
+  margin: 0;
+  display: block;
+}
+
+.student-result-details h2 {
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.student-result-details strong {
+  display: block;
+  color: #e33131;
+  font-size: 13px;
+}
+
+.student-result-details span,
+.student-result-details h3,
+.student-result-details p {
+  margin-top: 7px;
+  color: #4b5c73;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.student-tests-area {
+  grid-column: 2 / 4;
+  min-width: 0;
+  overflow: hidden;
+  border-top: 1px solid #d8e2ee;
+  background: #ffffff;
+  color: #14233d;
+}
+
+.student-tests-tabs {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid #d8e2ee;
+}
+
+.student-tests-tabs button {
+  height: 30px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 7px;
+  color: #53647f;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.student-tests-tabs button.is-active {
+  color: #ffffff;
+  background: #2b67ff;
+}
+
+.student-test-summary {
+  margin-left: auto;
+  color: #178f55;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.student-test-summary.is-error,
+.student-coding-failure {
+  color: #e33131;
+}
+
+.student-tests-table {
+  padding: 0 14px 14px;
+  overflow-x: auto;
+}
+
+.student-tests-row {
+  min-width: 720px;
+  display: grid;
+  grid-template-columns: 54px minmax(130px, 0.35fr) minmax(360px, 1fr) 120px;
+  align-items: center;
+  min-height: 38px;
+  border: 1px solid #d8e2ee;
+  border-top: 0;
+  font-size: 12px;
+}
+
+.student-tests-row--head {
+  min-height: 36px;
+  color: #50617a;
+  background: #f5f7fb;
+  font-weight: 900;
+}
+
+.student-tests-row > * {
+  padding: 0 12px;
+}
+
+.student-tests-row.is-failed {
+  background: #fff0f0;
+}
+
+.student-tests-row strong {
+  justify-self: start;
+  font-size: 12px;
+}
+
+.student-tests-row .is-passed {
+  color: #178f55;
+}
+
+.student-tests-row .is-failed {
+  color: #e33131;
+}
+
+.student-coding-actions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 150px 150px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 18px;
+  border-top: 1px solid #d8e2ee;
+  background: #ffffff;
+}
+
+.student-state-switch {
+  display: flex;
+  gap: 8px;
+}
+
+.student-state-switch button,
+.student-run-tests,
+.student-submit-code {
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.student-state-switch button {
+  border: 1px solid #d8e2ee;
+  color: #50617a;
+  background: #ffffff;
+}
+
+.student-state-switch button.is-active {
+  color: #175de8;
+  border-color: #9fc0ff;
+  background: #eef4ff;
+}
+
+.student-coding-failure {
+  justify-self: center;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.student-run-tests {
+  border: 1px solid #5f6f86;
+  color: #1d2e4c;
+  background: #ffffff;
+}
+
+.student-submit-code {
+  border: 1px solid #6e35f2;
+  color: #ffffff;
+  background: #6e35f2;
+}
+
+.student-submit-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.52);
+}
+
+.student-submit-modal {
+  width: min(380px, 100%);
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 34px;
+  border-radius: 22px;
+  color: #11182d;
+  background: #ffffff;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.32);
+  text-align: center;
+}
+
+.student-submit-icon {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #eee9ff;
+}
+
+.student-submit-icon::before {
+  content: "";
+  width: 24px;
+  height: 24px;
+  border: 3px solid #6e35f2;
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  transform: rotate(45deg);
+}
+
+.student-submit-modal h2 {
+  margin: 12px 0 4px;
+  color: #11182d;
+  font-size: 28px;
+}
+
+.student-submit-modal p {
+  margin: 0;
+  color: #4d5b73;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.student-submit-modal-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 12px;
+  margin-top: 22px;
+}
+
 @media (max-width: 980px) {
   .student-login-page {
     padding: 26px;
@@ -2179,6 +2749,51 @@ textarea:focus-visible {
 
   .student-sidebar > .student-sidebar__link {
     margin-top: 0;
+  }
+
+  .student-coding-page {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .student-coding-topbar,
+  .student-coding-shell,
+  .student-coding-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .student-coding-brand {
+    justify-content: start;
+    padding-left: 16px;
+  }
+
+  .student-coding-user {
+    padding: 10px 16px;
+  }
+
+  .student-coding-shell {
+    grid-template-rows: auto minmax(420px, auto) minmax(320px, auto) auto;
+    overflow: visible;
+  }
+
+  .student-coding-instructions,
+  .student-editor-area,
+  .student-output-area,
+  .student-tests-area {
+    grid-column: auto;
+    border-right: 0;
+  }
+
+  .student-coding-instructions {
+    max-height: none;
+  }
+
+  .student-tests-area {
+    grid-column: auto;
+  }
+
+  .student-coding-actions {
+    position: sticky;
+    bottom: 0;
   }
 }
 
@@ -2275,7 +2890,20 @@ textarea:focus-visible {
   }
 
   .student-feedback-score,
-  .student-modal-actions {
+  .student-modal-actions,
+  .student-submit-modal-actions {
     grid-template-columns: 1fr;
+  }
+
+  .student-coding-breadcrumb,
+  .student-coding-user,
+  .student-state-switch {
+    flex-wrap: wrap;
+  }
+
+  .student-result-details {
+    position: static;
+    width: auto;
+    margin: 12px;
   }
 }
