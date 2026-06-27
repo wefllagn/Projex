@@ -130,6 +130,26 @@ const workspaceActivities = [
   'Back up the file in a personal device or online repository',
 ]
 
+const repositoryFiles = [
+  { name: 'src', type: 'folder', commit: 'Initial commit', updated: 'a few minutes ago' },
+  { name: 'docs', type: 'folder', commit: 'Initial commit', updated: 'a few minutes ago' },
+  { name: 'README.md', type: 'file', commit: 'Initial commit', updated: 'a few minutes ago' },
+  { name: '.gitignore', type: 'file', commit: 'Initial commit', updated: 'a few minutes ago' },
+]
+
+const repositoryCollaborators = [
+  { name: 'Julius Teodoro', role: 'Team Lead', marker: 'You' },
+  { name: 'Alyssa Mendoza', role: 'Collaborator' },
+  { name: 'Marco Rivera', role: 'Collaborator' },
+  { name: 'Daniel Reyes', role: 'Collaborator' },
+]
+
+const repositoryCommits = [
+  { id: '3a7f9c1', message: 'Initial commit', author: 'Julius Teodoro', time: 'a few minutes ago' },
+  { id: '9b2e104', message: 'Add README project outline', author: 'Alyssa Mendoza', time: '12 minutes ago' },
+  { id: '51dc83a', message: 'Create docs folder for requirements', author: 'Daniel Reyes', time: '18 minutes ago' },
+]
+
 function ClassHeader({ activeTab }) {
   const tabs = [
     { label: 'Stream', path: '/student', key: 'stream' },
@@ -716,7 +736,13 @@ function GroupProjectsPage() {
             >
               <div className="student-row-summary">
                 <span className="student-group-icon" aria-hidden="true" />
-                <strong>{project.title}</strong>
+                {project.expanded ? (
+                  <NavLink to="/student/projects/prelim-group-project-1" className="student-row-title-link">
+                    {project.title}
+                  </NavLink>
+                ) : (
+                  <strong>{project.title}</strong>
+                )}
                 <span>{project.due}</span>
                 <button type="button" className="student-chevron" aria-label="Expand project" />
               </div>
@@ -738,7 +764,7 @@ function GroupProjectsPage() {
                     </div>
                   </div>
                   <div className="student-project-footer">
-                    <NavLink to="/student/projects" className="student-text-link">
+                    <NavLink to="/student/projects/prelim-group-project-1" className="student-text-link">
                       View instructions
                     </NavLink>
                     <span className="student-repository-status">Repository not yet created</span>
@@ -750,6 +776,267 @@ function GroupProjectsPage() {
         </div>
       </div>
     </StudentClassPage>
+  )
+}
+
+function GroupProjectDetailPage() {
+  return (
+    <StudentClassPage activeTab="assignments" wide>
+      <div className="student-detail-layout">
+        <main className="student-activity-detail-card">
+          <NavLink to="/student/projects" className="student-back-link">
+            Back to Group Projects
+          </NavLink>
+
+          <article className="student-detail-card student-project-detail-card">
+            <div className="student-detail-heading">
+              <span className="student-detail-icon student-project-detail-icon" aria-hidden="true" />
+              <div>
+                <h2>Prelim Group Project 1 Specifications</h2>
+                <p>
+                  <span>Mr. Rickon Morty</span>
+                  <span>Jun 30, 2026</span>
+                </p>
+                <p className="student-detail-due">Due Aug 27, 2026, 10:30 AM</p>
+              </div>
+            </div>
+
+            <div className="student-detail-divider" />
+
+            <div className="student-detail-attachment-row">
+              <div className="student-attachment student-attachment--wide">
+                <span className="student-pdf-icon">PDF</span>
+                <div>
+                  <strong>Prelim Group Project 1 Specifications.pdf</strong>
+                  <span>PDF · 1.2 MB</span>
+                </div>
+                <span className="student-document-preview" aria-hidden="true" />
+              </div>
+            </div>
+
+            <div className="student-detail-divider" />
+
+            <section className="student-project-instructions">
+              <h3>Project requirement</h3>
+              <p>
+                Create a team repository for the preliminary group project. Keep source code,
+                documentation, and requirement notes together so your instructor can review team progress.
+              </p>
+              <ul>
+                <li>Set up the initial repository structure.</li>
+                <li>Invite group members as collaborators.</li>
+                <li>Keep the official specifications linked to the workspace.</li>
+              </ul>
+            </section>
+
+            <div className="student-detail-divider" />
+
+            <section className="student-comments-block">
+              <h3>Class comments</h3>
+              <button type="button" className="student-comment-button">
+                Add comment
+              </button>
+            </section>
+          </article>
+        </main>
+
+        <aside className="student-work-rail">
+          <section className="student-work-card">
+            <div className="student-work-card__header">
+              <h2>Your team repository</h2>
+              <span className="student-work-status">To Do</span>
+            </div>
+            <p className="student-repo-help">
+              No repository created yet. Create a team repository and invite your groupmates as
+              collaborators.
+            </p>
+            <NavLink to="/student/projects/prelim-group-project-1/repository" className="student-primary-action">
+              Create Repository
+            </NavLink>
+            <button type="button" className="student-outline-action">
+              Join Existing Repository
+            </button>
+            <button type="button" className="student-outline-action">
+              View Specifications
+            </button>
+            <p className="student-repo-footnote">This repository will be linked to the class project requirement.</p>
+          </section>
+
+          <section className="student-work-card student-private-card">
+            <h2>Private comments</h2>
+            <button type="button" className="student-comment-button">
+              Add private comment
+            </button>
+          </section>
+        </aside>
+      </div>
+    </StudentClassPage>
+  )
+}
+
+function RepositoryWorkspacePage() {
+  return (
+    <div className="student-repository-page">
+      <header className="student-repository-topbar">
+        <div className="student-repository-breadcrumb">
+          <NavLink to="/student/classes">IT 112 - Computer Programming 1</NavLink>
+          <span>Prelim Group Project 1</span>
+          <strong>prelim-group-project-1-team-03</strong>
+        </div>
+        <div className="student-user-area">
+          <button type="button" className="student-bell" aria-label="Notifications">
+            <span className="student-bell__shape" aria-hidden="true" />
+            <span className="student-bell__count">2</span>
+          </button>
+          <span className="student-user-avatar" aria-hidden="true" />
+          <div className="student-user-name">
+            <strong>Julius Teodoro</strong>
+            <span>BSIT 2A</span>
+          </div>
+          <span className="student-dropdown" aria-hidden="true" />
+        </div>
+      </header>
+
+      <main className="student-repository-content">
+        <section className="student-repository-hero">
+          <span className="student-repo-mark" aria-hidden="true" />
+          <div>
+            <h1>prelim-group-project-1-team-03</h1>
+            <span className="student-repo-state">In Progress</span>
+          </div>
+        </section>
+
+        <div className="student-repository-toolbar">
+          <button type="button">main</button>
+          <span>Linked to IT 112</span>
+          <span>Team repository</span>
+          <span>Instructor: Mr. Rickon Morty</span>
+          <button type="button">Add file</button>
+          <button type="button">Find file</button>
+          <button type="button" className="student-repo-code-button">Code</button>
+          <button type="button">History</button>
+          <button type="button">Star 0</button>
+          <button type="button">Fork 0</button>
+        </div>
+
+        <div className="student-repository-grid">
+          <section className="student-repo-main-column">
+            <article className="student-repo-commit-card">
+              <span className="student-user-avatar" aria-hidden="true" />
+              <div>
+                <strong>Julius Teodoro committed a few minutes ago</strong>
+                <span>Initial commit</span>
+              </div>
+              <code>3a7f9c1</code>
+              <button type="button">View commit</button>
+            </article>
+
+            <section className="student-repo-card">
+              <div className="student-repo-file-head">
+                <span>Name</span>
+                <span>Last commit</span>
+                <span>Last update</span>
+              </div>
+              {repositoryFiles.map((file) => (
+                <div className="student-repo-file-row" key={file.name}>
+                  <span className={`student-repo-file-icon student-repo-file-icon--${file.type}`} aria-hidden="true" />
+                  <strong>{file.name}</strong>
+                  <span>{file.commit}</span>
+                  <span>{file.updated}</span>
+                </div>
+              ))}
+            </section>
+
+            <section className="student-repo-card student-readme-card">
+              <div className="student-repo-card-title">
+                <h2>README.md</h2>
+                <span>Preview</span>
+              </div>
+              <h3>Prelim Group Project 1</h3>
+              <p>
+                This repository contains the source code, documentation, and resources for our
+                preliminary group project.
+              </p>
+              <h4>Getting Started</h4>
+              <ol>
+                <li>Clone the repository</li>
+                <li>Open the project in your IDE</li>
+                <li>Run the application</li>
+              </ol>
+              <code>git clone https://projex.edu/repos/it112/prelim-group-project-1-team-03.git</code>
+            </section>
+          </section>
+
+          <aside className="student-repo-side-column">
+            <section className="student-repo-card">
+              <h2>Project Information</h2>
+              <ul className="student-repo-info-list">
+                <li>1 commit</li>
+                <li>1 branch</li>
+                <li>0 tags</li>
+                <li>1.2 MB project storage</li>
+                <li>4 collaborators</li>
+                <li>Created on Aug 25, 2026</li>
+              </ul>
+            </section>
+
+            <section className="student-repo-card">
+              <h2>Collaborators</h2>
+              <ul className="student-collaborator-list">
+                {repositoryCollaborators.map((member) => (
+                  <li key={member.name}>
+                    <span className="student-person-avatar">{member.name.charAt(0)}</span>
+                    <div>
+                      <strong>{member.name}</strong>
+                      <span>{member.role}</span>
+                    </div>
+                    {member.marker && <em>{member.marker}</em>}
+                  </li>
+                ))}
+              </ul>
+              <button type="button" className="student-outline-action">Invite collaborators</button>
+            </section>
+
+            <section className="student-repo-card">
+              <h2>Submission Status</h2>
+              <p className="student-repo-muted">Not yet marked ready</p>
+              <button type="button" className="student-primary-action">Mark Ready for Review</button>
+              <p className="student-repo-muted">
+                Mark your repository as ready once your team has completed the requirements.
+              </p>
+            </section>
+          </aside>
+
+          <section className="student-repo-card student-spec-card">
+            <h2>Project Specifications</h2>
+            <p>This repository is linked to the official project specifications.</p>
+            <div className="student-attachment student-attachment--wide">
+              <span className="student-pdf-icon">PDF</span>
+              <div>
+                <strong>Prelim Group Project 1 Specifications.pdf</strong>
+                <span>324 KB</span>
+              </div>
+              <span className="student-document-preview" aria-hidden="true" />
+            </div>
+            <button type="button" className="student-outline-action">View specifications</button>
+            <span className="student-linked-status">Linked on Aug 25, 2026</span>
+          </section>
+
+          <section className="student-repo-card student-commit-list">
+            <h2>Recent activity</h2>
+            {repositoryCommits.map((commit) => (
+              <div className="student-commit-row" key={commit.id}>
+                <code>{commit.id}</code>
+                <div>
+                  <strong>{commit.message}</strong>
+                  <span>{commit.author} · {commit.time}</span>
+                </div>
+              </div>
+            ))}
+          </section>
+        </div>
+      </main>
+    </div>
   )
 }
 
@@ -807,6 +1094,8 @@ function StudentRoutePage({ pagePath }) {
     'activity/act-loops-01/submission-record': <ActivityDetailPage initialSubmitted />,
     'activity/act-loops-01/feedback': <ActivityDetailPage initialSubmitted openFeedback />,
     projects: <GroupProjectsPage />,
+    'projects/prelim-group-project-1': <GroupProjectDetailPage />,
+    'projects/prelim-group-project-1/repository': <RepositoryWorkspacePage />,
     'projects/repo-campus-nav': <GroupProjectsPage />,
     'projects/repo-campus-nav/contributions': <GroupProjectsPage />,
     analytics: <StreamPage />,

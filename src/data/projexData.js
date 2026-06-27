@@ -220,6 +220,22 @@ export const routeCatalog = [
           'Team repositories, commits, tasks, contribution tracking, instructor-facing similarity signals, and archive state.',
       },
       {
+        path: 'projects/prelim-group-project-1',
+        label: 'Selected Group Project',
+        group: 'Project Collaboration Mode',
+        status: 'Placeholder',
+        summary:
+          'Selected group project requirement with due date, specification attachment, comments, and repository action panel.',
+      },
+      {
+        path: 'projects/prelim-group-project-1/repository',
+        label: 'Team Repository Workspace',
+        group: 'Project Collaboration Mode',
+        status: 'Placeholder',
+        summary:
+          'Student team repository workspace with files, README, collaborators, recent commits, specifications, and ready-for-review status.',
+      },
+      {
         path: 'projects/repo-campus-nav',
         label: 'Repository Overview',
         group: 'Project Collaboration Mode',

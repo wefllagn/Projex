@@ -1576,6 +1576,43 @@ textarea:focus-visible {
   transform: translateY(-50%);
 }
 
+.student-project-detail-icon::before {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.student-project-instructions {
+  padding-left: 64px;
+}
+
+.student-project-instructions h3 {
+  margin: 0 0 10px;
+  color: #182542;
+  font-size: 15px;
+}
+
+.student-project-instructions p,
+.student-project-instructions li,
+.student-repo-help,
+.student-repo-footnote {
+  color: #53637c;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.student-project-instructions ul {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+
+.student-repo-help,
+.student-repo-footnote {
+  margin: 0;
+}
+
 .student-people-panel {
   width: min(620px, 100%);
   min-height: 460px;
@@ -2724,6 +2761,403 @@ textarea:focus-visible {
   margin-top: 22px;
 }
 
+.student-repository-page {
+  min-height: 100vh;
+  color: #0f1d39;
+  background: #ffffff;
+}
+
+.student-repository-topbar {
+  min-height: 72px;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  padding: 0 32px;
+  border-bottom: 1px solid #e2e9f3;
+  background: rgba(255, 255, 255, 0.96);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.student-repository-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  align-items: center;
+  color: #50617a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.student-repository-breadcrumb a {
+  color: #50617a;
+  text-decoration: none;
+}
+
+.student-repository-breadcrumb span::before,
+.student-repository-breadcrumb strong::before {
+  content: "/";
+  margin-right: 9px;
+  color: #96a4b8;
+}
+
+.student-repository-content {
+  width: min(1280px, 100%);
+  margin: 0 auto;
+  padding: 28px 32px 44px;
+}
+
+.student-repository-hero {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.student-repo-mark {
+  width: 50px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d8e2ee;
+  border-radius: 10px;
+  background: #f4f7fb;
+}
+
+.student-repo-mark::before {
+  content: "";
+  width: 24px;
+  height: 18px;
+  border: 2px solid #617492;
+  border-radius: 4px;
+}
+
+.student-repository-hero h1 {
+  display: inline;
+  margin: 0 12px 0 0;
+  color: #101b38;
+  font-size: 34px;
+  line-height: 1.1;
+}
+
+.student-repo-state {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  color: #178f55;
+  background: #ddf7e9;
+  font-size: 12px;
+  font-weight: 900;
+  vertical-align: middle;
+}
+
+.student-repository-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.student-repository-toolbar button,
+.student-repository-toolbar span {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid #d8e2ee;
+  border-radius: 7px;
+  color: #233653;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.student-repository-toolbar button {
+  cursor: pointer;
+}
+
+.student-repository-toolbar .student-repo-code-button {
+  color: #ffffff;
+  border-color: #0b65ff;
+  background: #0b65ff;
+}
+
+.student-repository-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+.student-repo-main-column,
+.student-repo-side-column {
+  display: grid;
+  gap: 18px;
+}
+
+.student-repo-card,
+.student-repo-commit-card {
+  border: 1px solid #dbe5f1;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(37, 54, 89, 0.05);
+}
+
+.student-repo-card {
+  padding: 18px;
+}
+
+.student-repo-commit-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.student-repo-commit-card strong,
+.student-repo-commit-card span {
+  display: block;
+}
+
+.student-repo-commit-card strong {
+  color: #192844;
+  font-size: 13px;
+}
+
+.student-repo-commit-card span,
+.student-repo-muted,
+.student-repo-card p {
+  color: #66768d;
+  font-size: 13px;
+}
+
+.student-repo-commit-card code,
+.student-repo-commit-card button,
+.student-commit-row code {
+  border: 1px solid #d8e2ee;
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: #233653;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.student-repo-commit-card button {
+  cursor: pointer;
+}
+
+.student-repo-file-head,
+.student-repo-file-row {
+  display: grid;
+  grid-template-columns: 32px minmax(180px, 1fr) minmax(160px, 0.7fr) minmax(150px, 0.6fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.student-repo-file-head {
+  padding: 0 14px 12px;
+  color: #53647d;
+  border-bottom: 1px solid #dbe5f1;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.student-repo-file-head span:first-child {
+  grid-column: 1 / 3;
+}
+
+.student-repo-file-head span:nth-child(2) {
+  grid-column: 3;
+}
+
+.student-repo-file-head span:nth-child(3) {
+  grid-column: 4;
+}
+
+.student-repo-file-row {
+  min-height: 48px;
+  padding: 0 14px;
+  border-bottom: 1px solid #edf1f6;
+  color: #52637c;
+  font-size: 13px;
+}
+
+.student-repo-file-row:last-child {
+  border-bottom: 0;
+}
+
+.student-repo-file-row strong {
+  color: #182744;
+}
+
+.student-repo-file-icon {
+  width: 18px;
+  height: 16px;
+  border: 1.8px solid #617492;
+  border-radius: 3px;
+}
+
+.student-repo-file-icon--folder {
+  background: #eef4ff;
+}
+
+.student-repo-card-title {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.student-repo-card-title h2,
+.student-repo-card h2 {
+  margin: 0;
+  color: #152542;
+  font-size: 17px;
+}
+
+.student-repo-card-title span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #2d63ea;
+  background: #edf3ff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.student-readme-card h3 {
+  margin: 0 0 14px;
+  color: #101b38;
+  font-size: 24px;
+}
+
+.student-readme-card h4 {
+  margin: 18px 0 8px;
+  color: #101b38;
+}
+
+.student-readme-card ol {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding-left: 20px;
+  color: #40516d;
+}
+
+.student-readme-card code {
+  display: block;
+  padding: 12px;
+  border: 1px solid #d8e2ee;
+  border-radius: 7px;
+  color: #253653;
+  background: #f8fafc;
+  overflow-x: auto;
+}
+
+.student-repo-info-list,
+.student-collaborator-list {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.student-repo-info-list li {
+  color: #40516d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.student-collaborator-list {
+  margin-bottom: 14px;
+}
+
+.student-collaborator-list li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.student-collaborator-list strong,
+.student-collaborator-list span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-collaborator-list strong {
+  color: #182744;
+  font-size: 13px;
+}
+
+.student-collaborator-list span {
+  color: #66768d;
+  font-size: 12px;
+}
+
+.student-collaborator-list em {
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #0b65ff;
+  background: #edf3ff;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.student-spec-card,
+.student-commit-list {
+  grid-column: 1;
+}
+
+.student-spec-card {
+  display: grid;
+  gap: 12px;
+}
+
+.student-linked-status {
+  color: #178f55;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.student-commit-list {
+  display: grid;
+  gap: 12px;
+}
+
+.student-commit-row {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #edf1f6;
+}
+
+.student-commit-row strong,
+.student-commit-row span {
+  display: block;
+}
+
+.student-commit-row strong {
+  color: #182744;
+  font-size: 13px;
+}
+
+.student-commit-row span {
+  color: #66768d;
+  font-size: 12px;
+}
+
 @media (max-width: 980px) {
   .student-login-page {
     padding: 26px;
@@ -2794,6 +3228,32 @@ textarea:focus-visible {
   .student-coding-actions {
     position: sticky;
     bottom: 0;
+  }
+
+  .student-repository-topbar,
+  .student-repository-grid,
+  .student-repo-commit-card {
+    grid-template-columns: 1fr;
+  }
+
+  .student-repository-topbar {
+    position: relative;
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  .student-repository-content {
+    padding: 22px 18px 36px;
+  }
+
+  .student-repository-hero h1 {
+    font-size: 26px;
+  }
+
+  .student-spec-card,
+  .student-commit-list {
+    grid-column: auto;
   }
 }
 
@@ -2885,7 +3345,8 @@ textarea:focus-visible {
   }
 
   .student-detail-attachment-row,
-  .student-comments-block {
+  .student-comments-block,
+  .student-project-instructions {
     padding-left: 0;
   }
 
@@ -2905,5 +3366,18 @@ textarea:focus-visible {
     position: static;
     width: auto;
     margin: 12px;
+  }
+
+  .student-repo-file-head,
+  .student-repo-file-row {
+    min-width: 680px;
+  }
+
+  .student-repo-card {
+    overflow-x: auto;
+  }
+
+  .student-commit-row {
+    grid-template-columns: 1fr;
   }
 }

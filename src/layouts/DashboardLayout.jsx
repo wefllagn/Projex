@@ -19,6 +19,12 @@ function StudentSidebarLink({ to, children, end = false, count }) {
 }
 
 function StudentDashboardLayout() {
+  const location = useLocation()
+
+  if (location.pathname.includes('/workspace')) {
+    return <Outlet />
+  }
+
   return (
     <div className="student-app-shell">
       <aside className="student-sidebar">
