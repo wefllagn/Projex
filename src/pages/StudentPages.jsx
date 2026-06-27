@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
 const streamPosts = [
@@ -83,6 +84,14 @@ const classmates = [
   { name: 'Nina Salvador', email: 'nina.salvador@slu.edu.ph', avatar: 'N' },
 ]
 
+const feedbackResults = [
+  { label: 'Top border of asterisks', status: 'Passed' },
+  { label: 'Bottom border of asterisks', status: 'Passed' },
+  { label: '"hello world" appears correctly', status: 'Passed' },
+  { label: 'Required blank lines inside the box', status: 'Passed' },
+  { label: 'Program exits successfully', status: 'Passed' },
+]
+
 function ClassHeader({ activeTab }) {
   const tabs = [
     { label: 'Stream', path: '/student', key: 'stream' },
@@ -142,11 +151,13 @@ function ClassHeader({ activeTab }) {
   )
 }
 
-function StudentClassPage({ activeTab, children }) {
+function StudentClassPage({ activeTab, children, wide = false }) {
   return (
     <div className="student-class-page">
       <ClassHeader activeTab={activeTab} />
-      <section className="student-class-content">{children}</section>
+      <section className={wide ? 'student-class-content student-class-content--wide' : 'student-class-content'}>
+        {children}
+      </section>
     </div>
   )
 }
@@ -228,7 +239,13 @@ function ActivitiesPage() {
             >
               <div className="student-row-summary">
                 <span className="student-row-icon" aria-hidden="true" />
-                <strong>{activity.title}</strong>
+                {activity.expanded ? (
+                  <NavLink to="/student/activity/act-loops-01" className="student-row-title-link">
+                    {activity.title}
+                  </NavLink>
+                ) : (
+                  <strong>{activity.title}</strong>
+                )}
                 <span>{activity.due}</span>
                 <button type="button" className="student-more" aria-label="More options" />
               </div>
@@ -239,7 +256,7 @@ function ActivitiesPage() {
                     <ActivityAttachment />
                   </div>
                   <div className="student-activity-status">{activity.status}</div>
-                  <NavLink to="/student/activity" className="student-text-link">
+                  <NavLink to="/student/activity/act-loops-01" className="student-text-link">
                     View instructions
                   </NavLink>
                 </div>
@@ -249,6 +266,196 @@ function ActivitiesPage() {
         </div>
       </div>
     </StudentClassPage>
+  )
+}
+
+function ActivityDetailPage({ initialSubmitted = false, openFeedback = false }) {
+  const [submitted, setSubmitted] = useState(initialSubmitted)
+  const [feedbackOpen, setFeedbackOpen] = useState(openFeedback)
+
+  return (
+    <StudentClassPage activeTab="assignments" wide>
+      <div className="student-detail-layout">
+        <main className="student-activity-detail-card">
+          <NavLink to="/student/activity" className="student-back-link">
+            Back to Activities
+          </NavLink>
+
+          <article className="student-detail-card">
+            <div className="student-detail-heading">
+              <span className="student-detail-icon" aria-hidden="true" />
+              <div>
+                <h2>Prelim Programming Exercise 1 LAB</h2>
+                <p>
+                  <span>Mr. Rickon Morty</span>
+                  <span>Jun 30, 2026</span>
+                </p>
+                <p className="student-detail-due">Due Jul 3, 2026, 5:00 PM</p>
+              </div>
+            </div>
+
+            <div className="student-detail-divider" />
+
+            <div className="student-detail-attachment-row">
+              <div className="student-attachment student-attachment--wide">
+                <span className="student-pdf-icon">PDF</span>
+                <div>
+                  <strong>Programming Exercise Instructions.pdf</strong>
+                  <span>PDF</span>
+                </div>
+                <span className="student-document-preview" aria-hidden="true" />
+              </div>
+            </div>
+
+            {submitted && (
+              <>
+                <div className="student-detail-divider" />
+                <div className="student-submitted-inline">
+                  <span className="student-success-check" aria-hidden="true" />
+                  <strong>Submitted</strong>
+                  <span>Final work recorded</span>
+                  <span>Jun 30, 2026, 4:32 PM</span>
+                </div>
+              </>
+            )}
+
+            <div className="student-detail-divider" />
+
+            <section className="student-comments-block">
+              <h3>Class comments</h3>
+              <button type="button" className="student-comment-button">
+                Add comment
+              </button>
+            </section>
+          </article>
+        </main>
+
+        <aside className="student-work-rail">
+          <section className="student-work-card">
+            <div className="student-work-card__header">
+              <h2>Your work</h2>
+              <span className={submitted ? 'student-work-status is-done' : 'student-work-status'}>
+                {submitted ? 'Done' : 'To Do'}
+              </span>
+            </div>
+
+            {submitted ? (
+              <>
+                <div className="student-score-row">
+                  <span>Score</span>
+                  <strong>5 / 5</strong>
+                </div>
+                <div className="student-work-submitted">
+                  <span>Work submitted</span>
+                  <strong>Jun 30, 2026, 4:32 PM</strong>
+                  <div className="student-submitted-file">
+                    <span className="student-file-icon" aria-hidden="true" />
+                    <div>
+                      <strong>Prelim Programming Exercise 1 LAB</strong>
+                      <span>Submitted in-platform</span>
+                    </div>
+                    <span className="student-success-dot" aria-hidden="true" />
+                  </div>
+                </div>
+                <button type="button" className="student-outline-action" disabled>
+                  Submission locked
+                </button>
+                <button
+                  type="button"
+                  className="student-primary-action"
+                  onClick={() => setFeedbackOpen(true)}
+                >
+                  View Feedback
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="student-empty-work">
+                  <span className="student-file-icon" aria-hidden="true" />
+                  <div>
+                    <strong>No work submitted yet</strong>
+                    <span>You can do this activity in the platform.</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="student-primary-action"
+                  onClick={() => setSubmitted(true)}
+                >
+                  Preview submitted
+                </button>
+                <button type="button" className="student-outline-action">
+                  View Submission Guide
+                </button>
+              </>
+            )}
+          </section>
+
+          <section className="student-work-card student-private-card">
+            <h2>Private comments</h2>
+            <button type="button" className="student-comment-button">
+              Add private comment
+            </button>
+          </section>
+        </aside>
+      </div>
+
+      {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
+    </StudentClassPage>
+  )
+}
+
+function FeedbackModal({ onClose }) {
+  return (
+    <div className="student-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="student-feedback-title">
+      <section className="student-feedback-modal">
+        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close feedback" />
+        <p className="student-feedback-eyebrow">Automated Feedback</p>
+        <h2 id="student-feedback-title">Prelim Programming Exercise 1 LAB</h2>
+
+        <div className="student-feedback-score">
+          <span className="student-success-check" aria-hidden="true" />
+          <strong>Score: 5 / 5 (100%)</strong>
+          <span>All expected outputs matched</span>
+        </div>
+
+        <p className="student-feedback-note">
+          Scoring is based on predefined test cases. Each expected output matched by your code counts
+          toward the final score.
+        </p>
+
+        <div className="student-feedback-results">
+          <h3>Test Results (5 / 5 passed)</h3>
+          {feedbackResults.map((result, index) => (
+            <div className="student-feedback-result-row" key={result.label}>
+              <span className="student-success-check" aria-hidden="true" />
+              <strong>{index + 1}</strong>
+              <span>{result.label}</span>
+              <em>{result.status}</em>
+            </div>
+          ))}
+        </div>
+
+        <p className="student-hidden-note">
+          Hidden test cases may also be used in other activities to check additional inputs and expected
+          outputs. No hidden tests were used for this Hello World activity.
+        </p>
+
+        <div className="student-instructor-feedback">
+          <strong>Instructor / System Feedback</strong>
+          <p>Great job. Your submitted code matched all required expected outputs.</p>
+        </div>
+
+        <div className="student-modal-actions">
+          <button type="button" className="student-outline-action" onClick={onClose}>
+            Close
+          </button>
+          <button type="button" className="student-primary-action" onClick={onClose}>
+            View Submission
+          </button>
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -355,9 +562,9 @@ function StudentRoutePage({ pagePath }) {
     invitations: <StreamPage />,
     activity: <ActivitiesPage />,
     submissions: <ActivitiesPage />,
-    'activity/act-loops-01': <ActivitiesPage />,
-    'activity/act-loops-01/submission-record': <ActivitiesPage />,
-    'activity/act-loops-01/feedback': <ActivitiesPage />,
+    'activity/act-loops-01': <ActivityDetailPage />,
+    'activity/act-loops-01/submission-record': <ActivityDetailPage initialSubmitted />,
+    'activity/act-loops-01/feedback': <ActivityDetailPage initialSubmitted openFeedback />,
     projects: <GroupProjectsPage />,
     'projects/repo-campus-nav': <GroupProjectsPage />,
     'projects/repo-campus-nav/contributions': <GroupProjectsPage />,
