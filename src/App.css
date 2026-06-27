@@ -4054,3 +4054,258 @@ textarea:focus-visible {
     padding: 18px 24px;
   }
 }
+
+/* Small student UI polish fixes. */
+.student-login-stage {
+  grid-template-rows: auto auto auto;
+  align-items: start;
+}
+
+.student-login-logo {
+  grid-column: 1;
+  justify-self: center;
+  width: min(390px, 100%);
+  margin: 0 0 8px;
+}
+
+.student-login-info {
+  grid-column: 2;
+  grid-row: 1 / 3;
+}
+
+.student-login-card {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.student-home-content {
+  width: min(1100px, 100%);
+}
+
+.student-home-class-grid {
+  grid-template-columns: repeat(2, minmax(360px, 1fr));
+  gap: 18px;
+}
+
+.student-home-class-card {
+  min-height: 112px;
+  grid-template-columns: 48px minmax(0, 1fr) minmax(150px, auto) 28px;
+  gap: 16px;
+  padding: 20px 22px;
+}
+
+.student-home-class-card strong {
+  font-size: 15px;
+}
+
+.student-home-class-card span,
+.student-home-class-schedule span {
+  font-size: 12px;
+}
+
+.student-coding-instructions {
+  grid-row: 1 / 3;
+}
+
+.student-tests-area {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-column: 2 / 4;
+  grid-row: 2;
+  min-height: 0;
+}
+
+.student-tests-table {
+  min-height: 0;
+  max-height: 100%;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.student-coding-actions {
+  margin-left: 300px;
+}
+
+@media (max-width: 980px) {
+  .student-login-info,
+  .student-login-card,
+  .student-login-logo {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .student-home-class-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-coding-instructions,
+  .student-tests-area {
+    grid-row: auto;
+  }
+
+  .student-coding-actions {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .student-login-logo {
+    justify-self: start;
+    width: min(300px, 100%);
+  }
+
+  .student-home-class-card {
+    min-height: 118px;
+    grid-template-columns: 34px minmax(0, 1fr) 22px;
+    padding: 18px;
+  }
+}
+
+/* Targeted student polish fixes for login alignment and coding workspace layout. */
+.student-login-logo {
+  justify-self: start;
+  align-self: end;
+  width: min(460px, 100%);
+  margin: 0 0 12px;
+}
+
+.student-login-card {
+  justify-self: start;
+}
+
+.student-coding-page {
+  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-rows: 44px minmax(0, 1fr) 64px;
+}
+
+.student-coding-page::after {
+  content: "";
+  grid-column: 1;
+  grid-row: 3;
+  background: #ffffff;
+  border-top: 1px solid #d8e2ee;
+  border-right: 1px solid #263246;
+}
+
+.student-coding-topbar {
+  grid-column: 1 / 3;
+  grid-row: 1;
+}
+
+.student-coding-shell {
+  grid-column: 1 / 3;
+  grid-row: 2;
+  grid-template-columns: 300px minmax(360px, 1.25fr) minmax(320px, 0.9fr);
+  grid-template-rows: minmax(0, 1fr) 132px;
+}
+
+.student-coding-instructions {
+  grid-column: 1;
+  grid-row: 1 / 3;
+}
+
+.student-editor-area {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.student-output-area {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.student-tests-area {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  overflow: hidden;
+}
+
+.student-coding-actions {
+  z-index: 1;
+  grid-column: 2;
+  grid-row: 3;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  margin-left: 0;
+}
+
+.student-state-switch {
+  justify-self: start;
+}
+
+.student-state-switch button,
+.student-run-tests,
+.student-submit-code {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.student-run-tests {
+  justify-self: end;
+  min-width: 118px;
+}
+
+.student-submit-code {
+  justify-self: end;
+  min-width: 150px;
+}
+
+.student-tests-table {
+  min-height: 0;
+  max-height: 100%;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.student-tests-row {
+  min-width: 760px;
+}
+
+@media (max-width: 980px) {
+  .student-login-logo {
+    justify-self: start;
+    width: min(360px, 100%);
+  }
+
+  .student-login-card {
+    justify-self: stretch;
+  }
+
+  .student-coding-page {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .student-coding-page::after {
+    display: none;
+  }
+
+  .student-coding-topbar,
+  .student-coding-shell,
+  .student-coding-actions {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .student-coding-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(420px, auto) minmax(320px, auto) auto;
+  }
+
+  .student-coding-instructions,
+  .student-editor-area,
+  .student-output-area,
+  .student-tests-area {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .student-coding-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .student-run-tests,
+  .student-submit-code {
+    justify-self: stretch;
+    width: 100%;
+  }
+}

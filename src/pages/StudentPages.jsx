@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 
 const streamPosts = [
   {
@@ -191,6 +191,7 @@ const repositoryCommits = [
 
 function StudentProfileMenu() {
   const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
 
   return (
     <div className="student-profile-menu">
@@ -216,7 +217,7 @@ function StudentProfileMenu() {
           <div className="student-profile-menu-list">
             <button type="button">Profile</button>
             <button type="button">Settings</button>
-            <button type="button">Sign out</button>
+            <button type="button" onClick={() => navigate('/')}>Sign out</button>
           </div>
           <p>Privacy Policy · Terms of Service</p>
         </section>
@@ -576,12 +577,8 @@ function ActivityDetailPage({ initialSubmitted = false, openFeedback = false }) 
 function CodingWorkspacePage() {
   const [resultState, setResultState] = useState('success')
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const navigate = useNavigate()
   const failed = resultState === 'error'
-
-  if (submitted) {
-    return <ActivityDetailPage initialSubmitted />
-  }
 
   return (
     <div className="student-coding-page">
@@ -750,7 +747,7 @@ Process finished with exit code 0`}</pre>
           onCancel={() => setConfirmOpen(false)}
           onConfirm={() => {
             setConfirmOpen(false)
-            setSubmitted(true)
+            navigate('/student/activity/act-loops-01/submission-record')
           }}
         />
       )}
