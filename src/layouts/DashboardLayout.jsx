@@ -8,10 +8,10 @@ const studentClasses = [
   { label: 'MATH 101', initial: 'M' },
 ]
 
-function StudentSidebarLink({ to, children, end = false, count }) {
+function StudentSidebarLink({ to, children, end = false, count, icon }) {
   return (
     <NavLink to={to} end={end} className="student-sidebar__link">
-      <span className="student-sidebar__icon" aria-hidden="true" />
+      <span className={`student-sidebar__icon student-sidebar__icon--${icon}`} aria-hidden="true" />
       <span>{children}</span>
       {count && <span className="student-sidebar__count">{count}</span>}
     </NavLink>
@@ -33,10 +33,10 @@ function StudentDashboardLayout() {
         </NavLink>
 
         <nav className="student-sidebar__nav" aria-label="Student navigation">
-          <StudentSidebarLink to="/student" end>
+          <StudentSidebarLink to="/student" end icon="home">
             Home
           </StudentSidebarLink>
-          <StudentSidebarLink to="/student/activity" count="3">
+          <StudentSidebarLink to="/student/activity" count="3" icon="todo">
             To-do
           </StudentSidebarLink>
 
@@ -59,12 +59,10 @@ function StudentDashboardLayout() {
           </div>
 
           <div className="student-sidebar__lower">
-            <StudentSidebarLink to="/student/projects">My Repositories</StudentSidebarLink>
-            <StudentSidebarLink to="/student/join-class">Join Class</StudentSidebarLink>
+            <StudentSidebarLink to="/student/projects" icon="folder">My Repositories</StudentSidebarLink>
+            <StudentSidebarLink to="/student/join-class" icon="plus">Join Class</StudentSidebarLink>
           </div>
         </nav>
-
-        <StudentSidebarLink to="/student/settings">Settings</StudentSidebarLink>
       </aside>
 
       <main className="student-main">

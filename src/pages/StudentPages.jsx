@@ -4,14 +4,14 @@ import { NavLink } from 'react-router-dom'
 const streamPosts = [
   {
     id: 'stream-assignment',
-    author: 'RAMEL CABANILLA',
+    author: 'Mac Miller',
     text: 'posted a new assignment: Prelim Programming Exercise 1 LAB',
     date: 'Aug 25, 2022 (Edited Oct 5, 2022)',
     type: 'assignment',
   },
   {
     id: 'stream-announcement',
-    author: 'RAMEL CABANILLA',
+    author: 'Mac Miller',
     text: 'Please be informed that all 9:00 AM classes are required to attend the mass today, August 25, 2022 at the 6th-floor lobby. Thank you',
     date: 'Aug 25, 2022',
     type: 'announcement',
@@ -69,9 +69,48 @@ const groupProjects = [
   },
 ]
 
+const homeClasses = [
+  {
+    title: 'IT 112 - Computer Programming 1',
+    section: 'BSIT 2A',
+    schedule: 'Mon & Wed',
+    time: '8:00 - 9:30 AM',
+    instructor: 'Mr. Rickon Morty',
+    initial: 'I',
+    path: '/student/classes',
+  },
+  {
+    title: 'CS 111 - Introduction to Computing',
+    section: 'BSIT 2A',
+    schedule: 'Tue & Thu',
+    time: '10:00 - 11:30 AM',
+    instructor: 'Ms. Alyssa Mendoza',
+    initial: 'C',
+    path: '/student/classes',
+  },
+  {
+    title: 'IT 123 - Platform Technologies',
+    section: 'BSIT 2A',
+    schedule: 'Mon & Wed',
+    time: '1:00 - 2:30 PM',
+    instructor: 'Ms. Olivia Dean',
+    initial: 'I',
+    path: '/student/classes',
+  },
+  {
+    title: 'MATH 101 - College Algebra',
+    section: 'BSIT 2A',
+    schedule: 'Fri',
+    time: '9:00 - 10:30 AM',
+    instructor: 'Mr. Marco Rivera',
+    initial: 'M',
+    path: '/student/classes',
+  },
+]
+
 const instructors = [
   { name: 'Mr. Rickon Morty', email: 'rickon.morty@slu.edu.ph', avatar: 'RM' },
-  { name: 'Ramel Cabanilla', email: 'ramel.cabanilla@slu.edu.ph', avatar: 'RC' },
+  { name: 'Mac Miller', email: 'mac.miller@slu.edu.ph', avatar: 'MM' },
 ]
 
 const classmates = [
@@ -150,6 +189,42 @@ const repositoryCommits = [
   { id: '51dc83a', message: 'Create docs folder for requirements', author: 'Daniel Reyes', time: '18 minutes ago' },
 ]
 
+function StudentProfileMenu() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="student-profile-menu">
+      <button type="button" className="student-profile-trigger" onClick={() => setOpen(!open)}>
+        <span className="student-user-avatar" aria-hidden="true" />
+        <span className="student-user-name">
+          <strong>Julius Teodoro</strong>
+          <span>BSIT 2A</span>
+        </span>
+        <span className="student-dropdown" aria-hidden="true" />
+      </button>
+
+      {open && (
+        <section className="student-profile-dropdown">
+          <button type="button" className="student-profile-close" onClick={() => setOpen(false)} aria-label="Close profile menu" />
+          <strong>2216146@slu.edu.ph</strong>
+          <span>Managed by slu.edu.ph</span>
+          <div className="student-profile-photo">
+            <span className="student-user-avatar" aria-hidden="true" />
+          </div>
+          <h2>Hi, JULIUS!</h2>
+          <button type="button" className="student-manage-account">Manage your projex account</button>
+          <div className="student-profile-menu-list">
+            <button type="button">Profile</button>
+            <button type="button">Settings</button>
+            <button type="button">Sign out</button>
+          </div>
+          <p>Privacy Policy · Terms of Service</p>
+        </section>
+      )}
+    </div>
+  )
+}
+
 function ClassHeader({ activeTab }) {
   const tabs = [
     { label: 'Stream', path: '/student', key: 'stream' },
@@ -177,12 +252,7 @@ function ClassHeader({ activeTab }) {
             <span className="student-bell__shape" aria-hidden="true" />
             <span className="student-bell__count">5</span>
           </button>
-          <span className="student-user-avatar" aria-hidden="true" />
-          <div className="student-user-name">
-            <strong>Julius Teodoro</strong>
-            <span>BSIT 2A</span>
-          </div>
-          <span className="student-dropdown" aria-hidden="true" />
+          <StudentProfileMenu />
         </div>
       </div>
 
@@ -200,10 +270,6 @@ function ClassHeader({ activeTab }) {
             </NavLink>
           ))}
         </nav>
-        <button type="button" className="student-class-info">
-          <span aria-hidden="true">i</span>
-          Class Info
-        </button>
       </div>
     </header>
   )
@@ -216,6 +282,54 @@ function StudentClassPage({ activeTab, children, wide = false }) {
       <section className={wide ? 'student-class-content student-class-content--wide' : 'student-class-content'}>
         {children}
       </section>
+    </div>
+  )
+}
+
+function HomeDashboardPage() {
+  return (
+    <div className="student-home-page">
+      <header className="student-home-topbar">
+        <div />
+        <div className="student-user-area">
+          <button type="button" className="student-bell" aria-label="Notifications">
+            <span className="student-bell__shape" aria-hidden="true" />
+            <span className="student-bell__count">3</span>
+          </button>
+          <StudentProfileMenu />
+        </div>
+      </header>
+
+      <main className="student-home-content">
+        <h1>Welcome back, Julius 👋</h1>
+
+        <section className="student-home-classes">
+          <div className="student-home-section-heading">
+            <h2>My Classes</h2>
+            <NavLink to="/student/classes">View all classes</NavLink>
+          </div>
+
+          <div className="student-home-class-grid">
+            {homeClasses.map((item) => (
+              <NavLink to={item.path} className="student-home-class-card" key={item.title}>
+                <span className={`student-class-dot student-class-dot--${item.initial.toLowerCase()}`}>
+                  {item.initial}
+                </span>
+                <div>
+                  <strong>{item.title}</strong>
+                  <span>{item.section} · Sec. 01</span>
+                  <span>{item.instructor}</span>
+                </div>
+                <div className="student-home-class-schedule">
+                  <span>{item.schedule}</span>
+                  <span>{item.time}</span>
+                </div>
+                <span className="student-home-card-action" aria-hidden="true" />
+              </NavLink>
+            ))}
+          </div>
+        </section>
+      </main>
     </div>
   )
 }
@@ -888,12 +1002,7 @@ function RepositoryWorkspacePage() {
             <span className="student-bell__shape" aria-hidden="true" />
             <span className="student-bell__count">2</span>
           </button>
-          <span className="student-user-avatar" aria-hidden="true" />
-          <div className="student-user-name">
-            <strong>Julius Teodoro</strong>
-            <span>BSIT 2A</span>
-          </div>
-          <span className="student-dropdown" aria-hidden="true" />
+          <StudentProfileMenu />
         </div>
       </header>
 
@@ -1083,7 +1192,7 @@ function PeoplePage() {
 
 function StudentRoutePage({ pagePath }) {
   const pages = {
-    dashboard: <StreamPage />,
+    dashboard: <HomeDashboardPage />,
     classes: <StreamPage />,
     'join-class': <StreamPage />,
     invitations: <StreamPage />,

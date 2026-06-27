@@ -80,9 +80,9 @@ function LoginPage() {
 
         <aside className="student-login-info" aria-label="Projex information">
           <div className="student-login-info__copy">
-            <h2>Little infographic or fun fact</h2>
-            <p>Regarding what is Projex</p>
-            <p>Include pictures</p>
+            <span className="student-login-university">Saint Louis University</span>
+            <h2>Welcome to Projex</h2>
+            <p>Your all-in-one platform for programming education, collaboration, and growth.</p>
           </div>
           <img
             className="student-login-mascot"
@@ -90,6 +90,30 @@ function LoginPage() {
             alt=""
             aria-hidden="true"
           />
+          <div className="student-login-feature-list">
+            <div className="student-login-feature">
+              <span className="student-login-feature-icon student-login-feature-icon--activities" aria-hidden="true" />
+              <div>
+                <strong>Class Activities & Submissions</strong>
+                <p>Access activities, submit your work, and track your submissions easily.</p>
+              </div>
+            </div>
+            <div className="student-login-feature">
+              <span className="student-login-feature-icon student-login-feature-icon--teams" aria-hidden="true" />
+              <div>
+                <strong>Team Repositories & Collaboration</strong>
+                <p>Work together on projects with team repositories and seamless collaboration tools.</p>
+              </div>
+            </div>
+            <div className="student-login-feature">
+              <span className="student-login-feature-icon student-login-feature-icon--progress" aria-hidden="true" />
+              <div>
+                <strong>Feedback & Progress Tracking</strong>
+                <p>Receive feedback from instructors and monitor your progress over time.</p>
+              </div>
+            </div>
+          </div>
+          <p className="student-login-designed">Designed for programming education at Saint Louis University.</p>
         </aside>
 
         <Link className="student-dev-switcher-link" to="/prototype-switcher">

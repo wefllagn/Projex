@@ -3381,3 +3381,676 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+/* Student polish pass: dashboard, icons, profile menu, and login revamp. */
+.student-home-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle, rgba(106, 151, 210, 0.16) 1px, transparent 1.5px) 0 0 / 18px 18px,
+    #ffffff;
+}
+
+.student-home-topbar {
+  min-height: 72px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 46px;
+}
+
+.student-home-content {
+  width: min(900px, 100%);
+  padding: 8px 32px 64px;
+}
+
+.student-home-content h1 {
+  margin: 0 0 54px;
+  color: #101b38;
+  font-size: 27px;
+}
+
+.student-home-classes {
+  display: grid;
+  gap: 14px;
+}
+
+.student-home-section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  border-top: 1px solid #dfe7f1;
+  padding-top: 18px;
+}
+
+.student-home-section-heading h2 {
+  margin: 0;
+  color: #1c2d4b;
+  font-size: 15px;
+}
+
+.student-home-section-heading a {
+  color: #0b65ff;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.student-home-class-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.student-home-class-card {
+  min-height: 86px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) minmax(118px, auto) 24px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid #dfe7f1;
+  border-radius: 8px;
+  color: #1b2a45;
+  background: #ffffff;
+  text-decoration: none;
+  box-shadow: 0 10px 26px rgba(37, 54, 89, 0.05);
+}
+
+.student-home-class-card:hover {
+  border-color: #bcd2ff;
+  box-shadow: 0 14px 30px rgba(37, 88, 194, 0.1);
+}
+
+.student-home-class-card strong,
+.student-home-class-card span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-home-class-card strong {
+  font-size: 13px;
+}
+
+.student-home-class-card span,
+.student-home-class-schedule span {
+  color: #53647d;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.student-home-class-schedule {
+  display: grid;
+  gap: 7px;
+}
+
+.student-home-card-action {
+  width: 18px;
+  height: 18px;
+  position: relative;
+}
+
+.student-home-card-action::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 5px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid #53647d;
+  border-bottom: 2px solid #53647d;
+  transform: rotate(-45deg);
+}
+
+.student-profile-menu {
+  position: relative;
+}
+
+.student-profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.student-profile-dropdown {
+  position: absolute;
+  top: calc(100% + 16px);
+  right: 0;
+  z-index: 50;
+  width: 300px;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 22px 22px 18px;
+  border: 1px solid #dfe7f1;
+  border-radius: 18px;
+  color: #14233d;
+  background: #ffffff;
+  box-shadow: 0 22px 60px rgba(22, 34, 57, 0.18);
+}
+
+.student-profile-dropdown > strong,
+.student-profile-dropdown > span {
+  display: block;
+}
+
+.student-profile-dropdown > strong {
+  padding-right: 20px;
+  font-size: 14px;
+}
+
+.student-profile-dropdown > span {
+  color: #64738b;
+  font-size: 12px;
+}
+
+.student-profile-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.student-profile-close::before,
+.student-profile-close::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 10px;
+  width: 14px;
+  height: 2px;
+  background: #4a5a72;
+}
+
+.student-profile-close::before {
+  transform: rotate(45deg);
+}
+
+.student-profile-close::after {
+  transform: rotate(-45deg);
+}
+
+.student-profile-photo {
+  width: 82px;
+  height: 82px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #eef3fb;
+}
+
+.student-profile-photo .student-user-avatar {
+  width: 72px;
+  height: 72px;
+}
+
+.student-profile-dropdown h2 {
+  margin: 0;
+  color: #182744;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.student-manage-account {
+  min-height: 40px;
+  padding: 8px 22px;
+  border: 1px solid #9fb8e6;
+  border-radius: 999px;
+  color: #10233f;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.student-profile-menu-list {
+  width: 100%;
+  display: grid;
+  gap: 2px;
+  padding: 14px 0;
+  border-top: 1px solid #e2e8f2;
+  border-bottom: 1px solid #e2e8f2;
+}
+
+.student-profile-menu-list button {
+  min-height: 38px;
+  padding: 8px 12px 8px 42px;
+  border: 0;
+  border-radius: 8px;
+  color: #233653;
+  background: transparent;
+  text-align: left;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.student-profile-menu-list button:hover {
+  background: #f1f5fb;
+}
+
+.student-profile-dropdown p {
+  margin: 0;
+  color: #738299;
+  font-size: 11px;
+}
+
+.student-sidebar__icon {
+  position: relative;
+  border-color: #61718a;
+}
+
+.student-sidebar__icon--home {
+  border: 0;
+  border-radius: 3px;
+  background: #61718a;
+  clip-path: polygon(50% 8%, 92% 44%, 82% 44%, 82% 92%, 18% 92%, 18% 44%, 8% 44%);
+}
+
+.student-sidebar__link.active .student-sidebar__icon--home,
+.student-sidebar__link:hover .student-sidebar__icon--home {
+  background: currentColor;
+}
+
+.student-sidebar__icon--todo::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 5px;
+  width: 8px;
+  height: 5px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+}
+
+.student-sidebar__icon--folder {
+  border-radius: 3px;
+}
+
+.student-sidebar__icon--folder::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: -5px;
+  width: 10px;
+  height: 5px;
+  border: 2px solid currentColor;
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+}
+
+.student-sidebar__icon--plus::before,
+.student-sidebar__icon--plus::after {
+  content: "";
+  position: absolute;
+  background: currentColor;
+}
+
+.student-sidebar__icon--plus::before {
+  left: 4px;
+  right: 4px;
+  top: 7px;
+  height: 2px;
+}
+
+.student-sidebar__icon--plus::after {
+  top: 4px;
+  bottom: 4px;
+  left: 7px;
+  width: 2px;
+}
+
+.student-tab-icon--stream {
+  border-radius: 4px;
+}
+
+.student-tab-icon--stream::before {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 2px;
+  margin: 4px auto 0;
+  background: currentColor;
+  box-shadow: 0 4px 0 currentColor;
+}
+
+.student-tab-icon--assignments {
+  position: relative;
+}
+
+.student-tab-icon--assignments::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: -4px;
+  width: 7px;
+  height: 5px;
+  border: 2px solid currentColor;
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+}
+
+.student-tab-icon--people {
+  position: relative;
+  border: 0;
+}
+
+.student-tab-icon--people::before,
+.student-tab-icon--people::after {
+  content: "";
+  position: absolute;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+}
+
+.student-tab-icon--people::before {
+  left: 1px;
+  top: 1px;
+  width: 6px;
+  height: 6px;
+}
+
+.student-tab-icon--people::after {
+  right: 1px;
+  bottom: 1px;
+  width: 9px;
+  height: 7px;
+}
+
+.student-segmented-tabs a span {
+  position: relative;
+}
+
+.student-segmented-tabs a:first-child span::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: -4px;
+  width: 7px;
+  height: 5px;
+  border: 2px solid currentColor;
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+}
+
+.student-segmented-tabs a:last-child span {
+  border: 0;
+}
+
+.student-segmented-tabs a:last-child span::before,
+.student-segmented-tabs a:last-child span::after {
+  content: "";
+  position: absolute;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+}
+
+.student-segmented-tabs a:last-child span::before {
+  left: 0;
+  top: 1px;
+  width: 6px;
+  height: 6px;
+}
+
+.student-segmented-tabs a:last-child span::after {
+  right: 0;
+  bottom: 1px;
+  width: 9px;
+  height: 7px;
+}
+
+.student-login-page {
+  display: grid;
+  place-items: center;
+  padding: 48px;
+  background: #ffffff;
+}
+
+.student-login-stage {
+  width: min(1280px, 100%);
+  min-height: min(760px, calc(100vh - 96px));
+  grid-template-columns: minmax(360px, 0.82fr) minmax(560px, 1.18fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 34px 70px;
+}
+
+.student-login-logo {
+  width: 260px;
+  margin-left: 150px;
+}
+
+.student-login-card {
+  justify-self: center;
+  width: min(430px, 100%);
+  min-height: 360px;
+}
+
+.student-login-info {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-self: stretch;
+  min-height: 0;
+  padding: 54px 56px 0;
+  border: 1px solid #d9e4f1;
+  border-radius: 34px;
+  background: linear-gradient(180deg, #f8fbff 0%, #edf5ff 100%);
+  box-shadow: 10px 12px 0 rgba(17, 43, 74, 0.08);
+}
+
+.student-login-info__copy {
+  position: relative;
+  z-index: 1;
+  width: 58%;
+  padding: 0;
+  text-align: left;
+  text-transform: none;
+}
+
+.student-login-university {
+  display: block;
+  margin-bottom: 28px;
+  color: #2760b7;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.student-login-info__copy h2 {
+  margin: 0 0 12px;
+  max-width: none;
+  color: #14314d;
+  font-size: 38px;
+  line-height: 1.1;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.student-login-info__copy p {
+  margin: 0;
+  max-width: 420px;
+  color: #0d1c35;
+  font-size: 15px;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.student-login-mascot {
+  right: 42px;
+  top: 78px;
+  bottom: auto;
+  width: min(270px, 42%);
+}
+
+.student-login-feature-list {
+  display: grid;
+  gap: 26px;
+  margin-top: 42px;
+  padding-top: 36px;
+  border-top: 1px solid #d9e4f1;
+}
+
+.student-login-feature {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.student-login-feature-icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #dceafe;
+  color: #4d7fc3;
+}
+
+.student-login-feature-icon::before {
+  content: "";
+  width: 24px;
+  height: 28px;
+  border: 3px solid currentColor;
+  border-radius: 4px;
+}
+
+.student-login-feature-icon--teams::before {
+  width: 30px;
+  height: 18px;
+  border-radius: 999px 999px 6px 6px;
+}
+
+.student-login-feature-icon--progress::before {
+  width: 28px;
+  height: 24px;
+  border-top: 0;
+  border-right: 0;
+  transform: skew(-8deg);
+}
+
+.student-login-feature strong {
+  display: block;
+  color: #10233f;
+  font-size: 16px;
+}
+
+.student-login-feature p {
+  margin: 5px 0 0;
+  color: #263b5b;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.student-login-designed {
+  margin: 34px -56px 0;
+  padding: 22px 56px;
+  color: #5d86c0;
+  background: #e3efff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+@media (max-width: 980px) {
+  .student-home-content {
+    width: 100%;
+  }
+
+  .student-home-class-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-login-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .student-login-logo {
+    margin-left: 0;
+  }
+
+  .student-login-info__copy {
+    width: 100%;
+  }
+
+  .student-login-mascot {
+    position: static;
+    justify-self: end;
+    margin-top: -90px;
+  }
+}
+
+@media (max-width: 720px) {
+  .student-home-topbar {
+    padding: 14px 18px;
+  }
+
+  .student-home-content {
+    padding: 14px 18px 42px;
+  }
+
+  .student-home-content h1 {
+    margin-bottom: 28px;
+    font-size: 23px;
+  }
+
+  .student-home-class-card {
+    grid-template-columns: 34px minmax(0, 1fr) 22px;
+  }
+
+  .student-home-class-schedule {
+    grid-column: 2;
+  }
+
+  .student-home-card-action {
+    grid-column: 3;
+    grid-row: 1 / 3;
+  }
+
+  .student-profile-dropdown {
+    position: fixed;
+    top: 70px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+
+  .student-login-page {
+    padding: 22px;
+  }
+
+  .student-login-stage {
+    min-height: 0;
+    gap: 24px;
+  }
+
+  .student-login-info {
+    padding: 32px 24px 0;
+  }
+
+  .student-login-mascot {
+    width: min(230px, 80%);
+    margin-top: 18px;
+  }
+
+  .student-login-feature-list {
+    margin-top: 24px;
+    padding-top: 24px;
+  }
+
+  .student-login-designed {
+    margin: 24px -24px 0;
+    padding: 18px 24px;
+  }
+}
