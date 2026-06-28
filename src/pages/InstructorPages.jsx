@@ -8,13 +8,25 @@ const instructorClass = {
   classCode: '9446',
 }
 
+function generateClassCode() {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  const part = () => Array.from({ length: 4 }, () => characters[Math.floor(Math.random() * characters.length)]).join('')
+  return `${part()}-${part()}`
+}
+
+function copyClassCode(code) {
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(code)
+  }
+}
+
 const dashboardStats = [
-  { label: 'Total students', value: '38', detail: '36 enrolled, 2 invited' },
-  { label: 'Published activities', value: '5', detail: '2 close this week' },
-  { label: 'Pending submissions', value: '18', detail: 'Final records to check' },
-  { label: 'Repositories created', value: '9', detail: '11 expected teams' },
-  { label: 'Projects ready for review', value: '4', detail: 'Across prelim requirements' },
-  { label: 'Similarity review alerts', value: '3', detail: 'Instructor-only signals' },
+  { label: 'Total students', value: '38' },
+  { label: 'Published activities', value: '5' },
+  { label: 'Pending submissions', value: '18' },
+  { label: 'Repositories created', value: '9' },
+  { label: 'Projects ready for review', value: '4' },
+  { label: 'Similarity review alerts', value: '3' },
 ]
 
 const instructorHomeClasses = [
@@ -76,30 +88,23 @@ const streamItems = [
     id: 'activity-1',
     type: 'assignment',
     title: 'Published Prelim Programming Exercise 1 LAB',
-    detail: 'Due Aug 27, 2026, 10:30 AM - attempts allowed until due date',
+    detail: 'Due Aug 27, 2026, 10:30 AM',
     date: 'Aug 25, 2026',
   },
   {
     id: 'activity-2',
     type: 'assignment',
     title: 'Updated Loop Patterns and Input Validation',
-    detail: 'Visible test cases refreshed; hidden checking remains instructor-only',
+    detail: 'Visible test cases refreshed',
     date: 'Aug 26, 2026',
   },
   {
     id: 'project-1',
     type: 'announcement',
     title: 'Project update: Prelim Group Project 1 Specifications',
-    detail: '9 of 11 teams have created repositories; 4 are ready for review',
+    detail: '4 teams are ready for review',
     date: 'Aug 26, 2026',
   },
-]
-
-const repositorySummary = [
-  { label: 'Repositories created', value: '9 / 11' },
-  { label: 'Ready for review', value: '4 teams' },
-  { label: 'Uneven contribution', value: '2 teams' },
-  { label: 'Missing repository', value: '2 teams' },
 ]
 
 const activities = [
@@ -108,35 +113,35 @@ const activities = [
     due: 'Aug 27, 2026, 10:30 AM',
     status: 'Published',
     submissions: '31 / 38',
-    grading: 'Feedback releasing',
+    grading: 'Graded',
   },
   {
     title: 'Prelim Programming Exercise 2 LAB',
     due: 'Aug 30, 2026, 11:59 PM',
     status: 'Published',
     submissions: '24 / 38',
-    grading: 'Needs grading',
+    grading: 'For Review',
   },
   {
     title: 'Loop Patterns and Input Validation',
     due: 'Sep 3, 2026, 5:00 PM',
     status: 'Published',
     submissions: '12 / 38',
-    grading: 'Monitoring',
+    grading: 'For Review',
   },
   {
     title: 'Student Grade Analyzer',
     due: 'Sep 10, 2026, 10:30 AM',
     status: 'Draft',
     submissions: 'Not open',
-    grading: 'Setup review',
+    grading: 'For Review',
   },
   {
     title: 'CSV Enrollment Parser',
     due: 'Sep 17, 2026, 5:00 PM',
     status: 'Draft',
     submissions: 'Not open',
-    grading: 'Setup review',
+    grading: 'For Review',
   },
 ]
 
@@ -153,31 +158,31 @@ const submissionRows = [
     status: 'Submitted',
     submittedAt: 'Aug 27, 2026, 9:42 AM',
     tests: '5/5 visible passed',
-    similarity: 'Checked',
-    grade: 'Ready to release',
+    similarity: 'Graded',
+    grade: 'Graded',
   },
   {
     student: 'Alyssa Mendoza',
     status: 'Submitted',
     submittedAt: 'Aug 27, 2026, 10:08 AM',
     tests: '4/5 visible passed',
-    similarity: 'Needs review',
-    grade: 'Draft grade',
+    similarity: 'For Review',
+    grade: 'For Review',
   },
   {
     student: 'Marco Rivera',
     status: 'Late',
     submittedAt: 'Aug 27, 2026, 10:46 AM',
     tests: '3/5 visible passed',
-    similarity: 'Under review',
-    grade: 'Needs grading',
+    similarity: 'For Review',
+    grade: 'For Review',
   },
   {
     student: 'Daniel Reyes',
     status: 'Missing',
     submittedAt: 'No final submission',
     tests: 'No submitted code',
-    similarity: 'Not checked',
+    similarity: 'For Review',
     grade: 'Missing',
   },
   {
@@ -185,8 +190,8 @@ const submissionRows = [
     status: 'Submitted',
     submittedAt: 'Aug 27, 2026, 9:58 AM',
     tests: 'Failed tests',
-    similarity: 'Checked',
-    grade: 'Needs grading',
+    similarity: 'For Review',
+    grade: 'For Review',
   },
 ]
 
@@ -194,34 +199,26 @@ const queueRows = [
   {
     student: 'Alyssa Mendoza',
     activity: 'Prelim Programming Exercise 1 LAB',
-    status: 'Needs review',
+    status: 'For Review',
     submittedAt: 'Aug 27, 2026, 10:08 AM',
-    tests: '4/5 visible, hidden pending',
-    grade: 'Draft',
   },
   {
     student: 'Marco Rivera',
     activity: 'Prelim Programming Exercise 1 LAB',
     status: 'Late',
     submittedAt: 'Aug 27, 2026, 10:46 AM',
-    tests: '3/5 visible, 1 hidden failed',
-    grade: 'Needs grading',
   },
   {
     student: 'Mica Dela Cruz',
     activity: 'Prelim Programming Exercise 1 LAB',
-    status: 'Failed tests',
-    submittedAt: 'Aug 27, 2026, 9:58 AM',
-    tests: '2/5 visible, hidden pending',
-    grade: 'Needs grading',
+    status: 'Missing',
+    submittedAt: 'No final submission',
   },
   {
     student: 'Julius Teodoro',
     activity: 'Prelim Programming Exercise 1 LAB',
-    status: 'Graded',
+    status: 'Graded 96/100',
     submittedAt: 'Aug 27, 2026, 9:42 AM',
-    tests: '5/5 visible, 2/2 hidden',
-    grade: '96/100',
   },
 ]
 
@@ -231,6 +228,7 @@ const reviewTests = [
   { name: 'Handles blank-line spacing', visibility: 'Visible', result: 'Failed', points: '0 / 10' },
   { name: 'Matches hidden formatting edge case', visibility: 'Hidden', result: 'Failed', points: '0 / 15' },
   { name: 'Compiles without errors', visibility: 'Hidden', result: 'Passed', points: '20 / 20' },
+  { name: 'Uses descriptive variable names', visibility: 'Optional Test Case', result: 'Passed', points: '5 / 5' },
 ]
 
 const submittedCode = `package exercises.prelim;
@@ -250,7 +248,7 @@ const groupProjects = [
     due: 'Aug 27, 2026, 10:30 AM',
     status: 'Published',
     repositories: '9 / 11',
-    ready: '4 teams',
+    ready: '5 teams created / 8 expected teams',
     atRisk: '2 teams',
   },
   {
@@ -258,7 +256,7 @@ const groupProjects = [
     due: 'Sep 24, 2026, 10:30 AM',
     status: 'Published',
     repositories: '0 / 11',
-    ready: 'Not open',
+    ready: '0 teams created / 8 expected teams',
     atRisk: 'Not started',
   },
   {
@@ -266,7 +264,7 @@ const groupProjects = [
     due: 'Oct 20, 2026, 10:30 AM',
     status: 'Draft',
     repositories: 'Not open',
-    ready: 'Setup review',
+    ready: '0 teams created / 8 expected teams',
     atRisk: 'Not open',
   },
   {
@@ -274,7 +272,7 @@ const groupProjects = [
     due: 'Dec 5, 2026, 10:30 AM',
     status: 'Draft',
     repositories: 'Not open',
-    ready: 'Setup review',
+    ready: '0 teams created / 8 expected teams',
     atRisk: 'Not open',
   },
 ]
@@ -287,7 +285,7 @@ const projectTeams = [
     lastCommit: 'Aug 26, 2026, 8:14 PM',
     contribution: 'Balanced',
     status: 'Ready for review',
-    similarity: 'Checked',
+    similarity: 'Graded',
   },
   {
     team: 'Team 02',
@@ -296,7 +294,7 @@ const projectTeams = [
     lastCommit: 'Aug 26, 2026, 5:30 PM',
     contribution: 'Uneven',
     status: 'In progress',
-    similarity: 'Needs review',
+    similarity: 'For Review',
   },
   {
     team: 'Team 03',
@@ -305,7 +303,7 @@ const projectTeams = [
     lastCommit: 'Aug 27, 2026, 9:20 AM',
     contribution: 'Balanced',
     status: 'Not yet marked ready',
-    similarity: 'Comparable structure detected',
+    similarity: 'For Review',
   },
   {
     team: 'Team 04',
@@ -314,7 +312,7 @@ const projectTeams = [
     lastCommit: 'No activity',
     contribution: 'Missing',
     status: 'Missing repository',
-    similarity: 'Not checked',
+    similarity: 'For Review',
   },
 ]
 
@@ -426,12 +424,36 @@ function InstructorProfileMenu() {
 }
 
 function InstructorUserArea({ count = 5 }) {
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const announcements = [
+    ['System update', 'Compiler queue simulation refreshed for IT 112.'],
+    ['Review reminder', '18 submissions are waiting in Review Queues.'],
+    ['Repository archive', '4 project repositories are ready for instructor review.'],
+  ]
+
   return (
-    <div className="student-user-area">
-      <button type="button" className="student-bell" aria-label="Notifications">
+    <div className="student-user-area instructor-user-area">
+      <button
+        type="button"
+        className={notificationsOpen ? 'student-bell is-active' : 'student-bell'}
+        aria-label="Notifications"
+        aria-expanded={notificationsOpen}
+        onClick={() => setNotificationsOpen((current) => !current)}
+      >
         <span className="student-bell__shape" aria-hidden="true" />
         <span className="student-bell__count">{count}</span>
       </button>
+      {notificationsOpen && (
+        <section className="instructor-notification-dropdown" aria-label="Instructor notifications">
+          <h2>Notifications</h2>
+          {announcements.map(([title, detail]) => (
+            <article key={title}>
+              <strong>{title}</strong>
+              <span>{detail}</span>
+            </article>
+          ))}
+        </section>
+      )}
       <InstructorProfileMenu />
     </div>
   )
@@ -501,8 +523,7 @@ function InstructorDashboard() {
 
         <section className="student-home-classes">
           <div className="student-home-section-heading">
-            <h2>Classes You Handle</h2>
-            <NavLink to="/instructor/classes">Open IT 112</NavLink>
+            <h2>Your Classes</h2>
           </div>
 
           <div className="student-home-class-grid">
@@ -536,7 +557,6 @@ function InstructorStreamPage() {
       <div className="instructor-stream-shell">
         <section className="instructor-dashboard-section">
           <div className="student-home-section-heading">
-            <h2>Instructor Dashboard</h2>
             <span>IT 112 - BSIT 2A</span>
           </div>
 
@@ -545,7 +565,6 @@ function InstructorStreamPage() {
               <article className="instructor-stat-card" key={stat.label}>
                 <span>{stat.label}</span>
                 <strong>{stat.value}</strong>
-                <p>{stat.detail}</p>
               </article>
             ))}
           </div>
@@ -595,17 +614,6 @@ function InstructorStreamPage() {
             ))}
         </section>
 
-        <section className="instructor-repository-summary">
-          <h2>Student Repository Activity Summary</h2>
-          <div>
-            {repositorySummary.map((item) => (
-              <article key={item.label}>
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-              </article>
-            ))}
-          </div>
-        </section>
         </div>
       </div>
     </InstructorClassPage>
@@ -630,7 +638,7 @@ function AssignmentSubTabs({ active }) {
 function InstructorControls({ primaryLabel }) {
   return (
     <div className="instructor-controls-row">
-      <NavLink to="/instructor/activity/new" className="student-primary-action">{primaryLabel}</NavLink>
+      <NavLink to="/instructor/activity/new" className="student-primary-action instructor-create-action">{primaryLabel}</NavLink>
       <NavLink to="/instructor/activity/act-loops-01/submissions" className="student-outline-action">
         View submissions
       </NavLink>
@@ -905,16 +913,13 @@ function SubmissionQueuePage() {
             <NavLink to="/instructor/activity/act-loops-01/monitor" className="student-outline-action">
               Monitor activity
             </NavLink>
-            <NavLink to="/instructor/submission-review" className="student-primary-action">
-              Open selected review
-            </NavLink>
           </div>
         </div>
 
         <section className="instructor-page-heading">
           <p>Submission Queue</p>
           <h2>Final submitted activity records</h2>
-          <span>Submitted, missing, late, failed tests, needs review, and graded records.</span>
+          <span>For Review, Graded, Late, and Missing records.</span>
         </section>
 
         <div className="instructor-data-table" role="table" aria-label="Submission queue">
@@ -923,8 +928,6 @@ function SubmissionQueuePage() {
             <span>Activity</span>
             <span>Status</span>
             <span>Submitted at</span>
-            <span>Tests</span>
-            <span>Grade</span>
             <span>Action</span>
           </div>
           {queueRows.map((row) => (
@@ -933,8 +936,6 @@ function SubmissionQueuePage() {
               <span>{row.activity}</span>
               <em>{row.status}</em>
               <span>{row.submittedAt}</span>
-              <span>{row.tests}</span>
-              <span>{row.grade}</span>
               <div>
                 <NavLink to="/instructor/submission-review">Review</NavLink>
               </div>
@@ -970,12 +971,12 @@ function ReleaseFeedbackModal({ grade, feedback, onCancel, onRelease }) {
 function SubmissionReviewPage() {
   const [feedback, setFeedback] = useState('Good structure overall. Fix the blank-line formatting so the boxed output matches the required sample exactly.')
   const [grade, setGrade] = useState('82')
-  const [status, setStatus] = useState('Feedback draft')
   const [testRunState, setTestRunState] = useState('idle')
+  const [testPoints, setTestPoints] = useState(() => Object.fromEntries(reviewTests.map((test) => [test.name, test.points])))
   const [modalOpen, setModalOpen] = useState(false)
   const testsHaveRun = testRunState !== 'idle'
-  const visibleTests = reviewTests.filter((test) => test.visibility === 'Visible')
-  const failedTests = visibleTests.filter((test) => test.result === 'Failed')
+  const passedTests = reviewTests.filter((test) => test.result === 'Passed')
+  const failedTests = reviewTests.filter((test) => test.result === 'Failed')
 
   return (
     <InstructorClassPage activeTab="assignments">
@@ -984,7 +985,6 @@ function SubmissionReviewPage() {
           <NavLink to="/instructor/activity/act-loops-01/submissions" className="student-outline-action">
             Back to queue
           </NavLink>
-          <em>{status}</em>
         </div>
 
         <section className="instructor-page-heading">
@@ -1006,19 +1006,15 @@ function SubmissionReviewPage() {
             <section className="instructor-output-card">
               <div className="instructor-section-title">
                 <h3>Compiler output</h3>
-                <button type="button" onClick={() => setTestRunState('failed')}>Run Tests</button>
               </div>
               <pre>
                 {testsHaveRun
                   ? 'Mock compile succeeded.\nVisible tests: 2/3 passed.\nHidden tests: held for instructor-only review.\nFailed testcase: Handles blank-line spacing.'
                   : 'Tests have not been run in this review session.\nClick Run Tests to execute the hardcoded prototype check.'}
               </pre>
-            </section>
-
-            <section className="instructor-similarity-card">
-              <span>Similarity signal</span>
-              <strong>Needs instructor review</strong>
-              <p>Comparable structure detected in standard setup code. No student-facing score is shown.</p>
+              <div className="instructor-output-actions">
+                <button type="button" onClick={() => setTestRunState('failed')}>Run Tests</button>
+              </div>
             </section>
           </aside>
         </div>
@@ -1026,30 +1022,39 @@ function SubmissionReviewPage() {
         <section className="instructor-testcase-panel">
           <div className="instructor-section-title">
             <h3>Test case results</h3>
-            <span>{testsHaveRun ? '2 / 3 visible tests passed' : 'Waiting for Run Tests'}</span>
+            <span>{testsHaveRun ? `${passedTests.length} / ${reviewTests.length} tests passed` : 'Waiting for Run Tests'}</span>
           </div>
           {testsHaveRun ? (
             <>
               <div className="instructor-test-summary is-failed">
                 <strong>Failed</strong>
-                <span>2 passed, 1 failed. Hidden test logic remains instructor-only.</span>
+                <span>{passedTests.length} passed, {failedTests.length} failed. Hidden test logic remains instructor-only.</span>
               </div>
               <div className="instructor-data-table">
                 <div className="instructor-table-row instructor-table-row--head instructor-test-result-row">
-                  <span>Visible test case</span>
+                  <span>Test Case</span>
                   <span>Visibility</span>
                   <span>Result</span>
                   <span>Points</span>
                 </div>
-                {visibleTests.map((test) => (
+                {reviewTests.map((test) => (
                   <div className="instructor-table-row instructor-test-result-row" key={test.name}>
                     <strong>{test.name}</strong>
                     <span>{test.visibility}</span>
-                    <em>{test.result}</em>
-                    <span>{test.points}</span>
+                    <em className={test.result === 'Passed' ? 'is-passed' : 'is-failed'}>{test.result}</em>
+                    <input
+                      aria-label={`${test.name} points`}
+                      value={testPoints[test.name]}
+                      onChange={(event) => setTestPoints((current) => ({ ...current, [test.name]: event.target.value }))}
+                    />
                   </div>
                 ))}
               </div>
+              <section className="instructor-similarity-card instructor-similarity-after-tests">
+                <span>Similarity indicators</span>
+                <strong>72% similarity to other submissions</strong>
+                <p>Closest comparison: Marco Rivera submission. Comparable structure appears in standard setup code and output formatting.</p>
+              </section>
               {failedTests.length > 0 && (
                 <section className="instructor-failed-details">
                   <h3>Failed testcase details</h3>
@@ -1082,9 +1087,6 @@ function SubmissionReviewPage() {
             <input value={grade} onChange={(event) => setGrade(event.target.value)} />
           </label>
           <div className="instructor-form-actions">
-            <button type="button" className="student-outline-action" onClick={() => setStatus('Feedback saved')}>
-              Save feedback
-            </button>
             <button type="button" className="student-primary-action" onClick={() => setModalOpen(true)}>
               Release feedback
             </button>
@@ -1098,7 +1100,6 @@ function SubmissionReviewPage() {
             onCancel={() => setModalOpen(false)}
             onRelease={() => {
               setModalOpen(false)
-              setStatus('Feedback released')
             }}
           />
         )}
@@ -1128,7 +1129,7 @@ function ReviewQueuesPage() {
     {
       title: 'Student Grade Analyzer',
       due: 'Sep 10, 2026, 10:30 AM',
-      status: 'Needs review',
+      status: 'For Review',
       reviewState: '6 failed visible test summaries',
       actionPath: '/instructor/submission-review',
     },
@@ -1151,7 +1152,7 @@ function ReviewQueuesPage() {
     {
       title: 'prelim-group-project-1-team-02',
       due: 'Aug 27, 2026, 10:30 AM',
-      status: 'Needs review',
+      status: 'For Review',
       reviewState: 'Contribution balance needs check',
       actionPath: '/instructor/projects/prelim-group-project-1/repository',
     },
@@ -1170,7 +1171,6 @@ function ReviewQueuesPage() {
         <section className="student-home-classes">
           <div className="student-home-section-heading">
             <h2>Choose a Class</h2>
-            <span>Queues are organized by handled class</span>
           </div>
 
           <div className="instructor-review-class-grid">
@@ -1212,7 +1212,7 @@ function ReviewQueuesPage() {
                             className={queueFilter === 'activities' ? 'is-active' : undefined}
                             onClick={() => setQueueFilter('activities')}
                           >
-                            <span aria-hidden="true" />
+                            <span className="instructor-filter-icon instructor-filter-icon--activities" aria-hidden="true" />
                             Activities
                           </button>
                           <button
@@ -1220,7 +1220,7 @@ function ReviewQueuesPage() {
                             className={queueFilter === 'projects' ? 'is-active' : undefined}
                             onClick={() => setQueueFilter('projects')}
                           >
-                            <span aria-hidden="true" />
+                            <span className="instructor-filter-icon instructor-filter-icon--projects" aria-hidden="true" />
                             Group Projects
                           </button>
                         </div>
@@ -1265,9 +1265,7 @@ function InstructorProjectsPage() {
         <div className="instructor-assignment-toolbar">
           <AssignmentSubTabs active="projects" />
           <div className="instructor-controls-row">
-            <NavLink to="/instructor/projects/new" className="student-primary-action">Create Project Requirement</NavLink>
-            <button type="button" className="student-outline-action">View teams</button>
-            <button type="button" className="student-outline-action">Edit settings</button>
+            <NavLink to="/instructor/projects/new" className="student-primary-action instructor-create-action">Create Project Requirement</NavLink>
           </div>
         </div>
 
@@ -1283,7 +1281,7 @@ function InstructorProjectsPage() {
             <span>Due Date</span>
             <span>Status</span>
             <span>Repositories</span>
-            <span>Teams Ready</span>
+            <span>Teams</span>
             <span>At-risk Teams</span>
             <span>Actions</span>
           </div>
@@ -1296,8 +1294,8 @@ function InstructorProjectsPage() {
               <span>{project.ready}</span>
               <span>{project.atRisk}</span>
               <div>
-                <NavLink to="/instructor/projects/prelim-group-project-1">Monitor</NavLink>
-                <NavLink to="/instructor/projects/new">Settings</NavLink>
+                <NavLink to="/instructor/projects/prelim-group-project-1">View</NavLink>
+                <NavLink to="/instructor/projects/new">Configure</NavLink>
               </div>
             </div>
           ))}
@@ -1532,7 +1530,7 @@ function SimilarityReviewPanel() {
         <span>Instructor-only detail</span>
       </div>
       <div className="instructor-similarity-review">
-        <strong>Needs review</strong>
+        <strong>For Review</strong>
         <p>Comparable structure detected with Team 02 in menu controller and validation helper organization.</p>
         <div>
           <span>Files involved: src/MenuController.java, src/InputValidator.java</span>
@@ -1751,6 +1749,7 @@ function InviteStudentsModal({ classCode, onClose }) {
 function InstructorPeoplePage() {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [classCode, setClassCode] = useState(instructorClass.classCode)
+  const [copyStatus, setCopyStatus] = useState('')
 
   return (
     <InstructorClassPage activeTab="people">
@@ -1764,14 +1763,33 @@ function InstructorPeoplePage() {
             <button type="button" className="student-primary-action" onClick={() => setInviteOpen(true)}>
               Invite Students
             </button>
-            <button type="button" className="student-outline-action" onClick={() => setClassCode('IT112-8A')}>
+            <button
+              type="button"
+              className="student-outline-action"
+              onClick={() => {
+                setClassCode(generateClassCode())
+                setCopyStatus('')
+              }}
+            >
               Generate Class Code
             </button>
           </div>
         </section>
         <section className="instructor-generated-code">
           <span>Active class code</span>
-          <strong>{classCode}</strong>
+          <div className="instructor-code-copy-row">
+            <strong>{classCode}</strong>
+            <button
+              type="button"
+              onClick={() => {
+                copyClassCode(classCode)
+                setCopyStatus('Copied')
+              }}
+            >
+              Copy
+            </button>
+          </div>
+          {copyStatus && <em>{copyStatus}</em>}
         </section>
 
         <div className="instructor-data-table instructor-people-table" role="table" aria-label="Class roster">

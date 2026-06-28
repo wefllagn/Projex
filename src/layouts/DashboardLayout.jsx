@@ -15,6 +15,18 @@ const instructorClasses = [
   { label: 'IT 123', initial: 'I' },
 ]
 
+function generateClassCode() {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  const part = () => Array.from({ length: 4 }, () => characters[Math.floor(Math.random() * characters.length)]).join('')
+  return `${part()}-${part()}`
+}
+
+function copyClassCode(code) {
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(code)
+  }
+}
+
 function StudentSidebarLink({ to, children, end = false, count, icon }) {
   return (
     <NavLink to={to} end={end} className="student-sidebar__link">
@@ -27,6 +39,7 @@ function StudentSidebarLink({ to, children, end = false, count, icon }) {
 
 function CreateClassModal({ onClose }) {
   const [code, setCode] = useState('9446')
+  const [copyStatus, setCopyStatus] = useState('')
 
   return (
     <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="create-class-title">
@@ -54,8 +67,28 @@ function CreateClassModal({ onClose }) {
         </div>
         <section className="instructor-modal-code-panel">
           <span>Class code</span>
-          <strong>{code}</strong>
-          <button type="button" onClick={() => setCode('IT112-8A')}>Generate class code</button>
+          <div className="instructor-code-copy-row">
+            <strong>{code}</strong>
+            <button
+              type="button"
+              onClick={() => {
+                copyClassCode(code)
+                setCopyStatus('Copied')
+              }}
+            >
+              Copy
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setCode(generateClassCode())
+              setCopyStatus('')
+            }}
+          >
+            Generate class code
+          </button>
+          {copyStatus && <em>{copyStatus}</em>}
         </section>
         <div className="student-submit-modal-actions">
           <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
@@ -68,6 +101,7 @@ function CreateClassModal({ onClose }) {
 
 function InstructorDashboardLayout() {
   const [createClassOpen, setCreateClassOpen] = useState(false)
+  const location = useLocation()
 
   return (
     <div className="student-app-shell">
@@ -91,7 +125,7 @@ function InstructorDashboardLayout() {
                 <NavLink
                   key={item.label}
                   to="/instructor/classes"
-                  className={item.active ? 'student-class-link is-active' : 'student-class-link'}
+                  className={item.active && location.pathname.startsWith('/instructor/classes') ? 'student-class-link is-active' : 'student-class-link'}
                 >
                   <span className={`student-class-dot student-class-dot--${item.initial.toLowerCase()}`}>
                     {item.initial}

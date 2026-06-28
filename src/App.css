@@ -1215,6 +1215,55 @@ textarea:focus-visible {
   font-weight: 800;
 }
 
+.instructor-user-area {
+  position: relative;
+}
+
+.student-bell.is-active .student-bell__shape {
+  border-color: #245cff;
+}
+
+.instructor-notification-dropdown {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: 56px;
+  z-index: 60;
+  width: min(360px, calc(100vw - 32px));
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #dfe7f1;
+  border-radius: 10px;
+  color: #14233d;
+  background: #ffffff;
+  box-shadow: 0 22px 60px rgba(22, 34, 57, 0.18);
+}
+
+.instructor-notification-dropdown h2 {
+  margin: 0 0 2px;
+  color: #10233f;
+  font-size: 16px;
+}
+
+.instructor-notification-dropdown article {
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.instructor-notification-dropdown strong {
+  color: #1b2a45;
+  font-size: 14px;
+}
+
+.instructor-notification-dropdown span {
+  color: #53647d;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .student-user-avatar {
   width: 39px;
   height: 39px;
@@ -4425,8 +4474,14 @@ textarea:focus-visible {
 }
 
 .instructor-home-content {
+  width: min(1320px, 100%);
   display: grid;
-  gap: 32px;
+  gap: 28px;
+  padding-inline: clamp(24px, 4vw, 56px);
+}
+
+.instructor-home-content h1 {
+  margin-bottom: 26px;
 }
 
 .instructor-dashboard-section {
@@ -4530,14 +4585,15 @@ textarea:focus-visible {
 }
 
 .instructor-class-content {
+  padding-inline: clamp(28px, 4vw, 56px);
   background:
     linear-gradient(
       90deg,
       transparent 0,
-      transparent 18%,
-      rgba(247, 249, 252, 0.9) 18%,
-      rgba(247, 249, 252, 0.9) 82%,
-      transparent 82%
+      transparent 8%,
+      rgba(247, 249, 252, 0.9) 8%,
+      rgba(247, 249, 252, 0.9) 92%,
+      transparent 92%
     ),
     #ffffff;
 }
@@ -4559,26 +4615,38 @@ textarea:focus-visible {
 }
 
 .instructor-stream-card {
-  width: min(860px, 100%);
+  width: 100%;
   display: grid;
   gap: 18px;
   padding: 20px 0 24px;
 }
 
 .instructor-stream-shell {
-  width: min(1060px, 100%);
+  width: min(1440px, 100%);
   display: grid;
-  gap: 22px;
+  gap: 18px;
   margin: 0 auto;
 }
 
+.instructor-stream-shell .instructor-dashboard-section .student-home-section-heading {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.instructor-stream-shell .instructor-stat-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.instructor-stream-shell .instructor-stat-card {
+  min-height: 104px;
+}
+
 .instructor-composer-card {
-  width: min(720px, calc(100% - 44px));
+  width: 100%;
   display: grid;
   grid-template-columns: 39px minmax(0, 1fr);
   gap: 12px;
   align-items: center;
-  margin: 0 auto;
   padding: 14px 16px;
 }
 
@@ -4600,14 +4668,14 @@ textarea:focus-visible {
 
 .instructor-stream-section h2,
 .instructor-repository-summary h2 {
-  width: min(720px, calc(100% - 44px));
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   color: #1c2d4b;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .instructor-stream-card .student-stream-post {
-  width: min(720px, calc(100% - 44px));
+  width: 100%;
 }
 
 .instructor-stream-card .student-stream-post div:nth-child(2) {
@@ -4616,10 +4684,9 @@ textarea:focus-visible {
 }
 
 .instructor-repository-summary {
-  width: min(720px, calc(100% - 44px));
+  width: 100%;
   display: grid;
   gap: 14px;
-  margin: 0 auto;
   padding: 16px;
 }
 
@@ -4649,7 +4716,7 @@ textarea:focus-visible {
 .instructor-review-class-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: 16px;
 }
 
 .instructor-review-class-block {
@@ -4673,7 +4740,7 @@ textarea:focus-visible {
 .instructor-inline-review-table {
   display: grid;
   gap: 12px;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid #dfe7f1;
   border-radius: 8px;
   background: #ffffff;
@@ -4726,15 +4793,48 @@ textarea:focus-visible {
 }
 
 .instructor-inline-review-heading .student-segmented-tabs button span {
-  width: 15px;
-  height: 15px;
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 0;
+}
+
+.instructor-filter-icon--activities::before {
+  content: "";
+  position: absolute;
+  inset: 1px 3px;
   border: 2px solid currentColor;
-  border-radius: 4px;
+  border-radius: 3px;
+  box-shadow: 0 5px 0 -3px currentColor, 0 10px 0 -3px currentColor;
+}
+
+.instructor-filter-icon--projects::before {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 4px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+}
+
+.instructor-filter-icon--projects::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  width: 7px;
+  height: 5px;
+  border: 2px solid currentColor;
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
 }
 
 .instructor-review-queue-row {
-  min-width: 860px;
-  grid-template-columns: minmax(260px, 1.35fr) minmax(170px, 0.8fr) minmax(120px, 0.6fr) minmax(190px, 0.9fr) minmax(110px, 0.5fr);
+  min-width: 980px;
+  grid-template-columns: minmax(320px, 1.45fr) minmax(180px, 0.75fr) minmax(140px, 0.55fr) minmax(260px, 1fr) minmax(120px, 0.45fr);
 }
 
 .instructor-queue-panel {
@@ -4777,7 +4877,7 @@ textarea:focus-visible {
 .instructor-assignment-panel,
 .instructor-people-panel,
 .instructor-info-panel {
-  width: min(1060px, 100%);
+  width: min(1360px, 100%);
 }
 
 .instructor-assignment-toolbar {
@@ -4807,34 +4907,37 @@ textarea:focus-visible {
 .instructor-data-table {
   overflow-x: auto;
   border: 1px solid #e2e8f1;
-  border-radius: 8px 8px 0 0;
+  border-radius: 8px;
+  background: #ffffff;
 }
 
 .instructor-table-row {
   min-width: 980px;
   display: grid;
   grid-template-columns: minmax(220px, 1.35fr) minmax(150px, 0.85fr) minmax(110px, 0.65fr) minmax(120px, 0.7fr) minmax(130px, 0.75fr) minmax(150px, 0.8fr);
-  gap: 12px;
+  gap: 14px;
   align-items: center;
-  min-height: 56px;
-  padding: 10px 14px;
+  min-height: 62px;
+  padding: 13px 16px;
   border-bottom: 1px solid #e2e8f1;
   color: #273755;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .instructor-table-row--head {
   min-height: 43px;
   color: #65748d;
   background: #fbfcff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
 .instructor-table-row strong {
   color: #1b2a45;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 .instructor-table-row > span {
@@ -4853,15 +4956,32 @@ textarea:focus-visible {
   min-height: 31px;
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
+  padding: 7px 11px;
   border: 1px solid #d8e4f6;
   border-radius: 7px;
   color: #245cff;
   background: #ffffff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 900;
   text-decoration: none;
   cursor: pointer;
+}
+
+.instructor-create-action {
+  gap: 8px;
+}
+
+.instructor-create-action::before {
+  content: "+";
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #005dff;
+  background: #ffffff;
+  font-size: 15px;
+  line-height: 1;
 }
 
 .instructor-form-panel,
@@ -4888,13 +5008,15 @@ textarea:focus-visible {
 .instructor-page-heading h2 {
   margin: 0;
   color: #10233f;
-  font-size: 24px;
+  font-size: 28px;
+  line-height: 1.2;
 }
 
 .instructor-page-heading span {
   color: #53647d;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
+  line-height: 1.5;
 }
 
 .instructor-form-grid,
@@ -4987,7 +5109,8 @@ textarea:focus-visible {
 .instructor-upload-placeholder p {
   margin: 4px 0 0;
   color: #53647d;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .instructor-upload-placeholder button,
@@ -5035,7 +5158,7 @@ textarea:focus-visible {
 }
 
 .instructor-toggle-row span {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -5055,12 +5178,13 @@ textarea:focus-visible {
 .instructor-section-title h3 {
   margin: 0;
   color: #1c2d4b;
-  font-size: 16px;
+  font-size: 17px;
+  line-height: 1.25;
 }
 
 .instructor-section-title span {
   color: #64738b;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 900;
 }
 
@@ -5098,13 +5222,13 @@ textarea:focus-visible {
 }
 
 .instructor-queue-row {
-  min-width: 1120px;
-  grid-template-columns: minmax(150px, 0.8fr) minmax(220px, 1.15fr) minmax(120px, 0.7fr) minmax(180px, 1fr) minmax(160px, 0.9fr) minmax(110px, 0.55fr) minmax(100px, 0.55fr);
+  min-width: 880px;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(300px, 1.35fr) minmax(150px, 0.7fr) minmax(210px, 0.95fr) minmax(110px, 0.5fr);
 }
 
 .instructor-project-row {
-  min-width: 1120px;
-  grid-template-columns: minmax(240px, 1.25fr) minmax(170px, 0.9fr) minmax(110px, 0.55fr) minmax(120px, 0.65fr) minmax(120px, 0.65fr) minmax(120px, 0.65fr) minmax(140px, 0.75fr);
+  min-width: 1240px;
+  grid-template-columns: minmax(260px, 1.2fr) minmax(180px, 0.85fr) minmax(110px, 0.5fr) minmax(130px, 0.6fr) minmax(220px, 1fr) minmax(130px, 0.6fr) minmax(170px, 0.75fr);
 }
 
 .instructor-team-row {
@@ -5113,9 +5237,9 @@ textarea:focus-visible {
 }
 
 .instructor-review-page {
-  width: min(1120px, 100%);
+  width: min(1360px, 100%);
   margin: 0 auto;
-  padding: 22px;
+  padding: 24px;
   border: 1px solid #e1e7f0;
   border-radius: 8px;
   background: #ffffff;
@@ -5129,8 +5253,8 @@ textarea:focus-visible {
 
 .instructor-review-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 1fr);
+  gap: 18px;
 }
 
 .instructor-code-card,
@@ -5144,13 +5268,13 @@ textarea:focus-visible {
 
 .instructor-code-card pre,
 .instructor-output-card pre {
-  min-height: 280px;
+  min-height: 330px;
   margin: 0;
   padding: 16px;
   overflow: auto;
   border-radius: 8px;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.55;
   white-space: pre-wrap;
 }
@@ -5168,6 +5292,27 @@ textarea:focus-visible {
 .instructor-review-side {
   display: grid;
   gap: 16px;
+}
+
+.instructor-output-card {
+  align-content: stretch;
+}
+
+.instructor-output-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.instructor-output-actions button {
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid #d8e4f6;
+  border-radius: 7px;
+  color: #245cff;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
 }
 
 .instructor-similarity-card span {
@@ -5189,9 +5334,39 @@ textarea:focus-visible {
   line-height: 1.45;
 }
 
+.instructor-similarity-after-tests {
+  padding: 16px;
+  border-color: #d8e4f6;
+  background: #f8fbff;
+}
+
 .instructor-test-result-row {
-  min-width: 760px;
-  grid-template-columns: minmax(260px, 1.3fr) minmax(110px, 0.55fr) minmax(110px, 0.55fr) minmax(100px, 0.5fr);
+  min-width: 860px;
+  grid-template-columns: minmax(310px, 1.35fr) minmax(150px, 0.65fr) minmax(130px, 0.55fr) minmax(150px, 0.6fr);
+}
+
+.instructor-test-result-row em.is-passed {
+  border-color: #bce7cf;
+  color: #167146;
+  background: #e8f8ef;
+}
+
+.instructor-test-result-row em.is-failed {
+  border-color: #f0c7c2;
+  color: #a13f36;
+  background: #fff1ee;
+}
+
+.instructor-test-result-row input {
+  width: min(120px, 100%);
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid #d8e4f6;
+  border-radius: 7px;
+  color: #1b2a45;
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .instructor-test-summary {
@@ -5246,7 +5421,8 @@ textarea:focus-visible {
 .instructor-failed-details p {
   margin: 0;
   color: #53647d;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .instructor-failed-details code {
@@ -5274,6 +5450,7 @@ textarea:focus-visible {
 
 .instructor-feedback-panel textarea {
   min-height: 150px;
+  line-height: 1.5;
 }
 
 .instructor-release-modal p + p {
@@ -5344,7 +5521,15 @@ textarea:focus-visible {
   letter-spacing: 0.04em;
 }
 
-.instructor-modal-code-panel button {
+.instructor-code-copy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.instructor-modal-code-panel button,
+.instructor-generated-code button {
   width: fit-content;
   min-height: 34px;
   margin-top: 4px;
@@ -5356,6 +5541,18 @@ textarea:focus-visible {
   font-size: 12px;
   font-weight: 900;
   cursor: pointer;
+}
+
+.instructor-modal-code-panel em,
+.instructor-generated-code em {
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #167146;
+  background: #e8f8ef;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
 }
 
 .instructor-pending-list {
@@ -5406,7 +5603,13 @@ textarea:focus-visible {
 }
 
 .instructor-repository-content {
+  width: min(1440px, 100%);
   padding-bottom: 48px;
+}
+
+.instructor-repository-content .student-repository-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.32fr);
+  gap: 24px;
 }
 
 .instructor-review-actions {
@@ -5417,7 +5620,7 @@ textarea:focus-visible {
 .instructor-review-actions p {
   margin: 0;
   color: #53647d;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.45;
 }
 
@@ -5425,7 +5628,7 @@ textarea:focus-visible {
   display: grid;
   grid-column: span 2;
   gap: 14px;
-  padding: 18px;
+  padding: 20px;
   border: 1px solid #dfe7f1;
   border-radius: 8px;
   background: #ffffff;
@@ -5439,10 +5642,10 @@ textarea:focus-visible {
 
 .instructor-contribution-list article {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) repeat(4, minmax(90px, auto));
-  gap: 10px;
+  grid-template-columns: minmax(170px, 1fr) repeat(4, minmax(110px, auto));
+  gap: 12px;
   align-items: center;
-  padding: 12px;
+  padding: 14px;
   border-radius: 8px;
   background: #f8fbff;
 }
@@ -5455,8 +5658,9 @@ textarea:focus-visible {
 .instructor-contribution-list p {
   margin: 0;
   color: #53647d;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
+  line-height: 1.4;
 }
 
 .instructor-contribution-list em {
