@@ -546,9 +546,49 @@ function InstructorDashboard() {
   )
 }
 
+function InstructorStreamComments({ postId, comments, onAddComment }) {
+  const [commentText, setCommentText] = useState('')
+
+  return (
+    <div className="student-stream-comments">
+      {comments.map((comment) => (
+        <p key={`${postId}-${comment}`}>
+          <strong>Engr. Marco Rivera</strong>
+          <span>{comment}</span>
+        </p>
+      ))}
+      <div className="student-stream-comment-form">
+        <input
+          value={commentText}
+          onChange={(event) => setCommentText(event.target.value)}
+          placeholder="Add class comment"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            if (!commentText.trim()) return
+            onAddComment(postId, commentText.trim())
+            setCommentText('')
+          }}
+        >
+          Comment
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function InstructorStreamPage() {
   const [announcement, setAnnouncement] = useState('')
-  const [announcementStatus, setAnnouncementStatus] = useState('')
+  const [postedAnnouncements, setPostedAnnouncements] = useState([])
+  const [commentsByPost, setCommentsByPost] = useState({})
+
+  const addComment = (postId, comment) => {
+    setCommentsByPost((current) => ({
+      ...current,
+      [postId]: [...(current[postId] || []), comment],
+    }))
+  }
 
   return (
     <InstructorClassPage activeTab="stream">
@@ -583,14 +623,46 @@ function InstructorStreamPage() {
             type="button"
             aria-label="Post announcement"
             onClick={() => {
+              if (!announcement.trim()) return
+              setPostedAnnouncements((current) => [
+                {
+                  id: `instructor-announcement-${Date.now()}`,
+                  title: announcement.trim(),
+                  detail: 'Posted to BSIT 2A',
+                  date: 'Just now',
+                },
+                ...current,
+              ])
               setAnnouncement('')
-              setAnnouncementStatus('Announcement posted locally')
             }}
           >
             Enter
           </button>
         </section>
-        {announcementStatus && <p className="instructor-announcement-status">{announcementStatus}</p>}
+
+        {postedAnnouncements.length > 0 && (
+          <section className="instructor-stream-section">
+            <h2>Recent Announcements</h2>
+            {postedAnnouncements.map((item) => (
+              <article className="student-stream-post" key={item.id}>
+                <div className="student-post-icon student-post-icon--announcement" aria-hidden="true" />
+                <div>
+                  <p>
+                    <strong>{instructorClass.instructor}</strong> {item.title}
+                  </p>
+                  <span>{item.detail}</span>
+                  <span>{item.date}</span>
+                  <InstructorStreamComments
+                    postId={item.id}
+                    comments={commentsByPost[item.id] || []}
+                    onAddComment={addComment}
+                  />
+                </div>
+                <button type="button" className="student-more" aria-label="More options" />
+              </article>
+            ))}
+          </section>
+        )}
 
         <section className="instructor-stream-section">
           <h2>Recent Published Activities</h2>
@@ -605,6 +677,11 @@ function InstructorStreamPage() {
                   </p>
                   <span>{item.detail}</span>
                   <span>{item.date}</span>
+                  <InstructorStreamComments
+                    postId={item.id}
+                    comments={commentsByPost[item.id] || []}
+                    onAddComment={addComment}
+                  />
                 </div>
                 <button type="button" className="student-more" aria-label="More options" />
               </article>
@@ -624,6 +701,11 @@ function InstructorStreamPage() {
                   </p>
                   <span>{item.detail}</span>
                   <span>{item.date}</span>
+                  <InstructorStreamComments
+                    postId={item.id}
+                    comments={commentsByPost[item.id] || []}
+                    onAddComment={addComment}
+                  />
                 </div>
                 <button type="button" className="student-more" aria-label="More options" />
               </article>

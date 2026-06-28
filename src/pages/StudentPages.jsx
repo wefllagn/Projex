@@ -3,18 +3,28 @@ import { NavLink, useNavigate } from 'react-router-dom'
 
 const streamPosts = [
   {
-    id: 'stream-assignment',
-    author: 'Mac Miller',
-    text: 'posted a new assignment: Prelim Programming Exercise 1 LAB',
-    date: 'Aug 25, 2022 (Edited Oct 5, 2022)',
+    id: 'stream-announcement',
+    author: 'Mr. Rickon Morty',
+    text: 'Please review the updated Java naming guide before submitting this week.',
+    date: 'Jun 28, 2026',
+    label: 'Announcement',
+    type: 'announcement',
+  },
+  {
+    id: 'stream-activity',
+    author: 'Mr. Rickon Morty',
+    text: 'published Loop Patterns and Input Validation.',
+    date: 'Due Jul 10, 2026, 10:30 AM',
+    label: 'Activity update',
     type: 'assignment',
   },
   {
-    id: 'stream-announcement',
-    author: 'Mac Miller',
-    text: 'Please be informed that all 9:00 AM classes are required to attend the mass today, August 25, 2022 at the 6th-floor lobby. Thank you',
-    date: 'Aug 25, 2022',
-    type: 'announcement',
+    id: 'stream-feedback',
+    author: 'Projex',
+    text: 'released feedback for Prelim Programming Exercise 1 LAB.',
+    date: 'Jun 30, 2026',
+    label: 'Feedback released',
+    type: 'feedback',
   },
 ]
 
@@ -22,27 +32,38 @@ const activities = [
   {
     title: 'Prelim Programming Exercise 6 LAB',
     due: 'Due Sep 10, 2022, 10:30 AM',
+    dueValue: '2022-09-10T10:30:00',
+    status: 'To Do',
   },
   {
     title: 'Prelim Programming Exercise 5 LAB',
     due: 'Due Sep 10, 2022, 10:30 AM',
+    dueValue: '2022-09-10T10:30:00',
+    status: 'To Do',
   },
   {
     title: 'Prelim Programming Exercise 4 LAB',
     due: 'Due Sep 3, 2022',
+    dueValue: '2022-09-03T23:59:00',
+    status: 'Due Soon',
     selected: true,
   },
   {
     title: 'Prelim Programming Exercise 3 LAB',
     due: 'Due Sep 3, 2022, 10:30 AM',
+    dueValue: '2022-09-03T10:30:00',
+    status: 'To Do',
   },
   {
     title: 'Prelim Programming Exercise 2 LAB',
     due: 'Due Aug 27, 2022, 11:59PM',
+    dueValue: '2022-08-27T23:59:00',
+    status: 'Missing',
   },
   {
     title: 'Prelim Programming Exercise 1 LAB',
     due: 'Due Aug 27, 2022, 10:30 AM',
+    dueValue: '2022-08-27T10:30:00',
     expanded: true,
     status: 'Graded',
   },
@@ -52,18 +73,26 @@ const groupProjects = [
   {
     title: 'Final Group Project Proposal',
     due: 'Dec 5, 2026, 10:30 AM',
+    dueValue: '2026-12-05T10:30:00',
+    status: 'Upcoming',
   },
   {
     title: 'Midterm Group Project 1 Specifications',
     due: 'Oct 20, 2026, 10:30 AM',
+    dueValue: '2026-10-20T10:30:00',
+    status: 'Upcoming',
   },
   {
     title: 'Prelim Group Project 2 Specifications',
     due: 'Sep 24, 2026, 10:30 AM',
+    dueValue: '2026-09-24T10:30:00',
+    status: 'Upcoming',
   },
   {
     title: 'Prelim Group Project 1 Specifications',
     due: 'Aug 27, 2026, 10:30 AM',
+    dueValue: '2026-08-27T10:30:00',
+    status: 'Repository Needed',
     expanded: true,
     posted: 'Posted Aug 25, 2026',
   },
@@ -344,6 +373,38 @@ const pendingClassInvitations = [
   },
 ]
 
+const availableProjectRepositories = [
+  {
+    name: 'prelim-group-project-1-team-01',
+    members: 'Julius Teodoro, Rafael Santos, Mica Dela Cruz',
+    slots: 1,
+  },
+  {
+    name: 'prelim-group-project-1-team-03',
+    members: 'Alyssa Mendoza, Marco Rivera, Daniel Reyes',
+    slots: 1,
+  },
+  {
+    name: 'prelim-group-project-1-team-05',
+    members: 'Nina Salvador, Carlo Reyes',
+    slots: 2,
+  },
+]
+
+function sortByOption(items, option) {
+  return [...items].sort((first, second) => {
+    if (option === 'title') {
+      return first.title.localeCompare(second.title)
+    }
+
+    if (option === 'status') {
+      return (first.status || '').localeCompare(second.status || '')
+    }
+
+    return new Date(first.dueValue) - new Date(second.dueValue)
+  })
+}
+
 function StudentNotificationMenu({ count = 5 }) {
   const [open, setOpen] = useState(false)
 
@@ -518,27 +579,106 @@ function HomeDashboardPage() {
   )
 }
 
+function StudentStreamComments({ postId, comments, onAddComment }) {
+  const [commentText, setCommentText] = useState('')
+
+  return (
+    <div className="student-stream-comments">
+      {comments.map((comment) => (
+        <p key={`${postId}-${comment}`}>
+          <strong>Julius Teodoro</strong>
+          <span>{comment}</span>
+        </p>
+      ))}
+      <div className="student-stream-comment-form">
+        <input
+          value={commentText}
+          onChange={(event) => setCommentText(event.target.value)}
+          placeholder="Add class comment"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            if (!commentText.trim()) return
+            onAddComment(postId, commentText.trim())
+            setCommentText('')
+          }}
+        >
+          Comment
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function StreamPage() {
+  const [announcement, setAnnouncement] = useState('')
+  const [postedAnnouncements, setPostedAnnouncements] = useState([])
+  const [commentsByPost, setCommentsByPost] = useState({})
+  const visiblePosts = [...postedAnnouncements, ...streamPosts]
+
   return (
     <StudentClassPage activeTab="stream">
-      <div className="student-stream-card" aria-label="Class stream">
-        {streamPosts.map((post) => (
-          <article className="student-stream-post" key={post.id}>
-            <div className={`student-post-icon student-post-icon--${post.type}`} aria-hidden="true" />
-            <div>
-              <p>
-                <strong>{post.author}</strong> {post.text}
-              </p>
-              <span>{post.date}</span>
-              {post.type === 'announcement' && (
-                <button type="button" className="student-comment-button">
-                  Add comment
-                </button>
-              )}
-            </div>
-            <button type="button" className="student-more" aria-label="More options" />
-          </article>
-        ))}
+      <div className="instructor-stream-shell student-class-stream-shell">
+        <div className="student-stream-card instructor-stream-card" aria-label="Class stream">
+          <section className="instructor-composer-card student-composer-card">
+            <span className="student-user-avatar" aria-hidden="true" />
+            <label>
+              <span>Announcement</span>
+              <textarea
+                value={announcement}
+                onChange={(event) => setAnnouncement(event.target.value)}
+                placeholder="Announce something to BSIT 2A"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                if (!announcement.trim()) return
+                setPostedAnnouncements((current) => [
+                  {
+                    id: `student-announcement-${Date.now()}`,
+                    author: 'Julius Teodoro',
+                    text: announcement.trim(),
+                    date: 'Just now',
+                    label: 'Student announcement',
+                    type: 'announcement',
+                  },
+                  ...current,
+                ])
+                setAnnouncement('')
+              }}
+            >
+              Enter
+            </button>
+          </section>
+
+          <section className="instructor-stream-section">
+            <h2>Class Stream</h2>
+            {visiblePosts.map((post) => (
+              <article className="student-stream-post" key={post.id}>
+                <div className={`student-post-icon student-post-icon--${post.type}`} aria-hidden="true" />
+                <div>
+                  <p>
+                    <strong>{post.author}</strong> {post.text}
+                  </p>
+                  <span>{post.date}</span>
+                  <StudentStreamComments
+                    postId={post.id}
+                    comments={commentsByPost[post.id] || []}
+                    onAddComment={(postKey, comment) => {
+                      setCommentsByPost((current) => ({
+                        ...current,
+                        [postKey]: [...(current[postKey] || []), comment],
+                      }))
+                    }}
+                  />
+                </div>
+                <button type="button" className="student-more" aria-label="More options" />
+              </article>
+            ))}
+          </section>
+        </div>
       </div>
     </StudentClassPage>
   )
@@ -573,16 +713,29 @@ function ActivityAttachment() {
 }
 
 function ActivitiesPage() {
+  const [sortBy, setSortBy] = useState('due')
+  const sortedActivities = sortByOption(activities, sortBy)
+
   return (
     <StudentClassPage activeTab="assignments">
       <div className="student-assignment-panel">
-        <AssignmentSubTabs active="activities" />
+        <div className="student-assignment-toolbar">
+          <AssignmentSubTabs active="activities" />
+          <label className="student-sort-control">
+            Sort by
+            <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+              <option value="due">Due date</option>
+              <option value="status">Status</option>
+              <option value="title">Title</option>
+            </select>
+          </label>
+        </div>
         <div className="student-list-table">
           <div className="student-list-header">
             <span>Title</span>
             <span>Due Date</span>
           </div>
-          {activities.map((activity) => (
+          {sortedActivities.map((activity) => (
             <article
               className={
                 activity.expanded
@@ -631,7 +784,7 @@ function ActivityDetailPage({ initialSubmitted = false, openFeedback = false }) 
 
   return (
     <StudentClassPage activeTab="assignments" wide>
-      <div className="student-detail-layout">
+      <div className="student-detail-layout student-project-detail-layout">
         <main className="student-activity-detail-card">
           <NavLink to="/student/activity" className="student-back-link">
             Back to Activities
@@ -1014,16 +1167,29 @@ function FeedbackModal({ onClose }) {
 }
 
 function GroupProjectsPage() {
+  const [sortBy, setSortBy] = useState('due')
+  const sortedProjects = sortByOption(groupProjects, sortBy)
+
   return (
     <StudentClassPage activeTab="assignments">
       <div className="student-assignment-panel student-assignment-panel--narrow">
-        <AssignmentSubTabs active="projects" />
+        <div className="student-assignment-toolbar">
+          <AssignmentSubTabs active="projects" />
+          <label className="student-sort-control">
+            Sort by
+            <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+              <option value="due">Due date</option>
+              <option value="status">Status</option>
+              <option value="title">Title</option>
+            </select>
+          </label>
+        </div>
         <div className="student-list-table">
           <div className="student-list-header">
             <span>Project Requirements</span>
             <span>Due Date</span>
           </div>
-          {groupProjects.map((project) => (
+          {sortedProjects.map((project) => (
             <article
               className={project.expanded ? 'student-activity-row is-expanded' : 'student-activity-row'}
               key={project.title}
@@ -1056,12 +1222,9 @@ function GroupProjectsPage() {
                       </div>
                       <span className="student-document-preview" aria-hidden="true" />
                     </div>
-                  </div>
-                  <div className="student-project-footer">
-                    <NavLink to="/student/projects/prelim-group-project-1" className="student-text-link">
+                    <NavLink to="/student/projects/prelim-group-project-1" className="student-text-link student-project-instructions-link">
                       View instructions
                     </NavLink>
-                    <span className="student-repository-status">Repository not yet created</span>
                   </div>
                 </div>
               )}
@@ -1073,7 +1236,37 @@ function GroupProjectsPage() {
   )
 }
 
+function JoinRepositoryModal({ onClose, onJoin }) {
+  return (
+    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="join-repository-title">
+      <section className="student-action-modal student-join-repo-modal">
+        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close join repository" />
+        <p>Join Repository</p>
+        <h2 id="join-repository-title">Available repositories</h2>
+        <div className="student-available-repo-list">
+          {availableProjectRepositories.map((repo) => (
+            <article key={repo.name}>
+              <div>
+                <strong>{repo.name}</strong>
+                <span>{repo.members}</span>
+              </div>
+              <em>{repo.slots} {repo.slots === 1 ? 'slot' : 'slots'} available</em>
+              <button type="button" className="student-primary-action" onClick={() => onJoin(repo.name)}>
+                Join
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function GroupProjectDetailPage() {
+  const [createRepoOpen, setCreateRepoOpen] = useState(false)
+  const [joinRepoOpen, setJoinRepoOpen] = useState(false)
+  const [joinedRepository, setJoinedRepository] = useState('')
+
   return (
     <StudentClassPage activeTab="assignments" wide>
       <div className="student-detail-layout">
@@ -1098,14 +1291,14 @@ function GroupProjectDetailPage() {
             <div className="student-detail-divider" />
 
             <div className="student-detail-attachment-row">
-              <div className="student-attachment student-attachment--wide">
+              <button type="button" className="student-attachment student-attachment--wide student-clickable-attachment">
                 <span className="student-pdf-icon">PDF</span>
                 <div>
                   <strong>Prelim Group Project 1 Specifications.pdf</strong>
                   <span>PDF · 1.2 MB</span>
                 </div>
                 <span className="student-document-preview" aria-hidden="true" />
-              </div>
+              </button>
             </div>
 
             <div className="student-detail-divider" />
@@ -1138,21 +1331,37 @@ function GroupProjectDetailPage() {
           <section className="student-work-card">
             <div className="student-work-card__header">
               <h2>Your team repository</h2>
-              <span className="student-work-status">To Do</span>
+              <span className={joinedRepository ? 'student-work-status is-done' : 'student-work-status'}>
+                {joinedRepository ? 'Linked' : 'To Do'}
+              </span>
             </div>
-            <p className="student-repo-help">
-              No repository created yet. Create a team repository and invite your groupmates as
-              collaborators.
-            </p>
-            <NavLink to="/student/projects/prelim-group-project-1/repository" className="student-primary-action">
-              Create Repository
-            </NavLink>
-            <button type="button" className="student-outline-action">
-              Join Existing Repository
-            </button>
-            <button type="button" className="student-outline-action">
-              View Specifications
-            </button>
+            {joinedRepository ? (
+              <>
+                <p className="student-repo-help">
+                  You joined {joinedRepository}. Continue work in the linked team repository.
+                </p>
+                <NavLink to="/student/projects/prelim-group-project-1/repository" className="student-primary-action">
+                  Open Repository
+                </NavLink>
+              </>
+            ) : (
+              <>
+                <p className="student-repo-help">
+                  No repository created yet. Create a team repository and invite your groupmates as
+                  collaborators.
+                </p>
+                <button type="button" className="student-primary-action" onClick={() => setCreateRepoOpen(true)}>
+                  Create Repository
+                </button>
+                <button
+                  type="button"
+                  className="student-outline-action"
+                  onClick={() => setJoinRepoOpen(true)}
+                >
+                  Join Repository
+                </button>
+              </>
+            )}
             <p className="student-repo-footnote">This repository will be linked to the class project requirement.</p>
           </section>
 
@@ -1164,11 +1373,85 @@ function GroupProjectDetailPage() {
           </section>
         </aside>
       </div>
+      {createRepoOpen && <CreateRepositoryModal onClose={() => setCreateRepoOpen(false)} />}
+      {joinRepoOpen && (
+        <JoinRepositoryModal
+          onClose={() => setJoinRepoOpen(false)}
+          onJoin={(repoName) => {
+            setJoinedRepository(repoName)
+            setJoinRepoOpen(false)
+          }}
+        />
+      )}
     </StudentClassPage>
   )
 }
 
+function AddCollaboratorModal({ pendingCollaborators, onInvite, onClose }) {
+  const [search, setSearch] = useState('')
+  const [selectedClassmate, setSelectedClassmate] = useState(classmates[0].email)
+  const visibleClassmates = classmates.filter((classmate) => (
+    classmate.name.toLowerCase().includes(search.toLowerCase())
+      || classmate.email.toLowerCase().includes(search.toLowerCase())
+  ))
+
+  return (
+    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="add-collaborator-title">
+      <section className="student-action-modal student-collaborator-modal">
+        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close add collaborator" />
+        <p>Add Collaborator</p>
+        <h2 id="add-collaborator-title">Invite classmate to repository</h2>
+        <label className="student-single-field">
+          Search classmates
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by name or email"
+          />
+        </label>
+        <label className="student-single-field">
+          Select classmate
+          <select value={selectedClassmate} onChange={(event) => setSelectedClassmate(event.target.value)}>
+            {visibleClassmates.map((classmate) => (
+              <option value={classmate.email} key={classmate.email}>{classmate.name} - {classmate.email}</option>
+            ))}
+          </select>
+        </label>
+        <section className="student-pending-collaborators">
+          <strong>Pending collaborators</strong>
+          {pendingCollaborators.length ? (
+            pendingCollaborators.map((collaborator) => (
+              <span key={collaborator}>{collaborator}</span>
+            ))
+          ) : (
+            <span>No pending collaborator invites yet.</span>
+          )}
+        </section>
+        <div className="student-submit-modal-actions">
+          <button type="button" className="student-outline-action" onClick={onClose}>Close</button>
+          <button
+            type="button"
+            className="student-primary-action"
+            onClick={() => onInvite(selectedClassmate)}
+          >
+            Send Invite
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function RepositoryWorkspacePage() {
+  const [branchOpen, setBranchOpen] = useState(false)
+  const [selectedBranch, setSelectedBranch] = useState('main')
+  const [repoMenuOpen, setRepoMenuOpen] = useState(false)
+  const [codeMenuOpen, setCodeMenuOpen] = useState(false)
+  const [collaboratorOpen, setCollaboratorOpen] = useState(false)
+  const [pendingCollaborators, setPendingCollaborators] = useState([])
+  const [readyForReview, setReadyForReview] = useState(false)
+  const branches = ['main', 'project-setup', 'readme-updates']
+
   return (
     <div className="student-repository-page">
       <header className="student-repository-topbar">
@@ -1188,21 +1471,81 @@ function RepositoryWorkspacePage() {
           <span className="student-repo-mark" aria-hidden="true" />
           <div>
             <h1>prelim-group-project-1-team-03</h1>
-            <span className="student-repo-state">In Progress</span>
+            <span className="student-repo-state">{readyForReview ? 'Ready for Review' : 'In Progress'}</span>
           </div>
         </section>
 
         <div className="student-repository-toolbar">
-          <button type="button">main</button>
+          <div className="instructor-repo-dropdown">
+            <button type="button" className="instructor-branch-button" onClick={() => setBranchOpen((current) => !current)}>
+              <span className="instructor-branch-icon" aria-hidden="true" />
+              {selectedBranch}
+              <span className="instructor-caret" aria-hidden="true" />
+            </button>
+            {branchOpen && (
+              <div className="instructor-repo-menu instructor-branch-menu" aria-label="Repository branches">
+                <strong>Select Git revision</strong>
+                <label>
+                  <span>Search</span>
+                  <input placeholder="Search by Git revision" />
+                </label>
+                <span className="instructor-menu-group-label">Selected</span>
+                {branches.map((branch) => (
+                  <button
+                    type="button"
+                    className={selectedBranch === branch ? 'is-active' : undefined}
+                    onClick={() => {
+                      setSelectedBranch(branch)
+                      setBranchOpen(false)
+                    }}
+                    key={branch}
+                  >
+                    {branch}
+                    {branch === 'main' && (
+                      <>
+                        <em>default</em>
+                        <em>protected</em>
+                      </>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <span>Linked to IT 112</span>
           <span>Team repository</span>
           <span>Instructor: Mr. Rickon Morty</span>
-          <button type="button">Add file</button>
+          <div className="instructor-repo-toolbar-spacer" />
+          <div className="instructor-repo-dropdown">
+            <button type="button" className="instructor-repo-icon-button" onClick={() => setRepoMenuOpen((current) => !current)}>+</button>
+            {repoMenuOpen && (
+              <div className="instructor-repo-menu instructor-repo-menu--right" aria-label="Repository actions">
+                <span className="instructor-menu-group-label">This directory</span>
+                <button type="button">New file</button>
+                <button type="button">Upload file</button>
+                <button type="button">New directory</button>
+                <span className="instructor-menu-divider" />
+                <span className="instructor-menu-group-label">This repository</span>
+                <button type="button">New branch</button>
+                <button type="button">New tag</button>
+              </div>
+            )}
+          </div>
           <button type="button">Find file</button>
-          <button type="button" className="student-repo-code-button">Code</button>
+          <div className="instructor-repo-dropdown">
+            <button type="button" className="student-repo-code-button" onClick={() => setCodeMenuOpen((current) => !current)}>
+              Code
+              <span className="instructor-caret" aria-hidden="true" />
+            </button>
+            {codeMenuOpen && (
+              <div className="instructor-repo-menu instructor-repo-menu--right" aria-label="Code options">
+                <button type="button">Copy clone URL</button>
+                <button type="button">Download ZIP</button>
+                <button type="button">Open in IDE</button>
+              </div>
+            )}
+          </div>
           <button type="button">History</button>
-          <button type="button">Star 0</button>
-          <button type="button">Fork 0</button>
         </div>
 
         <div className="student-repository-grid">
@@ -1257,17 +1600,21 @@ function RepositoryWorkspacePage() {
             <section className="student-repo-card">
               <h2>Project Information</h2>
               <ul className="student-repo-info-list">
+                <li>{readyForReview ? 'Ready for review' : 'In progress'}</li>
                 <li>1 commit</li>
                 <li>1 branch</li>
                 <li>0 tags</li>
                 <li>1.2 MB project storage</li>
-                <li>4 collaborators</li>
+                <li>{4 + pendingCollaborators.length} collaborators</li>
                 <li>Created on Aug 25, 2026</li>
               </ul>
             </section>
 
             <section className="student-repo-card">
-              <h2>Collaborators</h2>
+              <div className="student-side-card-heading">
+                <h2>Collaborators</h2>
+                <button type="button" onClick={() => setCollaboratorOpen(true)}>Add Collaborator</button>
+              </div>
               <ul className="student-collaborator-list">
                 {repositoryCollaborators.map((member) => (
                   <li key={member.name}>
@@ -1279,16 +1626,37 @@ function RepositoryWorkspacePage() {
                     {member.marker && <em>{member.marker}</em>}
                   </li>
                 ))}
+                {pendingCollaborators.map((email) => (
+                  <li key={email}>
+                    <span className="student-person-avatar">?</span>
+                    <div>
+                      <strong>{email}</strong>
+                      <span>Invitation pending</span>
+                    </div>
+                  </li>
+                ))}
               </ul>
-              <button type="button" className="student-outline-action">Invite collaborators</button>
             </section>
 
             <section className="student-repo-card">
               <h2>Submission Status</h2>
-              <p className="student-repo-muted">Not yet marked ready</p>
-              <button type="button" className="student-primary-action">Mark Ready for Review</button>
               <p className="student-repo-muted">
-                Mark your repository as ready once your team has completed the requirements.
+                {readyForReview
+                  ? 'Repository has been marked ready for instructor review.'
+                  : 'Not yet marked ready'}
+              </p>
+              <button
+                type="button"
+                className="student-primary-action"
+                disabled={readyForReview}
+                onClick={() => setReadyForReview(true)}
+              >
+                {readyForReview ? 'Ready for Review' : 'Mark Ready for Review'}
+              </button>
+              <p className="student-repo-muted">
+                {readyForReview
+                  ? 'Your instructor can now review this repository in the prototype.'
+                  : 'Mark your repository as ready once your team has completed the requirements.'}
               </p>
             </section>
           </aside>
@@ -1322,6 +1690,17 @@ function RepositoryWorkspacePage() {
           </section>
         </div>
       </main>
+      {collaboratorOpen && (
+        <AddCollaboratorModal
+          pendingCollaborators={pendingCollaborators}
+          onClose={() => setCollaboratorOpen(false)}
+          onInvite={(email) => {
+            setPendingCollaborators((current) => (
+              current.includes(email) ? current : [...current, email]
+            ))
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -1420,16 +1799,21 @@ function StudentTodoPage() {
 }
 
 function CreateRepositoryModal({ onClose }) {
+  const navigate = useNavigate()
+
   return (
     <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="student-create-repo-title">
-      <section className="student-action-modal">
+      <section className="student-action-modal student-create-repo-modal">
         <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close create repository" />
         <p>Create Repository</p>
         <h2 id="student-create-repo-title">New student repository</h2>
-        <div className="student-action-form-grid">
-          <label>
+        <div className="student-create-repo-form">
+          <label className="student-create-repo-name">
             Repository name
-            <input defaultValue="java-practice-notes" />
+            <input value="prelim-group-project-1-team-03" readOnly />
+            <span>
+              Repository name is fixed for this project requirement in the prototype.
+            </span>
           </label>
           <label>
             Link to class
@@ -1439,13 +1823,30 @@ function CreateRepositoryModal({ onClose }) {
               <option>Personal repository</option>
             </select>
           </label>
-          <label>
-            Visibility
-            <select defaultValue="Private">
-              <option>Private</option>
-              <option>Class-visible</option>
-            </select>
-          </label>
+          <fieldset className="student-visibility-options">
+            <legend>Visibility level</legend>
+            <label>
+              <input type="radio" name="student-repo-visibility" defaultChecked />
+              <span>
+                <strong>Private</strong>
+                <small>Project access must be granted explicitly to each collaborator.</small>
+              </span>
+            </label>
+            <label>
+              <input type="radio" name="student-repo-visibility" />
+              <span>
+                <strong>Class-visible</strong>
+                <small>Visible to enrolled classmates and instructors in the linked class.</small>
+              </span>
+            </label>
+            <label>
+              <input type="radio" name="student-repo-visibility" />
+              <span>
+                <strong>Public prototype</strong>
+                <small>Visible in the local prototype repository list only.</small>
+              </span>
+            </label>
+          </fieldset>
           <label>
             Invite collaborator by email
             <input placeholder="student@slu.edu.ph" />
@@ -1453,7 +1854,13 @@ function CreateRepositoryModal({ onClose }) {
         </div>
         <div className="student-submit-modal-actions">
           <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
-          <button type="button" className="student-primary-action" onClick={onClose}>Create Repository</button>
+          <button
+            type="button"
+            className="student-primary-action"
+            onClick={() => navigate('/student/projects/prelim-group-project-1/repository')}
+          >
+            Create Repository
+          </button>
         </div>
       </section>
     </div>
@@ -1483,7 +1890,8 @@ function StudentRepositoriesPage() {
       eyebrow="Repository Learning"
       title="My Repositories"
       action={(
-        <button type="button" className="student-primary-action" onClick={() => setModalOpen(true)}>
+        <button type="button" className="student-global-action" onClick={() => setModalOpen(true)}>
+          <span aria-hidden="true">+</span>
           Create Repository
         </button>
       )}
@@ -1581,7 +1989,8 @@ function StudentJoinClassPage() {
       eyebrow="Class Membership"
       title="Join Class"
       action={(
-        <button type="button" className="student-primary-action" onClick={() => setModalOpen(true)}>
+        <button type="button" className="student-global-action" onClick={() => setModalOpen(true)}>
+          <span aria-hidden="true">+</span>
           Join Class by Code
         </button>
       )}
@@ -1657,7 +2066,6 @@ function PersonRow({ person }) {
         <strong>{person.name}</strong>
         <span>{person.email}</span>
       </div>
-      <button type="button" className="student-mail-button" aria-label={`Message ${person.name}`} />
     </li>
   )
 }
