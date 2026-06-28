@@ -50,39 +50,6 @@ const instructorHomeClasses = [
   },
 ]
 
-const attentionItems = [
-  {
-    title: 'Prelim Programming Exercise 2 LAB',
-    meta: 'Activity Mode',
-    status: 'Needs grading',
-    signal: '14 final submissions pending feedback release',
-  },
-  {
-    title: 'Team 04 repository',
-    meta: 'Project Collaboration Mode',
-    status: 'Missing repository',
-    signal: 'Prelim Group Project 1 is due Aug 27, 2026, 10:30 AM',
-  },
-  {
-    title: 'Team 02 contribution balance',
-    meta: 'Repository oversight',
-    status: 'Needs watch',
-    signal: 'Uneven commit activity across four members',
-  },
-  {
-    title: 'Student Grade Analyzer',
-    meta: 'Activity Mode',
-    status: 'Failed tests',
-    signal: '6 submissions have hidden checking issues',
-  },
-  {
-    title: 'Similarity review queue',
-    meta: 'Academic review',
-    status: 'Needs review',
-    signal: 'Comparable structure detected in 3 student records',
-  },
-]
-
 const reviewQueueClasses = [
   {
     title: 'IT 112 - Computer Programming 1',
@@ -1142,6 +1109,54 @@ function SubmissionReviewPage() {
 
 function ReviewQueuesPage() {
   const [selectedClass, setSelectedClass] = useState(reviewQueueClasses[0])
+  const [queueFilter, setQueueFilter] = useState('activities')
+  const activityQueueRows = [
+    {
+      title: 'Prelim Programming Exercise 2 LAB',
+      due: 'Aug 30, 2026, 11:59 PM',
+      status: 'Published',
+      reviewState: '14 submissions need grading',
+      actionPath: '/instructor/activity/act-loops-01/submissions',
+    },
+    {
+      title: 'Loop Patterns and Input Validation',
+      due: 'Sep 3, 2026, 5:00 PM',
+      status: 'Near deadline',
+      reviewState: '12 active submissions',
+      actionPath: '/instructor/activity/act-loops-01/monitor',
+    },
+    {
+      title: 'Student Grade Analyzer',
+      due: 'Sep 10, 2026, 10:30 AM',
+      status: 'Needs review',
+      reviewState: '6 failed visible test summaries',
+      actionPath: '/instructor/submission-review',
+    },
+  ]
+  const projectQueueRows = [
+    {
+      title: 'Prelim Group Project 1 Specifications',
+      due: 'Aug 27, 2026, 10:30 AM',
+      status: 'Ready for review',
+      reviewState: '4 repositories ready',
+      actionPath: '/instructor/projects/prelim-group-project-1',
+    },
+    {
+      title: 'prelim-group-project-1-team-03',
+      due: 'Aug 27, 2026, 10:30 AM',
+      status: 'Repository review',
+      reviewState: 'Archive readiness pending',
+      actionPath: '/instructor/projects/prelim-group-project-1/repository',
+    },
+    {
+      title: 'prelim-group-project-1-team-02',
+      due: 'Aug 27, 2026, 10:30 AM',
+      status: 'Needs review',
+      reviewState: 'Contribution balance needs check',
+      actionPath: '/instructor/projects/prelim-group-project-1/repository',
+    },
+  ]
+  const visibleQueueRows = queueFilter === 'activities' ? activityQueueRows : projectQueueRows
 
   return (
     <div className="instructor-home-page">
@@ -1159,75 +1174,83 @@ function ReviewQueuesPage() {
           </div>
 
           <div className="instructor-review-class-grid">
-            {reviewQueueClasses.map((item) => (
-              <button
-                type="button"
-                className={selectedClass.title === item.title ? 'student-home-class-card is-active' : 'student-home-class-card'}
-                onClick={() => setSelectedClass(item)}
-                key={item.title}
-              >
-                <span className={`student-class-dot student-class-dot--${item.title.charAt(0).toLowerCase()}`}>
-                  {item.title.charAt(0)}
-                </span>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.section}</span>
-                  <span>{item.signal}</span>
+            {reviewQueueClasses.map((item) => {
+              const isSelected = selectedClass.title === item.title
+
+              return (
+                <div className="instructor-review-class-block" key={item.title}>
+                  <button
+                    type="button"
+                    className={isSelected ? 'student-home-class-card is-active' : 'student-home-class-card'}
+                    onClick={() => setSelectedClass(item)}
+                  >
+                    <span className={`student-class-dot student-class-dot--${item.title.charAt(0).toLowerCase()}`}>
+                      {item.title.charAt(0)}
+                    </span>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <span>{item.section}</span>
+                      <span>{item.signal}</span>
+                    </div>
+                    <div className="student-home-class-schedule">
+                      <span>{item.count}</span>
+                      <span>open items</span>
+                    </div>
+                    <span className="student-home-card-action" aria-hidden="true" />
+                  </button>
+
+                  {isSelected && (
+                    <section className="instructor-inline-review-table" aria-label={`${item.title} review queue`}>
+                      <div className="instructor-inline-review-heading">
+                        <div>
+                          <h3>{item.title} review queue</h3>
+                          <span>{item.section}</span>
+                        </div>
+                        <div className="student-segmented-tabs" role="tablist" aria-label="Review queue type">
+                          <button
+                            type="button"
+                            className={queueFilter === 'activities' ? 'is-active' : undefined}
+                            onClick={() => setQueueFilter('activities')}
+                          >
+                            <span aria-hidden="true" />
+                            Activities
+                          </button>
+                          <button
+                            type="button"
+                            className={queueFilter === 'projects' ? 'is-active' : undefined}
+                            onClick={() => setQueueFilter('projects')}
+                          >
+                            <span aria-hidden="true" />
+                            Group Projects
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="instructor-data-table" role="table" aria-label={`${item.title} ${queueFilter} reviews`}>
+                        <div className="instructor-table-row instructor-table-row--head instructor-review-queue-row" role="row">
+                          <span>Title</span>
+                          <span>Due Date</span>
+                          <span>Status</span>
+                          <span>Review State</span>
+                          <span>Action</span>
+                        </div>
+                        {visibleQueueRows.map((row) => (
+                          <div className="instructor-table-row instructor-review-queue-row" role="row" key={row.title}>
+                            <strong>{row.title}</strong>
+                            <span>{row.due}</span>
+                            <em>{row.status}</em>
+                            <span>{row.reviewState}</span>
+                            <div>
+                              <NavLink to={row.actionPath}>Review</NavLink>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
                 </div>
-                <div className="student-home-class-schedule">
-                  <span>{item.count}</span>
-                  <span>open items</span>
-                </div>
-                <span className="student-home-card-action" aria-hidden="true" />
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="instructor-review-queue-detail">
-          <div className="student-home-section-heading">
-            <h2>{selectedClass.title}</h2>
-            <span>{selectedClass.section}</span>
-          </div>
-
-          <div className="instructor-queue-columns">
-            <section className="instructor-queue-panel">
-              <h3>Activities needing review</h3>
-              {[
-                ['Prelim Programming Exercise 2 LAB', '14 submissions need grading'],
-                ['Loop Patterns and Input Validation', 'Due soon - 12 active submissions'],
-                ['Student Grade Analyzer', '6 failed visible test summaries'],
-              ].map(([title, signal]) => (
-                <article key={title}>
-                  <strong>{title}</strong>
-                  <span>{signal}</span>
-                </article>
-              ))}
-            </section>
-
-            <section className="instructor-queue-panel">
-              <h3>Repositories ready for review</h3>
-              {[
-                ['prelim-group-project-1-team-01', 'Ready for review'],
-                ['prelim-group-project-1-team-03', 'Archive readiness pending'],
-                ['prelim-group-project-1-team-07', 'Contribution balance needs check'],
-              ].map(([title, signal]) => (
-                <article key={title}>
-                  <strong>{title}</strong>
-                  <span>{signal}</span>
-                </article>
-              ))}
-            </section>
-
-            <section className="instructor-queue-panel">
-              <h3>Pending submissions / review alerts</h3>
-              {attentionItems.map((item) => (
-                <article key={item.title}>
-                  <strong>{item.title}</strong>
-                  <span>{item.status} - {item.signal}</span>
-                </article>
-              ))}
-            </section>
+              )
+            })}
           </div>
         </section>
       </main>

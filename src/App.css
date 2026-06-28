@@ -4648,38 +4648,93 @@ textarea:focus-visible {
 
 .instructor-review-class-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(360px, 1fr));
-  gap: 18px;
+  grid-template-columns: 1fr;
+  gap: 14px;
 }
 
-.instructor-review-class-grid .student-home-class-card {
+.instructor-review-class-block {
+  display: grid;
+  gap: 10px;
+}
+
+.instructor-review-class-block .student-home-class-card {
   width: 100%;
   border: 1px solid #dfe7f1;
   text-align: left;
   cursor: pointer;
 }
 
-.instructor-review-class-grid .student-home-class-card.is-active {
+.instructor-review-class-block .student-home-class-card.is-active {
   border-color: #9fc2ff;
   background: #f8fbff;
   box-shadow: 0 14px 30px rgba(37, 88, 194, 0.1);
 }
 
-.instructor-review-queue-detail {
+.instructor-inline-review-table {
   display: grid;
-  gap: 14px;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dfe7f1;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(37, 54, 89, 0.05);
+  overflow-x: auto;
 }
 
-.instructor-review-queue-detail .student-home-section-heading > span {
+.instructor-inline-review-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.instructor-inline-review-heading h3 {
+  margin: 0 0 4px;
+  color: #1c2d4b;
+  font-size: 16px;
+}
+
+.instructor-inline-review-heading span {
   color: #53647d;
   font-size: 12px;
   font-weight: 800;
 }
 
-.instructor-queue-columns {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+.instructor-inline-review-heading .student-segmented-tabs {
+  flex: 0 0 auto;
+}
+
+.instructor-inline-review-heading .student-segmented-tabs button {
+  display: inline-flex;
+  min-height: 35px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #243755;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.instructor-inline-review-heading .student-segmented-tabs button.is-active {
+  background: #edf3ff;
+  color: #005dff;
+}
+
+.instructor-inline-review-heading .student-segmented-tabs button span {
+  width: 15px;
+  height: 15px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+}
+
+.instructor-review-queue-row {
+  min-width: 860px;
+  grid-template-columns: minmax(260px, 1.35fr) minmax(170px, 0.8fr) minmax(120px, 0.6fr) minmax(190px, 0.9fr) minmax(110px, 0.5fr);
 }
 
 .instructor-queue-panel {
@@ -5537,7 +5592,6 @@ textarea:focus-visible {
   .instructor-settings-grid,
   .instructor-rubric-grid,
   .instructor-review-grid,
-  .instructor-review-class-grid,
   .instructor-queue-columns,
   .instructor-repository-summary > div {
     grid-template-columns: repeat(2, minmax(0, 1fr));
