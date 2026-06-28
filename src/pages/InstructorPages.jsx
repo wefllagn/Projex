@@ -20,6 +20,15 @@ function copyClassCode(code) {
   }
 }
 
+function getStatusClass(status) {
+  if (status === 'For Review') return 'is-for-review'
+  if (status === 'Late') return 'is-late'
+  if (status === 'Missing') return 'is-missing'
+  if (status === 'Graded 96/100') return 'is-graded-high'
+  if (status === 'Graded 40/100') return 'is-graded-low'
+  return undefined
+}
+
 const dashboardStats = [
   { label: 'Total students', value: '38' },
   { label: 'Published activities', value: '5' },
@@ -111,37 +120,32 @@ const activities = [
   {
     title: 'Prelim Programming Exercise 1 LAB',
     due: 'Aug 27, 2026, 10:30 AM',
-    status: 'Published',
+    status: 'Graded 96/100',
     submissions: '31 / 38',
-    grading: 'Graded',
   },
   {
     title: 'Prelim Programming Exercise 2 LAB',
     due: 'Aug 30, 2026, 11:59 PM',
-    status: 'Published',
+    status: 'For Review',
     submissions: '24 / 38',
-    grading: 'For Review',
   },
   {
     title: 'Loop Patterns and Input Validation',
     due: 'Sep 3, 2026, 5:00 PM',
-    status: 'Published',
+    status: 'Late',
     submissions: '12 / 38',
-    grading: 'For Review',
   },
   {
     title: 'Student Grade Analyzer',
     due: 'Sep 10, 2026, 10:30 AM',
-    status: 'Draft',
-    submissions: 'Not open',
-    grading: 'For Review',
+    status: 'Missing',
+    submissions: '0 / 38',
   },
   {
     title: 'CSV Enrollment Parser',
     due: 'Sep 17, 2026, 5:00 PM',
-    status: 'Draft',
-    submissions: 'Not open',
-    grading: 'For Review',
+    status: 'For Review',
+    submissions: '8 / 38',
   },
 ]
 
@@ -149,49 +153,38 @@ const monitoringStats = [
   { label: 'Submitted', value: '31', detail: 'Final records received' },
   { label: 'Missing', value: '5', detail: 'No submission yet' },
   { label: 'Late', value: '2', detail: 'Submitted after due time' },
-  { label: 'Locked', value: '38', detail: 'Attempts closed after due date' },
 ]
 
 const submissionRows = [
   {
     student: 'Julius Teodoro',
-    status: 'Submitted',
+    status: 'Graded 96/100',
     submittedAt: 'Aug 27, 2026, 9:42 AM',
-    tests: '5/5 visible passed',
-    similarity: 'Graded',
-    grade: 'Graded',
+    similarity: 'Low',
   },
   {
     student: 'Alyssa Mendoza',
-    status: 'Submitted',
+    status: 'For Review',
     submittedAt: 'Aug 27, 2026, 10:08 AM',
-    tests: '4/5 visible passed',
-    similarity: 'For Review',
-    grade: 'For Review',
+    similarity: 'Medium',
   },
   {
     student: 'Marco Rivera',
     status: 'Late',
     submittedAt: 'Aug 27, 2026, 10:46 AM',
-    tests: '3/5 visible passed',
-    similarity: 'For Review',
-    grade: 'For Review',
+    similarity: 'High',
   },
   {
     student: 'Daniel Reyes',
     status: 'Missing',
     submittedAt: 'No final submission',
-    tests: 'No submitted code',
-    similarity: 'For Review',
-    grade: 'Missing',
+    similarity: 'Low',
   },
   {
     student: 'Mica Dela Cruz',
-    status: 'Submitted',
+    status: 'Graded 40/100',
     submittedAt: 'Aug 27, 2026, 9:58 AM',
-    tests: 'Failed tests',
-    similarity: 'For Review',
-    grade: 'For Review',
+    similarity: 'High',
   },
 ]
 
@@ -281,38 +274,30 @@ const projectTeams = [
   {
     team: 'Team 01',
     repo: 'prelim-group-project-1-team-01',
-    members: 'Julius Teodoro, Alyssa Mendoza, Daniel Reyes',
-    lastCommit: 'Aug 26, 2026, 8:14 PM',
+    representative: 'Julius Teodoro',
     contribution: 'Balanced',
-    status: 'Ready for review',
-    similarity: 'Graded',
+    status: 'Approved for Presentation',
   },
   {
     team: 'Team 02',
     repo: 'prelim-group-project-1-team-02',
-    members: 'Marco Rivera, Mica Dela Cruz, Rafael Santos',
-    lastCommit: 'Aug 26, 2026, 5:30 PM',
+    representative: 'Marco Rivera',
     contribution: 'Uneven',
-    status: 'In progress',
-    similarity: 'For Review',
+    status: 'Revision',
   },
   {
     team: 'Team 03',
     repo: 'prelim-group-project-1-team-03',
-    members: 'Julius Teodoro, Alyssa Mendoza, Marco Rivera, Daniel Reyes',
-    lastCommit: 'Aug 27, 2026, 9:20 AM',
+    representative: 'Alyssa Mendoza',
     contribution: 'Balanced',
-    status: 'Not yet marked ready',
-    similarity: 'For Review',
+    status: 'Approved for Presentation',
   },
   {
     team: 'Team 04',
     repo: 'No repository yet',
-    members: 'Pending team setup',
-    lastCommit: 'No activity',
+    representative: 'Pending team setup',
     contribution: 'Missing',
-    status: 'Missing repository',
-    similarity: 'For Review',
+    status: 'Missing Repository',
   },
 ]
 
@@ -338,14 +323,6 @@ const contributionRows = [
   { name: 'Alyssa Mendoza', commits: '8', lines: '+260 / -41', tasks: '3 completed', activity: 'Active', balance: '30%' },
   { name: 'Marco Rivera', commits: '4', lines: '+92 / -20', tasks: '1 completed', activity: 'Needs watch', balance: '15%' },
   { name: 'Daniel Reyes', commits: '2', lines: '+54 / -8', tasks: '1 completed', activity: 'Low activity', balance: '10%' },
-]
-
-const archiveChecklist = [
-  { item: 'Requirements complete', status: 'Ready' },
-  { item: 'README present', status: 'Ready' },
-  { item: 'Specifications linked', status: 'Ready' },
-  { item: 'Final review completed', status: 'Pending instructor decision' },
-  { item: 'Repository ready for preservation', status: 'Needs approval' },
 ]
 
 const roster = [
@@ -639,10 +616,6 @@ function InstructorControls({ primaryLabel }) {
   return (
     <div className="instructor-controls-row">
       <NavLink to="/instructor/activity/new" className="student-primary-action instructor-create-action">{primaryLabel}</NavLink>
-      <NavLink to="/instructor/activity/act-loops-01/submissions" className="student-outline-action">
-        View submissions
-      </NavLink>
-      <NavLink to="/instructor/activity/new" className="student-outline-action">Edit settings</NavLink>
     </div>
   )
 }
@@ -657,25 +630,20 @@ function InstructorActivitiesPage() {
         </div>
 
         <div className="instructor-data-table" role="table" aria-label="Programming activities">
-          <div className="instructor-table-row instructor-table-row--head" role="row">
+          <div className="instructor-table-row instructor-table-row--head instructor-activity-row" role="row">
             <span>Activity</span>
             <span>Due Date</span>
-            <span>Status</span>
             <span>Submissions</span>
-            <span>Grading</span>
             <span>Actions</span>
           </div>
           {activities.map((activity) => (
-            <div className="instructor-table-row" role="row" key={activity.title}>
+            <div className="instructor-table-row instructor-activity-row" role="row" key={activity.title}>
               <strong>{activity.title}</strong>
               <span>{activity.due}</span>
-              <em>{activity.status}</em>
               <span>{activity.submissions}</span>
-              <span>{activity.grading}</span>
               <div>
                 <NavLink to="/instructor/activity/act-loops-01/monitor">Monitor</NavLink>
-                <NavLink to="/instructor/activity/act-loops-01/submissions">Submissions</NavLink>
-                <NavLink to="/instructor/activity/new">Settings</NavLink>
+                <NavLink to="/instructor/activity/new">Configure</NavLink>
               </div>
             </div>
           ))}
@@ -844,7 +812,28 @@ function CreateActivityPage() {
   )
 }
 
+function ReviewAgainModal({ student, onClose }) {
+  return (
+    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="review-again-title">
+      <section className="student-submit-modal instructor-release-modal">
+        <span className="student-submit-icon" aria-hidden="true" />
+        <h2 id="review-again-title">Review graded submission again?</h2>
+        <p>{student}</p>
+        <p>This prototype action reopens the selected graded record for instructor review.</p>
+        <div className="student-submit-modal-actions">
+          <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
+          <NavLink to="/instructor/submission-review" className="student-primary-action" onClick={onClose}>
+            Review Again
+          </NavLink>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function ActivityMonitoringPage() {
+  const [reviewAgainStudent, setReviewAgainStudent] = useState('')
+
   return (
     <InstructorClassPage activeTab="assignments">
       <div className="student-assignment-panel instructor-assignment-panel">
@@ -852,9 +841,6 @@ function ActivityMonitoringPage() {
           <AssignmentSubTabs active="activities" />
           <div className="instructor-controls-row">
             <NavLink to="/instructor/activity" className="student-outline-action">Back to activities</NavLink>
-            <NavLink to="/instructor/activity/act-loops-01/submissions" className="student-primary-action">
-              View submission queue
-            </NavLink>
           </div>
         </div>
 
@@ -877,28 +863,36 @@ function ActivityMonitoringPage() {
         <div className="instructor-data-table" role="table" aria-label="Student submissions">
           <div className="instructor-table-row instructor-table-row--head instructor-submission-row" role="row">
             <span>Student name</span>
-            <span>Submission status</span>
+            <span>Status</span>
             <span>Last submitted</span>
-            <span>Test result</span>
             <span>Similarity signal</span>
-            <span>Grade status</span>
             <span>Action</span>
           </div>
           {submissionRows.map((row) => (
             <div className="instructor-table-row instructor-submission-row" role="row" key={row.student}>
               <strong>{row.student}</strong>
-              <em>{row.status}</em>
+              <em className={getStatusClass(row.status)}>{row.status}</em>
               <span>{row.submittedAt}</span>
-              <span>{row.tests}</span>
               <span>{row.similarity}</span>
-              <span>{row.grade}</span>
               <div>
-                <NavLink to="/instructor/submission-review">Review</NavLink>
+                {row.status.startsWith('Graded') ? (
+                  <>
+                    <span className="instructor-reviewed-label">Reviewed</span>
+                    <button type="button" className="instructor-row-options" onClick={() => setReviewAgainStudent(row.student)}>
+                      Options
+                    </button>
+                  </>
+                ) : (
+                  <NavLink to="/instructor/submission-review">Review</NavLink>
+                )}
               </div>
             </div>
           ))}
         </div>
       </div>
+      {reviewAgainStudent && (
+        <ReviewAgainModal student={reviewAgainStudent} onClose={() => setReviewAgainStudent('')} />
+      )}
     </InstructorClassPage>
   )
 }
@@ -934,7 +928,7 @@ function SubmissionQueuePage() {
             <div className="instructor-table-row instructor-queue-row" role="row" key={`${row.student}-${row.status}`}>
               <strong>{row.student}</strong>
               <span>{row.activity}</span>
-              <em>{row.status}</em>
+              <em className={getStatusClass(row.status)}>{row.status}</em>
               <span>{row.submittedAt}</span>
               <div>
                 <NavLink to="/instructor/submission-review">Review</NavLink>
@@ -1109,7 +1103,7 @@ function SubmissionReviewPage() {
 }
 
 function ReviewQueuesPage() {
-  const [selectedClass, setSelectedClass] = useState(reviewQueueClasses[0])
+  const [selectedClass, setSelectedClass] = useState(null)
   const [queueFilter, setQueueFilter] = useState('activities')
   const activityQueueRows = [
     {
@@ -1175,14 +1169,14 @@ function ReviewQueuesPage() {
 
           <div className="instructor-review-class-grid">
             {reviewQueueClasses.map((item) => {
-              const isSelected = selectedClass.title === item.title
+              const isSelected = selectedClass?.title === item.title
 
               return (
                 <div className="instructor-review-class-block" key={item.title}>
                   <button
                     type="button"
                     className={isSelected ? 'student-home-class-card is-active' : 'student-home-class-card'}
-                    onClick={() => setSelectedClass(item)}
+                    onClick={() => setSelectedClass(isSelected ? null : item)}
                   >
                     <span className={`student-class-dot student-class-dot--${item.title.charAt(0).toLowerCase()}`}>
                       {item.title.charAt(0)}
@@ -1191,10 +1185,6 @@ function ReviewQueuesPage() {
                       <strong>{item.title}</strong>
                       <span>{item.section}</span>
                       <span>{item.signal}</span>
-                    </div>
-                    <div className="student-home-class-schedule">
-                      <span>{item.count}</span>
-                      <span>open items</span>
                     </div>
                     <span className="student-home-card-action" aria-hidden="true" />
                   </button>
@@ -1446,23 +1436,18 @@ function ProjectMonitoringPage() {
         <div className="instructor-stat-grid instructor-monitor-grid">
           <article className="instructor-stat-card">
             <span>Repository progress</span>
-            <strong>9 / 11</strong>
-            <p>Team repositories created</p>
+            <strong>3 / 4</strong>
+            <p>Listed teams with repositories</p>
           </article>
           <article className="instructor-stat-card">
-            <span>Ready for review</span>
-            <strong>4</strong>
-            <p>Teams marked ready</p>
+            <span>Ready for presentation</span>
+            <strong>2</strong>
+            <p>Teams approved below</p>
           </article>
           <article className="instructor-stat-card">
             <span>At-risk teams</span>
             <strong>2</strong>
-            <p>Missing or uneven progress</p>
-          </article>
-          <article className="instructor-stat-card">
-            <span>Similarity signals</span>
-            <strong>2</strong>
-            <p>Instructor-only review needed</p>
+            <p>Revision, missing repository, or uneven contribution</p>
           </article>
         </div>
 
@@ -1470,24 +1455,20 @@ function ProjectMonitoringPage() {
           <div className="instructor-table-row instructor-table-row--head instructor-team-row">
             <span>Team</span>
             <span>Repository</span>
-            <span>Members</span>
-            <span>Last commit</span>
+            <span>Team Representative</span>
             <span>Contribution</span>
             <span>Status</span>
-            <span>Similarity</span>
             <span>Action</span>
           </div>
           {projectTeams.map((team) => (
             <div className="instructor-table-row instructor-team-row" key={team.team}>
               <strong>{team.team}</strong>
               <span>{team.repo}</span>
-              <span>{team.members}</span>
-              <span>{team.lastCommit}</span>
+              <span>{team.representative}</span>
               <em>{team.contribution}</em>
               <span>{team.status}</span>
-              <span>{team.similarity}</span>
               <div>
-                <NavLink to="/instructor/projects/prelim-group-project-1/repository">Open Repository</NavLink>
+                <NavLink to="/instructor/projects/prelim-group-project-1/repository">Review</NavLink>
               </div>
             </div>
           ))}
@@ -1520,59 +1501,38 @@ function ContributionReviewPanel() {
   )
 }
 
-function SimilarityReviewPanel() {
-  const [decision, setDecision] = useState('Open')
-
+function AddReviewModal({ onClose }) {
   return (
-    <section className="instructor-repo-panel">
-      <div className="instructor-section-title">
-        <h3>Similarity Review</h3>
-        <span>Instructor-only detail</span>
-      </div>
-      <div className="instructor-similarity-review">
-        <strong>For Review</strong>
-        <p>Comparable structure detected with Team 02 in menu controller and validation helper organization.</p>
-        <div>
-          <span>Files involved: src/MenuController.java, src/InputValidator.java</span>
-          <span>Signal: Moderate</span>
-          <span>Decision: {decision}</span>
+    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="add-review-title">
+      <section className="instructor-action-modal instructor-add-review-modal">
+        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close add review" />
+        <p>Repository Review</p>
+        <h2 id="add-review-title">Add Review</h2>
+        <label className="instructor-wide-field">
+          Notes
+          <textarea defaultValue="Repository structure is clear. Review the README setup steps and confirm the final presentation branch before marking the team ready." />
+        </label>
+        <section className="instructor-upload-placeholder">
+          <span className="student-pdf-icon">PDF</span>
+          <div>
+            <strong>Import PDF for notes</strong>
+            <p>Attach an annotated review note or rubric export for this team.</p>
+          </div>
+          <button type="button">Import PDF</button>
+        </section>
+        <div className="student-submit-modal-actions">
+          <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
+          <button type="button" className="student-outline-action" onClick={onClose}>Return for Revision</button>
+          <button type="button" className="student-primary-action" onClick={onClose}>Approve for Presentation</button>
         </div>
-        <button type="button" onClick={() => setDecision('Marked reviewed')}>Mark reviewed</button>
-      </div>
-    </section>
-  )
-}
-
-function ArchiveReadinessPanel() {
-  const [archiveStatus, setArchiveStatus] = useState('Awaiting final review')
-
-  return (
-    <section className="instructor-repo-panel">
-      <div className="instructor-section-title">
-        <h3>Archive Readiness</h3>
-        <span>{archiveStatus}</span>
-      </div>
-      <div className="instructor-archive-list">
-        {archiveChecklist.map((item) => (
-          <article key={item.item}>
-            <span>{item.item}</span>
-            <strong>{item.status}</strong>
-          </article>
-        ))}
-      </div>
-      <div className="instructor-controls-row">
-        <button type="button" className="student-primary-action" onClick={() => setArchiveStatus('Archive approved')}>
-          Approve archive
-        </button>
-        <button type="button" className="student-outline-action" onClick={() => setArchiveStatus('Returned for revision')}>
-          Return for revision
-        </button>
-      </div>
-    </section>
+      </section>
+    </div>
   )
 }
 
 function InstructorRepositoryReviewPage() {
+  const [reviewOpen, setReviewOpen] = useState(false)
+
   return (
     <div className="instructor-repository-page">
       <header className="student-repository-topbar">
@@ -1600,7 +1560,6 @@ function InstructorRepositoryReviewPage() {
           <span>Ready for Review</span>
           <button type="button" className="student-repo-code-button">Code</button>
           <button type="button">History</button>
-          <button type="button">Review actions</button>
         </div>
 
         <div className="student-repository-grid">
@@ -1657,7 +1616,6 @@ function InstructorRepositoryReviewPage() {
                 <li>12 commits</li>
                 <li>4 collaborators</li>
                 <li>Official specs linked</li>
-                <li>Archive review pending</li>
               </ul>
             </section>
 
@@ -1678,9 +1636,8 @@ function InstructorRepositoryReviewPage() {
 
             <section className="student-repo-card instructor-review-actions">
               <h2>Instructor Review Panel</h2>
-              <p>Review repository completeness, contribution balance, similarity signal, and archive readiness.</p>
-              <button type="button" className="student-primary-action">Save review note</button>
-              <button type="button" className="student-outline-action">Return for revision</button>
+              <p>Review repository completeness, contribution balance, and readiness for presentation.</p>
+              <button type="button" className="student-primary-action" onClick={() => setReviewOpen(true)}>Add Review</button>
             </section>
           </aside>
 
@@ -1698,10 +1655,9 @@ function InstructorRepositoryReviewPage() {
           </section>
 
           <ContributionReviewPanel />
-          <SimilarityReviewPanel />
-          <ArchiveReadinessPanel />
         </div>
       </main>
+      {reviewOpen && <AddReviewModal onClose={() => setReviewOpen(false)} />}
     </div>
   )
 }
@@ -1748,7 +1704,7 @@ function InviteStudentsModal({ classCode, onClose }) {
 
 function InstructorPeoplePage() {
   const [inviteOpen, setInviteOpen] = useState(false)
-  const [classCode, setClassCode] = useState(instructorClass.classCode)
+  const [classCode, setClassCode] = useState('')
   const [copyStatus, setCopyStatus] = useState('')
 
   return (
@@ -1757,7 +1713,7 @@ function InstructorPeoplePage() {
         <section className="instructor-people-actions">
           <div>
             <h2>Class Roster</h2>
-            <span>38 students - class code {classCode}</span>
+            <span>38 students</span>
           </div>
           <div>
             <button type="button" className="student-primary-action" onClick={() => setInviteOpen(true)}>
@@ -1777,19 +1733,25 @@ function InstructorPeoplePage() {
         </section>
         <section className="instructor-generated-code">
           <span>Active class code</span>
-          <div className="instructor-code-copy-row">
-            <strong>{classCode}</strong>
-            <button
-              type="button"
-              onClick={() => {
-                copyClassCode(classCode)
-                setCopyStatus('Copied')
-              }}
-            >
-              Copy
-            </button>
-          </div>
-          {copyStatus && <em>{copyStatus}</em>}
+          {classCode ? (
+            <>
+              <div className="instructor-code-copy-row">
+                <strong>{classCode}</strong>
+                <button
+                  type="button"
+                  onClick={() => {
+                    copyClassCode(classCode)
+                    setCopyStatus('Copied')
+                  }}
+                >
+                  Copy
+                </button>
+              </div>
+              {copyStatus && <em>{copyStatus}</em>}
+            </>
+          ) : (
+            <p>No active generated code.</p>
+          )}
         </section>
 
         <div className="instructor-data-table instructor-people-table" role="table" aria-label="Class roster">
@@ -1828,9 +1790,7 @@ function InstructorClassInfoPage() {
     ['Section', instructorClass.section],
     ['Instructor', instructorClass.instructor],
     ['Class code', instructorClass.classCode],
-    ['Activity rules', 'Submission attempts can be set from 1 to 3; attempts close after the due date'],
-    ['Repository rules', 'Team repositories are linked to group project requirements'],
-    ['Feedback release', 'Grades and comments are released after instructor review'],
+    ['Class Created', 'August 12, 2026'],
   ]
 
   return (

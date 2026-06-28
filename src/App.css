@@ -4580,6 +4580,36 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
+.instructor-table-row em.is-for-review {
+  border-color: #cfe0ff;
+  color: #245cff;
+  background: #edf3ff;
+}
+
+.instructor-table-row em.is-late {
+  border-color: #f0d3a9;
+  color: #9a580e;
+  background: #fff7e8;
+}
+
+.instructor-table-row em.is-missing {
+  border-color: #e7c8c8;
+  color: #8a2f2f;
+  background: #f7eeee;
+}
+
+.instructor-table-row em.is-graded-high {
+  border-color: #bce7cf;
+  color: #167146;
+  background: #e8f8ef;
+}
+
+.instructor-table-row em.is-graded-low {
+  border-color: #f0c7c2;
+  color: #a13f36;
+  background: #fff1ee;
+}
+
 .instructor-attention-card p {
   grid-column: 1 / -1;
 }
@@ -4726,6 +4756,7 @@ textarea:focus-visible {
 
 .instructor-review-class-block .student-home-class-card {
   width: 100%;
+  grid-template-columns: 48px minmax(0, 1fr) 28px;
   border: 1px solid #dfe7f1;
   text-align: left;
   cursor: pointer;
@@ -4833,8 +4864,9 @@ textarea:focus-visible {
 }
 
 .instructor-review-queue-row {
+  width: 100%;
   min-width: 980px;
-  grid-template-columns: minmax(320px, 1.45fr) minmax(180px, 0.75fr) minmax(140px, 0.55fr) minmax(260px, 1fr) minmax(120px, 0.45fr);
+  grid-template-columns: minmax(320px, 1.35fr) minmax(180px, 0.7fr) minmax(140px, 0.55fr) minmax(260px, 1fr) minmax(170px, 0.7fr);
 }
 
 .instructor-queue-panel {
@@ -5213,17 +5245,39 @@ textarea:focus-visible {
 }
 
 .instructor-monitor-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.instructor-activity-row {
+  min-width: 980px;
+  grid-template-columns: minmax(300px, 1.35fr) minmax(190px, 0.85fr) minmax(150px, 0.7fr) minmax(140px, 0.6fr) minmax(190px, 0.85fr);
 }
 
 .instructor-submission-row {
-  min-width: 1180px;
-  grid-template-columns: minmax(160px, 0.95fr) minmax(110px, 0.65fr) minmax(180px, 1fr) minmax(150px, 0.85fr) minmax(130px, 0.75fr) minmax(130px, 0.75fr) minmax(100px, 0.55fr);
+  min-width: 980px;
+  grid-template-columns: minmax(200px, 1fr) minmax(150px, 0.7fr) minmax(220px, 1fr) minmax(150px, 0.7fr) minmax(190px, 0.8fr);
 }
 
 .instructor-queue-row {
   min-width: 880px;
   grid-template-columns: minmax(180px, 0.9fr) minmax(300px, 1.35fr) minmax(150px, 0.7fr) minmax(210px, 0.95fr) minmax(110px, 0.5fr);
+}
+
+.instructor-reviewed-label {
+  min-height: 31px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid #bce7cf;
+  border-radius: 7px;
+  color: #167146;
+  background: #e8f8ef;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.instructor-row-options {
+  min-width: 34px;
 }
 
 .instructor-project-row {
@@ -5519,6 +5573,13 @@ textarea:focus-visible {
   color: #10233f;
   font-size: 24px;
   letter-spacing: 0.04em;
+}
+
+.instructor-generated-code p {
+  margin: 0;
+  color: #64738b;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .instructor-code-copy-row {
