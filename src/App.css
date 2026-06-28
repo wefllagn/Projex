@@ -3,8 +3,11 @@
   display: grid;
   place-items: center;
   padding: 32px;
-  background:
-    linear-gradient(90deg, rgba(24, 80, 76, 0.08) 1px, transparent 1px),
+  background: linear-gradient(
+      90deg,
+      rgba(24, 80, 76, 0.08) 1px,
+      transparent 1px
+    ),
     linear-gradient(rgba(24, 80, 76, 0.08) 1px, transparent 1px);
   background-size: 32px 32px;
 }
@@ -75,218 +78,416 @@
 
 .role-landing-page {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(24px, 4vw, 56px);
-  color: #10233f;
-  background:
-    radial-gradient(circle, rgba(37, 99, 235, 0.12) 1px, transparent 1.5px) 0 0 / 18px 18px,
-    linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: clamp(22px, 4vw, 44px);
+  color: #071b3f;
+  background: radial-gradient(
+      circle at 78% 14%,
+      rgba(15, 99, 255, 0.1),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 12% 26%,
+      rgba(121, 164, 255, 0.1),
+      transparent 28%
+    ),
+    radial-gradient(circle, rgba(37, 99, 235, 0.1) 1px, transparent 1.5px) 0 0 /
+      20px 20px,
+    #fbfdff;
 }
 
-.role-landing-panel {
-  width: min(1080px, 100%);
+.role-landing-shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
   display: grid;
-  gap: 34px;
-  padding: clamp(26px, 4vw, 46px);
-  border: 1px solid #d9e4f1;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 18px 44px rgba(22, 34, 57, 0.08);
+  gap: clamp(54px, 8vw, 92px);
 }
 
 .role-landing-brandbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: 20px;
+  min-height: 52px;
 }
 
-.role-landing-logo {
-  width: 154px;
+.role-landing-brand {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.role-landing-brand img {
+  width: 158px;
+  max-width: 100%;
   height: auto;
 }
 
 .role-landing-school {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-height: 42px;
-  padding: 8px 12px;
+  min-height: 34px;
+  padding: 0 14px;
   border: 1px solid #dbe6f4;
   border-radius: 999px;
-  background: #f7fbff;
-  color: #243a5c;
+  background: rgba(255, 255, 255, 0.84);
+  color: #4f617b;
   font-size: 12px;
-  font-weight: 900;
-  text-transform: uppercase;
+  font-weight: 800;
 }
 
-.role-landing-school img {
-  width: 30px;
-  height: 30px;
-  object-fit: contain;
+.role-landing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(440px, 0.98fr);
+  gap: clamp(42px, 6vw, 78px);
+  align-items: center;
 }
 
 .role-landing-copy {
   display: grid;
-  justify-items: center;
-  gap: 10px;
-  max-width: 740px;
-  margin: 8px auto 0;
-  text-align: center;
+  gap: 22px;
 }
 
-.role-landing-copy span {
-  color: #2760b7;
+.role-landing-kicker {
+  width: fit-content;
+  margin: 0;
+  padding: 7px 12px;
+  border: 1px solid #d6e4ff;
+  border-radius: 999px;
+  color: #0f63ff;
+  background: #f2f7ff;
   font-size: 12px;
   font-weight: 900;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .role-landing-copy h1 {
   margin: 0;
-  color: #071b3f;
-  font-size: clamp(42px, 6vw, 66px);
-  line-height: 1;
-}
-
-.role-landing-copy h2 {
-  margin: 0;
-  color: #1b2d4b;
-  font-size: clamp(21px, 3vw, 30px);
-  line-height: 1.18;
+  max-width: 720px;
+  color: #061832;
+  font-size: clamp(42px, 6vw, 72px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
 }
 
 .role-landing-copy p {
   margin: 0;
   max-width: 650px;
-  color: #53647d;
+  color: #52627a;
+  font-size: clamp(16px, 1.7vw, 18px);
   font-weight: 700;
-  font-size: 16px;
-  line-height: 1.65;
+  line-height: 1.72;
 }
 
-.role-landing-card-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.role-landing-card {
-  min-height: 230px;
+.role-landing-actions {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 26px;
-  border: 1px solid #dfe7f1;
-  border-radius: 8px;
-  color: #1b2a45;
-  background: #ffffff;
-  text-decoration: none;
-  box-shadow: 0 12px 28px rgba(37, 54, 89, 0.06);
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.role-landing-card:hover,
-.role-landing-card:focus-visible {
-  border-color: #9bbcff;
-  outline: none;
-  box-shadow: 0 18px 36px rgba(37, 88, 194, 0.13);
-  transform: translateY(-2px);
-}
-
-.role-landing-card-icon {
-  position: relative;
-  width: 54px;
-  height: 54px;
-  display: inline-grid;
-  place-items: center;
-  border: 1px solid #cfe0ff;
-  border-radius: 16px;
-  background: #eef5ff;
-}
-
-.role-landing-card-icon::before,
-.role-landing-card-icon::after {
-  content: '';
-  position: absolute;
-  display: block;
-}
-
-.role-landing-card-icon--student::before {
-  top: 12px;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: #1763ff;
-}
-
-.role-landing-card-icon--student::after {
-  bottom: 12px;
-  width: 26px;
-  height: 14px;
-  border-radius: 14px 14px 7px 7px;
-  background: #7aa3ff;
-}
-
-.role-landing-card-icon--instructor::before {
-  width: 24px;
-  height: 28px;
-  border: 3px solid #1763ff;
-  border-radius: 4px;
-  background: #ffffff;
-}
-
-.role-landing-card-icon--instructor::after {
-  width: 16px;
-  height: 3px;
-  border-radius: 999px;
-  background: #7aa3ff;
-  box-shadow: 0 7px 0 #7aa3ff;
-}
-
-.role-landing-card-copy {
-  display: grid;
-  gap: 8px;
-  flex: 1;
-}
-
-.role-landing-card strong {
-  color: #10233f;
-  font-size: 24px;
-  line-height: 1.18;
-}
-
-.role-landing-card-copy span {
-  color: #53647d;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.55;
-}
-
-.role-landing-card-cta {
+.role-landing-button {
+  min-height: 48px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: fit-content;
-  min-height: 42px;
-  padding: 0 16px;
+  padding: 0 20px;
   border-radius: 8px;
-  background: #0f63ff;
-  color: #ffffff;
   font-size: 14px;
+  font-weight: 900;
+  text-decoration: none;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease,
+    transform 160ms ease;
+}
+
+.role-landing-button:hover,
+.role-landing-button:focus-visible {
+  outline: none;
+  transform: translateY(-2px);
+}
+
+.role-landing-button--primary {
+  border: 1px solid #0f63ff;
+  color: #ffffff;
+  background: #0f63ff;
+  box-shadow: 0 14px 30px rgba(15, 99, 255, 0.22);
+}
+
+.role-landing-button--primary:hover,
+.role-landing-button--primary:focus-visible {
+  background: #0754df;
+}
+
+.role-landing-button--secondary {
+  border: 1px solid #cfdced;
+  color: #10233f;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.role-landing-button--secondary:hover,
+.role-landing-button--secondary:focus-visible {
+  border-color: #9bbcff;
+  color: #0f63ff;
+  background: #ffffff;
+}
+
+.role-landing-preview {
+  position: relative;
+  min-height: 520px;
+  display: grid;
+  align-items: center;
+}
+
+.role-landing-preview::before {
+  content: "";
+  position: absolute;
+  inset: 42px 8px 36px 52px;
+  border-radius: 32px;
+  background: rgba(15, 99, 255, 0.08);
+  filter: blur(24px);
+}
+
+.role-landing-preview-card {
+  position: relative;
+  border: 1px solid #d8e4f4;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 22px 60px rgba(15, 39, 80, 0.11);
+}
+
+.role-landing-preview-card--main {
+  padding: 22px;
+}
+
+.role-landing-preview-top,
+.role-landing-preview-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.role-landing-preview-top {
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e4ebf5;
+}
+
+.role-landing-preview-top span,
+.role-landing-preview-top strong,
+.role-landing-preview-metrics strong,
+.role-landing-preview-metrics span {
+  display: block;
+}
+
+.role-landing-preview-top span {
+  color: #0f63ff;
+  font-size: 12px;
   font-weight: 900;
 }
 
-.role-landing-card-cta::after {
-  content: '>';
-  margin-left: 10px;
+.role-landing-preview-top strong {
+  margin-top: 4px;
+  color: #071b3f;
+  font-size: 18px;
+}
+
+.role-landing-preview-pill {
+  min-height: 30px;
+  display: inline-flex !important;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: #12663f !important;
+  background: #e8f8ef;
+  font-size: 12px !important;
+}
+
+.role-landing-preview-metrics {
+  margin: 18px 0;
+}
+
+.role-landing-preview-metrics div {
+  flex: 1;
+  min-height: 82px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid #e1e9f4;
+  border-radius: 18px;
+  background: #f8fbff;
+}
+
+.role-landing-preview-metrics strong {
+  color: #061832;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.role-landing-preview-metrics span {
+  color: #5f6f87;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.role-landing-preview-list {
+  display: grid;
+  gap: 12px;
+}
+
+.role-landing-preview-list div {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 5px 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid #e1e9f4;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.role-landing-preview-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #0f63ff;
+}
+
+.role-landing-preview-dot--green {
+  background: #22a06b;
+}
+
+.role-landing-preview-dot--amber {
+  background: #d97706;
+}
+
+.role-landing-preview-dot--violet {
+  background: #7c3aed;
+}
+
+.role-landing-preview-list strong,
+.role-landing-preview-list small {
+  grid-column: 2;
+}
+
+.role-landing-preview-list strong {
+  color: #10233f;
+  font-size: 14px;
+}
+
+.role-landing-preview-list small {
+  color: #687891;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.role-landing-preview-card--float {
+  position: absolute;
+  right: -8px;
+  bottom: 8px;
+  min-width: 214px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 20px;
+  box-shadow: 0 18px 36px rgba(15, 39, 80, 0.14);
+}
+
+.role-landing-preview-card--float img {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+
+.role-landing-preview-card--float strong,
+.role-landing-preview-card--float span {
+  display: block;
+}
+
+.role-landing-preview-card--float strong {
+  color: #10233f;
+  font-size: 13px;
+}
+
+.role-landing-preview-card--float span {
+  margin-top: 3px;
+  color: #0f63ff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.role-landing-about {
+  display: grid;
+  gap: 24px;
+  padding: clamp(24px, 4vw, 34px);
+  border: 1px solid #dbe6f4;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 18px 44px rgba(15, 39, 80, 0.07);
+}
+
+.role-landing-about-copy {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.role-landing-about-copy h2 {
+  margin: 0;
+  color: #061832;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+.role-landing-about-copy p {
+  margin: 0;
+  color: #52627a;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.role-landing-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.role-landing-feature-card {
+  min-height: 200px;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid #dfe7f1;
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.role-landing-feature-mark {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #cfe0ff;
+  border-radius: 12px;
+  background: linear-gradient(#0f63ff, #0f63ff) center / 14px 2px no-repeat,
+    linear-gradient(#0f63ff, #0f63ff) center / 2px 14px no-repeat, #f0f6ff;
+}
+
+.role-landing-feature-card h3 {
+  margin: 0;
+  color: #10233f;
+  font-size: 18px;
+}
+
+.role-landing-feature-card p {
+  margin: 0;
+  color: #5a6b84;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.62;
 }
 
 .app-shell {
@@ -1409,10 +1610,8 @@ textarea:focus-visible {
   width: 39px;
   height: 39px;
   border-radius: 999px;
-  background:
-    radial-gradient(circle at 50% 32%, #f2c8a2 0 22%, transparent 23%),
-    radial-gradient(circle at 50% 86%, #243447 0 38%, transparent 39%),
-    #d6dbe3;
+  background: radial-gradient(circle at 50% 32%, #f2c8a2 0 22%, transparent 23%),
+    radial-gradient(circle at 50% 86%, #243447 0 38%, transparent 39%), #d6dbe3;
 }
 
 .student-user-name {
@@ -1518,8 +1717,7 @@ textarea:focus-visible {
 .student-class-content {
   min-height: calc(100vh - 147px);
   padding: 38px 24px 64px;
-  background:
-    linear-gradient(
+  background: linear-gradient(
       90deg,
       transparent 0,
       transparent 27%,
@@ -1582,10 +1780,8 @@ textarea:focus-visible {
 }
 
 .student-post-icon--announcement {
-  background:
-    radial-gradient(circle at 50% 32%, #f2c8a2 0 25%, transparent 26%),
-    radial-gradient(circle at 50% 100%, #4a6f92 0 44%, transparent 45%),
-    #ffffff;
+  background: radial-gradient(circle at 50% 32%, #f2c8a2 0 25%, transparent 26%),
+    radial-gradient(circle at 50% 100%, #4a6f92 0 44%, transparent 45%), #ffffff;
 }
 
 .student-comment-button,
@@ -1609,7 +1805,8 @@ textarea:focus-visible {
   height: 22px;
   justify-self: end;
   border-radius: 6px;
-  background: radial-gradient(circle, #526178 1.4px, transparent 1.8px) center / 5px 5px;
+  background: radial-gradient(circle, #526178 1.4px, transparent 1.8px) center /
+    5px 5px;
 }
 
 .student-assignment-panel {
@@ -1826,11 +2023,9 @@ textarea:focus-visible {
   height: 50px;
   border: 1px solid #dbe3ef;
   border-radius: 4px;
-  background:
-    linear-gradient(#eef3f8 0 0) 8px 8px / 72% 4px no-repeat,
+  background: linear-gradient(#eef3f8 0 0) 8px 8px / 72% 4px no-repeat,
     linear-gradient(#e7eef6 0 0) 8px 18px / 82% 4px no-repeat,
-    linear-gradient(#8bd18e 0 0) 8px 38px / 70% 4px no-repeat,
-    #ffffff;
+    linear-gradient(#8bd18e 0 0) 8px 38px / 70% 4px no-repeat, #ffffff;
 }
 
 .student-expanded-project {
@@ -3128,8 +3323,7 @@ textarea:focus-visible {
   height: 18px;
   border: 2px solid #4e6687;
   border-radius: 4px;
-  background:
-    linear-gradient(#f4f7fb, #f4f7fb) padding-box,
+  background: linear-gradient(#f4f7fb, #f4f7fb) padding-box,
     linear-gradient(90deg, #edf3ff, #ffffff) border-box;
   box-shadow: -6px -6px 0 -4px #4e6687;
 }
@@ -3415,7 +3609,10 @@ textarea:focus-visible {
 .student-repo-file-head,
 .student-repo-file-row {
   display: grid;
-  grid-template-columns: 32px minmax(180px, 1fr) minmax(160px, 0.7fr) minmax(150px, 0.6fr);
+  grid-template-columns: 32px minmax(180px, 1fr) minmax(160px, 0.7fr) minmax(
+      150px,
+      0.6fr
+    );
   gap: 8px;
   align-items: center;
 }
@@ -3864,8 +4061,12 @@ textarea:focus-visible {
 /* Student polish pass: dashboard, icons, profile menu, and login revamp. */
 .student-home-page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle, rgba(106, 151, 210, 0.16) 1px, transparent 1.5px) 0 0 / 18px 18px,
+  background: radial-gradient(
+        circle,
+        rgba(106, 151, 210, 0.16) 1px,
+        transparent 1.5px
+      )
+      0 0 / 18px 18px,
     #ffffff;
 }
 
@@ -4133,7 +4334,15 @@ textarea:focus-visible {
   border: 0;
   border-radius: 3px;
   background: #61718a;
-  clip-path: polygon(50% 8%, 92% 44%, 82% 44%, 82% 92%, 18% 92%, 18% 44%, 8% 44%);
+  clip-path: polygon(
+    50% 8%,
+    92% 44%,
+    82% 44%,
+    82% 92%,
+    18% 92%,
+    18% 44%,
+    8% 44%
+  );
 }
 
 .student-sidebar__link.active .student-sidebar__icon--home,
@@ -4792,8 +5001,12 @@ textarea:focus-visible {
 /* Instructor Pass 1: student-style shell with instructor-specific content. */
 .instructor-home-page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle, rgba(106, 151, 210, 0.16) 1px, transparent 1.5px) 0 0 / 18px 18px,
+  background: radial-gradient(
+        circle,
+        rgba(106, 151, 210, 0.16) 1px,
+        transparent 1.5px
+      )
+      0 0 / 18px 18px,
     #ffffff;
 }
 
@@ -4961,8 +5174,7 @@ textarea:focus-visible {
 
 .instructor-class-content {
   padding-inline: clamp(28px, 4vw, 56px);
-  background:
-    linear-gradient(
+  background: linear-gradient(
       90deg,
       transparent 0,
       transparent 8%,
@@ -5003,7 +5215,9 @@ textarea:focus-visible {
   margin: 0 auto;
 }
 
-.instructor-stream-shell .instructor-dashboard-section .student-home-section-heading {
+.instructor-stream-shell
+  .instructor-dashboard-section
+  .student-home-section-heading {
   padding-top: 0;
   border-top: 0;
 }
@@ -5316,7 +5530,9 @@ textarea:focus-visible {
 .instructor-review-queue-row {
   width: 100%;
   min-width: 0;
-  grid-template-columns: minmax(280px, 2fr) minmax(180px, 1fr) minmax(140px, 0.75fr) minmax(240px, 1.35fr) minmax(120px, 0.6fr);
+  grid-template-columns:
+    minmax(280px, 2fr) minmax(180px, 1fr) minmax(140px, 0.75fr)
+    minmax(240px, 1.35fr) minmax(120px, 0.6fr);
 }
 
 .instructor-review-queue-row > :last-child {
@@ -5404,7 +5620,9 @@ textarea:focus-visible {
 .instructor-table-row {
   min-width: 980px;
   display: grid;
-  grid-template-columns: minmax(220px, 1.35fr) minmax(150px, 0.85fr) minmax(110px, 0.65fr) minmax(120px, 0.7fr) minmax(130px, 0.75fr) minmax(150px, 0.8fr);
+  grid-template-columns:
+    minmax(220px, 1.35fr) minmax(150px, 0.85fr) minmax(110px, 0.65fr)
+    minmax(120px, 0.7fr) minmax(130px, 0.75fr) minmax(150px, 0.8fr);
   gap: 14px;
   align-items: center;
   min-height: 62px;
@@ -5680,7 +5898,9 @@ textarea:focus-visible {
 
 .instructor-test-row {
   min-width: 720px;
-  grid-template-columns: minmax(150px, 0.7fr) minmax(260px, 1.3fr) minmax(80px, 0.35fr) minmax(100px, 0.45fr);
+  grid-template-columns:
+    minmax(150px, 0.7fr) minmax(260px, 1.3fr) minmax(80px, 0.35fr)
+    minmax(100px, 0.45fr);
 }
 
 .instructor-rubric-grid input {
@@ -5708,17 +5928,23 @@ textarea:focus-visible {
 
 .instructor-activity-row {
   min-width: 900px;
-  grid-template-columns: minmax(340px, 1.55fr) minmax(210px, 0.85fr) minmax(150px, 0.6fr) minmax(210px, 0.85fr);
+  grid-template-columns:
+    minmax(340px, 1.55fr) minmax(210px, 0.85fr) minmax(150px, 0.6fr)
+    minmax(210px, 0.85fr);
 }
 
 .instructor-submission-row {
   min-width: 980px;
-  grid-template-columns: minmax(200px, 1fr) minmax(150px, 0.7fr) minmax(220px, 1fr) minmax(150px, 0.7fr) minmax(190px, 0.8fr);
+  grid-template-columns:
+    minmax(200px, 1fr) minmax(150px, 0.7fr) minmax(220px, 1fr)
+    minmax(150px, 0.7fr) minmax(190px, 0.8fr);
 }
 
 .instructor-queue-row {
   min-width: 880px;
-  grid-template-columns: minmax(180px, 0.9fr) minmax(300px, 1.35fr) minmax(150px, 0.7fr) minmax(210px, 0.95fr) minmax(110px, 0.5fr);
+  grid-template-columns:
+    minmax(180px, 0.9fr) minmax(300px, 1.35fr) minmax(150px, 0.7fr)
+    minmax(210px, 0.95fr) minmax(110px, 0.5fr);
 }
 
 .instructor-reviewed-label {
@@ -5740,12 +5966,16 @@ textarea:focus-visible {
 
 .instructor-project-row {
   min-width: 1240px;
-  grid-template-columns: minmax(260px, 1.2fr) minmax(180px, 0.85fr) minmax(110px, 0.5fr) minmax(130px, 0.6fr) minmax(220px, 1fr) minmax(130px, 0.6fr) minmax(170px, 0.75fr);
+  grid-template-columns:
+    minmax(260px, 1.2fr) minmax(180px, 0.85fr) minmax(110px, 0.5fr)
+    minmax(130px, 0.6fr) minmax(220px, 1fr) minmax(130px, 0.6fr) minmax(170px, 0.75fr);
 }
 
 .instructor-team-row {
   min-width: 1120px;
-  grid-template-columns: minmax(100px, 0.5fr) minmax(240px, 1.2fr) minmax(190px, 0.9fr) minmax(180px, 0.85fr) minmax(140px, 0.65fr) minmax(220px, 1fr) minmax(120px, 0.55fr);
+  grid-template-columns:
+    minmax(100px, 0.5fr) minmax(240px, 1.2fr) minmax(190px, 0.9fr)
+    minmax(180px, 0.85fr) minmax(140px, 0.65fr) minmax(220px, 1fr) minmax(120px, 0.55fr);
 }
 
 .instructor-review-page {
@@ -5854,7 +6084,9 @@ textarea:focus-visible {
 
 .instructor-test-result-row {
   min-width: 860px;
-  grid-template-columns: minmax(310px, 1.35fr) minmax(150px, 0.65fr) minmax(130px, 0.55fr) minmax(150px, 0.6fr);
+  grid-template-columns:
+    minmax(310px, 1.35fr) minmax(150px, 0.65fr) minmax(130px, 0.55fr)
+    minmax(150px, 0.6fr);
 }
 
 .instructor-test-result-row em.is-passed {
@@ -6350,7 +6582,9 @@ textarea:focus-visible {
 }
 
 .instructor-people-table .instructor-table-row {
-  grid-template-columns: minmax(170px, 1fr) minmax(220px, 1.2fr) minmax(90px, 0.55fr) minmax(90px, 0.55fr) minmax(90px, 0.55fr) minmax(150px, 0.8fr);
+  grid-template-columns:
+    minmax(170px, 1fr) minmax(220px, 1.2fr) minmax(90px, 0.55fr)
+    minmax(90px, 0.55fr) minmax(90px, 0.55fr) minmax(150px, 0.8fr);
 }
 
 .instructor-info-list {
@@ -6513,8 +6747,12 @@ textarea:focus-visible {
 
 .student-global-page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle, rgba(106, 151, 210, 0.14) 1px, transparent 1.5px) 0 0 / 18px 18px,
+  background: radial-gradient(
+        circle,
+        rgba(106, 151, 210, 0.14) 1px,
+        transparent 1.5px
+      )
+      0 0 / 18px 18px,
     #ffffff;
 }
 
@@ -7027,7 +7265,9 @@ textarea:focus-visible {
   line-height: 1.5;
 }
 
-.student-stream-post--clean > div:nth-child(2) > span:not(.student-stream-label) {
+.student-stream-post--clean
+  > div:nth-child(2)
+  > span:not(.student-stream-label) {
   font-size: 12px;
 }
 
@@ -7043,8 +7283,12 @@ textarea:focus-visible {
 }
 
 .student-post-icon--feedback {
-  background:
-    linear-gradient(135deg, transparent 43%, #178f55 44% 56%, transparent 57%),
+  background: linear-gradient(
+      135deg,
+      transparent 43%,
+      #178f55 44% 56%,
+      transparent 57%
+    ),
     #dcf8e7;
   border: 2px solid #9be1b9;
 }
@@ -7258,8 +7502,7 @@ textarea:focus-visible {
 /* Student class tabs: use the available class content width like instructor pages. */
 .student-class-content:not(.student-class-content--wide) {
   padding-inline: clamp(28px, 4vw, 56px);
-  background:
-    linear-gradient(
+  background: linear-gradient(
       90deg,
       transparent 0,
       transparent 8%,
@@ -7270,12 +7513,14 @@ textarea:focus-visible {
     #ffffff;
 }
 
-.student-class-content:not(.student-class-content--wide) .student-assignment-panel,
+.student-class-content:not(.student-class-content--wide)
+  .student-assignment-panel,
 .student-class-content:not(.student-class-content--wide) .student-people-panel {
   width: min(1360px, 100%);
 }
 
-.student-class-content:not(.student-class-content--wide) .student-assignment-panel {
+.student-class-content:not(.student-class-content--wide)
+  .student-assignment-panel {
   padding: 22px 18px 0;
 }
 
@@ -7285,8 +7530,11 @@ textarea:focus-visible {
   min-height: 52px;
 }
 
-.student-class-content:not(.student-class-content--wide) .student-row-summary strong,
-.student-class-content:not(.student-class-content--wide) .student-row-title-link {
+.student-class-content:not(.student-class-content--wide)
+  .student-row-summary
+  strong,
+.student-class-content:not(.student-class-content--wide)
+  .student-row-title-link {
   font-size: 14px;
 }
 
@@ -7295,7 +7543,9 @@ textarea:focus-visible {
   padding: 34px 42px 42px;
 }
 
-.student-class-content:not(.student-class-content--wide) .student-people-panel h2 {
+.student-class-content:not(.student-class-content--wide)
+  .student-people-panel
+  h2 {
   font-size: 25px;
 }
 
@@ -7304,16 +7554,21 @@ textarea:focus-visible {
   grid-template-columns: 38px minmax(0, 1fr) 32px;
 }
 
-.student-class-content:not(.student-class-content--wide) .student-person-avatar {
+.student-class-content:not(.student-class-content--wide)
+  .student-person-avatar {
   width: 28px;
   height: 28px;
 }
 
-.student-class-content:not(.student-class-content--wide) .student-person-row strong {
+.student-class-content:not(.student-class-content--wide)
+  .student-person-row
+  strong {
   font-size: 14px;
 }
 
-.student-class-content:not(.student-class-content--wide) .student-person-row span {
+.student-class-content:not(.student-class-content--wide)
+  .student-person-row
+  span {
   font-size: 12px;
 }
 
@@ -7322,7 +7577,8 @@ textarea:focus-visible {
     padding-inline: 12px;
   }
 
-  .student-class-content:not(.student-class-content--wide) .student-people-panel {
+  .student-class-content:not(.student-class-content--wide)
+    .student-people-panel {
     padding: 24px 18px;
   }
 }
@@ -7409,4 +7665,14 @@ textarea:focus-visible {
   .student-project-detail-layout .student-work-rail {
     margin-top: 0;
   }
+}
+
+/* FINAL OVERRIDE: login logo size */
+.student-login-logo {
+  width: 350px !important;
+  max-width: 80% !important;
+  height: auto !important;
+  margin-left: 10px !important;
+  margin-bottom: 0 !important;
+  transform: translateY(18px);
 }
