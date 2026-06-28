@@ -8,40 +8,53 @@ export function RoleLandingPage() {
     {
       label: 'Student',
       to: '/student-login',
-      description: 'Open the student sign-in page for activities, submissions, and team repositories.',
+      description: 'Access activities, submissions, feedback, and team repositories.',
+      cta: 'Continue as Student',
+      icon: 'student',
     },
     {
       label: 'Instructor',
       to: '/instructor-login',
-      description: 'Open the instructor sign-in page for class, activity, and repository review tools.',
-    },
-    {
-      label: 'Admin',
-      to: '/admin',
-      description: 'Go to the admin prototype workspace for users, courses, repositories, and storage.',
+      description: 'Manage classes, activities, submissions, and repository reviews.',
+      cta: 'Continue as Instructor',
+      icon: 'instructor',
     },
   ]
 
   return (
     <main className="role-landing-page">
       <section className="role-landing-panel" aria-labelledby="role-landing-title">
-        <img
-          className="role-landing-logo"
-          src="/assets/brand/projex-login-logo.png"
-          alt="Projex by Saint Louis University"
-        />
+        <header className="role-landing-brandbar">
+          <img
+            className="role-landing-logo"
+            src="/assets/brand/projex-sidebar-logo.png"
+            alt="Projex"
+          />
+          <div className="role-landing-school">
+            <img src="/assets/brand/slu-logo.png" alt="Saint Louis University" />
+            <span>Saint Louis University</span>
+          </div>
+        </header>
 
         <div className="role-landing-copy">
-          <span>Saint Louis University</span>
-          <h1 id="role-landing-title">Are you a student, instructor, or admin?</h1>
-          <p>Choose your Projex workspace to continue.</p>
+          <span>SAINT LOUIS UNIVERSITY</span>
+          <h1 id="role-landing-title">Welcome to Projex</h1>
+          <h2>Choose your workspace to continue.</h2>
+          <p>
+            A programming education platform for class activities, repository collaboration,
+            feedback, and project review.
+          </p>
         </div>
 
         <div className="role-landing-card-grid" aria-label="Choose a role">
           {roleLinks.map((role) => (
             <Link className="role-landing-card" to={role.to} key={role.label}>
-              <strong>{role.label}</strong>
-              <span>{role.description}</span>
+              <span className={`role-landing-card-icon role-landing-card-icon--${role.icon}`} aria-hidden="true" />
+              <span className="role-landing-card-copy">
+                <strong>{role.label}</strong>
+                <span>{role.description}</span>
+              </span>
+              <span className="role-landing-card-cta">{role.cta}</span>
             </Link>
           ))}
         </div>
@@ -128,8 +141,8 @@ export function InstructorLoginPage() {
         <aside className="student-login-info" aria-label="Projex instructor information">
           <div className="student-login-info__copy">
             <span className="student-login-university">Saint Louis University</span>
-            <h2>Guide programming work with Projex</h2>
-            <p>Review class activity, submissions, repository progress, and feedback from one workspace.</p>
+            <h2>Your Projex classroom, reviewed in minutes.</h2>
+            <p>Submissions, code progress, and feedback without jumping between tools.</p>
           </div>
           <img
             className="student-login-mascot"
