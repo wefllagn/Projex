@@ -1,0 +1,400 @@
+You are working on my existing projex-ui frontend project.
+
+Goal: build the Instructor Side UI based on the existing Student Side UI flow and visual style already implemented in the project.
+
+Do not redesign the whole app from scratch. Inspect the current files/components first, then reuse the existing layout system, colors, typography, spacing, sidebar style, cards, buttons, tables, tabs, badges, modals, and page structure from the Student Side.
+
+The instructor UI should feel like the same product as the student UI, but with instructor-specific actions and screens.
+
+PROJECT CONTEXT:
+Projex is a web-based academic repository-learning platform for programming education. It has:
+- Activity Mode: programming exercises, one final submission, in-platform coding/checking, test cases, feedback, grading.
+- Project Collaboration Mode: group project requirements, student-created repositories, collaborators, commits, contribution tracking, instructor review, archive readiness.
+- Roles: Student, Instructor, Admin.
+- Current student UI already includes class page, stream, assignments, activities, selected activity, in-platform coding, submit flow, feedback, group project repository, and project repository UI.
+
+IMPORTANT:
+The instructor side should be at the same UI-detail level as the student side. Do not only create a simple dashboard. Create realistic instructor screens that match the student flow counterpart.
+
+GENERAL REQUIREMENTS:
+1. Reuse existing Projex design language.
+2. Keep the interface clean, academic, and modern.
+3. Keep the Google Classroom-inspired class layout for class pages.
+4. Keep the GitLab-inspired repository layout for repository/project review pages.
+5. Use hardcoded prototype data only.
+6. Do not connect to backend.
+7. Do not remove or break existing student pages.
+8. Keep routing/state simple if the project is still prototype-based.
+9. Make sure the instructor role is accessible from the existing prototype role switch/login flow.
+10. Use realistic class data:
+   - Instructor: Engr. Marco Rivera
+   - Course: IT 112 - Computer Programming 1
+   - Section: BSIT 2A
+   - Class code: 9446
+   - Students: Julius Teodoro, Alyssa Mendoza, Marco Rivera, Daniel Reyes, etc.
+11. Make all buttons and tabs visually clickable, even if they only change prototype state.
+
+INSTRUCTOR UI FLOW TO IMPLEMENT:
+
+A. Instructor Login / Role Entry
+- Instructor should be selectable from the existing login/role selection.
+- After choosing Instructor View, show the instructor dashboard/class home.
+
+B. Instructor Home / Dashboard
+Create an instructor dashboard similar to the student dashboard but instructor-focused.
+Show summary cards:
+- Total students
+- Published activities
+- Pending submissions
+- Repositories created
+- Projects ready for review
+- Similarity review alerts
+
+Also show a queue/attention panel:
+- Activities needing grading
+- Projects with missing repositories
+- Teams with uneven contribution
+- Submissions with failed test cases
+- Similarity flags needing instructor review
+
+C. Instructor Class Page
+Create the class page for “IT 112 - Computer Programming 1” with tabs:
+- Stream
+- Assignments
+- People
+- Class Info
+
+Keep the same visual style as the student class page.
+
+D. Instructor Stream
+Create a class stream page where the instructor can see announcements and recent class activity.
+Include:
+- Announcement composer card
+- Recent published activities
+- Recent project updates
+- Student repository activity summary
+
+E. Instructor Assignments Page
+Inside Assignments, create secondary tabs:
+- Activities
+- Group Projects
+
+This should mirror the student Assignments tab, but with instructor controls.
+
+F. Instructor Activities Tab
+Create an activity management page with:
+- List of programming activities
+- Due dates
+- Published/draft status
+- Submission counts
+- Grading status
+
+Buttons:
+- Create Activity
+- View submissions
+- Edit settings
+
+Sample activities:
+- Prelim Programming Exercise 1 LAB
+- Prelim Programming Exercise 2 LAB
+- Loop Patterns and Input Validation
+- Student Grade Analyzer
+- CSV Enrollment Parser
+
+G. Create Activity Screen
+Create a realistic instructor form/page for creating an activity.
+Fields:
+- Activity title
+- Instructions
+- PDF/resource upload placeholder
+- Programming language
+- Due date
+- Submission rule: One final submission only
+- Compiler enabled toggle
+- Visible test cases
+- Hidden test cases
+- Rubric / scoring
+- Feedback visibility
+
+Add:
+- Publish Activity button
+- Save Draft button
+
+H. Test Case Setup Section
+Inside Create Activity or as a sub-panel, include:
+- Sample input
+- Expected output
+- Points
+- Visibility: visible / hidden
+- Add test case button
+
+I. Activity Detail / Monitoring Page
+When an instructor clicks an activity, show:
+- Activity title
+- Instructions/specification attachment
+- Due date
+- Submission progress
+- Submitted / missing / late / locked stats
+- Student submission table
+
+Student submission table columns:
+- Student name
+- Submission status
+- Last submitted
+- Test result
+- Similarity signal
+- Grade status
+- Action: Review
+
+J. Submission Queue
+Create a submission queue page/card/table showing all submissions needing review.
+Include status chips:
+- Submitted
+- Missing
+- Late
+- Failed tests
+- Needs review
+- Graded
+
+K. Selected Student Submission Review
+Create a review page for one student submission.
+Layout should be similar to the student in-platform coding page but instructor-focused.
+Include:
+- Student name
+- Activity title
+- Submitted code viewer
+- Compiler output
+- Test case results
+- Passed/failed indicators
+- Similarity indicator
+- Comment/feedback box
+- Grade input
+
+Buttons:
+- Save feedback
+- Release feedback
+- Return for revision if allowed
+
+L. Feedback Release Modal/State
+Create a small modal or confirmation state:
+- “Release feedback to student?”
+- Shows grade and comment summary
+- Buttons: Cancel, Release Feedback
+
+M. Instructor Group Projects Tab
+Create group project management page.
+Show project requirements list:
+- Prelim Group Project 1 Specifications
+- Prelim Group Project 2 Specifications
+- Midterm Group Project 1 Specifications
+- Final Group Project Proposal
+
+Each row should show:
+- Due date
+- Repository creation count
+- Teams ready for review
+- At-risk teams
+- Action buttons
+
+Include button:
+- Create Project Requirement
+
+N. Create Project Requirement Screen
+Create a form for instructor to publish group project requirements.
+Fields:
+- Project title
+- Project specifications / instructions
+- PDF attachment placeholder
+- Group size
+- Repository type: Team repository
+- Deadline
+- Required deliverables
+- Rubric
+- Contribution tracking enabled
+- Similarity review enabled
+- Archive requirement enabled
+
+Buttons:
+- Publish Project
+- Save Draft
+
+O. Project Requirement Monitoring Page
+When instructor opens a project requirement, show:
+- Project title
+- Specifications attachment
+- Due date
+- Group size rule
+- Repository creation progress
+- Teams table
+
+Teams table columns:
+- Team name
+- Repository name
+- Members
+- Last commit
+- Contribution balance
+- Submission status
+- Similarity signal
+- Action: Open repository
+
+Sample rows:
+- Team 01 / prelim-group-project-1-team-01 / Balanced / Ready for review
+- Team 02 / prelim-group-project-1-team-02 / Uneven / In progress
+- Team 03 / prelim-group-project-1-team-03 / Balanced / Not yet marked ready
+- Team 04 / No repository yet / Missing repository
+
+P. Instructor Repository Review Page
+Create a repository review page inspired by the student Project Repo UI and GitLab-like repository page.
+This is the instructor version of a student-created team repository.
+
+It should show:
+- Breadcrumb: IT 112 / Prelim Group Project 1 / prelim-group-project-1-team-03
+- Repository title
+- Status badge: In Progress / Ready for Review
+- Linked class
+- Team repository
+- Instructor review mode
+- File explorer
+- Latest commit banner
+- README preview
+- Pinned Official Project Specifications card
+- Right sidebar with project information
+- Collaborators list
+- Submission status
+- Instructor review panel
+
+File list sample:
+- src
+- docs
+- tests
+- README.md
+- PROJECT_SPECIFICATIONS.md
+- .gitignore
+- pom.xml or build.gradle
+
+Instructor-specific panels:
+- Contribution Summary
+- Similarity Review
+- Review Actions
+
+Q. Contribution Review Page or Panel
+Show:
+- Team members
+- Commit count
+- Lines changed
+- Tasks completed
+- Last activity
+- Contribution balance signal
+
+Example:
+- Julius Teodoro: 12 commits, 45% contribution, active
+- Alyssa Mendoza: 8 commits, 30% contribution, active
+- Marco Rivera: 4 commits, 15% contribution, needs watch
+- Daniel Reyes: 2 commits, 10% contribution, low activity
+
+R. Project Similarity Review
+Create an instructor-only similarity review panel.
+Do not make it too aggressive or accusatory.
+
+Use wording like:
+- Similarity signal
+- Needs review
+- Comparable structure detected
+- Instructor-only detail
+
+Show:
+- Team compared with another team
+- Similarity percentage/signal
+- Files involved
+- Review notes
+- Button: Mark reviewed
+
+S. Archive Readiness
+Create a project archive readiness section:
+- Requirements complete
+- README present
+- Specifications linked
+- Final review completed
+- Repository ready for preservation
+
+Buttons:
+- Approve archive
+- Return for revision
+
+T. Instructor People Page
+Create People tab/page for class roster.
+Include:
+- Student list
+- Email or student number placeholder
+- Section
+- Status
+- Invite status
+
+Buttons:
+- Invite Students
+- Generate Class Code
+- Remove from class or Manage
+
+U. Invite Students / Class Code
+Create simple panel/modal:
+- Class code: 9446
+- Copy class code
+- Invite by email placeholder
+- Pending invitations list
+
+V. Class Info / Settings
+Create a simple class info page:
+- Course name
+- Section
+- Instructor
+- Class code
+- Activity rules
+- Repository rules
+- Feedback release settings
+
+DESIGN NOTES:
+- The instructor UI should not feel like a separate app.
+- Use the same sidebar and class header style from the student UI.
+- Use instructor-specific labels, not student labels.
+- Keep the workflow obvious:
+  - Instructor asks: “What do I need to create, monitor, review, and release?”
+  - Student asks: “What do I need to do?”
+- Instructor pages should have more management tables, review queues, and action buttons.
+
+SUGGESTED ROUTES OR STATES:
+Use whatever routing/state pattern already exists in the project.
+If simple state-based navigation is used, continue using that.
+
+Possible pages/states:
+- instructor-dashboard
+- instructor-class-stream
+- instructor-assignments-activities
+- instructor-create-activity
+- instructor-activity-detail
+- instructor-submission-review
+- instructor-assignments-projects
+- instructor-create-project
+- instructor-project-monitoring
+- instructor-repository-review
+- instructor-people
+- instructor-class-info
+
+ACCEPTANCE CRITERIA:
+- Instructor role opens a complete instructor UI.
+- Instructor has a class dashboard.
+- Instructor can navigate Stream, Assignments, People, and Class Info.
+- Instructor Assignments has Activities and Group Projects tabs.
+- Activities include create, monitor, submission queue, and review states.
+- Group Projects include create requirement, team repositories, repository review, contribution review, and archive readiness.
+- UI matches the existing student-side design system.
+- Student UI still works after implementation.
+- No backend required.
+- Hardcoded prototype data is acceptable.
+- App builds/runs without errors.
+
+After implementing:
+1. Run the project.
+2. Check for visual layout issues.
+3. Fix broken imports, unused variables, and obvious responsiveness issues.
+4. Do not leave placeholder broken pages.
+5. Give a short summary of what files/components were changed and how to open the instructor flow.
