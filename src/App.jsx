@@ -6,7 +6,7 @@ import {
 import './App.css'
 import DashboardLayout from './layouts/DashboardLayout.jsx'
 import AdminRoutePage from './pages/AdminPages.jsx'
-import LoginPage, { PrototypeRoleSwitcher } from './pages/LoginPage.jsx'
+import LoginPage, { InstructorLoginPage, PrototypeRoleSwitcher, RoleLandingPage } from './pages/LoginPage.jsx'
 import PlaceholderPage from './pages/PlaceholderPage.jsx'
 import InstructorRoutePage from './pages/InstructorPages.jsx'
 import RoleDashboard from './pages/RoleDashboard.jsx'
@@ -58,7 +58,15 @@ const roleRoutes = routeCatalog.flatMap((role) => [
 const router = createBrowserRouter([
   {
     path: '/',
+    element: <RoleLandingPage />,
+  },
+  {
+    path: '/student-login',
     element: <LoginPage />,
+  },
+  {
+    path: '/instructor-login',
+    element: <InstructorLoginPage />,
   },
   {
     path: '/prototype-switcher',

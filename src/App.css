@@ -73,6 +73,99 @@
   font-size: 14px;
 }
 
+.role-landing-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  color: #10233f;
+  background:
+    radial-gradient(circle, rgba(106, 151, 210, 0.14) 1px, transparent 1.5px) 0 0 / 18px 18px,
+    #ffffff;
+}
+
+.role-landing-panel {
+  width: min(880px, 100%);
+  display: grid;
+  gap: 30px;
+  padding: 42px;
+  border: 1px solid #d9e4f1;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 22px 60px rgba(22, 34, 57, 0.08);
+}
+
+.role-landing-logo {
+  width: min(280px, 100%);
+  height: auto;
+}
+
+.role-landing-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.role-landing-copy span {
+  color: #2760b7;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.role-landing-copy h1 {
+  max-width: 620px;
+  margin: 0;
+  color: #14314d;
+  font-size: 34px;
+  line-height: 1.12;
+}
+
+.role-landing-copy p {
+  margin: 0;
+  color: #53647d;
+  font-weight: 700;
+}
+
+.role-landing-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.role-landing-card {
+  min-height: 146px;
+  display: grid;
+  align-content: space-between;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid #dfe7f1;
+  border-radius: 10px;
+  color: #1b2a45;
+  background: #ffffff;
+  text-decoration: none;
+  box-shadow: 0 10px 26px rgba(37, 54, 89, 0.05);
+}
+
+.role-landing-card:hover,
+.role-landing-card:focus-visible {
+  border-color: #bcd2ff;
+  outline: none;
+  box-shadow: 0 14px 30px rgba(37, 88, 194, 0.1);
+  transform: translateY(-1px);
+}
+
+.role-landing-card strong {
+  color: #10233f;
+  font-size: 20px;
+}
+
+.role-landing-card span {
+  color: #53647d;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .app-shell {
   min-height: 100vh;
   display: grid;
@@ -626,10 +719,23 @@ textarea:focus-visible {
   .login-panel,
   .mode-overview,
   .stat-grid,
+  .role-landing-card-grid,
   .form-row,
   .form-row--triple,
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .role-landing-page {
+    padding: 18px;
+  }
+
+  .role-landing-panel {
+    padding: 26px;
+  }
+
+  .role-landing-copy h1 {
+    font-size: 28px;
   }
 
   .login-copy {
