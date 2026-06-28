@@ -8,6 +8,12 @@ const studentClasses = [
   { label: 'MATH 101', initial: 'M' },
 ]
 
+const instructorClasses = [
+  { label: 'IT 112 - Computer Programming 1', initial: 'I', active: true },
+  { label: 'CS 111', initial: 'C' },
+  { label: 'IT 123', initial: 'I' },
+]
+
 function StudentSidebarLink({ to, children, end = false, count, icon }) {
   return (
     <NavLink to={to} end={end} className="student-sidebar__link">
@@ -15,6 +21,54 @@ function StudentSidebarLink({ to, children, end = false, count, icon }) {
       <span>{children}</span>
       {count && <span className="student-sidebar__count">{count}</span>}
     </NavLink>
+  )
+}
+
+function InstructorDashboardLayout() {
+  return (
+    <div className="student-app-shell">
+      <aside className="student-sidebar">
+        <NavLink to="/instructor" className="student-brand" aria-label="Projex instructor home">
+          <img src="/assets/brand/projex-sidebar-logo.png" alt="Projex" />
+        </NavLink>
+
+        <nav className="student-sidebar__nav" aria-label="Instructor navigation">
+          <StudentSidebarLink to="/instructor" end icon="home">
+            Home
+          </StudentSidebarLink>
+          <StudentSidebarLink to="/instructor/activity" count="18" icon="todo">
+            Review Queue
+          </StudentSidebarLink>
+
+          <div className="student-sidebar__group">
+            <p>MY CLASSES</p>
+            <div className="student-class-list">
+              {instructorClasses.map((item) => (
+                <NavLink
+                  key={item.label}
+                  to="/instructor/classes"
+                  className={item.active ? 'student-class-link is-active' : 'student-class-link'}
+                >
+                  <span className={`student-class-dot student-class-dot--${item.initial.toLowerCase()}`}>
+                    {item.initial}
+                  </span>
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
+
+          <div className="student-sidebar__lower">
+            <StudentSidebarLink to="/instructor/projects" icon="folder">Project Reviews</StudentSidebarLink>
+            <StudentSidebarLink to="/instructor/people" icon="plus">People</StudentSidebarLink>
+          </div>
+        </nav>
+      </aside>
+
+      <main className="student-main">
+        <Outlet />
+      </main>
+    </div>
   )
 }
 
@@ -78,6 +132,10 @@ function DashboardLayout({ role }) {
 
   if (role.id === 'student') {
     return <StudentDashboardLayout />
+  }
+
+  if (role.id === 'instructor') {
+    return <InstructorDashboardLayout />
   }
 
   const groupedRoutes = role.routes.reduce((groups, route) => {

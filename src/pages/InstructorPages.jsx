@@ -1,512 +1,571 @@
-import { useState } from 'react'
-import Card from '../components/Card.jsx'
-import DataTable from '../components/DataTable.jsx'
-import StatCard from '../components/StatCard.jsx'
-import StatusBadge from '../components/StatusBadge.jsx'
-import {
-  instructorActivities,
-  instructorActivitySettings,
-  instructorAnalytics,
-  instructorAnalyticsRows,
-  instructorClassCode,
-  instructorMonitoringRows,
-  instructorProjectDetail,
-  instructorProjects,
-  instructorReview,
-  instructorRoster,
-  instructorSimilarityReports,
-  instructorStudentProfile,
-  instructorSubmissions,
-} from '../data/projexData.js'
+import { NavLink } from 'react-router-dom'
 
-const standardColumns = [
-  { key: 'item', label: 'Item' },
-  { key: 'mode', label: 'Context' },
-  { key: 'status', label: 'Status' },
-  { key: 'signal', label: 'Signal' },
+const instructorClass = {
+  course: 'IT 112 - Computer Programming 1',
+  section: 'BSIT 2A',
+  instructor: 'Engr. Marco Rivera',
+  classCode: '9446',
+}
+
+const dashboardStats = [
+  { label: 'Total students', value: '38', detail: '36 enrolled, 2 invited' },
+  { label: 'Published activities', value: '5', detail: '2 close this week' },
+  { label: 'Pending submissions', value: '18', detail: 'Final records to check' },
+  { label: 'Repositories created', value: '9', detail: '11 expected teams' },
+  { label: 'Projects ready for review', value: '4', detail: 'Across prelim requirements' },
+  { label: 'Similarity review alerts', value: '3', detail: 'Instructor-only signals' },
 ]
 
-function PageIntro({ eyebrow, title, summary, status }) {
+const attentionItems = [
+  {
+    title: 'Prelim Programming Exercise 2 LAB',
+    meta: 'Activity Mode',
+    status: 'Needs grading',
+    signal: '14 final submissions pending feedback release',
+  },
+  {
+    title: 'Team 04 repository',
+    meta: 'Project Collaboration Mode',
+    status: 'Missing repository',
+    signal: 'Prelim Group Project 1 is due Aug 27, 2026, 10:30 AM',
+  },
+  {
+    title: 'Team 02 contribution balance',
+    meta: 'Repository oversight',
+    status: 'Needs watch',
+    signal: 'Uneven commit activity across four members',
+  },
+  {
+    title: 'Student Grade Analyzer',
+    meta: 'Activity Mode',
+    status: 'Failed tests',
+    signal: '6 submissions have hidden checking issues',
+  },
+  {
+    title: 'Similarity review queue',
+    meta: 'Academic review',
+    status: 'Needs review',
+    signal: 'Comparable structure detected in 3 student records',
+  },
+]
+
+const streamItems = [
+  {
+    id: 'activity-1',
+    type: 'assignment',
+    title: 'Published Prelim Programming Exercise 1 LAB',
+    detail: 'Due Aug 27, 2026, 10:30 AM - one final submission only',
+    date: 'Aug 25, 2026',
+  },
+  {
+    id: 'activity-2',
+    type: 'assignment',
+    title: 'Updated Loop Patterns and Input Validation',
+    detail: 'Visible test cases refreshed; hidden checking remains instructor-only',
+    date: 'Aug 26, 2026',
+  },
+  {
+    id: 'project-1',
+    type: 'announcement',
+    title: 'Project update: Prelim Group Project 1 Specifications',
+    detail: '9 of 11 teams have created repositories; 4 are ready for review',
+    date: 'Aug 26, 2026',
+  },
+]
+
+const repositorySummary = [
+  { label: 'Repositories created', value: '9 / 11' },
+  { label: 'Ready for review', value: '4 teams' },
+  { label: 'Uneven contribution', value: '2 teams' },
+  { label: 'Missing repository', value: '2 teams' },
+]
+
+const activities = [
+  {
+    title: 'Prelim Programming Exercise 1 LAB',
+    due: 'Aug 27, 2026, 10:30 AM',
+    status: 'Published',
+    submissions: '31 / 38',
+    grading: 'Feedback releasing',
+  },
+  {
+    title: 'Prelim Programming Exercise 2 LAB',
+    due: 'Aug 30, 2026, 11:59 PM',
+    status: 'Published',
+    submissions: '24 / 38',
+    grading: 'Needs grading',
+  },
+  {
+    title: 'Loop Patterns and Input Validation',
+    due: 'Sep 3, 2026, 5:00 PM',
+    status: 'Published',
+    submissions: '12 / 38',
+    grading: 'Monitoring',
+  },
+  {
+    title: 'Student Grade Analyzer',
+    due: 'Sep 10, 2026, 10:30 AM',
+    status: 'Draft',
+    submissions: 'Not open',
+    grading: 'Setup review',
+  },
+  {
+    title: 'CSV Enrollment Parser',
+    due: 'Sep 17, 2026, 5:00 PM',
+    status: 'Draft',
+    submissions: 'Not open',
+    grading: 'Setup review',
+  },
+]
+
+const groupProjects = [
+  {
+    title: 'Prelim Group Project 1 Specifications',
+    due: 'Aug 27, 2026, 10:30 AM',
+    status: 'Published',
+    repositories: '9 / 11',
+    review: '4 ready',
+  },
+  {
+    title: 'Prelim Group Project 2 Specifications',
+    due: 'Sep 24, 2026, 10:30 AM',
+    status: 'Published',
+    repositories: '0 / 11',
+    review: 'Not open',
+  },
+  {
+    title: 'Midterm Group Project 1 Specifications',
+    due: 'Oct 20, 2026, 10:30 AM',
+    status: 'Draft',
+    repositories: 'Not open',
+    review: 'Setup review',
+  },
+  {
+    title: 'Final Group Project Proposal',
+    due: 'Dec 5, 2026, 10:30 AM',
+    status: 'Draft',
+    repositories: 'Not open',
+    review: 'Setup review',
+  },
+]
+
+const roster = [
+  {
+    name: 'Julius Teodoro',
+    email: '2216146@slu.edu.ph',
+    section: 'BSIT 2A',
+    status: 'Enrolled',
+    invite: 'Accepted',
+  },
+  {
+    name: 'Alyssa Mendoza',
+    email: 'alyssa.mendoza@slu.edu.ph',
+    section: 'BSIT 2A',
+    status: 'Enrolled',
+    invite: 'Accepted',
+  },
+  {
+    name: 'Marco Rivera',
+    email: 'marco.rivera.student@slu.edu.ph',
+    section: 'BSIT 2A',
+    status: 'Enrolled',
+    invite: 'Accepted',
+  },
+  {
+    name: 'Daniel Reyes',
+    email: 'daniel.reyes@slu.edu.ph',
+    section: 'BSIT 2A',
+    status: 'Enrolled',
+    invite: 'Accepted',
+  },
+  {
+    name: 'Mica Dela Cruz',
+    email: 'mica.delacruz@slu.edu.ph',
+    section: 'BSIT 2A',
+    status: 'Pending',
+    invite: 'Invited',
+  },
+]
+
+function InstructorProfileMenu() {
   return (
-    <div className="page-heading">
-      <div>
-        <p className="eyebrow">{eyebrow}</p>
-        <h2>{title}</h2>
-        <p>{summary}</p>
-      </div>
-      {status && <StatusBadge label={status} />}
+    <div className="student-profile-menu">
+      <button type="button" className="student-profile-trigger">
+        <span className="student-user-avatar" aria-hidden="true" />
+        <span className="student-user-name">
+          <strong>Engr. Marco Rivera</strong>
+          <span>Instructor</span>
+        </span>
+      </button>
     </div>
   )
 }
 
-function ActionButton({ children, disabled = false, onClick }) {
+function InstructorUserArea({ count = 5 }) {
   return (
-    <button
-      type="button"
-      className={disabled ? 'action-button is-disabled' : 'action-button'}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {children}
-    </button>
+    <div className="student-user-area">
+      <button type="button" className="student-bell" aria-label="Notifications">
+        <span className="student-bell__shape" aria-hidden="true" />
+        <span className="student-bell__count">{count}</span>
+      </button>
+      <InstructorProfileMenu />
+    </div>
+  )
+}
+
+function InstructorClassHeader({ activeTab }) {
+  const tabs = [
+    { label: 'Stream', path: '/instructor/classes', key: 'stream' },
+    { label: 'Assignments', path: '/instructor/activity', key: 'assignments' },
+    { label: 'People', path: '/instructor/people', key: 'people' },
+    { label: 'Class Info', path: '/instructor/class-info', key: 'info' },
+  ]
+
+  return (
+    <header className="student-class-header">
+      <div className="student-class-header__top">
+        <div className="student-course-title">
+          <span className="student-course-avatar">I</span>
+          <div>
+            <h1>{instructorClass.course}</h1>
+            <div className="student-course-meta">
+              <span>{instructorClass.section}</span>
+              <span>{instructorClass.instructor}</span>
+              <span className="student-class-code">{instructorClass.classCode}</span>
+            </div>
+          </div>
+        </div>
+        <InstructorUserArea />
+      </div>
+
+      <div className="student-class-header__bottom">
+        <nav className="student-class-tabs" aria-label="Instructor class tabs">
+          {tabs.map((tab) => (
+            <NavLink
+              key={tab.key}
+              to={tab.path}
+              className={activeTab === tab.key ? 'is-active' : undefined}
+            >
+              <span className={`student-tab-icon student-tab-icon--${tab.key}`} aria-hidden="true" />
+              {tab.label}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+    </header>
+  )
+}
+
+function InstructorClassPage({ activeTab, children }) {
+  return (
+    <div className="student-class-page">
+      <InstructorClassHeader activeTab={activeTab} />
+      <section className="student-class-content instructor-class-content">{children}</section>
+    </div>
   )
 }
 
 function InstructorDashboard() {
   return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Instructor workspace"
-        title="Dashboard"
-        summary="Course operations for rosters, deadlines, final submissions, checking, grading, similarity review, and project oversight."
-        status="Hardcoded prototype"
-      />
-      <div className="stat-grid">
-        <StatCard label="Class roster" value="96" detail="8 pending invitations" />
-        <StatCard label="Published activities" value="9" detail="4 close this week" />
-        <StatCard label="Submissions" value="28" detail="Final locked records to review" />
-        <StatCard label="Similarity reviews" value="6" detail="Instructor-only detailed view" />
-      </div>
-      <div className="mode-overview">
-        <Card title="Activity Mode" eyebrow="Checking and grading">
-          <p>
-            Manage deadlines, one-submission-only settings, checking setup, final
-            submission queues, compiler output, feedback, and rubric grades.
-          </p>
-        </Card>
-        <Card title="Project Collaboration Mode" eyebrow="Repository oversight">
-          <p>
-            Monitor project groups, repositories, commits, tasks, contribution balance,
-            similarity review, and archive readiness.
-          </p>
-        </Card>
-      </div>
-      <Card title="Instructor attention queue" eyebrow="Selected course and section">
-        <DataTable columns={standardColumns} rows={instructorAnalyticsRows} />
-      </Card>
-    </div>
-  )
-}
+    <div className="instructor-home-page">
+      <header className="student-home-topbar">
+        <InstructorUserArea count={6} />
+      </header>
 
-function RosterPage() {
-  return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Class management"
-        title="Class Roster"
-        summary="Enrolled and invited students for CS 111 - BSCS 1A. Student status is hardcoded for this prototype."
-        status="BSCS 1A"
-      />
-      <Card title="Roster" eyebrow="Enrolled students and invitation status">
-        <DataTable columns={standardColumns} rows={instructorRoster} />
-      </Card>
-    </div>
-  )
-}
+      <main className="student-home-content instructor-home-content">
+        <h1>Welcome back, Engr. Rivera</h1>
 
-function InviteStudentsPage() {
-  const [email, setEmail] = useState('student@slu.example')
-  const [studentId, setStudentId] = useState('2026-00123')
-  const [message, setMessage] = useState('No invitation sent in this mock session.')
-
-  return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Class management"
-        title="Invite Students"
-        summary="Simulated invitation form for adding students to the selected course and section. No email or backend request is sent."
-        status="Mock UI"
-      />
-      <Card title="Invite by email or student ID" eyebrow="CS 111 | BSCS 1A">
-        <div className="form-row form-row--triple">
-          <label>
-            Email
-            <input value={email} onChange={(event) => setEmail(event.target.value)} />
-          </label>
-          <label>
-            Student ID
-            <input value={studentId} onChange={(event) => setStudentId(event.target.value)} />
-          </label>
-          <ActionButton onClick={() => setMessage(`Invitation previewed for ${email} (${studentId}).`)}>
-            Send Mock Invite
-          </ActionButton>
-        </div>
-        <p className="helper-text">{message}</p>
-      </Card>
-      <Card title="Recent invitation status" eyebrow="Hardcoded records">
-        <DataTable columns={standardColumns} rows={instructorRoster.filter((row) => row.status === 'Invited')} />
-      </Card>
-    </div>
-  )
-}
-
-function ClassCodePage() {
-  const [code, setCode] = useState(instructorClassCode.code)
-
-  return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Class management"
-        title="Class Code"
-        summary="Generate and display the class code students use to join this section. Generation is simulated locally."
-        status={instructorClassCode.status}
-      />
-      <Card title={code} eyebrow={`${instructorClassCode.course} | ${instructorClassCode.section}`}>
-        <div className="detail-list">
-          <span>Generated: {instructorClassCode.generatedAt}</span>
-          <span>Expires: {instructorClassCode.expiresAt}</span>
-          <span>Status: {instructorClassCode.status}</span>
-        </div>
-        <div className="button-row">
-          <ActionButton onClick={() => setCode('SLU-CS111-1A-R2')}>Generate Mock Code</ActionButton>
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-function ActivityManagementPage() {
-  return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Activity Mode"
-        title="Activity Management"
-        summary="Instructor-created programming activities with language, deadline, publish/close status, one-submission rule, and checking setup."
-        status="One submission only"
-      />
-      <Card title="Activities" eyebrow="Created by instructor">
-        <DataTable columns={standardColumns} rows={instructorActivities} />
-      </Card>
-    </div>
-  )
-}
-
-function CreateActivityPage() {
-  const [title, setTitle] = useState('Campus Events API Client')
-  const [status, setStatus] = useState('Draft activity not saved.')
-
-  return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Activity Mode"
-        title="Create Activity"
-        summary="Mock creation form for configuring activity basics, deadline, test count, and one-submission-only rule."
-        status="Draft"
-      />
-      <Card title="Activity draft" eyebrow="Simulated form">
-        <div className="form-grid">
-          <label>
-            Title
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <label>
-            Language
-            <input defaultValue="JavaScript" />
-          </label>
-          <label>
-            Deadline
-            <input defaultValue="2026-07-12 17:00" />
-          </label>
-          <label>
-            Test case count
-            <input defaultValue="4 visible, 2 hidden" />
-          </label>
-        </div>
-        <div className="button-row">
-          <StatusBadge label="One submission only" />
-          <StatusBadge label="Draft" />
-          <ActionButton onClick={() => setStatus(`Draft preview created for ${title}.`)}>
-            Preview Activity
-          </ActionButton>
-        </div>
-        <p className="helper-text">{status}</p>
-      </Card>
-    </div>
-  )
-}
-
-function ActivitySettingsPage() {
-  return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Activity Mode"
-        title="Activity Settings"
-        summary="Deadline, publish/close status, one-submission-only rule, checking setup, test case count, and rubric configuration."
-        status={instructorActivitySettings.publishStatus}
-      />
-      <div className="stat-grid">
-        <StatCard label="Deadline" value="Jul 3" detail={instructorActivitySettings.deadline} />
-        <StatCard label="Rule" value="One" detail={instructorActivitySettings.submissionRule} />
-        <StatCard label="Tests" value="5" detail={instructorActivitySettings.testCaseCount} />
-        <StatCard label="Close status" value="Open" detail={instructorActivitySettings.closeStatus} />
-      </div>
-      <Card title={instructorActivitySettings.title} eyebrow={instructorActivitySettings.language}>
-        <p>{instructorActivitySettings.checkingSetup}</p>
-        <div className="inline-badges">
-          <StatusBadge label={instructorActivitySettings.publishStatus} />
-          <StatusBadge label={instructorActivitySettings.submissionRule} />
-          <StatusBadge label="Mock checking" />
-        </div>
-      </Card>
-      <Card title="Rubric and checking setup" eyebrow="Configured criteria">
-        <DataTable columns={standardColumns} rows={instructorActivitySettings.rubric} />
-      </Card>
-    </div>
-  )
-}
-
-function MonitoringPage() {
-  return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Activity Mode"
-        title="Student Monitoring"
-        summary="Live-style monitoring mockup for editing state, compiler state, submitted records, and intervention signals."
-        status="Monitoring"
-      />
-      <Card title="Progress by student" eyebrow="Mock activity states">
-        <DataTable columns={standardColumns} rows={instructorMonitoringRows} />
-      </Card>
-    </div>
-  )
-}
-
-function SubmissionQueuePage() {
-  return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Activity Mode"
-        title="Submission Queue"
-        summary="Final submitted activity records only, with submitted date/time, compiler output state, test summary, feedback, grade, and similarity signal."
-        status="Review queue"
-      />
-      <Card title="Submitted records" eyebrow="One final submission per student">
-        <DataTable
-          columns={[
-            { key: 'item', label: 'Student' },
-            { key: 'activity', label: 'Activity' },
-            { key: 'submittedAt', label: 'Submitted at' },
-            { key: 'status', label: 'Review' },
-            { key: 'tests', label: 'Tests' },
-            { key: 'grade', label: 'Grade' },
-            { key: 'feedback', label: 'Feedback' },
-          ]}
-          rows={instructorSubmissions}
-        />
-      </Card>
-    </div>
-  )
-}
-
-function SubmissionReviewPage() {
-  const [feedback, setFeedback] = useState('Return with comments on empty input handling.')
-  const [grade, setGrade] = useState('73')
-  const [status, setStatus] = useState(instructorReview.status)
-
-  return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Submission Review"
-        title={`${instructorReview.student} | ${instructorReview.activity}`}
-        summary="Instructor-only review with code preview, mock compiler output, visible and hidden checking summary, rubric draft, feedback, and grade controls."
-        status={status}
-      />
-      <div className="stat-grid">
-        <StatCard label="Submitted" value="Jun 21" detail={instructorReview.submittedAt} />
-        <StatCard label="Compiler" value="OK" detail="Mock compile succeeded" />
-        <StatCard label="Visible tests" value="2/3" detail="Instructor sees full result" />
-        <StatCard label="Hidden tests" value="1/2" detail="Instructor-only checks" />
-      </div>
-      <div className="workspace-grid workspace-grid--editor">
-        <Card title="Code preview" eyebrow="Mock editor">
-          <pre className="code-panel">{instructorReview.code}</pre>
-        </Card>
-        <Card title="Compiler output" eyebrow="Automated checking">
-          <pre className="terminal-panel">{instructorReview.compilerOutput}</pre>
-        </Card>
-      </div>
-      <Card title="Test case results" eyebrow="Visible and hidden checks">
-        <DataTable columns={standardColumns} rows={instructorReview.tests} />
-      </Card>
-      <div className="workspace-grid">
-        <Card title="Grade and rubric" eyebrow="Mock grading">
-          <DataTable columns={standardColumns} rows={instructorReview.rubric} />
-          <div className="form-row">
-            <label>
-              Grade
-              <input value={grade} onChange={(event) => setGrade(event.target.value)} />
-            </label>
-            <ActionButton onClick={() => setStatus('Graded')}>Mark Graded</ActionButton>
+        <section className="instructor-dashboard-section">
+          <div className="student-home-section-heading">
+            <h2>Instructor Dashboard</h2>
+            <NavLink to="/instructor/classes">Open class stream</NavLink>
           </div>
-        </Card>
-        <Card title="Final instructor feedback" eyebrow="Mock feedback panel">
-          <label>
-            Feedback
-            <textarea value={feedback} onChange={(event) => setFeedback(event.target.value)} />
-          </label>
-          <div className="button-row">
-            <ActionButton onClick={() => setStatus('Needs Revision')}>Request Revision</ActionButton>
-            <ActionButton onClick={() => setStatus('Checked')}>Release Feedback</ActionButton>
+
+          <div className="instructor-stat-grid">
+            {dashboardStats.map((stat) => (
+              <article className="instructor-stat-card" key={stat.label}>
+                <span>{stat.label}</span>
+                <strong>{stat.value}</strong>
+                <p>{stat.detail}</p>
+              </article>
+            ))}
           </div>
-        </Card>
+        </section>
+
+        <section className="instructor-dashboard-section">
+          <div className="student-home-section-heading">
+            <h2>Attention Queue</h2>
+            <span>IT 112 - BSIT 2A</span>
+          </div>
+
+          <div className="instructor-attention-list">
+            {attentionItems.map((item) => (
+              <article className="instructor-attention-card" key={item.title}>
+                <div>
+                  <strong>{item.title}</strong>
+                  <span>{item.meta}</span>
+                </div>
+                <em>{item.status}</em>
+                <p>{item.signal}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}
+
+function InstructorStreamPage() {
+  return (
+    <InstructorClassPage activeTab="stream">
+      <div className="student-stream-card instructor-stream-card" aria-label="Instructor class stream">
+        <section className="instructor-composer-card">
+          <span className="student-user-avatar" aria-hidden="true" />
+          <button type="button">Announce something to BSIT 2A</button>
+        </section>
+
+        <section className="instructor-stream-section">
+          <h2>Recent Published Activities</h2>
+          {streamItems
+            .filter((item) => item.type === 'assignment')
+            .map((item) => (
+              <article className="student-stream-post" key={item.id}>
+                <div className="student-post-icon student-post-icon--assignment" aria-hidden="true" />
+                <div>
+                  <p>
+                    <strong>{instructorClass.instructor}</strong> {item.title}
+                  </p>
+                  <span>{item.detail}</span>
+                  <span>{item.date}</span>
+                </div>
+                <button type="button" className="student-more" aria-label="More options" />
+              </article>
+            ))}
+        </section>
+
+        <section className="instructor-stream-section">
+          <h2>Recent Project Updates</h2>
+          {streamItems
+            .filter((item) => item.type === 'announcement')
+            .map((item) => (
+              <article className="student-stream-post" key={item.id}>
+                <div className="student-post-icon student-post-icon--announcement" aria-hidden="true" />
+                <div>
+                  <p>
+                    <strong>{instructorClass.instructor}</strong> {item.title}
+                  </p>
+                  <span>{item.detail}</span>
+                  <span>{item.date}</span>
+                </div>
+                <button type="button" className="student-more" aria-label="More options" />
+              </article>
+            ))}
+        </section>
+
+        <section className="instructor-repository-summary">
+          <h2>Student Repository Activity Summary</h2>
+          <div>
+            {repositorySummary.map((item) => (
+              <article key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </article>
+            ))}
+          </div>
+        </section>
       </div>
+    </InstructorClassPage>
+  )
+}
+
+function AssignmentSubTabs({ active }) {
+  return (
+    <div className="student-segmented-tabs" aria-label="Instructor assignment type">
+      <NavLink to="/instructor/activity" className={active === 'activities' ? 'is-active' : undefined}>
+        <span aria-hidden="true" />
+        Activities
+      </NavLink>
+      <NavLink to="/instructor/projects" className={active === 'projects' ? 'is-active' : undefined}>
+        <span aria-hidden="true" />
+        Group Projects
+      </NavLink>
     </div>
   )
 }
 
-function ProjectOversightPage() {
+function InstructorControls({ primaryLabel }) {
   return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Project Collaboration Mode"
-        title="Project Oversight"
-        summary="Project groups, repositories, project status, task progress, contribution balance, and archive readiness."
-        status="Repository learning"
-      />
-      <Card title="Project repositories" eyebrow="Course project groups">
-        <DataTable columns={standardColumns} rows={instructorProjects} />
-      </Card>
-      <div className="mode-overview">
-        <Card title="Group members" eyebrow="Campus Navigation Assistant">
-          <DataTable columns={standardColumns} rows={instructorProjectDetail.members} />
-        </Card>
-        <Card title="Task progress" eyebrow="Milestone work">
-          <DataTable columns={standardColumns} rows={instructorProjectDetail.tasks} />
-        </Card>
-      </div>
-      <Card title="Commit timeline" eyebrow="Repository activity">
-        <DataTable columns={standardColumns} rows={instructorProjectDetail.commits} />
-      </Card>
+    <div className="instructor-controls-row">
+      <button type="button" className="student-primary-action">{primaryLabel}</button>
+      <button type="button" className="student-outline-action">View queue</button>
+      <button type="button" className="student-outline-action">Edit settings</button>
     </div>
   )
 }
 
-function ContributionReviewPage() {
+function InstructorActivitiesPage() {
   return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Project Collaboration Mode"
-        title="Contribution Review"
-        summary="Instructor view of contribution balance across members, commits, reviews, tasks, and intervention signals."
-        status="Review"
-      />
-      <Card title="Contribution balance" eyebrow="Campus Navigation Assistant">
-        <DataTable columns={standardColumns} rows={instructorProjectDetail.members} />
-      </Card>
-    </div>
-  )
-}
-
-function SimilarityPage() {
-  const [decision, setDecision] = useState('Open')
-  const rows = instructorSimilarityReports.map((report) => ({
-    ...report,
-    decision: report.item === 'Nico Santos - Student Grade Analyzer' ? decision : report.decision,
-  }))
-
-  return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Instructor-only similarity review"
-        title="Project and Submission Similarity"
-        summary="Detailed similarity indicators are visible here for instructors only. Student pages expose only general academic review labels."
-        status="Instructor-only"
-      />
-      <Card title="Detailed similarity reports" eyebrow="Scores, matches, and decisions">
-        <DataTable
-          columns={[
-            { key: 'item', label: 'Flagged work' },
-            { key: 'mode', label: 'Type' },
-            { key: 'status', label: 'Severity' },
-            { key: 'signal', label: 'Score and matched source' },
-            { key: 'decision', label: 'Instructor decision' },
-          ]}
-          rows={rows}
-        />
-        <div className="button-row">
-          <ActionButton onClick={() => setDecision('Dismissed after review')}>Dismiss</ActionButton>
-          <ActionButton onClick={() => setDecision('Request student explanation')}>Request Explanation</ActionButton>
-          <ActionButton onClick={() => setDecision('Escalated')}>Escalate</ActionButton>
+    <InstructorClassPage activeTab="assignments">
+      <div className="student-assignment-panel instructor-assignment-panel">
+        <div className="instructor-assignment-toolbar">
+          <AssignmentSubTabs active="activities" />
+          <InstructorControls primaryLabel="Create Activity" />
         </div>
-      </Card>
-    </div>
-  )
-}
 
-function ArchiveReadinessPage() {
-  return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Project Collaboration Mode"
-        title="Archive Readiness"
-        summary="Preservation readiness for final project repositories, including metadata, snapshot labels, retention, and unresolved review items."
-        status="Archive review"
-      />
-      <Card title="Archive checklist" eyebrow="Campus Navigation Assistant">
-        <DataTable columns={standardColumns} rows={instructorProjectDetail.archive} />
-      </Card>
-    </div>
-  )
-}
-
-function AnalyticsPage() {
-  return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Learning analytics"
-        title="Class Learning Analytics"
-        summary="Class completion, weak topics, compiler/test performance, student progress indicators, and intervention signals."
-        status="Instructor"
-      />
-      <div className="stat-grid">
-        {instructorAnalytics.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
+        <div className="instructor-data-table" role="table" aria-label="Programming activities">
+          <div className="instructor-table-row instructor-table-row--head" role="row">
+            <span>Activity</span>
+            <span>Due Date</span>
+            <span>Status</span>
+            <span>Submissions</span>
+            <span>Grading</span>
+            <span>Actions</span>
+          </div>
+          {activities.map((activity) => (
+            <div className="instructor-table-row" role="row" key={activity.title}>
+              <strong>{activity.title}</strong>
+              <span>{activity.due}</span>
+              <em>{activity.status}</em>
+              <span>{activity.submissions}</span>
+              <span>{activity.grading}</span>
+              <div>
+                <button type="button">Monitor</button>
+                <button type="button">Settings</button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-      <Card title="Intervention signals" eyebrow="Course and section analytics">
-        <DataTable columns={standardColumns} rows={instructorAnalyticsRows} />
-      </Card>
-    </div>
+    </InstructorClassPage>
   )
 }
 
-function StudentProfilePage() {
+function InstructorProjectsPage() {
   return (
-    <div className="page-stack">
-      <PageIntro
-        eyebrow="Student coding profile"
-        title={instructorStudentProfile.name}
-        summary={`Academic coding profile for ${instructorStudentProfile.section}, including submissions, checking trend, feedback, and repository contribution.`}
-        status={instructorStudentProfile.status}
-      />
-      <Card title="Profile signals" eyebrow="Instructor view">
-        <DataTable columns={standardColumns} rows={instructorStudentProfile.rows} />
-      </Card>
-    </div>
+    <InstructorClassPage activeTab="assignments">
+      <div className="student-assignment-panel instructor-assignment-panel">
+        <div className="instructor-assignment-toolbar">
+          <AssignmentSubTabs active="projects" />
+          <InstructorControls primaryLabel="Create Project Requirement" />
+        </div>
+
+        <div className="instructor-data-table" role="table" aria-label="Group projects">
+          <div className="instructor-table-row instructor-table-row--head" role="row">
+            <span>Project Requirement</span>
+            <span>Due Date</span>
+            <span>Status</span>
+            <span>Repositories</span>
+            <span>Review</span>
+            <span>Actions</span>
+          </div>
+          {groupProjects.map((project) => (
+            <div className="instructor-table-row" role="row" key={project.title}>
+              <strong>{project.title}</strong>
+              <span>{project.due}</span>
+              <em>{project.status}</em>
+              <span>{project.repositories}</span>
+              <span>{project.review}</span>
+              <div>
+                <button type="button">Monitor</button>
+                <button type="button">Settings</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </InstructorClassPage>
+  )
+}
+
+function InstructorPeoplePage() {
+  return (
+    <InstructorClassPage activeTab="people">
+      <div className="student-people-panel instructor-people-panel">
+        <section className="instructor-people-actions">
+          <div>
+            <h2>Class Roster</h2>
+            <span>38 students - class code {instructorClass.classCode}</span>
+          </div>
+          <div>
+            <button type="button" className="student-primary-action">Invite Students</button>
+            <button type="button" className="student-outline-action">Generate Class Code</button>
+          </div>
+        </section>
+
+        <div className="instructor-data-table instructor-people-table" role="table" aria-label="Class roster">
+          <div className="instructor-table-row instructor-table-row--head" role="row">
+            <span>Student</span>
+            <span>Email / Student No.</span>
+            <span>Section</span>
+            <span>Status</span>
+            <span>Invite</span>
+            <span>Actions</span>
+          </div>
+          {roster.map((student) => (
+            <div className="instructor-table-row" role="row" key={student.email}>
+              <strong>{student.name}</strong>
+              <span>{student.email}</span>
+              <span>{student.section}</span>
+              <em>{student.status}</em>
+              <span>{student.invite}</span>
+              <div>
+                <button type="button">Manage</button>
+                <button type="button">Remove</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </InstructorClassPage>
+  )
+}
+
+function InstructorClassInfoPage() {
+  const rules = [
+    ['Course name', instructorClass.course],
+    ['Section', instructorClass.section],
+    ['Instructor', instructorClass.instructor],
+    ['Class code', instructorClass.classCode],
+    ['Activity rules', 'One final submission only; deadline locks submit controls'],
+    ['Repository rules', 'Team repositories are linked to group project requirements'],
+    ['Feedback release', 'Grades and comments are released after instructor review'],
+  ]
+
+  return (
+    <InstructorClassPage activeTab="info">
+      <div className="student-people-panel instructor-info-panel">
+        <section>
+          <h2>Class Info</h2>
+          <p>Academic programming workspace settings for IT 112 - BSIT 2A.</p>
+        </section>
+
+        <div className="instructor-info-list">
+          {rules.map(([label, value]) => (
+            <article key={label}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </article>
+          ))}
+        </div>
+      </div>
+    </InstructorClassPage>
   )
 }
 
 function InstructorRoutePage({ pagePath }) {
   const pages = {
     dashboard: <InstructorDashboard />,
-    roster: <RosterPage />,
-    'invite-students': <InviteStudentsPage />,
-    'class-code': <ClassCodePage />,
-    activity: <ActivityManagementPage />,
-    'activity/new': <CreateActivityPage />,
-    'activity-settings': <ActivitySettingsPage />,
-    'activity/act-loops-01/monitor': <MonitoringPage />,
-    'activity/act-loops-01/submissions': <SubmissionQueuePage />,
-    'submission-review': <SubmissionReviewPage />,
-    projects: <ProjectOversightPage />,
-    'projects/repo-campus-nav/contributions': <ContributionReviewPage />,
-    'projects/repo-campus-nav/similarity': <SimilarityPage />,
-    'projects/repo-campus-nav/archive': <ArchiveReadinessPage />,
-    analytics: <AnalyticsPage />,
-    'students/stu-alyssa': <StudentProfilePage />,
+    classes: <InstructorStreamPage />,
+    activity: <InstructorActivitiesPage />,
+    projects: <InstructorProjectsPage />,
+    people: <InstructorPeoplePage />,
+    roster: <InstructorPeoplePage />,
+    'class-info': <InstructorClassInfoPage />,
+    'class-code': <InstructorClassInfoPage />,
   }
 
-  return pages[pagePath]
+  return pages[pagePath] || <InstructorStreamPage />
 }
 
 export default InstructorRoutePage

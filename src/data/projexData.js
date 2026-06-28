@@ -277,6 +277,30 @@ export const routeCatalog = [
     ...roles[1],
     routes: [
       {
+        path: 'classes',
+        label: 'Class Stream',
+        group: 'Class Management',
+        status: 'Shell ready',
+        summary:
+          'Instructor stream for IT 112 - BSIT 2A with announcements, activity updates, project updates, and repository activity.',
+      },
+      {
+        path: 'people',
+        label: 'People',
+        group: 'Class Management',
+        status: 'Shell ready',
+        summary:
+          'Instructor-facing people tab with roster, invite status, class code, and local management controls.',
+      },
+      {
+        path: 'class-info',
+        label: 'Class Info',
+        group: 'Class Management',
+        status: 'Shell ready',
+        summary:
+          'Course, section, instructor, class code, activity rules, repository rules, and feedback release settings.',
+      },
+      {
         path: 'roster',
         label: 'Class Roster',
         group: 'Class Management',
