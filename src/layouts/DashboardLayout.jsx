@@ -160,6 +160,9 @@ function InstructorDashboardLayout() {
 
 function StudentDashboardLayout() {
   const location = useLocation()
+  const isInsideStudentClass = location.pathname.startsWith('/student/classes')
+    || location.pathname.startsWith('/student/activity')
+    || location.pathname.startsWith('/student/projects')
 
   if (location.pathname.includes('/workspace')) {
     return <Outlet />
@@ -176,7 +179,7 @@ function StudentDashboardLayout() {
           <StudentSidebarLink to="/student" end icon="home">
             Home
           </StudentSidebarLink>
-          <StudentSidebarLink to="/student/activity" count="3" icon="todo">
+          <StudentSidebarLink to="/student/todo" count="3" icon="todo">
             To-do
           </StudentSidebarLink>
 
@@ -187,7 +190,7 @@ function StudentDashboardLayout() {
                 <NavLink
                   key={item.label}
                   to="/student/classes"
-                  className={item.active ? 'student-class-link is-active' : 'student-class-link'}
+                  className={item.active && isInsideStudentClass ? 'student-class-link is-active' : 'student-class-link'}
                 >
                   <span className={`student-class-dot student-class-dot--${item.initial.toLowerCase()}`}>
                     {item.initial}
@@ -199,7 +202,7 @@ function StudentDashboardLayout() {
           </div>
 
           <div className="student-sidebar__lower">
-            <StudentSidebarLink to="/student/projects" icon="folder">My Repositories</StudentSidebarLink>
+            <StudentSidebarLink to="/student/repositories" icon="folder">My Repositories</StudentSidebarLink>
             <StudentSidebarLink to="/student/join-class" icon="plus">Join Class</StudentSidebarLink>
           </div>
         </nav>

@@ -142,6 +142,14 @@ export const routeCatalog = [
           'Enrolled classes, section membership, instructor names, and class codes are visible here.',
       },
       {
+        path: 'todo',
+        label: 'To-do',
+        group: 'Student Shell',
+        status: 'Shell ready',
+        summary:
+          'Standalone student to-do list grouped by due window with hardcoded activity, project, and repository work.',
+      },
+      {
         path: 'join-class',
         label: 'Join Class',
         group: 'Class Membership',
@@ -248,6 +256,14 @@ export const routeCatalog = [
         group: 'Project Collaboration Mode',
         status: 'Placeholder',
         summary: 'Personal and team contribution balance for the project repository.',
+      },
+      {
+        path: 'repositories',
+        label: 'My Repositories',
+        group: 'Project Collaboration Mode',
+        status: 'Shell ready',
+        summary:
+          'Standalone student repository index organized by class and personal repositories.',
       },
       {
         path: 'analytics',
