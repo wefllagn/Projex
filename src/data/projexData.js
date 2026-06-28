@@ -377,6 +377,27 @@ export const routeCatalog = [
           'Course repositories, project health, team contribution balance, similarity, and archive readiness.',
       },
       {
+        path: 'projects/new',
+        label: 'Create Project Requirement',
+        group: 'Project Collaboration Mode',
+        status: 'Shell ready',
+        summary: 'Hardcoded project requirement creation form with team repository settings.',
+      },
+      {
+        path: 'projects/prelim-group-project-1',
+        label: 'Project Monitoring',
+        group: 'Project Collaboration Mode',
+        status: 'Shell ready',
+        summary: 'Project requirement monitoring with repository progress and team status.',
+      },
+      {
+        path: 'projects/prelim-group-project-1/repository',
+        label: 'Repository Review',
+        group: 'Project Collaboration Mode',
+        status: 'Shell ready',
+        summary: 'Instructor review of a student-created team repository with contribution, similarity, and archive readiness.',
+      },
+      {
         path: 'projects/repo-campus-nav/contributions',
         label: 'Contribution Review',
         group: 'Project Collaboration Mode',

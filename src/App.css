@@ -4792,6 +4792,39 @@ textarea:focus-visible {
   text-transform: none;
 }
 
+.instructor-field-note {
+  margin: -6px 0 0;
+  color: #53647d;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.instructor-attempt-control {
+  display: inline-flex;
+  gap: 6px;
+  width: fit-content;
+  padding: 4px;
+  border: 1px solid #dfe7f1;
+  border-radius: 999px;
+  background: #f8fbff;
+}
+
+.instructor-attempt-control button {
+  width: 38px;
+  min-height: 31px;
+  border: 0;
+  border-radius: 999px;
+  color: #53647d;
+  background: transparent;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.instructor-attempt-control button.is-active {
+  color: #ffffff;
+  background: #005dff;
+}
+
 .instructor-upload-placeholder,
 .instructor-testcase-panel,
 .instructor-feedback-panel,
@@ -4928,6 +4961,16 @@ textarea:focus-visible {
 .instructor-queue-row {
   min-width: 1120px;
   grid-template-columns: minmax(150px, 0.8fr) minmax(220px, 1.15fr) minmax(120px, 0.7fr) minmax(180px, 1fr) minmax(160px, 0.9fr) minmax(110px, 0.55fr) minmax(100px, 0.55fr);
+}
+
+.instructor-project-row {
+  min-width: 1120px;
+  grid-template-columns: minmax(240px, 1.25fr) minmax(170px, 0.9fr) minmax(110px, 0.55fr) minmax(120px, 0.65fr) minmax(120px, 0.65fr) minmax(120px, 0.65fr) minmax(140px, 0.75fr);
+}
+
+.instructor-team-row {
+  min-width: 1380px;
+  grid-template-columns: minmax(110px, 0.55fr) minmax(220px, 1fr) minmax(280px, 1.3fr) minmax(170px, 0.8fr) minmax(140px, 0.7fr) minmax(160px, 0.8fr) minmax(180px, 0.9fr) minmax(150px, 0.75fr);
 }
 
 .instructor-review-page {
@@ -5103,6 +5146,141 @@ textarea:focus-visible {
   line-height: 1.45;
 }
 
+.instructor-repository-page {
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.instructor-repository-content {
+  padding-bottom: 48px;
+}
+
+.instructor-review-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.instructor-review-actions p {
+  margin: 0;
+  color: #53647d;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.instructor-repo-panel {
+  display: grid;
+  grid-column: span 2;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #dfe7f1;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(37, 54, 89, 0.05);
+}
+
+.instructor-contribution-list {
+  display: grid;
+  gap: 10px;
+}
+
+.instructor-contribution-list article {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) repeat(4, minmax(90px, auto));
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.instructor-contribution-list strong {
+  color: #1b2a45;
+}
+
+.instructor-contribution-list span,
+.instructor-contribution-list p {
+  margin: 0;
+  color: #53647d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.instructor-contribution-list em {
+  justify-self: start;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #245cff;
+  background: #edf3ff;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.instructor-similarity-review {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #f0d3a9;
+  border-radius: 8px;
+  background: #fff8ef;
+}
+
+.instructor-similarity-review strong {
+  color: #703c10;
+  font-size: 18px;
+}
+
+.instructor-similarity-review p {
+  margin: 0;
+  color: #53647d;
+  line-height: 1.45;
+}
+
+.instructor-similarity-review div {
+  display: grid;
+  gap: 6px;
+  color: #6b5b43;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.instructor-similarity-review button {
+  width: fit-content;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid #e8c58e;
+  border-radius: 7px;
+  color: #703c10;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.instructor-archive-list {
+  display: grid;
+  gap: 8px;
+}
+
+.instructor-archive-list article {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.instructor-archive-list span {
+  color: #53647d;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.instructor-archive-list strong {
+  color: #1b2a45;
+  font-size: 13px;
+}
+
 .instructor-people-panel,
 .instructor-info-panel {
   display: grid;
@@ -5172,6 +5350,10 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .instructor-contribution-list article {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .instructor-feedback-panel label:first-child,
   .instructor-feedback-panel .instructor-form-actions {
     grid-column: auto;
@@ -5200,5 +5382,13 @@ textarea:focus-visible {
 
   .instructor-attention-card em {
     justify-self: start;
+  }
+
+  .instructor-upload-placeholder,
+  .instructor-contribution-list article,
+  .instructor-archive-list article {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

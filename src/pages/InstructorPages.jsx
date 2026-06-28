@@ -55,7 +55,7 @@ const streamItems = [
     id: 'activity-1',
     type: 'assignment',
     title: 'Published Prelim Programming Exercise 1 LAB',
-    detail: 'Due Aug 27, 2026, 10:30 AM - one final submission only',
+    detail: 'Due Aug 27, 2026, 10:30 AM - attempts allowed until due date',
     date: 'Aug 25, 2026',
   },
   {
@@ -123,7 +123,7 @@ const monitoringStats = [
   { label: 'Submitted', value: '31', detail: 'Final records received' },
   { label: 'Missing', value: '5', detail: 'No submission yet' },
   { label: 'Late', value: '2', detail: 'Submitted after due time' },
-  { label: 'Locked', value: '38', detail: 'One final submission rule' },
+  { label: 'Locked', value: '38', detail: 'Attempts closed after due date' },
 ]
 
 const submissionRows = [
@@ -229,29 +229,104 @@ const groupProjects = [
     due: 'Aug 27, 2026, 10:30 AM',
     status: 'Published',
     repositories: '9 / 11',
-    review: '4 ready',
+    ready: '4 teams',
+    atRisk: '2 teams',
   },
   {
     title: 'Prelim Group Project 2 Specifications',
     due: 'Sep 24, 2026, 10:30 AM',
     status: 'Published',
     repositories: '0 / 11',
-    review: 'Not open',
+    ready: 'Not open',
+    atRisk: 'Not started',
   },
   {
     title: 'Midterm Group Project 1 Specifications',
     due: 'Oct 20, 2026, 10:30 AM',
     status: 'Draft',
     repositories: 'Not open',
-    review: 'Setup review',
+    ready: 'Setup review',
+    atRisk: 'Not open',
   },
   {
     title: 'Final Group Project Proposal',
     due: 'Dec 5, 2026, 10:30 AM',
     status: 'Draft',
     repositories: 'Not open',
-    review: 'Setup review',
+    ready: 'Setup review',
+    atRisk: 'Not open',
   },
+]
+
+const projectTeams = [
+  {
+    team: 'Team 01',
+    repo: 'prelim-group-project-1-team-01',
+    members: 'Julius Teodoro, Alyssa Mendoza, Daniel Reyes',
+    lastCommit: 'Aug 26, 2026, 8:14 PM',
+    contribution: 'Balanced',
+    status: 'Ready for review',
+    similarity: 'Checked',
+  },
+  {
+    team: 'Team 02',
+    repo: 'prelim-group-project-1-team-02',
+    members: 'Marco Rivera, Mica Dela Cruz, Rafael Santos',
+    lastCommit: 'Aug 26, 2026, 5:30 PM',
+    contribution: 'Uneven',
+    status: 'In progress',
+    similarity: 'Needs review',
+  },
+  {
+    team: 'Team 03',
+    repo: 'prelim-group-project-1-team-03',
+    members: 'Julius Teodoro, Alyssa Mendoza, Marco Rivera, Daniel Reyes',
+    lastCommit: 'Aug 27, 2026, 9:20 AM',
+    contribution: 'Balanced',
+    status: 'Not yet marked ready',
+    similarity: 'Comparable structure detected',
+  },
+  {
+    team: 'Team 04',
+    repo: 'No repository yet',
+    members: 'Pending team setup',
+    lastCommit: 'No activity',
+    contribution: 'Missing',
+    status: 'Missing repository',
+    similarity: 'Not checked',
+  },
+]
+
+const repositoryFiles = [
+  { name: 'src', type: 'folder', commit: 'Add menu validation', updated: '12 minutes ago' },
+  { name: 'docs', type: 'folder', commit: 'Link project notes', updated: '1 hour ago' },
+  { name: 'tests', type: 'folder', commit: 'Add sample scenario tests', updated: '2 hours ago' },
+  { name: 'README.md', type: 'file', commit: 'Update run instructions', updated: '22 minutes ago' },
+  { name: 'PROJECT_SPECIFICATIONS.md', type: 'file', commit: 'Pin official requirements', updated: 'yesterday' },
+  { name: '.gitignore', type: 'file', commit: 'Initial commit', updated: 'Aug 25, 2026' },
+  { name: 'pom.xml', type: 'file', commit: 'Configure Java project', updated: 'Aug 25, 2026' },
+]
+
+const repositoryCollaborators = [
+  { name: 'Julius Teodoro', role: 'Team Lead' },
+  { name: 'Alyssa Mendoza', role: 'Collaborator' },
+  { name: 'Marco Rivera', role: 'Collaborator' },
+  { name: 'Daniel Reyes', role: 'Collaborator' },
+]
+
+const contributionRows = [
+  { name: 'Julius Teodoro', commits: '12', lines: '+420 / -88', tasks: '5 completed', activity: 'Active', balance: '45%' },
+  { name: 'Alyssa Mendoza', commits: '8', lines: '+260 / -41', tasks: '3 completed', activity: 'Active', balance: '30%' },
+  { name: 'Marco Rivera', commits: '4', lines: '+92 / -20', tasks: '1 completed', activity: 'Needs watch', balance: '15%' },
+  { name: 'Daniel Reyes', commits: '2', lines: '+54 / -8', tasks: '1 completed', activity: 'Low activity', balance: '10%' },
+]
+
+const archiveChecklist = [
+  { item: 'Requirements complete', status: 'Ready' },
+  { item: 'README present', status: 'Ready' },
+  { item: 'Specifications linked', status: 'Ready' },
+  { item: 'Final review completed', status: 'Pending instructor decision' },
+  { item: 'Repository ready for preservation', status: 'Needs approval' },
 ]
 
 const roster = [
@@ -551,6 +626,7 @@ function InstructorActivitiesPage() {
 
 function CreateActivityPage() {
   const [status, setStatus] = useState('Draft not saved in this prototype session.')
+  const [attemptLimit, setAttemptLimit] = useState('1')
 
   return (
     <InstructorClassPage activeTab="assignments">
@@ -580,10 +656,24 @@ function CreateActivityPage() {
             <input defaultValue="2026-09-03 17:00" />
           </label>
           <label>
-            Submission rule
-            <input defaultValue="One final submission only" />
+            Submission Attempts
+            <div className="instructor-attempt-control" role="group" aria-label="Submission attempts">
+              {['1', '2', '3'].map((attempt) => (
+                <button
+                  type="button"
+                  className={attemptLimit === attempt ? 'is-active' : undefined}
+                  onClick={() => setAttemptLimit(attempt)}
+                  key={attempt}
+                >
+                  {attempt}
+                </button>
+              ))}
+            </div>
           </label>
         </div>
+        <p className="instructor-field-note">
+          Students may use up to {attemptLimit} submission {attemptLimit === '1' ? 'attempt' : 'attempts'} until the due date. Attempts lock after the deadline.
+        </p>
 
         <label className="instructor-wide-field">
           Instructions
@@ -602,8 +692,8 @@ function CreateActivityPage() {
         <section className="instructor-upload-placeholder">
           <span className="instructor-code-file-icon">JAVA</span>
           <div>
-            <strong>Instructor reference solution upload placeholder</strong>
-            <p>ReferenceSolution.java is used only by the instructor to compare expected behavior.</p>
+            <strong>Add source code for test cases</strong>
+            <p>Upload a Java source file used only for instructor-side prototype test-case setup.</p>
           </div>
           <button type="button">Choose source file</button>
         </section>
@@ -710,7 +800,7 @@ function ActivityMonitoringPage() {
         <section className="instructor-page-heading">
           <p>Activity Monitoring</p>
           <h2>Prelim Programming Exercise 1 LAB</h2>
-          <span>Due Aug 27, 2026, 10:30 AM - one final submission only</span>
+          <span>Due Aug 27, 2026, 10:30 AM - attempts allowed until due date</span>
         </section>
 
         <div className="instructor-stat-grid instructor-monitor-grid">
@@ -847,7 +937,7 @@ function SubmissionReviewPage() {
         <section className="instructor-page-heading">
           <p>Selected Student Submission Review</p>
           <h2>Alyssa Mendoza - Prelim Programming Exercise 1 LAB</h2>
-          <span>Submitted Aug 27, 2026, 10:08 AM - one final submission record</span>
+          <span>Submitted Aug 27, 2026, 10:08 AM - latest recorded attempt before the deadline</span>
         </section>
 
         <div className="instructor-review-grid">
@@ -971,37 +1061,431 @@ function InstructorProjectsPage() {
         <div className="instructor-assignment-toolbar">
           <AssignmentSubTabs active="projects" />
           <div className="instructor-controls-row">
-            <button type="button" className="student-primary-action">Create Project Requirement</button>
+            <NavLink to="/instructor/projects/new" className="student-primary-action">Create Project Requirement</NavLink>
             <button type="button" className="student-outline-action">View teams</button>
             <button type="button" className="student-outline-action">Edit settings</button>
           </div>
         </div>
 
+        <section className="instructor-page-heading">
+          <p>Group Projects</p>
+          <h2>Project requirements management</h2>
+          <span>Publish requirements, monitor repositories, and review archive readiness with hardcoded prototype data.</span>
+        </section>
+
         <div className="instructor-data-table" role="table" aria-label="Group projects">
-          <div className="instructor-table-row instructor-table-row--head" role="row">
+          <div className="instructor-table-row instructor-table-row--head instructor-project-row" role="row">
             <span>Project Requirement</span>
             <span>Due Date</span>
             <span>Status</span>
             <span>Repositories</span>
-            <span>Review</span>
+            <span>Teams Ready</span>
+            <span>At-risk Teams</span>
             <span>Actions</span>
           </div>
           {groupProjects.map((project) => (
-            <div className="instructor-table-row" role="row" key={project.title}>
+            <div className="instructor-table-row instructor-project-row" role="row" key={project.title}>
               <strong>{project.title}</strong>
               <span>{project.due}</span>
               <em>{project.status}</em>
               <span>{project.repositories}</span>
-              <span>{project.review}</span>
+              <span>{project.ready}</span>
+              <span>{project.atRisk}</span>
               <div>
-                <button type="button">Monitor</button>
-                <button type="button">Settings</button>
+                <NavLink to="/instructor/projects/prelim-group-project-1">Monitor</NavLink>
+                <NavLink to="/instructor/projects/new">Settings</NavLink>
               </div>
             </div>
           ))}
         </div>
       </div>
     </InstructorClassPage>
+  )
+}
+
+function CreateProjectRequirementPage() {
+  const [status, setStatus] = useState('Project requirement draft not saved.')
+
+  return (
+    <InstructorClassPage activeTab="assignments">
+      <div className="student-assignment-panel instructor-assignment-panel instructor-form-panel">
+        <div className="instructor-assignment-toolbar">
+          <AssignmentSubTabs active="projects" />
+          <NavLink to="/instructor/projects" className="student-outline-action">Back to projects</NavLink>
+        </div>
+
+        <section className="instructor-page-heading">
+          <p>Create Project Requirement</p>
+          <h2>Publish group project specifications</h2>
+          <span>Team repository requirement setup for IT 112 - BSIT 2A.</span>
+        </section>
+
+        <div className="instructor-form-grid">
+          <label>
+            Project title
+            <input defaultValue="Prelim Group Project 1 Specifications" />
+          </label>
+          <label>
+            Group size
+            <input defaultValue="4 students" />
+          </label>
+          <label>
+            Deadline
+            <input defaultValue="2026-08-27 10:30" />
+          </label>
+          <label>
+            Repository type
+            <span className="instructor-fixed-value">Team repository</span>
+          </label>
+        </div>
+
+        <label className="instructor-wide-field">
+          Project specifications / instructions
+          <textarea defaultValue="Create a Java-based preliminary group project. Keep source code, documentation, tests, and implementation notes in the linked team repository. Mark the repository ready when all deliverables are complete." />
+        </label>
+
+        <section className="instructor-upload-placeholder">
+          <span className="student-pdf-icon">PDF</span>
+          <div>
+            <strong>Project specifications PDF placeholder</strong>
+            <p>Prelim Group Project 1 Specifications.pdf can be attached for the class.</p>
+          </div>
+          <button type="button">Choose PDF</button>
+        </section>
+
+        <div className="instructor-form-grid">
+          <label>
+            Required deliverables
+            <textarea defaultValue={'README.md\nsrc folder\ntests folder\nPROJECT_SPECIFICATIONS.md\nFinal demo notes'} />
+          </label>
+          <label>
+            Rubric
+            <textarea defaultValue={'Correctness - 40\nRepository organization - 20\nContribution balance - 20\nDocumentation - 20'} />
+          </label>
+        </div>
+
+        <div className="instructor-settings-grid">
+          <label className="instructor-toggle-row">
+            <input type="checkbox" defaultChecked />
+            <span>Contribution tracking enabled</span>
+          </label>
+          <label className="instructor-toggle-row">
+            <input type="checkbox" defaultChecked />
+            <span>Similarity review enabled</span>
+          </label>
+          <label className="instructor-toggle-row">
+            <input type="checkbox" defaultChecked />
+            <span>Archive requirement enabled</span>
+          </label>
+          <label className="instructor-toggle-row">
+            <input type="checkbox" defaultChecked />
+            <span>Instructor approval required before preservation</span>
+          </label>
+        </div>
+
+        <div className="instructor-form-actions">
+          <button type="button" className="student-outline-action" onClick={() => setStatus('Project requirement draft saved locally.')}>
+            Save Draft
+          </button>
+          <button type="button" className="student-primary-action" onClick={() => setStatus('Project requirement marked as published in local prototype state.')}>
+            Publish Project
+          </button>
+          <p>{status}</p>
+        </div>
+      </div>
+    </InstructorClassPage>
+  )
+}
+
+function ProjectMonitoringPage() {
+  return (
+    <InstructorClassPage activeTab="assignments">
+      <div className="student-assignment-panel instructor-assignment-panel">
+        <div className="instructor-assignment-toolbar">
+          <AssignmentSubTabs active="projects" />
+          <div className="instructor-controls-row">
+            <NavLink to="/instructor/projects" className="student-outline-action">Back to group projects</NavLink>
+            <NavLink to="/instructor/projects/prelim-group-project-1/repository" className="student-primary-action">
+              Open repository review
+            </NavLink>
+          </div>
+        </div>
+
+        <section className="instructor-page-heading">
+          <p>Project Requirement Monitoring</p>
+          <h2>Prelim Group Project 1 Specifications</h2>
+          <span>Due Aug 27, 2026, 10:30 AM - repositories created 9 / 11</span>
+        </section>
+
+        <section className="instructor-upload-placeholder">
+          <span className="student-pdf-icon">PDF</span>
+          <div>
+            <strong>Official specifications attached</strong>
+            <p>Prelim Group Project 1 Specifications.pdf - group size rule: 4 students per team.</p>
+          </div>
+          <button type="button">View specs</button>
+        </section>
+
+        <div className="instructor-stat-grid instructor-monitor-grid">
+          <article className="instructor-stat-card">
+            <span>Repository progress</span>
+            <strong>9 / 11</strong>
+            <p>Team repositories created</p>
+          </article>
+          <article className="instructor-stat-card">
+            <span>Ready for review</span>
+            <strong>4</strong>
+            <p>Teams marked ready</p>
+          </article>
+          <article className="instructor-stat-card">
+            <span>At-risk teams</span>
+            <strong>2</strong>
+            <p>Missing or uneven progress</p>
+          </article>
+          <article className="instructor-stat-card">
+            <span>Similarity signals</span>
+            <strong>2</strong>
+            <p>Instructor-only review needed</p>
+          </article>
+        </div>
+
+        <div className="instructor-data-table" role="table" aria-label="Project teams">
+          <div className="instructor-table-row instructor-table-row--head instructor-team-row">
+            <span>Team</span>
+            <span>Repository</span>
+            <span>Members</span>
+            <span>Last commit</span>
+            <span>Contribution</span>
+            <span>Status</span>
+            <span>Similarity</span>
+            <span>Action</span>
+          </div>
+          {projectTeams.map((team) => (
+            <div className="instructor-table-row instructor-team-row" key={team.team}>
+              <strong>{team.team}</strong>
+              <span>{team.repo}</span>
+              <span>{team.members}</span>
+              <span>{team.lastCommit}</span>
+              <em>{team.contribution}</em>
+              <span>{team.status}</span>
+              <span>{team.similarity}</span>
+              <div>
+                <NavLink to="/instructor/projects/prelim-group-project-1/repository">Open Repository</NavLink>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </InstructorClassPage>
+  )
+}
+
+function ContributionReviewPanel() {
+  return (
+    <section className="instructor-repo-panel">
+      <div className="instructor-section-title">
+        <h3>Contribution Summary</h3>
+        <span>Instructor review</span>
+      </div>
+      <div className="instructor-contribution-list">
+        {contributionRows.map((row) => (
+          <article key={row.name}>
+            <strong>{row.name}</strong>
+            <span>{row.commits} commits</span>
+            <span>{row.lines}</span>
+            <span>{row.tasks}</span>
+            <em>{row.balance}</em>
+            <p>{row.activity}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function SimilarityReviewPanel() {
+  const [decision, setDecision] = useState('Open')
+
+  return (
+    <section className="instructor-repo-panel">
+      <div className="instructor-section-title">
+        <h3>Similarity Review</h3>
+        <span>Instructor-only detail</span>
+      </div>
+      <div className="instructor-similarity-review">
+        <strong>Needs review</strong>
+        <p>Comparable structure detected with Team 02 in menu controller and validation helper organization.</p>
+        <div>
+          <span>Files involved: src/MenuController.java, src/InputValidator.java</span>
+          <span>Signal: Moderate</span>
+          <span>Decision: {decision}</span>
+        </div>
+        <button type="button" onClick={() => setDecision('Marked reviewed')}>Mark reviewed</button>
+      </div>
+    </section>
+  )
+}
+
+function ArchiveReadinessPanel() {
+  const [archiveStatus, setArchiveStatus] = useState('Awaiting final review')
+
+  return (
+    <section className="instructor-repo-panel">
+      <div className="instructor-section-title">
+        <h3>Archive Readiness</h3>
+        <span>{archiveStatus}</span>
+      </div>
+      <div className="instructor-archive-list">
+        {archiveChecklist.map((item) => (
+          <article key={item.item}>
+            <span>{item.item}</span>
+            <strong>{item.status}</strong>
+          </article>
+        ))}
+      </div>
+      <div className="instructor-controls-row">
+        <button type="button" className="student-primary-action" onClick={() => setArchiveStatus('Archive approved')}>
+          Approve archive
+        </button>
+        <button type="button" className="student-outline-action" onClick={() => setArchiveStatus('Returned for revision')}>
+          Return for revision
+        </button>
+      </div>
+    </section>
+  )
+}
+
+function InstructorRepositoryReviewPage() {
+  return (
+    <div className="instructor-repository-page">
+      <header className="student-repository-topbar">
+        <div className="student-repository-breadcrumb">
+          <NavLink to="/instructor/classes">IT 112</NavLink>
+          <NavLink to="/instructor/projects/prelim-group-project-1">Prelim Group Project 1</NavLink>
+          <strong>prelim-group-project-1-team-03</strong>
+        </div>
+        <InstructorUserArea count={4} />
+      </header>
+
+      <main className="student-repository-content instructor-repository-content">
+        <section className="student-repository-hero">
+          <span className="student-repo-mark" aria-hidden="true" />
+          <div>
+            <h1>prelim-group-project-1-team-03</h1>
+            <span className="student-repo-state">Instructor Review Mode</span>
+          </div>
+        </section>
+
+        <div className="student-repository-toolbar">
+          <button type="button">main</button>
+          <span>Linked to IT 112</span>
+          <span>Team repository</span>
+          <span>Ready for Review</span>
+          <button type="button" className="student-repo-code-button">Code</button>
+          <button type="button">History</button>
+          <button type="button">Review actions</button>
+        </div>
+
+        <div className="student-repository-grid">
+          <section className="student-repo-main-column">
+            <article className="student-repo-commit-card">
+              <span className="student-user-avatar" aria-hidden="true" />
+              <div>
+                <strong>Alyssa Mendoza committed 12 minutes ago</strong>
+                <span>Add menu validation and update README instructions</span>
+              </div>
+              <code>8f41ac2</code>
+              <button type="button">View commit</button>
+            </article>
+
+            <section className="student-repo-card">
+              <div className="student-repo-file-head">
+                <span>Name</span>
+                <span>Last commit</span>
+                <span>Last update</span>
+              </div>
+              {repositoryFiles.map((file) => (
+                <div className="student-repo-file-row" key={file.name}>
+                  <span className={`student-repo-file-icon student-repo-file-icon--${file.type}`} aria-hidden="true" />
+                  <strong>{file.name}</strong>
+                  <span>{file.commit}</span>
+                  <span>{file.updated}</span>
+                </div>
+              ))}
+            </section>
+
+            <section className="student-repo-card student-readme-card">
+              <div className="student-repo-card-title">
+                <h2>README.md</h2>
+                <span>Preview</span>
+              </div>
+              <h3>Prelim Group Project 1</h3>
+              <p>
+                Java project for the preliminary group requirement. The repository includes
+                source code, tests, documentation, and linked official specifications.
+              </p>
+              <ol>
+                <li>Open the project in IntelliJ IDEA</li>
+                <li>Run the Java entry point</li>
+                <li>Review test scenarios under tests</li>
+              </ol>
+            </section>
+          </section>
+
+          <aside className="student-repo-side-column">
+            <section className="student-repo-card">
+              <h2>Project Information</h2>
+              <ul className="student-repo-info-list">
+                <li>Ready for review</li>
+                <li>12 commits</li>
+                <li>4 collaborators</li>
+                <li>Official specs linked</li>
+                <li>Archive review pending</li>
+              </ul>
+            </section>
+
+            <section className="student-repo-card">
+              <h2>Collaborators</h2>
+              <ul className="student-collaborator-list">
+                {repositoryCollaborators.map((member) => (
+                  <li key={member.name}>
+                    <span className="student-person-avatar">{member.name.charAt(0)}</span>
+                    <div>
+                      <strong>{member.name}</strong>
+                      <span>{member.role}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="student-repo-card instructor-review-actions">
+              <h2>Instructor Review Panel</h2>
+              <p>Review repository completeness, contribution balance, similarity signal, and archive readiness.</p>
+              <button type="button" className="student-primary-action">Save review note</button>
+              <button type="button" className="student-outline-action">Return for revision</button>
+            </section>
+          </aside>
+
+          <section className="student-repo-card student-spec-card">
+            <h2>Pinned Official Project Specifications</h2>
+            <p>This repository is linked to the official project requirement.</p>
+            <div className="student-attachment student-attachment--wide">
+              <span className="student-pdf-icon">PDF</span>
+              <div>
+                <strong>Prelim Group Project 1 Specifications.pdf</strong>
+                <span>324 KB</span>
+              </div>
+              <span className="student-document-preview" aria-hidden="true" />
+            </div>
+          </section>
+
+          <ContributionReviewPanel />
+          <SimilarityReviewPanel />
+          <ArchiveReadinessPanel />
+        </div>
+      </main>
+    </div>
   )
 }
 
@@ -1054,7 +1538,7 @@ function InstructorClassInfoPage() {
     ['Section', instructorClass.section],
     ['Instructor', instructorClass.instructor],
     ['Class code', instructorClass.classCode],
-    ['Activity rules', 'One final submission only; deadline locks submit controls'],
+    ['Activity rules', 'Submission attempts can be set from 1 to 3; attempts close after the due date'],
     ['Repository rules', 'Team repositories are linked to group project requirements'],
     ['Feedback release', 'Grades and comments are released after instructor review'],
   ]
@@ -1091,6 +1575,12 @@ function InstructorRoutePage({ pagePath }) {
     'activity/act-loops-01/submissions': <SubmissionQueuePage />,
     'submission-review': <SubmissionReviewPage />,
     projects: <InstructorProjectsPage />,
+    'projects/new': <CreateProjectRequirementPage />,
+    'projects/prelim-group-project-1': <ProjectMonitoringPage />,
+    'projects/prelim-group-project-1/repository': <InstructorRepositoryReviewPage />,
+    'projects/repo-campus-nav/contributions': <InstructorRepositoryReviewPage />,
+    'projects/repo-campus-nav/similarity': <InstructorRepositoryReviewPage />,
+    'projects/repo-campus-nav/archive': <InstructorRepositoryReviewPage />,
     people: <InstructorPeoplePage />,
     roster: <InstructorPeoplePage />,
     'class-info': <InstructorClassInfoPage />,
