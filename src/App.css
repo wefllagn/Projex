@@ -79,7 +79,7 @@
 .role-landing-page {
   min-height: 100vh;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   padding: clamp(22px, 4vw, 48px) 0 0;
   color: #07143a;
   background:
@@ -529,17 +529,33 @@
 }
 
 .role-landing-experience {
-  display: grid;
-  gap: 34px;
+  --carousel-scroll-step: clamp(230px, 38vh, 390px);
   width: 100vw;
+  height: calc(100vh + var(--carousel-scroll-step) + var(--carousel-scroll-step) + var(--carousel-scroll-step));
+  min-height: 760px;
   margin-left: calc(50% - 50vw);
-  padding: clamp(44px, 7vw, 76px) max(24px, calc((100vw - 1200px) / 2)) clamp(64px, 8vw, 96px);
+  padding: 0;
   border-top: 1px solid #dce6f5;
   background: rgba(255, 255, 255, 0.72);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
+.role-landing-experience-pin {
+  position: sticky;
+  top: 0;
+  box-sizing: border-box;
+  height: 100vh;
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: clamp(18px, 3vh, 30px);
+  padding: clamp(54px, 9vh, 88px) max(24px, calc((100vw - 1200px) / 2)) clamp(28px, 5vh, 56px);
+  overflow: hidden;
+}
+
 .role-landing-experience-heading {
+  position: relative;
+  z-index: 5;
   display: grid;
   gap: 8px;
   width: min(960px, 100%);
@@ -565,18 +581,16 @@
   margin-top: 10px;
 }
 
-.role-landing-progress button {
+.role-landing-progress span {
   position: relative;
   width: 86px;
   height: 7px;
-  border: 0;
   border-radius: 999px;
   background: #d9e5f8;
-  cursor: pointer;
   overflow: hidden;
 }
 
-.role-landing-progress button::before {
+.role-landing-progress span::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -586,64 +600,90 @@
   transition: width 240ms ease;
 }
 
-.role-landing-progress button.is-active::before {
+.role-landing-progress span.is-active::before {
   width: 100%;
 }
 
 .role-landing-carousel {
-  display: grid;
-  grid-template-columns: 50px minmax(0, 1fr) 50px;
-  gap: 20px;
-  align-items: center;
-}
-
-.role-landing-carousel-button {
-  width: 48px;
-  height: 48px;
-  border: 1px solid #dce7f6;
-  border-radius: 999px;
-  color: #3f609f;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 12px 30px rgba(34, 68, 120, 0.09);
-  cursor: pointer;
-  transition: transform 160ms ease, box-shadow 160ms ease;
-}
-
-.role-landing-carousel-button:hover,
-.role-landing-carousel-button:focus-visible {
-  outline: none;
-  transform: translateY(-2px);
-  box-shadow: 0 16px 34px rgba(34, 68, 120, 0.14);
-}
-
-.role-landing-carousel-button span {
-  font-size: 34px;
-  line-height: 1;
+  position: relative;
+  min-height: clamp(320px, 48vh, 430px);
+  display: block;
+  overflow: visible;
 }
 
 .role-landing-carousel-stage {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(190px, 0.7fr) minmax(360px, 1.6fr) minmax(190px, 0.7fr);
-  gap: 18px;
-  align-items: stretch;
+  position: relative;
+  width: min(980px, 100%);
+  height: clamp(310px, 46vh, 410px);
+  margin: 0 auto;
+  overflow: visible;
+  perspective: 1200px;
 }
 
 .role-landing-benefit-card {
-  min-height: 280px;
+  position: absolute;
+  top: clamp(8px, 2vh, 24px);
+  left: 50%;
+  width: min(680px, 74vw);
+  min-height: clamp(290px, 42vh, 350px);
   display: grid;
-  gap: 18px;
-  align-content: center;
-  padding: 30px;
+  grid-template-columns: minmax(210px, 0.78fr) minmax(300px, 1fr);
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid #dce7f6;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 20px 44px rgba(34, 68, 120, 0.08);
-  animation: roleLandingRise 420ms ease both;
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: 0 22px 55px rgba(34, 68, 120, 0.14);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) scale(0.76);
+  filter: blur(8px);
+  transition:
+    opacity 280ms ease,
+    transform 320ms ease,
+    filter 320ms ease,
+    box-shadow 320ms ease;
 }
 
-.role-landing-benefit-card > span,
-.role-landing-benefit-card div > span {
+.role-landing-benefit-card--active {
+  z-index: 4;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) scale(1);
+  filter: blur(0);
+  box-shadow: 0 28px 68px rgba(34, 68, 120, 0.18);
+}
+
+.role-landing-benefit-card--previous {
+  z-index: 2;
+  opacity: 0.44;
+  transform: translateX(-95%) scale(0.82);
+  filter: blur(4px);
+}
+
+.role-landing-benefit-card--next {
+  z-index: 2;
+  opacity: 0.44;
+  transform: translateX(-5%) scale(0.82);
+  filter: blur(4px);
+}
+
+.role-landing-benefit-card--hidden {
+  z-index: 1;
+  opacity: 0;
+  transform: translateX(-50%) scale(0.7);
+  filter: blur(10px);
+}
+
+.role-landing-benefit-copy {
+  display: grid;
+  align-content: center;
+  gap: clamp(12px, 2vh, 20px);
+  padding: clamp(24px, 4vh, 42px);
+}
+
+.role-landing-benefit-copy span {
   color: #3f609f;
   font-size: 14px;
   font-weight: 900;
@@ -660,63 +700,25 @@
 .role-landing-benefit-card p {
   margin: 0;
   color: #4d618c;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.65;
 }
 
-.role-landing-benefit-card--side {
-  min-height: 260px;
-  opacity: 0.9;
-}
-
-.role-landing-benefit-card--active {
-  grid-template-columns: minmax(210px, 0.72fr) minmax(260px, 1fr);
-  align-content: stretch;
-  align-items: center;
-  min-height: 315px;
-  padding: 0;
-  overflow: hidden;
-}
-
-.role-landing-benefit-card--active > div:first-child {
-  display: grid;
-  gap: 20px;
-  padding: 34px;
-}
-
 .role-landing-benefit-visual {
   position: relative;
-  min-height: 315px;
-  display: grid;
-  align-content: center;
-  gap: 14px;
-  padding: 34px;
+  min-height: clamp(290px, 42vh, 350px);
+  overflow: hidden;
   background:
     linear-gradient(120deg, rgba(130, 158, 212, 0.2), rgba(255, 255, 255, 0.6)),
     #eef5ff;
 }
 
-.role-landing-benefit-chip {
-  width: fit-content;
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 18px;
-  border-radius: 8px;
-  color: #102f75;
-  background: rgba(255, 255, 255, 0.9);
-  font-size: 12px;
-  font-weight: 900;
-  box-shadow: 0 10px 24px rgba(46, 78, 130, 0.11);
-}
-
 .role-landing-benefit-visual img {
-  position: absolute;
-  right: 22px;
-  bottom: 18px;
-  width: 120px;
-  height: auto;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  object-fit: cover;
 }
 
 @keyframes roleLandingGlow {
@@ -770,11 +772,7 @@
   }
 
   .role-landing-carousel-stage {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .role-landing-benefit-card--side {
-    display: none;
+    width: min(860px, 100%);
   }
 }
 
@@ -836,30 +834,53 @@
   }
 
   .role-landing-experience {
-    padding-inline: 16px;
+    height: auto;
+    min-height: auto;
   }
 
-  .role-landing-progress button {
+  .role-landing-experience-pin {
+    position: relative;
+    min-height: auto;
+    padding: 44px 16px 64px;
+  }
+
+  .role-landing-progress span {
     flex: 1;
     width: auto;
   }
 
   .role-landing-carousel {
-    grid-template-columns: 42px minmax(0, 1fr) 42px;
-    gap: 10px;
+    min-height: 0;
   }
 
-  .role-landing-carousel-button {
-    width: 40px;
-    height: 40px;
+  .role-landing-carousel-stage {
+    height: auto;
+    display: grid;
+    gap: 18px;
   }
 
-  .role-landing-benefit-card--active {
+  .role-landing-benefit-card {
+    position: static;
+    width: min(360px, 88vw);
     grid-template-columns: 1fr;
+    min-height: 480px;
+    margin: 0 auto;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+    filter: none;
   }
 
   .role-landing-benefit-visual {
     min-height: 210px;
+  }
+
+  .role-landing-benefit-card--previous,
+  .role-landing-benefit-card--next,
+  .role-landing-benefit-card--hidden {
+    opacity: 1;
+    transform: none;
+    filter: none;
   }
 }
 
@@ -873,8 +894,7 @@
     animation: none;
   }
 
-  .role-landing-button,
-  .role-landing-carousel-button {
+  .role-landing-button {
     transition: none;
   }
 }

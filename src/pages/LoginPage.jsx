@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Card from "../components/Card.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
@@ -6,6 +6,7 @@ import { roles } from "../data/projexData.js";
 
 export function RoleLandingPage() {
   const [activeBenefit, setActiveBenefit] = useState(0);
+  const experienceRef = useRef(null);
 
   const previewRows = [
     {
@@ -51,6 +52,7 @@ export function RoleLandingPage() {
       message: "Activities, repositories, submissions, and feedback in one place.",
       meta: "01",
       accent: "blue",
+      image: "/assets/brand/landing-benefit-1.png",
     },
     {
       title: "Repository-ready collaboration",
@@ -58,6 +60,7 @@ export function RoleLandingPage() {
         "Students can create project repositories, invite teammates, and work inside a class-based workflow.",
       meta: "02",
       accent: "violet",
+      image: "/assets/brand/landing-benefit-2.png",
     },
     {
       title: "Easier checking for instructors",
@@ -65,6 +68,7 @@ export function RoleLandingPage() {
         "Instructors can monitor submissions, review repositories, and track class progress faster.",
       meta: "03",
       accent: "cyan",
+      image: "/assets/brand/landing-benefit-3.png",
     },
     {
       title: "Feedback-ready progress",
@@ -72,22 +76,75 @@ export function RoleLandingPage() {
         "Grades, comments, checking results, and improvement signals are easier to follow.",
       meta: "04",
       accent: "green",
+      image: "/assets/brand/landing-benefit-4.png",
     },
   ];
 
   const previousBenefit =
     (activeBenefit - 1 + benefitCards.length) % benefitCards.length;
   const nextBenefit = (activeBenefit + 1) % benefitCards.length;
-  const activeCard = benefitCards[activeBenefit];
 
-  const goToPreviousBenefit = () => {
-    setActiveBenefit(previousBenefit);
+  const getBenefitPosition = (index) => {
+    if (index === activeBenefit) {
+      return "active";
+    }
+
+    if (index === previousBenefit) {
+      return "previous";
+    }
+
+    if (index === nextBenefit) {
+      return "next";
+    }
+
+    return "hidden";
   };
 
-  const goToNextBenefit = () => {
-    setActiveBenefit(nextBenefit);
-  };
+  useEffect(() => {
+    const updateActiveBenefit = () => {
+      const section = experienceRef.current;
 
+      if (!section) {
+        return;
+      }
+
+      if (window.matchMedia("(max-width: 760px)").matches) {
+        setActiveBenefit(0);
+        return;
+      }
+
+      const sectionTop = section.offsetTop;
+      const scrollStart = sectionTop;
+      const scrollEnd = sectionTop + section.offsetHeight - window.innerHeight;
+      const currentScroll = window.scrollY;
+
+      if (currentScroll < scrollStart) {
+        setActiveBenefit(0);
+        return;
+      }
+
+      if (currentScroll >= scrollEnd) {
+        setActiveBenefit(benefitCards.length - 1);
+        return;
+      }
+
+      const scrollRange = Math.max(scrollEnd - scrollStart, 1);
+      const progress = Math.min(Math.max((currentScroll - scrollStart) / scrollRange, 0), 1);
+      const maxIndex = benefitCards.length - 1;
+      const nextIndex = Math.min(Math.round(progress * maxIndex), maxIndex);
+
+      setActiveBenefit(nextIndex);
+    };
+
+    updateActiveBenefit();
+    window.addEventListener("scroll", updateActiveBenefit, { passive: true });
+    window.addEventListener("resize", updateActiveBenefit);
+
+    return () => {
+      window.removeEventListener("scroll", updateActiveBenefit);
+      window.removeEventListener("resize", updateActiveBenefit);
+    };
+  }, [benefitCards.length]);
   return (
     <main className="role-landing-page">
       <span className="role-landing-glow role-landing-glow--one" aria-hidden="true" />
@@ -201,69 +258,49 @@ export function RoleLandingPage() {
           </aside>
         </section>
 
-        <section className="role-landing-experience" aria-labelledby="role-landing-experience-title">
-          <div className="role-landing-experience-heading">
-            <span>The experience</span>
-            <h2 id="role-landing-experience-title">Designed for progress</h2>
-            <div className="role-landing-progress" aria-label="Benefit progress">
-              {benefitCards.map((benefit, index) => (
-                <button
-                  type="button"
-                  className={index === activeBenefit ? "is-active" : ""}
-                  key={benefit.title}
-                  onClick={() => setActiveBenefit(index)}
-                  aria-label={`Show ${benefit.title}`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="role-landing-carousel">
-            <button
-              className="role-landing-carousel-button"
-              type="button"
-              onClick={goToPreviousBenefit}
-              aria-label="Previous benefit"
-            >
-              <span aria-hidden="true">‹</span>
-            </button>
-
-            <div className="role-landing-carousel-stage" aria-live="polite">
-              <article className="role-landing-benefit-card role-landing-benefit-card--side">
-                <span>{benefitCards[previousBenefit].meta}</span>
-                <h3>{benefitCards[previousBenefit].title}</h3>
-                <p>{benefitCards[previousBenefit].message}</p>
-              </article>
-
-              <article className={`role-landing-benefit-card role-landing-benefit-card--active role-landing-benefit-card--${activeCard.accent}`}>
-                <div>
-                  <span>{activeCard.meta}</span>
-                  <h3>{activeCard.title}</h3>
-                  <p>{activeCard.message}</p>
-                </div>
-                <div className="role-landing-benefit-visual" aria-hidden="true">
-                  <div className="role-landing-benefit-chip">Activity</div>
-                  <div className="role-landing-benefit-chip">Repository</div>
-                  <div className="role-landing-benefit-chip">Feedback</div>
-                  <img src="/assets/brand/projex-login-mascot.png" alt="" />
-                </div>
-              </article>
-
-              <article className="role-landing-benefit-card role-landing-benefit-card--side">
-                <span>{benefitCards[nextBenefit].meta}</span>
-                <h3>{benefitCards[nextBenefit].title}</h3>
-                <p>{benefitCards[nextBenefit].message}</p>
-              </article>
+        <section
+          className="role-landing-experience"
+          aria-labelledby="role-landing-experience-title"
+          ref={experienceRef}
+        >
+          <div className="role-landing-experience-pin">
+            <div className="role-landing-experience-heading">
+              <span>The experience</span>
+              <h2 id="role-landing-experience-title">Designed for progress</h2>
+              <div className="role-landing-progress" aria-label="Benefit progress">
+                {benefitCards.map((benefit, index) => (
+                  <span
+                    className={index === activeBenefit ? "is-active" : ""}
+                    key={benefit.title}
+                  />
+                ))}
+              </div>
             </div>
 
-            <button
-              className="role-landing-carousel-button"
-              type="button"
-              onClick={goToNextBenefit}
-              aria-label="Next benefit"
-            >
-              <span aria-hidden="true">›</span>
-            </button>
+            <div className="role-landing-carousel">
+              <div className="role-landing-carousel-stage" aria-live="polite">
+                {benefitCards.map((benefit, index) => {
+                  const position = getBenefitPosition(index);
+
+                  return (
+                    <article
+                      className={"role-landing-benefit-card role-landing-benefit-card--" + position + " role-landing-benefit-card--" + benefit.accent}
+                      aria-hidden={position === "hidden"}
+                      key={benefit.title}
+                    >
+                      <div className="role-landing-benefit-copy">
+                        <span>{benefit.meta}</span>
+                        <h3>{benefit.title}</h3>
+                        <p>{benefit.message}</p>
+                      </div>
+                      <div className="role-landing-benefit-visual" aria-hidden="true">
+                        <img src={benefit.image} alt="" />
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </section>
       </div>
