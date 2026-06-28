@@ -29,6 +29,20 @@ function getStatusClass(status) {
   return undefined
 }
 
+function getProjectStatusClass(status) {
+  if (status === 'Approved for Presentation') return 'is-approved'
+  if (status === 'Revision') return 'is-revision'
+  if (status === 'Missing Repository') return 'is-missing-repository'
+  return undefined
+}
+
+function getContributionClass(contribution) {
+  if (contribution === 'Balanced') return 'is-balanced'
+  if (contribution === 'Uneven') return 'is-uneven'
+  if (contribution === 'Missing') return 'is-contribution-missing'
+  return undefined
+}
+
 const dashboardStats = [
   { label: 'Total students', value: '38' },
   { label: 'Published activities', value: '5' },
@@ -275,6 +289,7 @@ const projectTeams = [
     team: 'Team 01',
     repo: 'prelim-group-project-1-team-01',
     representative: 'Julius Teodoro',
+    lastCommit: 'Aug 26, 2026, 8:14 PM',
     contribution: 'Balanced',
     status: 'Approved for Presentation',
   },
@@ -282,6 +297,7 @@ const projectTeams = [
     team: 'Team 02',
     repo: 'prelim-group-project-1-team-02',
     representative: 'Marco Rivera',
+    lastCommit: 'Aug 26, 2026, 5:30 PM',
     contribution: 'Uneven',
     status: 'Revision',
   },
@@ -289,6 +305,7 @@ const projectTeams = [
     team: 'Team 03',
     repo: 'prelim-group-project-1-team-03',
     representative: 'Alyssa Mendoza',
+    lastCommit: 'Aug 27, 2026, 9:20 AM',
     contribution: 'Balanced',
     status: 'Approved for Presentation',
   },
@@ -296,6 +313,7 @@ const projectTeams = [
     team: 'Team 04',
     repo: 'No repository yet',
     representative: 'Pending team setup',
+    lastCommit: 'No activity',
     contribution: 'Missing',
     status: 'Missing Repository',
   },
@@ -529,6 +547,9 @@ function InstructorDashboard() {
 }
 
 function InstructorStreamPage() {
+  const [announcement, setAnnouncement] = useState('')
+  const [announcementStatus, setAnnouncementStatus] = useState('')
+
   return (
     <InstructorClassPage activeTab="stream">
       <div className="instructor-stream-shell">
@@ -550,8 +571,26 @@ function InstructorStreamPage() {
         <div className="student-stream-card instructor-stream-card" aria-label="Instructor class stream">
         <section className="instructor-composer-card">
           <span className="student-user-avatar" aria-hidden="true" />
-          <button type="button">Announce something to BSIT 2A</button>
+          <label>
+            <span>Announcement</span>
+            <textarea
+              value={announcement}
+              onChange={(event) => setAnnouncement(event.target.value)}
+              placeholder="Announce something to BSIT 2A"
+            />
+          </label>
+          <button
+            type="button"
+            aria-label="Post announcement"
+            onClick={() => {
+              setAnnouncement('')
+              setAnnouncementStatus('Announcement posted locally')
+            }}
+          >
+            Enter
+          </button>
         </section>
+        {announcementStatus && <p className="instructor-announcement-status">{announcementStatus}</p>}
 
         <section className="instructor-stream-section">
           <h2>Recent Published Activities</h2>
@@ -1140,7 +1179,7 @@ function ReviewQueuesPage() {
       title: 'prelim-group-project-1-team-03',
       due: 'Aug 27, 2026, 10:30 AM',
       status: 'Repository review',
-      reviewState: 'Archive readiness pending',
+      reviewState: 'Instructor review pending',
       actionPath: '/instructor/projects/prelim-group-project-1/repository',
     },
     {
@@ -1262,7 +1301,7 @@ function InstructorProjectsPage() {
         <section className="instructor-page-heading">
           <p>Group Projects</p>
           <h2>Project requirements management</h2>
-          <span>Publish requirements, monitor repositories, and review archive readiness with hardcoded prototype data.</span>
+          <span>Publish requirements, monitor repositories, and review presentation readiness with hardcoded prototype data.</span>
         </section>
 
         <div className="instructor-data-table" role="table" aria-label="Group projects">
@@ -1412,16 +1451,13 @@ function ProjectMonitoringPage() {
           <AssignmentSubTabs active="projects" />
           <div className="instructor-controls-row">
             <NavLink to="/instructor/projects" className="student-outline-action">Back to group projects</NavLink>
-            <NavLink to="/instructor/projects/prelim-group-project-1/repository" className="student-primary-action">
-              Open repository review
-            </NavLink>
           </div>
         </div>
 
         <section className="instructor-page-heading">
           <p>Project Requirement Monitoring</p>
           <h2>Prelim Group Project 1 Specifications</h2>
-          <span>Due Aug 27, 2026, 10:30 AM - repositories created 9 / 11</span>
+          <span>Due Aug 27, 2026, 10:30 AM - repositories created 3 / 4</span>
         </section>
 
         <section className="instructor-upload-placeholder">
@@ -1456,6 +1492,7 @@ function ProjectMonitoringPage() {
             <span>Team</span>
             <span>Repository</span>
             <span>Team Representative</span>
+            <span>Last Commit</span>
             <span>Contribution</span>
             <span>Status</span>
             <span>Action</span>
@@ -1465,8 +1502,9 @@ function ProjectMonitoringPage() {
               <strong>{team.team}</strong>
               <span>{team.repo}</span>
               <span>{team.representative}</span>
-              <em>{team.contribution}</em>
-              <span>{team.status}</span>
+              <span>{team.lastCommit}</span>
+              <em className={getContributionClass(team.contribution)}>{team.contribution}</em>
+              <em className={getProjectStatusClass(team.status)}>{team.status}</em>
               <div>
                 <NavLink to="/instructor/projects/prelim-group-project-1/repository">Review</NavLink>
               </div>
@@ -1521,7 +1559,6 @@ function AddReviewModal({ onClose }) {
           <button type="button">Import PDF</button>
         </section>
         <div className="student-submit-modal-actions">
-          <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
           <button type="button" className="student-outline-action" onClick={onClose}>Return for Revision</button>
           <button type="button" className="student-primary-action" onClick={onClose}>Approve for Presentation</button>
         </div>
@@ -1530,8 +1567,48 @@ function AddReviewModal({ onClose }) {
   )
 }
 
+function InviteCollaboratorModal({ onClose }) {
+  const [email, setEmail] = useState('')
+  const [status, setStatus] = useState('')
+
+  return (
+    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="invite-collaborator-title">
+      <section className="instructor-action-modal instructor-invite-collaborator-modal">
+        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close invite collaborator" />
+        <p>Collaborator Invite</p>
+        <h2 id="invite-collaborator-title">Invite collaborator by email</h2>
+        <label className="instructor-wide-field">
+          Email address
+          <input
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="student@slu.edu.ph"
+          />
+        </label>
+        {status && <span className="instructor-modal-status">{status}</span>}
+        <div className="student-submit-modal-actions">
+          <button type="button" className="student-outline-action" onClick={onClose}>Close</button>
+          <button
+            type="button"
+            className="student-primary-action"
+            onClick={() => setStatus(email ? `Invitation queued for ${email}` : 'Enter an email address first.')}
+          >
+            Send Invite
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function InstructorRepositoryReviewPage() {
   const [reviewOpen, setReviewOpen] = useState(false)
+  const [branchOpen, setBranchOpen] = useState(false)
+  const [selectedBranch, setSelectedBranch] = useState('main')
+  const [repoMenuOpen, setRepoMenuOpen] = useState(false)
+  const [codeMenuOpen, setCodeMenuOpen] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const branches = ['main', 'presentation-ready', 'revision-notes']
 
   return (
     <div className="instructor-repository-page">
@@ -1554,11 +1631,75 @@ function InstructorRepositoryReviewPage() {
         </section>
 
         <div className="student-repository-toolbar">
-          <button type="button">main</button>
+          <div className="instructor-repo-dropdown">
+            <button type="button" className="instructor-branch-button" onClick={() => setBranchOpen((current) => !current)}>
+              <span className="instructor-branch-icon" aria-hidden="true" />
+              {selectedBranch}
+              <span className="instructor-caret" aria-hidden="true" />
+            </button>
+            {branchOpen && (
+              <div className="instructor-repo-menu instructor-branch-menu" aria-label="Repository branches">
+                <strong>Select Git revision</strong>
+                <label>
+                  <span>Search</span>
+                  <input placeholder="Search by Git revision" />
+                </label>
+                <span className="instructor-menu-group-label">Selected</span>
+                {branches.map((branch) => (
+                  <button
+                    type="button"
+                    className={selectedBranch === branch ? 'is-active' : undefined}
+                    onClick={() => {
+                      setSelectedBranch(branch)
+                      setBranchOpen(false)
+                    }}
+                    key={branch}
+                  >
+                    {branch}
+                    {branch === 'main' && (
+                      <>
+                        <em>default</em>
+                        <em>protected</em>
+                      </>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <span>Linked to IT 112</span>
           <span>Team repository</span>
           <span>Ready for Review</span>
-          <button type="button" className="student-repo-code-button">Code</button>
+          <div className="instructor-repo-toolbar-spacer" />
+          <div className="instructor-repo-dropdown">
+            <button type="button" className="instructor-repo-icon-button" onClick={() => setRepoMenuOpen((current) => !current)}>+</button>
+            {repoMenuOpen && (
+              <div className="instructor-repo-menu instructor-repo-menu--right" aria-label="Repository actions">
+                <span className="instructor-menu-group-label">This directory</span>
+                <button type="button">New file</button>
+                <button type="button">Upload file</button>
+                <button type="button">New directory</button>
+                <span className="instructor-menu-divider" />
+                <span className="instructor-menu-group-label">This repository</span>
+                <button type="button">New branch</button>
+                <button type="button">New tag</button>
+              </div>
+            )}
+          </div>
+          <button type="button">Find file</button>
+          <div className="instructor-repo-dropdown">
+            <button type="button" className="student-repo-code-button" onClick={() => setCodeMenuOpen((current) => !current)}>
+              Code
+              <span className="instructor-caret" aria-hidden="true" />
+            </button>
+            {codeMenuOpen && (
+              <div className="instructor-repo-menu instructor-repo-menu--right" aria-label="Code options">
+                <button type="button">Copy clone URL</button>
+                <button type="button">Download ZIP</button>
+                <button type="button">Open in IDE</button>
+              </div>
+            )}
+          </div>
           <button type="button">History</button>
         </div>
 
@@ -1616,11 +1757,15 @@ function InstructorRepositoryReviewPage() {
                 <li>12 commits</li>
                 <li>4 collaborators</li>
                 <li>Official specs linked</li>
+                <li>Created on Aug 25, 2026</li>
               </ul>
             </section>
 
-            <section className="student-repo-card">
-              <h2>Collaborators</h2>
+            <section className="student-repo-card instructor-collaborators-card">
+              <div className="instructor-side-card-heading">
+                <h2>Collaborators</h2>
+                <button type="button" onClick={() => setInviteOpen(true)}>Invite</button>
+              </div>
               <ul className="student-collaborator-list">
                 {repositoryCollaborators.map((member) => (
                   <li key={member.name}>
@@ -1658,6 +1803,7 @@ function InstructorRepositoryReviewPage() {
         </div>
       </main>
       {reviewOpen && <AddReviewModal onClose={() => setReviewOpen(false)} />}
+      {inviteOpen && <InviteCollaboratorModal onClose={() => setInviteOpen(false)} />}
     </div>
   )
 }

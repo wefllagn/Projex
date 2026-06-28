@@ -38,7 +38,7 @@ function StudentSidebarLink({ to, children, end = false, count, icon }) {
 }
 
 function CreateClassModal({ onClose }) {
-  const [code, setCode] = useState('9446')
+  const [code, setCode] = useState('')
   const [copyStatus, setCopyStatus] = useState('')
 
   return (
@@ -67,18 +67,22 @@ function CreateClassModal({ onClose }) {
         </div>
         <section className="instructor-modal-code-panel">
           <span>Class code</span>
-          <div className="instructor-code-copy-row">
-            <strong>{code}</strong>
-            <button
-              type="button"
-              onClick={() => {
-                copyClassCode(code)
-                setCopyStatus('Copied')
-              }}
-            >
-              Copy
-            </button>
-          </div>
+          {code ? (
+            <div className="instructor-code-copy-row">
+              <strong>{code}</strong>
+              <button
+                type="button"
+                onClick={() => {
+                  copyClassCode(code)
+                  setCopyStatus('Copied')
+                }}
+              >
+                Copy
+              </button>
+            </div>
+          ) : (
+            <p>No generated class code yet.</p>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -137,7 +141,6 @@ function InstructorDashboardLayout() {
           </div>
 
           <div className="student-sidebar__lower">
-            <StudentSidebarLink to="/instructor/projects" icon="folder">Project Reviews</StudentSidebarLink>
             <button type="button" className="student-sidebar__link instructor-sidebar-button" onClick={() => setCreateClassOpen(true)}>
               <span className="student-sidebar__icon student-sidebar__icon--plus" aria-hidden="true" />
               <span>Create Class</span>
