@@ -4778,6 +4778,20 @@ textarea:focus-visible {
   min-height: 130px;
 }
 
+.instructor-fixed-value {
+  min-height: 39px;
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #dfe7f1;
+  border-radius: 7px;
+  color: #10233f;
+  background: #f8fbff;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: none;
+}
+
 .instructor-upload-placeholder,
 .instructor-testcase-panel,
 .instructor-feedback-panel,
@@ -4815,6 +4829,19 @@ textarea:focus-visible {
   font-size: 12px;
   font-weight: 900;
   cursor: pointer;
+}
+
+.instructor-code-file-icon {
+  min-width: 42px;
+  min-height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #bcd2ff;
+  border-radius: 7px;
+  color: #245cff;
+  background: #edf3ff;
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .instructor-toggle-row {
@@ -4983,6 +5010,71 @@ textarea:focus-visible {
 .instructor-test-result-row {
   min-width: 760px;
   grid-template-columns: minmax(260px, 1.3fr) minmax(110px, 0.55fr) minmax(110px, 0.55fr) minmax(100px, 0.5fr);
+}
+
+.instructor-test-summary {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid #d8e4f6;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.instructor-test-summary strong {
+  color: #245cff;
+  font-size: 16px;
+}
+
+.instructor-test-summary span {
+  color: #53647d;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.instructor-test-summary.is-failed {
+  border-color: #f0c7c2;
+  background: #fff5f3;
+}
+
+.instructor-test-summary.is-failed strong {
+  color: #a13f36;
+}
+
+.instructor-failed-details {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #f0c7c2;
+  border-radius: 8px;
+  background: #fffafa;
+}
+
+.instructor-failed-details h3 {
+  margin: 0;
+  color: #1c2d4b;
+  font-size: 15px;
+}
+
+.instructor-failed-details article {
+  display: grid;
+  gap: 7px;
+}
+
+.instructor-failed-details p {
+  margin: 0;
+  color: #53647d;
+  font-size: 13px;
+}
+
+.instructor-failed-details code {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 7px;
+  color: #24364c;
+  background: #f5f8fd;
+  font-size: 12px;
+  white-space: normal;
 }
 
 .instructor-feedback-panel {

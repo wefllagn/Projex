@@ -573,11 +573,7 @@ function CreateActivityPage() {
           </label>
           <label>
             Programming language
-            <select defaultValue="Java">
-              <option>Java</option>
-              <option>Python</option>
-              <option>JavaScript</option>
-            </select>
+            <span className="instructor-fixed-value">Java</span>
           </label>
           <label>
             Due date
@@ -601,6 +597,15 @@ function CreateActivityPage() {
             <p>Programming Exercise Instructions.pdf can be attached in the final product.</p>
           </div>
           <button type="button">Choose file</button>
+        </section>
+
+        <section className="instructor-upload-placeholder">
+          <span className="instructor-code-file-icon">JAVA</span>
+          <div>
+            <strong>Instructor reference solution upload placeholder</strong>
+            <p>ReferenceSolution.java is used only by the instructor to compare expected behavior.</p>
+          </div>
+          <button type="button">Choose source file</button>
         </section>
 
         <div className="instructor-settings-grid">
@@ -823,7 +828,11 @@ function SubmissionReviewPage() {
   const [feedback, setFeedback] = useState('Good structure overall. Fix the blank-line formatting so the boxed output matches the required sample exactly.')
   const [grade, setGrade] = useState('82')
   const [status, setStatus] = useState('Feedback draft')
+  const [testRunState, setTestRunState] = useState('idle')
   const [modalOpen, setModalOpen] = useState(false)
+  const testsHaveRun = testRunState !== 'idle'
+  const visibleTests = reviewTests.filter((test) => test.visibility === 'Visible')
+  const failedTests = visibleTests.filter((test) => test.result === 'Failed')
 
   return (
     <InstructorClassPage activeTab="assignments">
@@ -854,9 +863,13 @@ function SubmissionReviewPage() {
             <section className="instructor-output-card">
               <div className="instructor-section-title">
                 <h3>Compiler output</h3>
-                <span>Mock checking</span>
+                <button type="button" onClick={() => setTestRunState('failed')}>Run Tests</button>
               </div>
-              <pre>{'Mock compile succeeded.\nVisible tests: 4/5 passed.\nHidden tests: 1/2 passed.\nBlank-line formatting mismatch detected.'}</pre>
+              <pre>
+                {testsHaveRun
+                  ? 'Mock compile succeeded.\nVisible tests: 2/3 passed.\nHidden tests: held for instructor-only review.\nFailed testcase: Handles blank-line spacing.'
+                  : 'Tests have not been run in this review session.\nClick Run Tests to execute the hardcoded prototype check.'}
+              </pre>
             </section>
 
             <section className="instructor-similarity-card">
@@ -870,24 +883,50 @@ function SubmissionReviewPage() {
         <section className="instructor-testcase-panel">
           <div className="instructor-section-title">
             <h3>Test case results</h3>
-            <span>Visible and hidden checks</span>
+            <span>{testsHaveRun ? '2 / 3 visible tests passed' : 'Waiting for Run Tests'}</span>
           </div>
-          <div className="instructor-data-table">
-            <div className="instructor-table-row instructor-table-row--head instructor-test-result-row">
-              <span>Test case</span>
-              <span>Visibility</span>
-              <span>Result</span>
-              <span>Points</span>
-            </div>
-            {reviewTests.map((test) => (
-              <div className="instructor-table-row instructor-test-result-row" key={test.name}>
-                <strong>{test.name}</strong>
-                <span>{test.visibility}</span>
-                <em>{test.result}</em>
-                <span>{test.points}</span>
+          {testsHaveRun ? (
+            <>
+              <div className="instructor-test-summary is-failed">
+                <strong>Failed</strong>
+                <span>2 passed, 1 failed. Hidden test logic remains instructor-only.</span>
               </div>
-            ))}
-          </div>
+              <div className="instructor-data-table">
+                <div className="instructor-table-row instructor-table-row--head instructor-test-result-row">
+                  <span>Visible test case</span>
+                  <span>Visibility</span>
+                  <span>Result</span>
+                  <span>Points</span>
+                </div>
+                {visibleTests.map((test) => (
+                  <div className="instructor-table-row instructor-test-result-row" key={test.name}>
+                    <strong>{test.name}</strong>
+                    <span>{test.visibility}</span>
+                    <em>{test.result}</em>
+                    <span>{test.points}</span>
+                  </div>
+                ))}
+              </div>
+              {failedTests.length > 0 && (
+                <section className="instructor-failed-details">
+                  <h3>Failed testcase details</h3>
+                  {failedTests.map((test) => (
+                    <article key={test.name}>
+                      <strong>{test.name}</strong>
+                      <p>Expected a blank spacer line inside the output box before the closing border.</p>
+                      <code>Expected: "*                             *" before final border</code>
+                      <code>Received: final border printed immediately after "hello world"</code>
+                    </article>
+                  ))}
+                </section>
+              )}
+            </>
+          ) : (
+            <div className="instructor-test-summary">
+              <strong>Not run</strong>
+              <span>Use Run Tests to show the hardcoded visible test summary for this submitted code.</span>
+            </div>
+          )}
         </section>
 
         <section className="instructor-feedback-panel">
