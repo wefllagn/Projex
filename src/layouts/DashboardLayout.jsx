@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { courseOptions, roles, sectionOptions } from '../data/projexData.js'
 
@@ -24,7 +25,50 @@ function StudentSidebarLink({ to, children, end = false, count, icon }) {
   )
 }
 
+function CreateClassModal({ onClose }) {
+  const [code, setCode] = useState('9446')
+
+  return (
+    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="create-class-title">
+      <section className="instructor-action-modal">
+        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close create class" />
+        <p>Create Class</p>
+        <h2 id="create-class-title">New instructor class</h2>
+        <div className="instructor-form-grid">
+          <label>
+            Course name
+            <input defaultValue="IT 112 - Computer Programming 1" />
+          </label>
+          <label>
+            Section
+            <input defaultValue="BSIT 2A" />
+          </label>
+          <label>
+            Instructor
+            <input defaultValue="Engr. Marco Rivera" />
+          </label>
+          <label>
+            Invite student
+            <input placeholder="student@slu.edu.ph" />
+          </label>
+        </div>
+        <section className="instructor-modal-code-panel">
+          <span>Class code</span>
+          <strong>{code}</strong>
+          <button type="button" onClick={() => setCode('IT112-8A')}>Generate class code</button>
+        </section>
+        <div className="student-submit-modal-actions">
+          <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
+          <button type="button" className="student-primary-action" onClick={onClose}>Create Class</button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function InstructorDashboardLayout() {
+  const [createClassOpen, setCreateClassOpen] = useState(false)
+
   return (
     <div className="student-app-shell">
       <aside className="student-sidebar">
@@ -60,7 +104,10 @@ function InstructorDashboardLayout() {
 
           <div className="student-sidebar__lower">
             <StudentSidebarLink to="/instructor/projects" icon="folder">Project Reviews</StudentSidebarLink>
-            <StudentSidebarLink to="/instructor/people" icon="plus">People</StudentSidebarLink>
+            <button type="button" className="student-sidebar__link instructor-sidebar-button" onClick={() => setCreateClassOpen(true)}>
+              <span className="student-sidebar__icon student-sidebar__icon--plus" aria-hidden="true" />
+              <span>Create Class</span>
+            </button>
           </div>
         </nav>
       </aside>
@@ -68,6 +115,8 @@ function InstructorDashboardLayout() {
       <main className="student-main">
         <Outlet />
       </main>
+
+      {createClassOpen && <CreateClassModal onClose={() => setCreateClassOpen(false)} />}
     </div>
   )
 }

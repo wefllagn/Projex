@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 
 const instructorClass = {
   course: 'IT 112 - Computer Programming 1',
@@ -368,15 +368,38 @@ const roster = [
 ]
 
 function InstructorProfileMenu() {
+  const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
+
   return (
     <div className="student-profile-menu">
-      <button type="button" className="student-profile-trigger">
+      <button type="button" className="student-profile-trigger" onClick={() => setOpen(!open)}>
         <span className="student-user-avatar" aria-hidden="true" />
         <span className="student-user-name">
           <strong>Engr. Marco Rivera</strong>
           <span>Instructor</span>
         </span>
+        <span className="student-dropdown" aria-hidden="true" />
       </button>
+
+      {open && (
+        <section className="student-profile-dropdown">
+          <button type="button" className="student-profile-close" onClick={() => setOpen(false)} aria-label="Close profile menu" />
+          <strong>marco.rivera@slu.edu.ph</strong>
+          <span>Managed by slu.edu.ph</span>
+          <div className="student-profile-photo">
+            <span className="student-user-avatar" aria-hidden="true" />
+          </div>
+          <h2>Hi, ENGR. RIVERA!</h2>
+          <button type="button" className="student-manage-account">Manage your projex account</button>
+          <div className="student-profile-menu-list">
+            <button type="button">Profile</button>
+            <button type="button">Settings</button>
+            <button type="button" onClick={() => navigate('/')}>Sign out</button>
+          </div>
+          <p>Privacy Policy - Terms of Service</p>
+        </section>
+      )}
     </div>
   )
 }
@@ -1105,6 +1128,7 @@ function InstructorProjectsPage() {
 
 function CreateProjectRequirementPage() {
   const [status, setStatus] = useState('Project requirement draft not saved.')
+  const [maxGroupSize, setMaxGroupSize] = useState('4')
 
   return (
     <InstructorClassPage activeTab="assignments">
@@ -1126,8 +1150,19 @@ function CreateProjectRequirementPage() {
             <input defaultValue="Prelim Group Project 1 Specifications" />
           </label>
           <label>
-            Group size
-            <input defaultValue="4 students" />
+            Maximum group size / maximum repository collaborators
+            <div className="instructor-attempt-control instructor-group-size-control" role="group" aria-label="Maximum group size">
+              {['4', '5', '6', '7', '8'].map((size) => (
+                <button
+                  type="button"
+                  className={maxGroupSize === size ? 'is-active' : undefined}
+                  onClick={() => setMaxGroupSize(size)}
+                  key={size}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
           </label>
           <label>
             Deadline
@@ -1138,6 +1173,9 @@ function CreateProjectRequirementPage() {
             <span className="instructor-fixed-value">Team repository</span>
           </label>
         </div>
+        <p className="instructor-field-note">
+          Team repositories can have up to {maxGroupSize} collaborators for this requirement.
+        </p>
 
         <label className="instructor-wide-field">
           Project specifications / instructions
@@ -1489,19 +1527,70 @@ function InstructorRepositoryReviewPage() {
   )
 }
 
+function InviteStudentsModal({ classCode, onClose }) {
+  const pendingInvites = [
+    { name: 'Luis Carino', email: 'luis.carino@slu.edu.ph', status: 'Pending' },
+    { name: 'Rina Salvador', email: 'rina.salvador@slu.edu.ph', status: 'Pending' },
+    { name: 'Paolo Garcia', email: 'paolo.garcia@slu.edu.ph', status: 'Draft invite' },
+  ]
+
+  return (
+    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="invite-students-title">
+      <section className="instructor-action-modal">
+        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close invite students" />
+        <p>Invite Students</p>
+        <h2 id="invite-students-title">Invite students to IT 112 - BSIT 2A</h2>
+        <section className="instructor-modal-code-panel">
+          <span>Class code</span>
+          <strong>{classCode}</strong>
+        </section>
+        <label className="instructor-wide-field">
+          Invite by email
+          <input placeholder="student@slu.edu.ph" />
+        </label>
+        <section className="instructor-pending-list">
+          <h3>Pending invitations</h3>
+          {pendingInvites.map((invite) => (
+            <article key={invite.email}>
+              <strong>{invite.name}</strong>
+              <span>{invite.email}</span>
+              <em>{invite.status}</em>
+            </article>
+          ))}
+        </section>
+        <div className="student-submit-modal-actions">
+          <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
+          <button type="button" className="student-primary-action" onClick={onClose}>Close</button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function InstructorPeoplePage() {
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [classCode, setClassCode] = useState(instructorClass.classCode)
+
   return (
     <InstructorClassPage activeTab="people">
       <div className="student-people-panel instructor-people-panel">
         <section className="instructor-people-actions">
           <div>
             <h2>Class Roster</h2>
-            <span>38 students - class code {instructorClass.classCode}</span>
+            <span>38 students - class code {classCode}</span>
           </div>
           <div>
-            <button type="button" className="student-primary-action">Invite Students</button>
-            <button type="button" className="student-outline-action">Generate Class Code</button>
+            <button type="button" className="student-primary-action" onClick={() => setInviteOpen(true)}>
+              Invite Students
+            </button>
+            <button type="button" className="student-outline-action" onClick={() => setClassCode('IT112-8A')}>
+              Generate Class Code
+            </button>
           </div>
+        </section>
+        <section className="instructor-generated-code">
+          <span>Active class code</span>
+          <strong>{classCode}</strong>
         </section>
 
         <div className="instructor-data-table instructor-people-table" role="table" aria-label="Class roster">
@@ -1528,6 +1617,8 @@ function InstructorPeoplePage() {
           ))}
         </div>
       </div>
+
+      {inviteOpen && <InviteStudentsModal classCode={classCode} onClose={() => setInviteOpen(false)} />}
     </InstructorClassPage>
   )
 }
