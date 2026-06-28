@@ -4565,6 +4565,13 @@ textarea:focus-visible {
   padding: 20px 0 24px;
 }
 
+.instructor-stream-shell {
+  width: min(1060px, 100%);
+  display: grid;
+  gap: 22px;
+  margin: 0 auto;
+}
+
 .instructor-composer-card {
   width: min(720px, calc(100% - 44px));
   display: grid;
@@ -4637,6 +4644,79 @@ textarea:focus-visible {
 .instructor-repository-summary strong {
   color: #10233f;
   font-size: 16px;
+}
+
+.instructor-review-class-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(360px, 1fr));
+  gap: 18px;
+}
+
+.instructor-review-class-grid .student-home-class-card {
+  width: 100%;
+  border: 1px solid #dfe7f1;
+  text-align: left;
+  cursor: pointer;
+}
+
+.instructor-review-class-grid .student-home-class-card.is-active {
+  border-color: #9fc2ff;
+  background: #f8fbff;
+  box-shadow: 0 14px 30px rgba(37, 88, 194, 0.1);
+}
+
+.instructor-review-queue-detail {
+  display: grid;
+  gap: 14px;
+}
+
+.instructor-review-queue-detail .student-home-section-heading > span {
+  color: #53647d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.instructor-queue-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.instructor-queue-panel {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #dfe7f1;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(37, 54, 89, 0.05);
+}
+
+.instructor-queue-panel h3 {
+  margin: 0 0 4px;
+  color: #1c2d4b;
+  font-size: 15px;
+}
+
+.instructor-queue-panel article {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.instructor-queue-panel strong {
+  color: #1b2a45;
+  font-size: 13px;
+}
+
+.instructor-queue-panel span {
+  color: #53647d;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
 }
 
 .instructor-assignment-panel,
@@ -5457,6 +5537,8 @@ textarea:focus-visible {
   .instructor-settings-grid,
   .instructor-rubric-grid,
   .instructor-review-grid,
+  .instructor-review-class-grid,
+  .instructor-queue-columns,
   .instructor-repository-summary > div {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -5487,6 +5569,8 @@ textarea:focus-visible {
   .instructor-settings-grid,
   .instructor-rubric-grid,
   .instructor-review-grid,
+  .instructor-review-class-grid,
+  .instructor-queue-columns,
   .instructor-repository-summary > div,
   .instructor-info-list article {
     grid-template-columns: 1fr;

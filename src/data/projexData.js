@@ -323,6 +323,14 @@ export const routeCatalog = [
         summary: 'Generate and view the selected section class code.',
       },
       {
+        path: 'review-queues',
+        label: 'Review Queues',
+        group: 'Activity Mode',
+        status: 'Shell ready',
+        summary:
+          'Instructor review queues organized by class with activities, submissions, repositories, and alerts.',
+      },
+      {
         path: 'activity',
         label: 'Activity Management',
         group: 'Activity Mode',

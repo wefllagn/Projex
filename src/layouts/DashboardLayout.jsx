@@ -80,8 +80,8 @@ function InstructorDashboardLayout() {
           <StudentSidebarLink to="/instructor" end icon="home">
             Home
           </StudentSidebarLink>
-          <StudentSidebarLink to="/instructor/activity/act-loops-01/submissions" count="18" icon="todo">
-            Review Queue
+          <StudentSidebarLink to="/instructor/review-queues" count="18" icon="todo">
+            Review Queues
           </StudentSidebarLink>
 
           <div className="student-sidebar__group">

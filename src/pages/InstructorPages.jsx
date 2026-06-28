@@ -17,6 +17,39 @@ const dashboardStats = [
   { label: 'Similarity review alerts', value: '3', detail: 'Instructor-only signals' },
 ]
 
+const instructorHomeClasses = [
+  {
+    title: 'IT 112 - Computer Programming 1',
+    section: 'BSIT 2A',
+    schedule: 'Mon & Wed',
+    time: '8:00 - 9:30 AM',
+    students: '38 students',
+    classCode: '9446',
+    initial: 'I',
+    path: '/instructor/classes',
+  },
+  {
+    title: 'CS 111 - Introduction to Computing',
+    section: 'BSIT 2A',
+    schedule: 'Tue & Thu',
+    time: '10:00 - 11:30 AM',
+    students: '42 students',
+    classCode: '7731',
+    initial: 'C',
+    path: '/instructor/classes',
+  },
+  {
+    title: 'IT 123 - Platform Technologies',
+    section: 'BSIT 2A',
+    schedule: 'Fri',
+    time: '1:00 - 2:30 PM',
+    students: '34 students',
+    classCode: '6812',
+    initial: 'I',
+    path: '/instructor/classes',
+  },
+]
+
 const attentionItems = [
   {
     title: 'Prelim Programming Exercise 2 LAB',
@@ -47,6 +80,27 @@ const attentionItems = [
     meta: 'Academic review',
     status: 'Needs review',
     signal: 'Comparable structure detected in 3 student records',
+  },
+]
+
+const reviewQueueClasses = [
+  {
+    title: 'IT 112 - Computer Programming 1',
+    section: 'BSIT 2A',
+    count: '18',
+    signal: 'Activities, submissions, and repository reviews pending',
+  },
+  {
+    title: 'CS 111 - Introduction to Computing',
+    section: 'BSIT 2A',
+    count: '9',
+    signal: 'Near-deadline activities and late submissions',
+  },
+  {
+    title: 'IT 123 - Platform Technologies',
+    section: 'BSIT 2A',
+    count: '6',
+    signal: 'Repository readiness and contribution watches',
   },
 ]
 
@@ -478,10 +532,45 @@ function InstructorDashboard() {
       <main className="student-home-content instructor-home-content">
         <h1>Welcome back, Engr. Rivera</h1>
 
+        <section className="student-home-classes">
+          <div className="student-home-section-heading">
+            <h2>Classes You Handle</h2>
+            <NavLink to="/instructor/classes">Open IT 112</NavLink>
+          </div>
+
+          <div className="student-home-class-grid">
+            {instructorHomeClasses.map((item) => (
+              <NavLink to={item.path} className="student-home-class-card" key={item.title}>
+                <span className={`student-class-dot student-class-dot--${item.initial.toLowerCase()}`}>
+                  {item.initial}
+                </span>
+                <div>
+                  <strong>{item.title}</strong>
+                  <span>{item.section} - {item.students}</span>
+                  <span>Class code {item.classCode}</span>
+                </div>
+                <div className="student-home-class-schedule">
+                  <span>{item.schedule}</span>
+                  <span>{item.time}</span>
+                </div>
+                <span className="student-home-card-action" aria-hidden="true" />
+              </NavLink>
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}
+
+function InstructorStreamPage() {
+  return (
+    <InstructorClassPage activeTab="stream">
+      <div className="instructor-stream-shell">
         <section className="instructor-dashboard-section">
           <div className="student-home-section-heading">
             <h2>Instructor Dashboard</h2>
-            <NavLink to="/instructor/classes">Open class stream</NavLink>
+            <span>IT 112 - BSIT 2A</span>
           </div>
 
           <div className="instructor-stat-grid">
@@ -495,34 +584,7 @@ function InstructorDashboard() {
           </div>
         </section>
 
-        <section className="instructor-dashboard-section">
-          <div className="student-home-section-heading">
-            <h2>Attention Queue</h2>
-            <span>IT 112 - BSIT 2A</span>
-          </div>
-
-          <div className="instructor-attention-list">
-            {attentionItems.map((item) => (
-              <article className="instructor-attention-card" key={item.title}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.meta}</span>
-                </div>
-                <em>{item.status}</em>
-                <p>{item.signal}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-      </main>
-    </div>
-  )
-}
-
-function InstructorStreamPage() {
-  return (
-    <InstructorClassPage activeTab="stream">
-      <div className="student-stream-card instructor-stream-card" aria-label="Instructor class stream">
+        <div className="student-stream-card instructor-stream-card" aria-label="Instructor class stream">
         <section className="instructor-composer-card">
           <span className="student-user-avatar" aria-hidden="true" />
           <button type="button">Announce something to BSIT 2A</button>
@@ -577,6 +639,7 @@ function InstructorStreamPage() {
             ))}
           </div>
         </section>
+        </div>
       </div>
     </InstructorClassPage>
   )
@@ -1074,6 +1137,101 @@ function SubmissionReviewPage() {
         )}
       </div>
     </InstructorClassPage>
+  )
+}
+
+function ReviewQueuesPage() {
+  const [selectedClass, setSelectedClass] = useState(reviewQueueClasses[0])
+
+  return (
+    <div className="instructor-home-page">
+      <header className="student-home-topbar">
+        <InstructorUserArea count={6} />
+      </header>
+
+      <main className="student-home-content instructor-home-content">
+        <h1>Review Queues</h1>
+
+        <section className="student-home-classes">
+          <div className="student-home-section-heading">
+            <h2>Choose a Class</h2>
+            <span>Queues are organized by handled class</span>
+          </div>
+
+          <div className="instructor-review-class-grid">
+            {reviewQueueClasses.map((item) => (
+              <button
+                type="button"
+                className={selectedClass.title === item.title ? 'student-home-class-card is-active' : 'student-home-class-card'}
+                onClick={() => setSelectedClass(item)}
+                key={item.title}
+              >
+                <span className={`student-class-dot student-class-dot--${item.title.charAt(0).toLowerCase()}`}>
+                  {item.title.charAt(0)}
+                </span>
+                <div>
+                  <strong>{item.title}</strong>
+                  <span>{item.section}</span>
+                  <span>{item.signal}</span>
+                </div>
+                <div className="student-home-class-schedule">
+                  <span>{item.count}</span>
+                  <span>open items</span>
+                </div>
+                <span className="student-home-card-action" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="instructor-review-queue-detail">
+          <div className="student-home-section-heading">
+            <h2>{selectedClass.title}</h2>
+            <span>{selectedClass.section}</span>
+          </div>
+
+          <div className="instructor-queue-columns">
+            <section className="instructor-queue-panel">
+              <h3>Activities needing review</h3>
+              {[
+                ['Prelim Programming Exercise 2 LAB', '14 submissions need grading'],
+                ['Loop Patterns and Input Validation', 'Due soon - 12 active submissions'],
+                ['Student Grade Analyzer', '6 failed visible test summaries'],
+              ].map(([title, signal]) => (
+                <article key={title}>
+                  <strong>{title}</strong>
+                  <span>{signal}</span>
+                </article>
+              ))}
+            </section>
+
+            <section className="instructor-queue-panel">
+              <h3>Repositories ready for review</h3>
+              {[
+                ['prelim-group-project-1-team-01', 'Ready for review'],
+                ['prelim-group-project-1-team-03', 'Archive readiness pending'],
+                ['prelim-group-project-1-team-07', 'Contribution balance needs check'],
+              ].map(([title, signal]) => (
+                <article key={title}>
+                  <strong>{title}</strong>
+                  <span>{signal}</span>
+                </article>
+              ))}
+            </section>
+
+            <section className="instructor-queue-panel">
+              <h3>Pending submissions / review alerts</h3>
+              {attentionItems.map((item) => (
+                <article key={item.title}>
+                  <strong>{item.title}</strong>
+                  <span>{item.status} - {item.signal}</span>
+                </article>
+              ))}
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
   )
 }
 
@@ -1659,6 +1817,7 @@ function InstructorRoutePage({ pagePath }) {
   const pages = {
     dashboard: <InstructorDashboard />,
     classes: <InstructorStreamPage />,
+    'review-queues': <ReviewQueuesPage />,
     activity: <InstructorActivitiesPage />,
     'activity/new': <CreateActivityPage />,
     'activity-settings': <CreateActivityPage />,
