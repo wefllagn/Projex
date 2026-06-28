@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
 const instructorClass = {
@@ -117,6 +118,110 @@ const activities = [
     grading: 'Setup review',
   },
 ]
+
+const monitoringStats = [
+  { label: 'Submitted', value: '31', detail: 'Final records received' },
+  { label: 'Missing', value: '5', detail: 'No submission yet' },
+  { label: 'Late', value: '2', detail: 'Submitted after due time' },
+  { label: 'Locked', value: '38', detail: 'One final submission rule' },
+]
+
+const submissionRows = [
+  {
+    student: 'Julius Teodoro',
+    status: 'Submitted',
+    submittedAt: 'Aug 27, 2026, 9:42 AM',
+    tests: '5/5 visible passed',
+    similarity: 'Checked',
+    grade: 'Ready to release',
+  },
+  {
+    student: 'Alyssa Mendoza',
+    status: 'Submitted',
+    submittedAt: 'Aug 27, 2026, 10:08 AM',
+    tests: '4/5 visible passed',
+    similarity: 'Needs review',
+    grade: 'Draft grade',
+  },
+  {
+    student: 'Marco Rivera',
+    status: 'Late',
+    submittedAt: 'Aug 27, 2026, 10:46 AM',
+    tests: '3/5 visible passed',
+    similarity: 'Under review',
+    grade: 'Needs grading',
+  },
+  {
+    student: 'Daniel Reyes',
+    status: 'Missing',
+    submittedAt: 'No final submission',
+    tests: 'No submitted code',
+    similarity: 'Not checked',
+    grade: 'Missing',
+  },
+  {
+    student: 'Mica Dela Cruz',
+    status: 'Submitted',
+    submittedAt: 'Aug 27, 2026, 9:58 AM',
+    tests: 'Failed tests',
+    similarity: 'Checked',
+    grade: 'Needs grading',
+  },
+]
+
+const queueRows = [
+  {
+    student: 'Alyssa Mendoza',
+    activity: 'Prelim Programming Exercise 1 LAB',
+    status: 'Needs review',
+    submittedAt: 'Aug 27, 2026, 10:08 AM',
+    tests: '4/5 visible, hidden pending',
+    grade: 'Draft',
+  },
+  {
+    student: 'Marco Rivera',
+    activity: 'Prelim Programming Exercise 1 LAB',
+    status: 'Late',
+    submittedAt: 'Aug 27, 2026, 10:46 AM',
+    tests: '3/5 visible, 1 hidden failed',
+    grade: 'Needs grading',
+  },
+  {
+    student: 'Mica Dela Cruz',
+    activity: 'Prelim Programming Exercise 1 LAB',
+    status: 'Failed tests',
+    submittedAt: 'Aug 27, 2026, 9:58 AM',
+    tests: '2/5 visible, hidden pending',
+    grade: 'Needs grading',
+  },
+  {
+    student: 'Julius Teodoro',
+    activity: 'Prelim Programming Exercise 1 LAB',
+    status: 'Graded',
+    submittedAt: 'Aug 27, 2026, 9:42 AM',
+    tests: '5/5 visible, 2/2 hidden',
+    grade: '96/100',
+  },
+]
+
+const reviewTests = [
+  { name: 'Displays required header text', visibility: 'Visible', result: 'Passed', points: '10 / 10' },
+  { name: 'Uses five formatted output lines', visibility: 'Visible', result: 'Passed', points: '15 / 15' },
+  { name: 'Handles blank-line spacing', visibility: 'Visible', result: 'Failed', points: '0 / 10' },
+  { name: 'Matches hidden formatting edge case', visibility: 'Hidden', result: 'Failed', points: '0 / 15' },
+  { name: 'Compiles without errors', visibility: 'Hidden', result: 'Passed', points: '20 / 20' },
+]
+
+const submittedCode = `package exercises.prelim;
+
+public class Exercise1 {
+    public static void main(String[] args) {
+        System.out.println("*******************************");
+        System.out.println("*         hello world         *");
+        System.out.println("*                             *");
+        System.out.println("*******************************");
+    }
+}`
 
 const groupProjects = [
   {
@@ -397,9 +502,11 @@ function AssignmentSubTabs({ active }) {
 function InstructorControls({ primaryLabel }) {
   return (
     <div className="instructor-controls-row">
-      <button type="button" className="student-primary-action">{primaryLabel}</button>
-      <button type="button" className="student-outline-action">View queue</button>
-      <button type="button" className="student-outline-action">Edit settings</button>
+      <NavLink to="/instructor/activity/new" className="student-primary-action">{primaryLabel}</NavLink>
+      <NavLink to="/instructor/activity/act-loops-01/submissions" className="student-outline-action">
+        View submissions
+      </NavLink>
+      <NavLink to="/instructor/activity/new" className="student-outline-action">Edit settings</NavLink>
     </div>
   )
 }
@@ -430,12 +537,389 @@ function InstructorActivitiesPage() {
               <span>{activity.submissions}</span>
               <span>{activity.grading}</span>
               <div>
-                <button type="button">Monitor</button>
-                <button type="button">Settings</button>
+                <NavLink to="/instructor/activity/act-loops-01/monitor">Monitor</NavLink>
+                <NavLink to="/instructor/activity/act-loops-01/submissions">Submissions</NavLink>
+                <NavLink to="/instructor/activity/new">Settings</NavLink>
               </div>
             </div>
           ))}
         </div>
+      </div>
+    </InstructorClassPage>
+  )
+}
+
+function CreateActivityPage() {
+  const [status, setStatus] = useState('Draft not saved in this prototype session.')
+
+  return (
+    <InstructorClassPage activeTab="assignments">
+      <div className="student-assignment-panel instructor-assignment-panel instructor-form-panel">
+        <div className="instructor-assignment-toolbar">
+          <AssignmentSubTabs active="activities" />
+          <NavLink to="/instructor/activity" className="student-outline-action">Back to activities</NavLink>
+        </div>
+
+        <section className="instructor-page-heading">
+          <p>Create Activity</p>
+          <h2>Programming activity setup</h2>
+          <span>Hardcoded prototype form - no backend request is sent.</span>
+        </section>
+
+        <div className="instructor-form-grid">
+          <label>
+            Activity title
+            <input defaultValue="Loop Patterns and Input Validation" />
+          </label>
+          <label>
+            Programming language
+            <select defaultValue="Java">
+              <option>Java</option>
+              <option>Python</option>
+              <option>JavaScript</option>
+            </select>
+          </label>
+          <label>
+            Due date
+            <input defaultValue="2026-09-03 17:00" />
+          </label>
+          <label>
+            Submission rule
+            <input defaultValue="One final submission only" />
+          </label>
+        </div>
+
+        <label className="instructor-wide-field">
+          Instructions
+          <textarea defaultValue="Write a program that reads integer input, validates the values, and prints a formatted loop summary. Submit only when your final code is ready." />
+        </label>
+
+        <section className="instructor-upload-placeholder">
+          <span className="student-pdf-icon">PDF</span>
+          <div>
+            <strong>Resource / PDF attachment placeholder</strong>
+            <p>Programming Exercise Instructions.pdf can be attached in the final product.</p>
+          </div>
+          <button type="button">Choose file</button>
+        </section>
+
+        <div className="instructor-settings-grid">
+          <label className="instructor-toggle-row">
+            <input type="checkbox" defaultChecked />
+            <span>Compiler enabled</span>
+          </label>
+          <label className="instructor-toggle-row">
+            <input type="checkbox" defaultChecked />
+            <span>Show visible test summaries to students</span>
+          </label>
+          <label className="instructor-toggle-row">
+            <input type="checkbox" defaultChecked />
+            <span>Hide hidden test logic from students</span>
+          </label>
+          <label className="instructor-toggle-row">
+            <input type="checkbox" defaultChecked />
+            <span>Release feedback after instructor approval</span>
+          </label>
+        </div>
+
+        <section className="instructor-testcase-panel">
+          <div className="instructor-section-title">
+            <h3>Test Case Setup</h3>
+            <button type="button">Add test case</button>
+          </div>
+          <div className="instructor-data-table">
+            <div className="instructor-table-row instructor-table-row--head instructor-test-row">
+              <span>Sample Input</span>
+              <span>Expected Output</span>
+              <span>Points</span>
+              <span>Visibility</span>
+            </div>
+            {[
+              ['10 20 30 -1', 'Count: 3 | Average: 20.00', '20', 'Visible'],
+              ['5 -3 8 -1', 'Invalid input ignored | Count: 2', '20', 'Visible'],
+              ['0 -1', 'Count: 1 | Average: 0.00', '30', 'Hidden'],
+            ].map(([input, output, points, visibility]) => (
+              <div className="instructor-table-row instructor-test-row" key={`${input}-${visibility}`}>
+                <span>{input}</span>
+                <span>{output}</span>
+                <span>{points}</span>
+                <em>{visibility}</em>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="instructor-testcase-panel">
+          <div className="instructor-section-title">
+            <h3>Rubric / Scoring</h3>
+            <span>100 points</span>
+          </div>
+          <div className="instructor-rubric-grid">
+            <label>
+              Correctness
+              <input defaultValue="40" />
+            </label>
+            <label>
+              Input validation
+              <input defaultValue="20" />
+            </label>
+            <label>
+              Code readability
+              <input defaultValue="20" />
+            </label>
+            <label>
+              Output formatting
+              <input defaultValue="20" />
+            </label>
+          </div>
+        </section>
+
+        <div className="instructor-form-actions">
+          <button type="button" className="student-outline-action" onClick={() => setStatus('Draft saved locally for preview.')}>
+            Save Draft
+          </button>
+          <button type="button" className="student-primary-action" onClick={() => setStatus('Activity marked as published in local prototype state.')}>
+            Publish Activity
+          </button>
+          <p>{status}</p>
+        </div>
+      </div>
+    </InstructorClassPage>
+  )
+}
+
+function ActivityMonitoringPage() {
+  return (
+    <InstructorClassPage activeTab="assignments">
+      <div className="student-assignment-panel instructor-assignment-panel">
+        <div className="instructor-assignment-toolbar">
+          <AssignmentSubTabs active="activities" />
+          <div className="instructor-controls-row">
+            <NavLink to="/instructor/activity" className="student-outline-action">Back to activities</NavLink>
+            <NavLink to="/instructor/activity/act-loops-01/submissions" className="student-primary-action">
+              View submission queue
+            </NavLink>
+          </div>
+        </div>
+
+        <section className="instructor-page-heading">
+          <p>Activity Monitoring</p>
+          <h2>Prelim Programming Exercise 1 LAB</h2>
+          <span>Due Aug 27, 2026, 10:30 AM - one final submission only</span>
+        </section>
+
+        <div className="instructor-stat-grid instructor-monitor-grid">
+          {monitoringStats.map((stat) => (
+            <article className="instructor-stat-card" key={stat.label}>
+              <span>{stat.label}</span>
+              <strong>{stat.value}</strong>
+              <p>{stat.detail}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="instructor-data-table" role="table" aria-label="Student submissions">
+          <div className="instructor-table-row instructor-table-row--head instructor-submission-row" role="row">
+            <span>Student name</span>
+            <span>Submission status</span>
+            <span>Last submitted</span>
+            <span>Test result</span>
+            <span>Similarity signal</span>
+            <span>Grade status</span>
+            <span>Action</span>
+          </div>
+          {submissionRows.map((row) => (
+            <div className="instructor-table-row instructor-submission-row" role="row" key={row.student}>
+              <strong>{row.student}</strong>
+              <em>{row.status}</em>
+              <span>{row.submittedAt}</span>
+              <span>{row.tests}</span>
+              <span>{row.similarity}</span>
+              <span>{row.grade}</span>
+              <div>
+                <NavLink to="/instructor/submission-review">Review</NavLink>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </InstructorClassPage>
+  )
+}
+
+function SubmissionQueuePage() {
+  return (
+    <InstructorClassPage activeTab="assignments">
+      <div className="student-assignment-panel instructor-assignment-panel">
+        <div className="instructor-assignment-toolbar">
+          <AssignmentSubTabs active="activities" />
+          <div className="instructor-controls-row">
+            <NavLink to="/instructor/activity/act-loops-01/monitor" className="student-outline-action">
+              Monitor activity
+            </NavLink>
+            <NavLink to="/instructor/submission-review" className="student-primary-action">
+              Open selected review
+            </NavLink>
+          </div>
+        </div>
+
+        <section className="instructor-page-heading">
+          <p>Submission Queue</p>
+          <h2>Final submitted activity records</h2>
+          <span>Submitted, missing, late, failed tests, needs review, and graded records.</span>
+        </section>
+
+        <div className="instructor-data-table" role="table" aria-label="Submission queue">
+          <div className="instructor-table-row instructor-table-row--head instructor-queue-row" role="row">
+            <span>Student</span>
+            <span>Activity</span>
+            <span>Status</span>
+            <span>Submitted at</span>
+            <span>Tests</span>
+            <span>Grade</span>
+            <span>Action</span>
+          </div>
+          {queueRows.map((row) => (
+            <div className="instructor-table-row instructor-queue-row" role="row" key={`${row.student}-${row.status}`}>
+              <strong>{row.student}</strong>
+              <span>{row.activity}</span>
+              <em>{row.status}</em>
+              <span>{row.submittedAt}</span>
+              <span>{row.tests}</span>
+              <span>{row.grade}</span>
+              <div>
+                <NavLink to="/instructor/submission-review">Review</NavLink>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </InstructorClassPage>
+  )
+}
+
+function ReleaseFeedbackModal({ grade, feedback, onCancel, onRelease }) {
+  return (
+    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="release-feedback-title">
+      <section className="student-submit-modal instructor-release-modal">
+        <span className="student-submit-icon" aria-hidden="true" />
+        <h2 id="release-feedback-title">Release feedback to student?</h2>
+        <p>Grade: {grade || 'Not set'}</p>
+        <p>{feedback || 'No feedback comment entered.'}</p>
+        <div className="student-submit-modal-actions">
+          <button type="button" className="student-outline-action" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="button" className="student-primary-action" onClick={onRelease}>
+            Release Feedback
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function SubmissionReviewPage() {
+  const [feedback, setFeedback] = useState('Good structure overall. Fix the blank-line formatting so the boxed output matches the required sample exactly.')
+  const [grade, setGrade] = useState('82')
+  const [status, setStatus] = useState('Feedback draft')
+  const [modalOpen, setModalOpen] = useState(false)
+
+  return (
+    <InstructorClassPage activeTab="assignments">
+      <div className="instructor-review-page">
+        <div className="instructor-assignment-toolbar">
+          <NavLink to="/instructor/activity/act-loops-01/submissions" className="student-outline-action">
+            Back to queue
+          </NavLink>
+          <em>{status}</em>
+        </div>
+
+        <section className="instructor-page-heading">
+          <p>Selected Student Submission Review</p>
+          <h2>Alyssa Mendoza - Prelim Programming Exercise 1 LAB</h2>
+          <span>Submitted Aug 27, 2026, 10:08 AM - one final submission record</span>
+        </section>
+
+        <div className="instructor-review-grid">
+          <section className="instructor-code-card">
+            <div className="instructor-section-title">
+              <h3>Submitted code viewer</h3>
+              <span>Exercise1.java</span>
+            </div>
+            <pre>{submittedCode}</pre>
+          </section>
+
+          <aside className="instructor-review-side">
+            <section className="instructor-output-card">
+              <div className="instructor-section-title">
+                <h3>Compiler output</h3>
+                <span>Mock checking</span>
+              </div>
+              <pre>{'Mock compile succeeded.\nVisible tests: 4/5 passed.\nHidden tests: 1/2 passed.\nBlank-line formatting mismatch detected.'}</pre>
+            </section>
+
+            <section className="instructor-similarity-card">
+              <span>Similarity signal</span>
+              <strong>Needs instructor review</strong>
+              <p>Comparable structure detected in standard setup code. No student-facing score is shown.</p>
+            </section>
+          </aside>
+        </div>
+
+        <section className="instructor-testcase-panel">
+          <div className="instructor-section-title">
+            <h3>Test case results</h3>
+            <span>Visible and hidden checks</span>
+          </div>
+          <div className="instructor-data-table">
+            <div className="instructor-table-row instructor-table-row--head instructor-test-result-row">
+              <span>Test case</span>
+              <span>Visibility</span>
+              <span>Result</span>
+              <span>Points</span>
+            </div>
+            {reviewTests.map((test) => (
+              <div className="instructor-table-row instructor-test-result-row" key={test.name}>
+                <strong>{test.name}</strong>
+                <span>{test.visibility}</span>
+                <em>{test.result}</em>
+                <span>{test.points}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="instructor-feedback-panel">
+          <label>
+            Instructor feedback
+            <textarea value={feedback} onChange={(event) => setFeedback(event.target.value)} />
+          </label>
+          <label>
+            Grade
+            <input value={grade} onChange={(event) => setGrade(event.target.value)} />
+          </label>
+          <div className="instructor-form-actions">
+            <button type="button" className="student-outline-action" onClick={() => setStatus('Feedback saved')}>
+              Save feedback
+            </button>
+            <button type="button" className="student-primary-action" onClick={() => setModalOpen(true)}>
+              Release feedback
+            </button>
+          </div>
+        </section>
+
+        {modalOpen && (
+          <ReleaseFeedbackModal
+            grade={grade}
+            feedback={feedback}
+            onCancel={() => setModalOpen(false)}
+            onRelease={() => {
+              setModalOpen(false)
+              setStatus('Feedback released')
+            }}
+          />
+        )}
       </div>
     </InstructorClassPage>
   )
@@ -447,7 +931,11 @@ function InstructorProjectsPage() {
       <div className="student-assignment-panel instructor-assignment-panel">
         <div className="instructor-assignment-toolbar">
           <AssignmentSubTabs active="projects" />
-          <InstructorControls primaryLabel="Create Project Requirement" />
+          <div className="instructor-controls-row">
+            <button type="button" className="student-primary-action">Create Project Requirement</button>
+            <button type="button" className="student-outline-action">View teams</button>
+            <button type="button" className="student-outline-action">Edit settings</button>
+          </div>
         </div>
 
         <div className="instructor-data-table" role="table" aria-label="Group projects">
@@ -558,6 +1046,11 @@ function InstructorRoutePage({ pagePath }) {
     dashboard: <InstructorDashboard />,
     classes: <InstructorStreamPage />,
     activity: <InstructorActivitiesPage />,
+    'activity/new': <CreateActivityPage />,
+    'activity-settings': <CreateActivityPage />,
+    'activity/act-loops-01/monitor': <ActivityMonitoringPage />,
+    'activity/act-loops-01/submissions': <SubmissionQueuePage />,
+    'submission-review': <SubmissionReviewPage />,
     projects: <InstructorProjectsPage />,
     people: <InstructorPeoplePage />,
     roster: <InstructorPeoplePage />,

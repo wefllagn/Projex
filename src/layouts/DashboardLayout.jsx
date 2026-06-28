@@ -36,7 +36,7 @@ function InstructorDashboardLayout() {
           <StudentSidebarLink to="/instructor" end icon="home">
             Home
           </StudentSidebarLink>
-          <StudentSidebarLink to="/instructor/activity" count="18" icon="todo">
+          <StudentSidebarLink to="/instructor/activity/act-loops-01/submissions" count="18" icon="todo">
             Review Queue
           </StudentSidebarLink>
 
