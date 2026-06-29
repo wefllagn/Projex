@@ -164,10 +164,6 @@ function StudentDashboardLayout() {
     || location.pathname.startsWith('/student/activity')
     || location.pathname.startsWith('/student/projects')
 
-  if (location.pathname.includes('/workspace')) {
-    return <Outlet />
-  }
-
   return (
     <div className="student-app-shell">
       <aside className="student-sidebar">

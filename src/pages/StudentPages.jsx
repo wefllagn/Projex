@@ -919,18 +919,28 @@ function CodingWorkspacePage() {
   return (
     <div className="student-coding-page">
       <header className="student-coding-topbar">
-        <NavLink to="/student/activity/act-loops-01" className="student-coding-brand">
-          PROJEX
-        </NavLink>
         <nav className="student-coding-breadcrumb" aria-label="Coding workspace breadcrumb">
-          <NavLink to="/student/activity">Activities</NavLink>
+          <NavLink to="/student/classes">IT 112 - Computer Programming 1</NavLink>
           <span>Lab Activity 1</span>
-          <strong>Do Activity</strong>
+          <strong>Exercise1.java</strong>
         </nav>
+        <div className="student-coding-toolbar" aria-label="Workspace actions">
+          <button type="button" className="student-workspace-button student-workspace-button--save">
+            Save
+          </button>
+          <button type="button" className="student-workspace-button student-workspace-button--fullscreen">
+            Fullscreen
+          </button>
+          <button type="button" className="student-workspace-button student-workspace-button--run" onClick={() => setResultState('success')}>
+            Run Code
+          </button>
+          <button type="button" className="student-workspace-button student-workspace-button--more" aria-label="More workspace actions">
+            <span aria-hidden="true" />
+          </button>
+        </div>
         <div className="student-coding-user">
-          <span>Student</span>
-          <strong>Julius Teodoro</strong>
-          <span className="student-user-avatar" aria-hidden="true" />
+          <StudentNotificationMenu count={2} />
+          <StudentProfileMenu />
         </div>
       </header>
 
@@ -980,9 +990,22 @@ function CodingWorkspacePage() {
         <section className="student-editor-area">
           <div className="student-editor-tabs">
             <span>Exercise1.java</span>
-            <button type="button" aria-label="Add file">+</button>
+            <button type="button" aria-label="Close file">×</button>
           </div>
-          <pre className="student-code-editor">{workspaceCode}</pre>
+          <div className="student-editor-workbench">
+            <aside className="student-editor-explorer" aria-label="Project files">
+              <strong>EXPLORER</strong>
+              <span className="is-open">PRELIM-PROGRAMMING-EXERCISE-1</span>
+              <span className="is-folder">src</span>
+              <em className="is-file is-active">Exercise1.java</em>
+              <span className="is-folder">docs</span>
+              <em className="is-file">README.md</em>
+              <em className="is-file">.gitignore</em>
+              <small>OUTLINE</small>
+              <small>TIMELINE</small>
+            </aside>
+            <pre className="student-code-editor">{workspaceCode}</pre>
+          </div>
           <footer className="student-editor-status">
             <span>Line 13, Col 42</span>
             <span>Spaces: 4</span>
@@ -1036,14 +1059,12 @@ Process finished with exit code 0`}</pre>
             </div>
             <div className="student-tests-row">
               <span>1</span>
-              <span>-</span>
-              <span>Hello World box output exactly as shown above</span>
-              <strong className="is-passed">Passed</strong>
-            </div>
-            <div className={failed ? 'student-tests-row is-failed' : 'student-tests-row'}>
-              <span>2</span>
               <span>(no input)</span>
-              <span>Hello World box output exactly as shown above</span>
+              <pre className="student-expected-output">{`*******************************
+*                             *
+*         hello world         *
+*                             *
+*******************************`}</pre>
               <strong className={failed ? 'is-failed' : 'is-passed'}>
                 {failed ? 'Failed' : 'Passed'}
               </strong>

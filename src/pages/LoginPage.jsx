@@ -128,10 +128,16 @@ export function RoleLandingPage() {
         return;
       }
 
-      const scrollRange = Math.max(scrollEnd - scrollStart, 1);
-      const progress = Math.min(Math.max((currentScroll - scrollStart) / scrollRange, 0), 1);
       const maxIndex = benefitCards.length - 1;
-      const nextIndex = Math.min(Math.round(progress * maxIndex), maxIndex);
+      const scrollRange = Math.max(scrollEnd - scrollStart, 1);
+      const progress = Math.min(
+        Math.max((currentScroll - scrollStart) / scrollRange, 0),
+        1,
+      );
+      const nextIndex = Math.min(
+        Math.floor(progress * benefitCards.length),
+        maxIndex,
+      );
 
       setActiveBenefit(nextIndex);
     };
@@ -301,6 +307,14 @@ export function RoleLandingPage() {
                 })}
               </div>
             </div>
+            <footer
+              className={
+                "role-landing-footer" +
+                (activeBenefit === benefitCards.length - 1 ? " is-visible" : "")
+              }
+            >
+              &copy; 2026 Projex. All rights reserved.
+            </footer>
           </div>
         </section>
       </div>
@@ -351,7 +365,7 @@ export function InstructorLoginPage() {
       <section className="student-login-stage" aria-label="Instructor login">
         <img
           className="student-login-logo"
-          src="/assets/brand/projex-login-logo1.png"
+          src="/assets/brand/projex-login-logo.png"
           alt="Projex by Saint Louis University"
         />
 
@@ -394,9 +408,6 @@ export function InstructorLoginPage() {
           aria-label="Projex instructor information"
         >
           <div className="student-login-info__copy">
-            <span className="student-login-university">
-              Saint Louis University
-            </span>
             <h2>Your Projex classroom, reviewed in minutes.</h2>
             <p>
               Submissions, code progress, and feedback without jumping between
@@ -455,9 +466,6 @@ export function InstructorLoginPage() {
           </p>
         </aside>
 
-        <Link className="student-dev-switcher-link" to="/">
-          Role selection
-        </Link>
       </section>
     </main>
   );
@@ -471,7 +479,7 @@ function LoginPage() {
       <section className="student-login-stage" aria-label="Student login">
         <img
           className="student-login-logo"
-          src="/assets/brand/projex-login-logo1.png"
+          src="/assets/brand/projex-login-logo.png"
           alt="Projex by Saint Louis University"
         />
 
@@ -511,9 +519,6 @@ function LoginPage() {
 
         <aside className="student-login-info" aria-label="Projex information">
           <div className="student-login-info__copy">
-            <span className="student-login-university">
-              Saint Louis University
-            </span>
             <h2>Welcome to Projex</h2>
             <p>
               Your all-in-one platform for programming education, collaboration,
@@ -572,9 +577,6 @@ function LoginPage() {
           </p>
         </aside>
 
-        <Link className="student-dev-switcher-link" to="/prototype-switcher">
-          Prototype role switcher
-        </Link>
       </section>
     </main>
   );

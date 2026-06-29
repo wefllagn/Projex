@@ -84,9 +84,9 @@
   padding: clamp(22px, 4vw, 48px) 0 0;
   color: #07143a;
   background:
-    radial-gradient(circle at 8% 86%, rgba(130, 158, 212, 0.34), transparent 28%),
-    radial-gradient(circle at 90% 3%, rgba(130, 158, 212, 0.26), transparent 28%),
-    linear-gradient(135deg, #ffffff 0%, #f4f9ff 44%, #eaf3ff 100%);
+    radial-gradient(circle at 12% 82%, rgba(130, 158, 212, 0.36), transparent 30%),
+    radial-gradient(circle at 84% 8%, rgba(184, 210, 255, 0.42), transparent 32%),
+    linear-gradient(135deg, #ffffff 0%, #f8fbff 42%, #edf5ff 100%);
 }
 
 .role-landing-page::before {
@@ -94,32 +94,48 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: radial-gradient(circle, rgba(130, 158, 212, 0.13) 1px, transparent 1.4px);
+  background-image: radial-gradient(circle, rgba(130, 158, 212, 0.14) 1px, transparent 1.4px);
   background-size: 20px 20px;
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.85), transparent 82%);
 }
 
+.role-landing-page::after {
+  content: "";
+  position: fixed;
+  inset: -24% -18%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 26% 24%, rgba(255, 255, 255, 0.86), transparent 23%),
+    linear-gradient(112deg, transparent 28%, rgba(255, 255, 255, 0.58) 43%, rgba(174, 204, 255, 0.2) 52%, transparent 66%);
+  filter: blur(18px);
+  opacity: 0.7;
+  mix-blend-mode: screen;
+  animation: roleLandingLightSweep 18s ease-in-out infinite alternate;
+}
+
 .role-landing-glow {
   position: absolute;
-  width: 440px;
-  height: 440px;
+  width: 520px;
+  height: 520px;
   border-radius: 999px;
   pointer-events: none;
-  filter: blur(42px);
-  opacity: 0.32;
-  animation: roleLandingGlow 12s ease-in-out infinite alternate;
+  filter: blur(46px);
+  opacity: 0.46;
+  mix-blend-mode: multiply;
+  animation: roleLandingGlow 14s ease-in-out infinite alternate;
 }
 
 .role-landing-glow--one {
-  left: -150px;
-  top: 260px;
-  background: #829ed4;
+  left: -170px;
+  top: 240px;
+  background: rgba(130, 158, 212, 0.78);
 }
 
 .role-landing-glow--two {
-  right: -150px;
-  top: -120px;
-  background: #b8d2ff;
+  right: -170px;
+  top: -130px;
+  background: rgba(184, 210, 255, 0.86);
   animation-delay: -4s;
 }
 
@@ -229,38 +245,63 @@
 }
 
 .role-landing-button {
+  position: relative;
   min-height: 62px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   padding: 0 20px;
-  border: 2px solid #829ed4;
+  border: 1px solid rgba(255, 255, 255, 0.58);
   border-radius: 9px;
+  overflow: hidden;
   color: #ffffff;
-  background: #829ed4;
+  background:
+    linear-gradient(145deg, rgba(130, 158, 212, 0.78), rgba(130, 158, 212, 0.58)),
+    rgba(130, 158, 212, 0.64);
   font-size: 15px;
   font-weight: 900;
   text-decoration: none;
-  box-shadow: 0 12px 28px rgba(40, 74, 132, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.46),
+    inset 0 -12px 24px rgba(78, 111, 174, 0.16),
+    0 12px 28px rgba(40, 74, 132, 0.1);
+  backdrop-filter: blur(18px) saturate(1.18);
+  -webkit-backdrop-filter: blur(18px) saturate(1.18);
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.role-landing-button::before {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto;
+  height: 42%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), transparent);
+  opacity: 0.86;
+  pointer-events: none;
 }
 
 .role-landing-button:hover,
 .role-landing-button:focus-visible {
   outline: none;
+  color: #ffffff;
+  background:
+    linear-gradient(145deg, rgba(130, 158, 212, 1), rgba(110, 139, 200, 0.9)),
+    #829ed4;
   transform: translateY(-2px);
-  box-shadow: 0 16px 32px rgba(40, 74, 132, 0.13);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.56),
+    inset 0 -12px 24px rgba(78, 111, 174, 0.22),
+    0 16px 32px rgba(40, 74, 132, 0.16);
 }
 
 .role-landing-button--student {
   color: #ffffff;
-  background: #829ed4;
 }
 
 .role-landing-button--instructor {
   color: #ffffff;
-  background: #829ed4;
 }
 
 .role-landing-button-icon {
@@ -321,17 +362,26 @@
   position: absolute;
   inset: 54px 18px 24px 40px;
   border-radius: 34px;
-  background: rgba(130, 158, 212, 0.2);
-  filter: blur(28px);
+  background:
+    radial-gradient(circle at 62% 16%, rgba(255, 255, 255, 0.76), transparent 30%),
+    rgba(130, 158, 212, 0.24);
+  filter: blur(30px);
 }
 
 .role-landing-preview-card {
   position: relative;
   z-index: 1;
-  border: 1px solid rgba(130, 158, 212, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.74);
   border-radius: 26px;
-  background: #ffffff;
-  box-shadow: 0 28px 70px rgba(53, 84, 134, 0.18);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.54)),
+    rgba(255, 255, 255, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -1px 0 rgba(130, 158, 212, 0.12),
+    0 28px 70px rgba(53, 84, 134, 0.16);
+  backdrop-filter: blur(26px) saturate(1.2);
+  -webkit-backdrop-filter: blur(26px) saturate(1.2);
   animation: roleLandingFloat 6s ease-in-out infinite;
 }
 
@@ -353,9 +403,10 @@
   align-items: center;
   gap: 4px;
   padding: 4px;
-  border: 1px solid #dbe7fb;
+  border: 1px solid rgba(199, 216, 244, 0.8);
   border-radius: 10px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
 }
 
 .role-landing-preview-tabs span,
@@ -372,13 +423,14 @@
 
 .role-landing-preview-tabs .is-active {
   color: #3f609f;
-  background: #edf4ff;
+  background: rgba(237, 244, 255, 0.82);
 }
 
 .role-landing-preview-action {
-  border: 1px solid #dbe7fb;
+  border: 1px solid rgba(199, 216, 244, 0.82);
   color: #3f609f;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.54);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
 }
 
 .role-landing-preview-heading {
@@ -422,9 +474,10 @@
   align-content: center;
   gap: 7px;
   padding: 16px;
-  border: 1px solid #e3ebf8;
+  border: 1px solid rgba(214, 226, 244, 0.82);
   border-radius: 12px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
 }
 
 .role-landing-preview-metrics span,
@@ -442,9 +495,10 @@
 
 .role-landing-preview-table {
   display: grid;
-  border: 1px solid #e3ebf8;
+  border: 1px solid rgba(214, 226, 244, 0.82);
   border-radius: 12px;
   overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
 }
 
 .role-landing-preview-row {
@@ -454,8 +508,8 @@
   align-items: center;
   min-height: 48px;
   padding: 0 14px;
-  border-bottom: 1px solid #e9eff8;
-  background: #ffffff;
+  border-bottom: 1px solid rgba(225, 234, 246, 0.8);
+  background: rgba(255, 255, 255, 0.64);
   color: #263b65;
   font-size: 11px;
   font-weight: 800;
@@ -468,7 +522,7 @@
 .role-landing-preview-row--head {
   min-height: 42px;
   color: #4c5f84;
-  background: #f8fbff;
+  background: rgba(248, 251, 255, 0.72);
   font-size: 10px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -509,9 +563,9 @@
 }
 
 .role-landing-review-action {
-  border: 1px solid #dbe7fb;
+  border: 1px solid rgba(199, 216, 244, 0.82);
   color: #3f609f;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.64);
 }
 
 .role-landing-mascot-float {
@@ -530,27 +584,26 @@
 }
 
 .role-landing-experience {
-  --carousel-scroll-step: clamp(230px, 38vh, 390px);
-  width: 100%;
-  height: calc(100vh + var(--carousel-scroll-step) + var(--carousel-scroll-step) + var(--carousel-scroll-step));
-  min-height: 760px;
-  margin-left: 0;
-  padding: 0;
-  border-top: 1px solid #dce6f5;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --carousel-scroll-step: clamp(280px, 38vh, 420px);
+  width: 100vw;
+  height: calc(clamp(660px, 82vh, 780px) + var(--carousel-scroll-step) + var(--carousel-scroll-step) + var(--carousel-scroll-step));
+  min-height: 1260px;
+  margin-left: calc(50% - 50vw);
+  padding: 0 0 clamp(24px, 4vh, 42px);
+  border-top: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .role-landing-experience-pin {
   position: sticky;
   top: 0;
   box-sizing: border-box;
-  height: 100vh;
-  min-height: 0;
+  min-height: clamp(660px, 82vh, 780px);
   display: grid;
   align-content: start;
-  gap: clamp(18px, 3vh, 30px);
-  padding: clamp(54px, 9vh, 88px) max(24px, calc((100vw - 1200px) / 2)) clamp(28px, 5vh, 56px);
+  gap: clamp(18px, 3vh, 28px);
+  padding: clamp(42px, 6vh, 62px) max(24px, calc((100vw - 1200px) / 2)) clamp(32px, 5vh, 54px);
   overflow: hidden;
 }
 
@@ -559,7 +612,7 @@
   z-index: 5;
   display: grid;
   gap: 8px;
-  width: min(960px, 100%);
+  width: min(1120px, calc(100% - 72px));
   margin: 0 auto;
 }
 
@@ -607,15 +660,15 @@
 
 .role-landing-carousel {
   position: relative;
-  min-height: clamp(320px, 48vh, 430px);
+  min-height: clamp(390px, 48vh, 450px);
   display: block;
   overflow: visible;
 }
 
 .role-landing-carousel-stage {
   position: relative;
-  width: min(980px, 100%);
-  height: clamp(310px, 46vh, 410px);
+  width: min(1120px, calc(100% - 72px));
+  height: clamp(390px, 48vh, 450px);
   margin: 0 auto;
   overflow: visible;
   perspective: 1200px;
@@ -632,10 +685,16 @@
   align-items: stretch;
   padding: 0;
   overflow: hidden;
-  border: 1px solid #dce7f6;
+  border: 1px solid rgba(255, 255, 255, 0.74);
   border-radius: 15px;
-  background: #ffffff;
-  box-shadow: 0 22px 55px rgba(34, 68, 120, 0.14);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.3)),
+    rgba(255, 255, 255, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 22px 55px rgba(34, 68, 120, 0.14);
+  backdrop-filter: blur(24px) saturate(1.16);
+  -webkit-backdrop-filter: blur(24px) saturate(1.16);
   opacity: 0;
   pointer-events: none;
   transform: translateX(-50%) scale(0.76);
@@ -653,7 +712,36 @@
   pointer-events: auto;
   transform: translateX(-50%) scale(1);
   filter: blur(0);
-  box-shadow: 0 28px 68px rgba(34, 68, 120, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    0 28px 68px rgba(34, 68, 120, 0.18);
+}
+
+.role-landing-footer {
+  position: relative;
+  z-index: 1;
+  width: min(1200px, calc(100% - 48px));
+  min-height: 34px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: clamp(4px, 1vh, 10px) auto 0;
+  padding: 12px 0 0;
+  border-top: 1px solid rgba(130, 158, 212, 0.2);
+  color: rgba(37, 55, 92, 0.72);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 300ms ease, transform 300ms ease, visibility 300ms ease;
+}
+
+.role-landing-footer.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
 .role-landing-benefit-card--previous {
@@ -711,7 +799,7 @@
   min-height: clamp(290px, 42vh, 350px);
   overflow: hidden;
   background:
-    linear-gradient(120deg, rgba(130, 158, 212, 0.2), rgba(255, 255, 255, 0.6)),
+    linear-gradient(120deg, rgba(130, 158, 212, 0.16), rgba(255, 255, 255, 0.64)),
     #eef5ff;
 }
 
@@ -725,11 +813,33 @@
 @keyframes roleLandingGlow {
   from {
     transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.24;
+    opacity: 0.38;
   }
   to {
-    transform: translate3d(34px, -26px, 0) scale(1.08);
-    opacity: 0.38;
+    transform: translate3d(38px, -30px, 0) scale(1.1);
+    opacity: 0.58;
+  }
+}
+
+@keyframes roleLandingLightSweep {
+  from {
+    transform: translate3d(-7%, -3%, 0) rotate(-3deg);
+    opacity: 0.54;
+  }
+  to {
+    transform: translate3d(8%, 4%, 0) rotate(3deg);
+    opacity: 0.86;
+  }
+}
+
+@keyframes roleLandingFooterFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -857,8 +967,10 @@
   }
 
   .role-landing-experience {
+    width: 100%;
     height: auto;
     min-height: auto;
+    margin-left: 0;
   }
 
   .role-landing-experience-pin {
@@ -907,15 +1019,24 @@
     transform: none;
     filter: none;
   }
+
+  .role-landing-footer {
+    width: min(100% - 32px, 1200px);
+    padding-bottom: 22px;
+    text-align: center;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .role-landing-page::after,
   .role-landing-glow,
   .role-landing-copy,
   .role-landing-preview,
   .role-landing-preview-card,
   .role-landing-mascot-float,
-  .role-landing-benefit-card {
+  .role-landing-footer,
+  .role-landing-benefit-card,
+  .student-login-mascot {
     animation: none;
   }
 
@@ -4921,11 +5042,42 @@ textarea:focus-visible {
 .student-login-page {
   display: grid;
   place-items: center;
+  position: relative;
   padding: 48px;
-  background: #ffffff;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 82%, rgba(130, 158, 212, 0.36), transparent 30%),
+    radial-gradient(circle at 84% 8%, rgba(184, 210, 255, 0.42), transparent 32%),
+    linear-gradient(135deg, #ffffff 0%, #f8fbff 42%, #edf5ff 100%);
+}
+
+.student-login-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(130, 158, 212, 0.14) 1px, transparent 1.4px);
+  background-size: 20px 20px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.85), transparent 82%);
+}
+
+.student-login-page::after {
+  content: "";
+  position: absolute;
+  inset: -24% -18%;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 26% 24%, rgba(255, 255, 255, 0.86), transparent 23%),
+    linear-gradient(112deg, transparent 28%, rgba(255, 255, 255, 0.58) 43%, rgba(174, 204, 255, 0.2) 52%, transparent 66%);
+  filter: blur(18px);
+  opacity: 0.7;
+  mix-blend-mode: screen;
+  animation: roleLandingLightSweep 18s ease-in-out infinite alternate;
 }
 
 .student-login-stage {
+  position: relative;
+  z-index: 1;
   width: min(1280px, 100%);
   min-height: min(760px, calc(100vh - 96px));
   grid-template-columns: minmax(360px, 0.82fr) minmax(560px, 1.18fr);
@@ -4942,6 +5094,47 @@ textarea:focus-visible {
   justify-self: center;
   width: min(430px, 100%);
   min-height: 360px;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(237, 245, 255, 0.5)),
+    rgba(255, 255, 255, 0.46);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 22px 58px rgba(53, 84, 134, 0.1);
+  backdrop-filter: blur(24px) saturate(1.16);
+  -webkit-backdrop-filter: blur(24px) saturate(1.16);
+  animation: roleLandingRise 760ms ease both;
+}
+
+.student-login-field > span {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.student-login-field input {
+  border-color: rgba(130, 158, 212, 0.52);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+
+.student-login-button {
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  color: #314c7e;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.24)),
+    rgba(255, 255, 255, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -12px 24px rgba(130, 158, 212, 0.12),
+    0 12px 28px rgba(40, 74, 132, 0.1);
+  backdrop-filter: blur(18px) saturate(1.18);
+  -webkit-backdrop-filter: blur(18px) saturate(1.18);
+}
+
+.student-login-button:hover {
+  color: #ffffff;
+  background:
+    linear-gradient(145deg, rgba(130, 158, 212, 0.94), rgba(130, 158, 212, 0.68)),
+    #829ed4;
 }
 
 .student-login-info {
@@ -4950,10 +5143,17 @@ textarea:focus-visible {
   align-self: stretch;
   min-height: 0;
   padding: 54px 56px 0;
-  border: 1px solid #d9e4f1;
+  border: 1px solid rgba(255, 255, 255, 0.74);
   border-radius: 34px;
-  background: linear-gradient(180deg, #f8fbff 0%, #edf5ff 100%);
-  box-shadow: 10px 12px 0 rgba(17, 43, 74, 0.08);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(237, 245, 255, 0.5)),
+    rgba(255, 255, 255, 0.46);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 24px 60px rgba(53, 84, 134, 0.11);
+  backdrop-filter: blur(24px) saturate(1.16);
+  -webkit-backdrop-filter: blur(24px) saturate(1.16);
+  animation: roleLandingRise 820ms 120ms ease both;
 }
 
 .student-login-info__copy {
@@ -5000,6 +5200,7 @@ textarea:focus-visible {
   top: 78px;
   bottom: auto;
   width: min(270px, 42%);
+  animation: roleLandingFloat 5.5s ease-in-out infinite;
 }
 
 .student-login-feature-list {
@@ -5023,30 +5224,76 @@ textarea:focus-visible {
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: #dceafe;
+  position: relative;
+  background:
+    linear-gradient(145deg, rgba(220, 234, 254, 0.98), rgba(220, 234, 254, 0.72)),
+    #dceafe;
   color: #4d7fc3;
 }
 
 .student-login-feature-icon::before {
   content: "";
-  width: 24px;
-  height: 28px;
-  border: 3px solid currentColor;
-  border-radius: 4px;
+  position: absolute;
+  display: block;
 }
 
-.student-login-feature-icon--teams::before {
-  width: 30px;
-  height: 18px;
+.student-login-feature-icon::after {
+  content: "";
+  position: absolute;
+  display: block;
+}
+
+.student-login-feature-icon--activities::before {
+  width: 20px;
+  height: 26px;
+  border: 3px solid currentColor;
+  border-radius: 5px;
+}
+
+.student-login-feature-icon--activities::after {
+  width: 10px;
+  height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 8px 0 currentColor;
+}
+
+.student-login-feature-icon--teams::before,
+.student-login-feature-icon--teams::after {
+  border: 3px solid currentColor;
   border-radius: 999px 999px 6px 6px;
 }
 
+.student-login-feature-icon--teams::before {
+  width: 24px;
+  height: 17px;
+  bottom: 15px;
+}
+
+.student-login-feature-icon--teams::after {
+  width: 13px;
+  height: 13px;
+  top: 16px;
+  border-bottom: 0;
+}
+
 .student-login-feature-icon--progress::before {
-  width: 28px;
-  height: 24px;
-  border-top: 0;
-  border-right: 0;
-  transform: skew(-8deg);
+  width: 27px;
+  height: 25px;
+  border-left: 3px solid currentColor;
+  border-bottom: 3px solid currentColor;
+  border-radius: 0 0 0 5px;
+}
+
+.student-login-feature-icon--progress::after {
+  left: 20px;
+  bottom: 20px;
+  width: 22px;
+  height: 16px;
+  border-left: 3px solid currentColor;
+  border-bottom: 3px solid currentColor;
+  transform: skew(-16deg) rotate(-8deg);
+  transform-origin: left bottom;
 }
 
 .student-login-feature strong {
@@ -5063,10 +5310,15 @@ textarea:focus-visible {
 }
 
 .student-login-designed {
-  margin: 34px -56px 0;
-  padding: 22px 56px;
+  align-self: end;
+  justify-self: stretch;
+  box-sizing: border-box;
+  width: calc(100% + 132px);
+  margin: 30px -66px -1px;
+  padding: 20px 66px 22px;
+  border-radius: 0 0 34px 34px;
   color: #5d86c0;
-  background: #e3efff;
+  background: rgba(227, 239, 255, 0.82);
   font-size: 14px;
   font-weight: 800;
 }
@@ -5158,8 +5410,9 @@ textarea:focus-visible {
   }
 
   .student-login-designed {
-    margin: 24px -24px 0;
-    padding: 18px 24px;
+    width: calc(100% + 58px);
+    margin: 24px -29px -1px;
+    padding: 18px 29px;
   }
 }
 
@@ -8089,10 +8342,548 @@ textarea:focus-visible {
 
 /* FINAL OVERRIDE: login logo size */
 .student-login-logo {
-  width: 350px !important;
-  max-width: 80% !important;
+  width: 780px !important;
+  max-width: calc(100% + 20px) !important;
   height: auto !important;
   margin-left: 10px !important;
   margin-bottom: 0 !important;
   transform: translateY(18px);
+}
+
+/* Student coding workspace redesign: sidebar board-flow layout. */
+.student-main:has(.student-coding-page) {
+  overflow: hidden;
+  background: #f8fbff;
+}
+
+.student-coding-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 80px minmax(0, 1fr) 78px;
+  color: #11213d;
+  background:
+    radial-gradient(circle, rgba(106, 151, 210, 0.12) 1px, transparent 1.5px) 0 0 / 18px 18px,
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  overflow: hidden;
+}
+
+.student-coding-page::after {
+  display: none;
+}
+
+.student-coding-topbar {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 0 32px;
+  border-bottom: 1px solid #e3ebf5;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 10px 26px rgba(37, 54, 89, 0.05);
+  backdrop-filter: blur(18px);
+}
+
+.student-coding-brand {
+  display: none;
+}
+
+.student-coding-breadcrumb {
+  min-width: 0;
+  padding: 0;
+  color: #64738b;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.student-coding-breadcrumb a,
+.student-coding-breadcrumb strong {
+  color: #23334f;
+}
+
+.student-coding-breadcrumb span::before,
+.student-coding-breadcrumb strong::before {
+  content: "/";
+  color: #95a3b8;
+}
+
+.student-coding-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.student-workspace-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid #b9d0ff;
+  border-radius: 8px;
+  color: #1265f8;
+  background: rgba(255, 255, 255, 0.88);
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 8px 18px rgba(23, 98, 220, 0.08);
+  cursor: pointer;
+}
+
+.student-workspace-button--run {
+  border-color: #0b63ff;
+  color: #ffffff;
+  background: #0b63ff;
+  box-shadow: 0 10px 22px rgba(11, 99, 255, 0.18);
+}
+
+.student-workspace-button--more {
+  width: 42px;
+  padding: 0;
+  border-color: #d7e1ef;
+  color: #23334f;
+}
+
+.student-workspace-button--more span,
+.student-workspace-button--more span::before,
+.student-workspace-button--more span::after {
+  width: 4px;
+  height: 4px;
+  display: block;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.student-workspace-button--more span {
+  position: relative;
+}
+
+.student-workspace-button--more span::before,
+.student-workspace-button--more span::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+
+.student-workspace-button--more span::before {
+  top: -8px;
+}
+
+.student-workspace-button--more span::after {
+  top: 8px;
+}
+
+.student-coding-user {
+  padding: 0;
+  color: #12213a;
+}
+
+.student-coding-user > .student-notification-menu,
+.student-coding-user > .student-profile-menu {
+  flex: 0 0 auto;
+}
+
+.student-coding-shell {
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(270px, 310px) minmax(520px, 1.35fr) minmax(360px, 0.8fr);
+  grid-template-rows: minmax(0, 1fr) minmax(210px, 250px);
+  gap: 0;
+  padding: 16px 32px 0;
+  overflow: hidden;
+}
+
+.student-coding-instructions {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  min-height: 0;
+  margin-right: 24px;
+  overflow: hidden;
+  border: 1px solid #e2eaf5;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 40px rgba(35, 53, 84, 0.08);
+}
+
+.student-coding-activity-title {
+  padding: 18px 18px 14px;
+  border-bottom-color: #e4ecf6;
+}
+
+.student-coding-activity-title span:first-child {
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #6b3ff4;
+  background: #f0eaff;
+}
+
+.student-coding-activity-title h1 {
+  max-width: 210px;
+  margin-top: 12px;
+  font-size: 20px;
+}
+
+.student-coding-activity-title strong {
+  top: 70px;
+  right: 18px;
+  width: auto;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #0b63ff;
+  background: #edf4ff;
+  font-size: 12px;
+}
+
+.student-coding-tabs button {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.student-coding-scroll {
+  padding: 18px 18px 16px;
+}
+
+.student-coding-scroll h2 {
+  font-size: 14px;
+}
+
+.student-coding-scroll li {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.student-coding-tip {
+  border: 1px solid #dbe8ff;
+  background: #f0f6ff;
+}
+
+.student-autosave {
+  border-top-color: #e4ecf6;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.student-editor-area,
+.student-output-area {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid #243044;
+  background: #0e1724;
+  box-shadow: 0 22px 46px rgba(18, 31, 53, 0.2);
+}
+
+.student-editor-area {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-rows: 48px minmax(0, 1fr) 34px;
+  border-right: 0;
+  border-radius: 10px 0 0 0;
+  overflow: hidden;
+}
+
+.student-output-area {
+  grid-column: 3;
+  grid-row: 1;
+  display: grid;
+  grid-template-rows: 48px minmax(0, 1fr);
+  border-radius: 0 10px 0 0;
+  overflow: hidden;
+}
+
+.student-editor-tabs,
+.student-output-header {
+  min-height: 48px;
+  border-bottom-color: rgba(82, 103, 136, 0.32);
+  background: linear-gradient(180deg, #162132 0%, #121b2a 100%);
+}
+
+.student-editor-tabs span {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 18px;
+  border-bottom: 2px solid #1f6fff;
+}
+
+.student-editor-tabs span::before {
+  border-color: #d16f3d;
+}
+
+.student-editor-tabs button {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.student-editor-workbench {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 218px minmax(0, 1fr);
+  background: #0e1724;
+}
+
+.student-editor-explorer {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 14px 0;
+  border-right: 1px solid rgba(82, 103, 136, 0.32);
+  color: #9cabbe;
+  background: linear-gradient(180deg, #172233 0%, #111a28 100%);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.student-editor-explorer strong,
+.student-editor-explorer span,
+.student-editor-explorer em,
+.student-editor-explorer small {
+  min-width: 0;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: normal;
+}
+
+.student-editor-explorer strong {
+  color: #7f8da3;
+  font-size: 11px;
+}
+
+.student-editor-explorer .is-open,
+.student-editor-explorer .is-folder {
+  color: #c4cfdd;
+}
+
+.student-editor-explorer .is-file {
+  padding-left: 34px;
+}
+
+.student-editor-explorer .is-active {
+  color: #dbe7f7;
+  background: rgba(31, 111, 255, 0.38);
+}
+
+.student-editor-explorer small {
+  margin-top: 10px;
+  border-top: 1px solid rgba(82, 103, 136, 0.32);
+  color: #b4c0d0;
+}
+
+.student-code-editor,
+.student-output-panel {
+  padding: 18px 28px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 54px, transparent 54px),
+    radial-gradient(circle at 18% 8%, rgba(50, 93, 164, 0.18), transparent 28%),
+    #0e1724;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.student-code-editor {
+  color: #80cf6f;
+  padding-left: 72px;
+}
+
+.student-output-panel {
+  color: #f5f7fb;
+}
+
+.student-editor-status {
+  border-top-color: rgba(82, 103, 136, 0.32);
+  background: #172233;
+}
+
+.student-tests-area {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #dfe7f1;
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 22px 46px rgba(18, 31, 53, 0.08);
+}
+
+.student-tests-tabs {
+  min-height: 52px;
+  padding: 0 20px;
+  background: #ffffff;
+}
+
+.student-tests-tabs button.is-active {
+  color: #ffffff;
+  background: #2b67ff;
+}
+
+.student-test-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.student-test-summary::after {
+  content: "";
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, transparent 48%, #ffffff 49% 58%, transparent 59%) 3px 4px / 9px 8px no-repeat,
+    #77dc9b;
+}
+
+.student-test-summary.is-error::after {
+  background: #ffe0e0;
+}
+
+.student-tests-table {
+  max-height: none;
+  padding: 0;
+}
+
+.student-tests-row {
+  min-width: 760px;
+  grid-template-columns: 70px minmax(150px, 0.35fr) minmax(420px, 1fr) 140px;
+  min-height: 64px;
+  border-right: 0;
+  border-left: 0;
+  border-color: #e1e8f2;
+}
+
+.student-tests-row--head {
+  min-height: 44px;
+  background: #f6f9fd;
+}
+
+.student-expected-output {
+  width: fit-content;
+  margin: 12px 0;
+  padding: 12px 18px;
+  border: 1px solid #dce6f3;
+  border-radius: 8px;
+  color: #243451;
+  background: #ffffff;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.student-coding-actions {
+  grid-column: 1;
+  grid-row: 3;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 32px;
+  border-top: 1px solid #e1e8f2;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 -10px 26px rgba(37, 54, 89, 0.05);
+}
+
+.student-run-tests {
+  min-width: 130px;
+  border-color: #243451;
+  color: #14233d;
+}
+
+.student-submit-code {
+  min-width: 166px;
+  border-color: #6e35f2;
+  background: #6e35f2;
+}
+
+@media (max-width: 1280px) {
+  .student-coding-topbar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .student-coding-user {
+    display: none;
+  }
+
+  .student-coding-shell {
+    grid-template-columns: minmax(250px, 300px) minmax(440px, 1.2fr) minmax(300px, 0.8fr);
+    padding-inline: 24px;
+  }
+
+  .student-editor-workbench {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 980px) {
+  .student-main:has(.student-coding-page) {
+    overflow: visible;
+  }
+
+  .student-coding-page {
+    min-height: auto;
+    grid-template-rows: auto auto auto;
+    overflow: visible;
+  }
+
+  .student-coding-topbar {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+
+  .student-coding-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .student-coding-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(420px, auto) minmax(320px, auto) auto;
+    padding: 18px;
+    overflow: visible;
+  }
+
+  .student-coding-instructions,
+  .student-editor-area,
+  .student-output-area,
+  .student-tests-area {
+    grid-column: 1;
+    grid-row: auto;
+    margin: 0 0 16px;
+    border-radius: 10px;
+  }
+
+  .student-editor-area,
+  .student-output-area {
+    border: 1px solid #243044;
+  }
+
+  .student-editor-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .student-editor-explorer {
+    display: none;
+  }
+
+  .student-coding-actions {
+    position: sticky;
+    bottom: 0;
+    grid-template-columns: 1fr;
+    padding: 14px 18px;
+  }
+
+  .student-state-switch,
+  .student-run-tests,
+  .student-submit-code {
+    width: 100%;
+  }
 }
