@@ -28,47 +28,6 @@ const streamPosts = [
   },
 ]
 
-const activities = [
-  {
-    title: 'Prelim Programming Exercise 6 LAB',
-    due: 'Due Sep 10, 2022, 10:30 AM',
-    dueValue: '2022-09-10T10:30:00',
-    status: 'To Do',
-  },
-  {
-    title: 'Prelim Programming Exercise 5 LAB',
-    due: 'Due Sep 10, 2022, 10:30 AM',
-    dueValue: '2022-09-10T10:30:00',
-    status: 'To Do',
-  },
-  {
-    title: 'Prelim Programming Exercise 4 LAB',
-    due: 'Due Sep 3, 2022',
-    dueValue: '2022-09-03T23:59:00',
-    status: 'Due Soon',
-    selected: true,
-  },
-  {
-    title: 'Prelim Programming Exercise 3 LAB',
-    due: 'Due Sep 3, 2022, 10:30 AM',
-    dueValue: '2022-09-03T10:30:00',
-    status: 'To Do',
-  },
-  {
-    title: 'Prelim Programming Exercise 2 LAB',
-    due: 'Due Aug 27, 2022, 11:59PM',
-    dueValue: '2022-08-27T23:59:00',
-    status: 'Missing',
-  },
-  {
-    title: 'Prelim Programming Exercise 1 LAB',
-    due: 'Due Aug 27, 2022, 10:30 AM',
-    dueValue: '2022-08-27T10:30:00',
-    expanded: true,
-    status: 'Graded',
-  },
-]
-
 const groupProjects = [
   {
     title: 'Final Group Project Proposal',
@@ -135,6 +94,13 @@ const homeClasses = [
     initial: 'M',
     path: '/student/classes',
   },
+]
+
+const studentDashboardStats = [
+  { label: 'Pending To-dos', value: '3', detail: 'activities waiting', tone: 'blue' },
+  { label: 'Joined Classes', value: '4', detail: 'classes', tone: 'green' },
+  { label: 'Active Repositories', value: '2', detail: 'in progress', tone: 'purple' },
+  { label: 'Due This Week', value: '2', detail: 'tasks', tone: 'orange' },
 ]
 
 const instructors = [
@@ -250,12 +216,13 @@ const todoSections = [
   {
     id: 'no-due-date',
     label: 'No Due Date',
+    tone: 'blue',
     items: [
       {
-        title: 'Read repository contribution guide',
-        meta: 'Personal repository setup',
-        type: 'Repository',
-        className: 'Personal Repositories',
+        title: 'Read Java Naming Conventions Guide',
+        meta: 'No strict deadline',
+        type: 'Reference',
+        className: 'IT 112 - BSIT 2A',
         path: '/student/projects/prelim-group-project-1/repository',
       },
     ],
@@ -263,11 +230,13 @@ const todoSections = [
   {
     id: 'this-week',
     label: 'This Week',
+    tone: 'blue',
     items: [
       {
         title: 'Prelim Programming Exercise 1 LAB',
         meta: 'Due Jul 3, 2026, 5:00 PM',
         type: 'Activity',
+        status: 'Not submitted',
         className: 'IT 112 - BSIT 2A',
         path: '/student/activity/act-loops-01',
       },
@@ -275,6 +244,7 @@ const todoSections = [
         title: 'Prelim Group Project 1 Specifications',
         meta: 'Repository setup due Aug 27, 2026',
         type: 'Group Project',
+        status: 'Repository setup required',
         className: 'IT 112 - BSIT 2A',
         path: '/student/projects/prelim-group-project-1',
       },
@@ -283,6 +253,7 @@ const todoSections = [
   {
     id: 'next-week',
     label: 'Next Week',
+    tone: 'green',
     items: [
       {
         title: 'Loop Patterns and Input Validation',
@@ -296,12 +267,13 @@ const todoSections = [
   {
     id: 'later',
     label: 'Later',
+    tone: 'purple',
     items: [
       {
-        title: 'Campus Navigator repository workspace',
-        meta: 'Continue README and initial folders',
-        type: 'Repository',
-        className: 'CS 111 - BSIT 2A',
+        title: 'Team Repository Progress Check',
+        meta: 'Upcoming in August',
+        type: 'Upcoming',
+        className: 'IT 112 - BSIT 2A',
         path: '/student/projects/prelim-group-project-1/repository',
       },
     ],
@@ -348,10 +320,10 @@ const studentRepositoryGroups = [
 
 const personalRepositories = [
   {
-    name: 'java-practice-notes',
-    detail: 'Personal Java drills and scratch work',
-    status: 'Private',
-    updated: 'Updated Jun 25, 2026',
+    name: 'java-practice-julius',
+    detail: 'Exercises, experiments, and review snippets',
+    status: 'Active',
+    updated: 'Updated yesterday',
     path: '/student/projects/prelim-group-project-1/repository',
   },
 ]
@@ -546,9 +518,30 @@ function HomeDashboardPage() {
       </header>
 
       <main className="student-home-content">
-        <h1>Welcome back, Julius</h1>
+        <section className="student-home-hero">
+          <div className="student-home-mascot" aria-hidden="true">
+            <img src="/assets/brand/projex-login-mascot.png" alt="" />
+          </div>
+          <div>
+            <h1>Welcome back, Julius</h1>
+            <p>Here are your classes, upcoming tasks, and recent repository updates.</p>
+          </div>
+        </section>
 
-        <section className="student-home-classes">
+        <section className="student-home-stats" aria-label="Student overview">
+          {studentDashboardStats.map((stat) => (
+            <article className="student-dashboard-stat" key={stat.label}>
+              <span className={`student-dashboard-stat-icon student-dashboard-stat-icon--${stat.tone}`} aria-hidden="true" />
+              <div>
+                <span>{stat.label}</span>
+                <strong>{stat.value}</strong>
+                <small>{stat.detail}</small>
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <section className="student-home-classes student-home-classes-panel">
           <div className="student-home-section-heading">
             <h2>My Classes</h2>
             <NavLink to="/student/classes">View all classes</NavLink>
@@ -699,80 +692,176 @@ function AssignmentSubTabs({ active }) {
   )
 }
 
-function ActivityAttachment() {
-  return (
-    <div className="student-attachment">
-      <span className="student-pdf-icon">PDF</span>
-      <div>
-        <strong>Prelim Programming Exerc...</strong>
-        <span>PDF</span>
-      </div>
-      <span className="student-document-preview" aria-hidden="true" />
-    </div>
-  )
-}
-
 function ActivitiesPage() {
   const [sortBy, setSortBy] = useState('due')
-  const sortedActivities = sortByOption(activities, sortBy)
+  const [assignmentFilter, setAssignmentFilter] = useState('all')
+  const assignmentRows = [
+    {
+      title: 'Prelim Programming Exercise 1 LAB',
+      description: 'Write a Java program that performs basic input, output, and arithmetic operations.',
+      posted: 'Posted Aug 25, 2022',
+      due: 'Due Aug 27, 2022, 10:30 AM',
+      dueValue: '2022-08-27T10:30:00',
+      status: 'Not Submitted',
+      type: 'Activity',
+      action: 'View Details',
+      path: '/student/activity/act-loops-01',
+    },
+    {
+      title: 'Prelim Programming Exercise 2 LAB',
+      description: 'Conditional statements and loops implementation in Java.',
+      posted: 'Posted Aug 27, 2022',
+      due: 'Due Aug 27, 2022, 11:59 PM',
+      dueValue: '2022-08-27T23:59:00',
+      status: 'Not Submitted',
+      type: 'Activity',
+      action: 'View Details',
+      path: '/student/activity/act-loops-01',
+    },
+    {
+      title: 'Prelim Programming Exercise 3 LAB',
+      description: 'Arrays, methods, and string manipulation.',
+      posted: 'Posted Aug 30, 2022',
+      due: 'Due Sep 3, 2022, 10:30 AM',
+      dueValue: '2022-09-03T10:30:00',
+      status: 'Submitted',
+      type: 'Activity',
+      action: 'View Submission',
+      path: '/student/activity/act-loops-01/submitted',
+    },
+    {
+      title: 'Prelim Programming Exercise 4 LAB',
+      description: 'File handling and exception handling.',
+      posted: 'Posted Sep 2, 2022',
+      due: 'Due Sep 3, 2022',
+      dueValue: '2022-09-03T23:59:00',
+      status: 'Submitted',
+      type: 'Activity',
+      action: 'View Submission',
+      path: '/student/activity/act-loops-01/submitted',
+    },
+    {
+      title: 'Prelim Programming Exercise 6 LAB',
+      description: 'Basic object-oriented programming concepts.',
+      posted: 'Posted Sep 7, 2022',
+      due: 'Due Sep 10, 2022, 10:30 AM',
+      dueValue: '2022-09-10T10:30:00',
+      status: 'Submitted',
+      type: 'Activity',
+      action: 'View Submission',
+      path: '/student/activity/act-loops-01/submitted',
+    },
+    {
+      title: 'Prelim Group Project 1',
+      description: 'Team project: Build a student information system.',
+      posted: 'Posted Aug 24, 2022',
+      due: 'Due Aug 27, 2022',
+      dueValue: '2022-08-27T23:59:00',
+      status: 'Submitted',
+      type: 'Group Project',
+      action: 'View Project',
+      path: '/student/projects/prelim-group-project-1',
+    },
+  ]
+  const assignmentStats = [
+    { label: 'Total Assignments', value: '6', detail: 'All activities & projects', tone: 'blue' },
+    { label: 'Pending', value: '2', detail: 'Awaiting your submission', tone: 'orange' },
+    { label: 'Submitted', value: '3', detail: 'Completed & submitted', tone: 'green' },
+    { label: 'Graded', value: '1', detail: 'Feedback available', tone: 'purple' },
+  ]
+  const filteredAssignments = assignmentRows.filter((item) => (
+    assignmentFilter === 'all'
+      || (assignmentFilter === 'activities' && item.type === 'Activity')
+      || (assignmentFilter === 'projects' && item.type === 'Group Project')
+  ))
+  const sortedAssignments = sortByOption(filteredAssignments, sortBy)
+  const tabCounts = {
+    all: assignmentRows.length,
+    activities: assignmentRows.filter((item) => item.type === 'Activity').length,
+    projects: assignmentRows.filter((item) => item.type === 'Group Project').length,
+  }
 
   return (
     <StudentClassPage activeTab="assignments">
-      <div className="student-assignment-panel">
-        <div className="student-assignment-toolbar">
-          <AssignmentSubTabs active="activities" />
-          <label className="student-sort-control">
-            Sort by
-            <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-              <option value="due">Due date</option>
-              <option value="status">Status</option>
-              <option value="title">Title</option>
-            </select>
-          </label>
-        </div>
-        <div className="student-list-table">
-          <div className="student-list-header">
-            <span>Title</span>
-            <span>Due Date</span>
-          </div>
-          {sortedActivities.map((activity) => (
-            <article
-              className={
-                activity.expanded
-                  ? 'student-activity-row is-expanded'
-                  : activity.selected
-                    ? 'student-activity-row is-selected'
-                    : 'student-activity-row'
-              }
-              key={activity.title}
-            >
-              <div className="student-row-summary">
-                <span className="student-row-icon" aria-hidden="true" />
-                {activity.expanded ? (
-                  <NavLink to="/student/activity/act-loops-01" className="student-row-title-link">
-                    {activity.title}
-                  </NavLink>
-                ) : (
-                  <strong>{activity.title}</strong>
-                )}
-                <span>{activity.due}</span>
-                <button type="button" className="student-more" aria-label="More options" />
+      <div className="student-assignment-board">
+        <section className="student-assignment-stats" aria-label="Assignment overview">
+          {assignmentStats.map((stat) => (
+            <article className="student-dashboard-stat student-assignment-stat" key={stat.label}>
+              <span className={`student-dashboard-stat-icon student-dashboard-stat-icon--${stat.tone}`} aria-hidden="true" />
+              <div>
+                <span>{stat.label}</span>
+                <strong>{stat.value}</strong>
+                <small>{stat.detail}</small>
               </div>
-              {activity.expanded && (
-                <div className="student-expanded-activity">
-                  <div>
-                    <small>Posted Aug 25, 2022 (Edited Oct 5, 2022)</small>
-                    <ActivityAttachment />
-                  </div>
-                  <div className="student-activity-status">{activity.status}</div>
-                  <NavLink to="/student/activity/act-loops-01" className="student-text-link">
-                    View instructions
-                  </NavLink>
-                </div>
-              )}
             </article>
           ))}
-        </div>
+        </section>
+
+        <section className="student-assignment-panel student-assignment-panel--board">
+          <div className="student-assignment-toolbar student-assignment-toolbar--board">
+            <div className="student-assignment-filter-tabs" aria-label="Assignment type">
+              <button
+                type="button"
+                className={assignmentFilter === 'all' ? 'is-active' : undefined}
+                onClick={() => setAssignmentFilter('all')}
+              >
+                All ({tabCounts.all})
+              </button>
+              <button
+                type="button"
+                className={assignmentFilter === 'activities' ? 'is-active' : undefined}
+                onClick={() => setAssignmentFilter('activities')}
+              >
+                Activities ({tabCounts.activities})
+              </button>
+              <button
+                type="button"
+                className={assignmentFilter === 'projects' ? 'is-active' : undefined}
+                onClick={() => setAssignmentFilter('projects')}
+              >
+                Group Projects ({tabCounts.projects})
+              </button>
+            </div>
+            <label className="student-sort-control">
+              Sort by
+              <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                <option value="due">Due date (soonest)</option>
+                <option value="status">Status</option>
+                <option value="title">Title</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="student-assignment-list">
+            {sortedAssignments.map((assignment) => {
+              const itemType = assignment.type.toLowerCase().replace(/\s+/g, '-')
+              const itemStatus = assignment.status.toLowerCase().replace(/\s+/g, '-')
+
+              return (
+                <article className={`student-assignment-row student-assignment-row--${itemType}`} key={assignment.title}>
+                  <div className="student-assignment-type">
+                    <span className={`student-todo-icon student-todo-icon--${itemType}`} aria-hidden="true" />
+                    <strong>{assignment.type}</strong>
+                  </div>
+                  <div>
+                    <h2>{assignment.title}</h2>
+                    <p>{assignment.description}</p>
+                    <small>{assignment.posted}</small>
+                  </div>
+                  <div className="student-assignment-due">
+                    <span>{assignment.due}</span>
+                    <em className={`student-assignment-status student-assignment-status--${itemStatus}`}>
+                      {assignment.status}
+                    </em>
+                  </div>
+                  <NavLink to={assignment.path} className={assignment.type === 'Group Project' ? 'student-assignment-action student-assignment-action--project' : 'student-assignment-action'}>
+                    {assignment.action}
+                  </NavLink>
+                </article>
+              )
+            })}
+          </div>
+        </section>
       </div>
     </StudentClassPage>
   )
@@ -1752,7 +1841,9 @@ function StudentGlobalPage({ title, eyebrow, action, children }) {
 }
 
 function StudentTodoPage() {
-  const [activeSection, setActiveSection] = useState('this-week')
+  const [openSections, setOpenSections] = useState(() => (
+    todoSections.reduce((current, section) => ({ ...current, [section.id]: true }), {})
+  ))
   const [selectedClass, setSelectedClass] = useState('All Classes')
 
   const visibleSections = todoSections.map((section) => ({
@@ -1776,36 +1867,52 @@ function StudentTodoPage() {
         </label>
       )}
     >
-      <section className="student-global-panel">
+      <section className="student-global-panel student-todo-board">
         {visibleSections.map((section) => {
-          const isOpen = activeSection === section.id
+          const isOpen = openSections[section.id]
 
           return (
-            <article className="student-collapsible-section" key={section.id}>
+            <article className={`student-collapsible-section student-task-group student-task-group--${section.tone}`} key={section.id}>
               <button
                 type="button"
                 className={isOpen ? 'is-open' : undefined}
-                onClick={() => setActiveSection(isOpen ? '' : section.id)}
+                onClick={() => setOpenSections((current) => ({ ...current, [section.id]: !isOpen }))}
               >
-                <span>{section.label}</span>
+                <span className="student-task-group-title">
+                  <span className={`student-task-group-icon student-task-group-icon--${section.tone}`} aria-hidden="true" />
+                  {section.label}
+                </span>
                 <em>{section.items.length}</em>
               </button>
 
               {isOpen && (
                 <div className="student-todo-list">
                   {section.items.length ? (
-                    section.items.map((item) => (
-                      <NavLink to={item.path} className="student-todo-item" key={item.title}>
-                        <span className={`student-todo-type student-todo-type--${item.type.toLowerCase().replace(/\s+/g, '-')}`}>
-                          {item.type}
-                        </span>
+                    section.items.map((item) => {
+                      const itemType = item.type.toLowerCase().replace(/\s+/g, '-')
+
+                      return (
+                        <NavLink to={item.path} className={`student-todo-item student-todo-item--${itemType}`} key={item.title}>
+                          <span className={`student-todo-icon student-todo-icon--${itemType}`} aria-hidden="true" />
                         <div>
                           <strong>{item.title}</strong>
-                          <span>{item.meta}</span>
+                          <span>
+                            <span className={`student-todo-type student-todo-type--${itemType}`}>
+                              {item.type}
+                            </span>
+                            {item.meta}
+                          </span>
                         </div>
+                        {item.status && (
+                          <em className={`student-todo-status student-todo-status--${item.status.toLowerCase().replace(/\s+/g, '-')}`}>
+                            {item.status}
+                          </em>
+                        )}
                         <small>{item.className}</small>
+                        <span className="student-row-arrow" aria-hidden="true" />
                       </NavLink>
-                    ))
+                      )
+                    })
                   ) : (
                     <p className="student-empty-note">No items in this section for the selected class.</p>
                   )}
@@ -1889,22 +1996,46 @@ function CreateRepositoryModal({ onClose }) {
 }
 
 function RepositoryRow({ repo }) {
+  const repoState = repo.status.toLowerCase().replace(/\s+/g, '-')
+
   return (
-    <NavLink to={repo.path} className="student-repository-index-row">
-      <span className="student-repo-file-icon student-repo-file-icon--folder" aria-hidden="true" />
+    <NavLink to={repo.path} className={`student-repository-index-row student-repository-index-row--${repoState}`}>
+      <span className="student-repository-row-icon" aria-hidden="true" />
       <div>
         <strong>{repo.name}</strong>
         <span>{repo.detail}</span>
       </div>
+      <span className="student-repo-branch" aria-hidden="true">main</span>
+      <span className="student-repo-code-mark" aria-hidden="true" />
       <em>{repo.status}</em>
       <small>{repo.updated}</small>
+      <span className="student-row-arrow" aria-hidden="true" />
     </NavLink>
   )
 }
 
 function StudentRepositoriesPage() {
-  const [openGroup, setOpenGroup] = useState('it112')
+  const [openGroups, setOpenGroups] = useState(() => ({
+    it112: true,
+    cs111: true,
+    personal: true,
+  }))
   const [modalOpen, setModalOpen] = useState(false)
+  const repositoryStats = [
+    { label: 'In Progress', value: '1', detail: 'repository', tone: 'blue' },
+    { label: 'Submitted', value: '1', detail: 'repository', tone: 'green' },
+    { label: 'Personal Repositories', value: '1', detail: 'workspace', tone: 'orange' },
+  ]
+  const visibleRepositoryGroups = [
+    ...studentRepositoryGroups,
+    {
+      id: 'personal',
+      label: 'Personal Repositories',
+      section: '',
+      repos: personalRepositories,
+      tone: 'purple',
+    },
+  ]
 
   return (
     <StudentGlobalPage
@@ -1917,21 +2048,42 @@ function StudentRepositoriesPage() {
         </button>
       )}
     >
-      <section className="student-global-panel">
-        {studentRepositoryGroups.map((group) => {
-          const isOpen = openGroup === group.id
+      <section className="student-repository-stats" aria-label="Repository overview">
+        {repositoryStats.map((stat) => (
+          <article className="student-dashboard-stat" key={stat.label}>
+            <span className={`student-dashboard-stat-icon student-dashboard-stat-icon--${stat.tone}`} aria-hidden="true" />
+            <div>
+              <span>{stat.label}</span>
+              <strong>{stat.value}</strong>
+              <small>{stat.detail}</small>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="student-global-panel student-repository-board">
+        {visibleRepositoryGroups.map((group) => {
+          const isOpen = openGroups[group.id]
+          const tone = group.tone || (group.id === 'cs111' ? 'green' : 'blue')
 
           return (
-            <article className="student-collapsible-section" key={group.id}>
+            <article className={`student-collapsible-section student-repository-group student-repository-group--${tone}`} key={group.id}>
               <button
                 type="button"
                 className={isOpen ? 'is-open' : undefined}
-                onClick={() => setOpenGroup(isOpen ? '' : group.id)}
+                onClick={() => setOpenGroups((current) => ({ ...current, [group.id]: !isOpen }))}
               >
-                <span>{group.label}</span>
+                <span className="student-task-group-title">
+                  <span className={`student-repository-group-icon student-repository-group-icon--${tone}`} aria-hidden="true">
+                    {group.label.charAt(0)}
+                  </span>
+                  <span>
+                    {group.label}
+                    {group.section && <small>{group.section}</small>}
+                  </span>
+                </span>
                 <em>{group.repos.length}</em>
               </button>
-              <p className="student-section-meta">{group.section}</p>
 
               {isOpen && (
                 <div className="student-repository-index-list">
@@ -1943,24 +2095,6 @@ function StudentRepositoriesPage() {
             </article>
           )
         })}
-
-        <article className="student-collapsible-section">
-          <button
-            type="button"
-            className={openGroup === 'personal' ? 'is-open' : undefined}
-            onClick={() => setOpenGroup(openGroup === 'personal' ? '' : 'personal')}
-          >
-            <span>Personal Repositories</span>
-            <em>{personalRepositories.length}</em>
-          </button>
-          {openGroup === 'personal' && (
-            <div className="student-repository-index-list">
-              {personalRepositories.map((repo) => (
-                <RepositoryRow repo={repo} key={repo.name} />
-              ))}
-            </div>
-          )}
-        </article>
       </section>
 
       {modalOpen && <CreateRepositoryModal onClose={() => setModalOpen(false)} />}
