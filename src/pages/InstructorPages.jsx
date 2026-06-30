@@ -85,24 +85,75 @@ const instructorHomeClasses = [
   },
 ]
 
+const instructorHomeStats = [
+  {
+    label: 'Review Queues',
+    value: '18',
+    detail: 'pending submissions',
+    tone: 'blue',
+    icon: 'queue',
+  },
+  {
+    label: 'Active Classes',
+    value: '3',
+    detail: 'classes',
+    tone: 'green',
+    icon: 'book',
+  },
+  {
+    label: 'Total Students',
+    value: '114',
+    detail: 'students',
+    tone: 'purple',
+    icon: 'students',
+  },
+]
+
+const instructorReviewPreview = [
+  {
+    title: 'Prelim Programming Exercise 1 LAB',
+    course: 'IT 112',
+    count: '12',
+  },
+  {
+    title: 'Group Project 1 Repository Check',
+    course: 'IT 112',
+    count: '4',
+  },
+  {
+    title: 'Intro to Computing Quiz Output Check',
+    course: 'CS 111',
+    count: '2',
+  },
+]
+
 const reviewQueueClasses = [
   {
     title: 'IT 112 - Computer Programming 1',
     section: 'BSIT 2A',
     count: '18',
     signal: 'Activities, submissions, and repository reviews pending',
+    pending: '12 pending',
+    secondary: '3 repo checks',
+    tone: 'blue',
   },
   {
     title: 'CS 111 - Introduction to Computing',
     section: 'BSIT 2A',
     count: '9',
     signal: 'Near-deadline activities and late submissions',
+    pending: '4 pending',
+    secondary: '2 late',
+    tone: 'green',
   },
   {
     title: 'IT 123 - Platform Technologies',
     section: 'BSIT 2A',
     count: '6',
     signal: 'Repository readiness and contribution watches',
+    pending: '2 pending',
+    secondary: '1 flagged',
+    tone: 'purple',
   },
 ]
 
@@ -509,37 +560,82 @@ function InstructorClassPage({ activeTab, children }) {
 function InstructorDashboard() {
   return (
     <div className="instructor-home-page">
-      <header className="student-home-topbar">
+      <header className="student-home-topbar instructor-dashboard-topbar">
         <InstructorUserArea count={6} />
       </header>
 
       <main className="student-home-content instructor-home-content">
-        <h1>Welcome back, Engr. Rivera</h1>
+        <section className="instructor-dashboard-hero">
+          <h1>Welcome back, Sir Rivera!</h1>
+          <p>Here's an overview of your classes, pending reviews, and recent teaching activity.</p>
+        </section>
 
-        <section className="student-home-classes">
-          <div className="student-home-section-heading">
-            <h2>Your Classes</h2>
-          </div>
+        <section className="instructor-home-stat-grid" aria-label="Instructor dashboard summary">
+          {instructorHomeStats.map((stat) => (
+            <article className={`instructor-home-stat-card instructor-home-stat-card--${stat.tone}`} key={stat.label}>
+              <span className={`instructor-home-stat-icon instructor-home-stat-icon--${stat.icon}`} aria-hidden="true" />
+              <div>
+                <span>{stat.label}</span>
+                <strong>{stat.value}</strong>
+                <p>{stat.detail}</p>
+              </div>
+            </article>
+          ))}
+        </section>
 
-          <div className="student-home-class-grid">
-            {instructorHomeClasses.map((item) => (
-              <NavLink to={item.path} className="student-home-class-card" key={item.title}>
-                <span className={`student-class-dot student-class-dot--${item.initial.toLowerCase()}`}>
-                  {item.initial}
-                </span>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.section} - {item.students}</span>
-                  <span>Class code {item.classCode}</span>
-                </div>
-                <div className="student-home-class-schedule">
-                  <span>{item.schedule}</span>
-                  <span>{item.time}</span>
-                </div>
-                <span className="student-home-card-action" aria-hidden="true" />
-              </NavLink>
-            ))}
-          </div>
+        <section className="instructor-home-dashboard-grid">
+          <section className="instructor-home-panel instructor-home-classes-panel">
+            <div className="instructor-home-panel-heading">
+              <div>
+                <span className="instructor-panel-icon instructor-panel-icon--classes" aria-hidden="true" />
+                <h2>Your Classes</h2>
+              </div>
+              <NavLink to="/instructor/classes">View all classes</NavLink>
+            </div>
+
+            <div className="instructor-home-class-list">
+              {instructorHomeClasses.map((item) => (
+                <NavLink to={item.path} className="instructor-home-class-card" key={item.title}>
+                  <span className={`instructor-class-avatar instructor-class-avatar--${item.initial.toLowerCase()}`}>
+                    {item.title.split(' - ')[0].replace(' ', '\n')}
+                  </span>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <span>{item.section}</span>
+                    <span>{item.students}</span>
+                    <span>Class code {item.classCode}</span>
+                    <small>{item.schedule} · {item.time}</small>
+                  </div>
+                  <span className="student-home-card-action" aria-hidden="true" />
+                </NavLink>
+              ))}
+            </div>
+          </section>
+
+          <section className="instructor-home-panel instructor-home-review-panel">
+            <div className="instructor-home-panel-heading">
+              <div>
+                <span className="instructor-panel-icon instructor-panel-icon--reviews" aria-hidden="true" />
+                <h2>Review Queue Preview</h2>
+              </div>
+              <NavLink to="/instructor/review-queues">View all</NavLink>
+            </div>
+
+            <div className="instructor-home-review-list">
+              {instructorReviewPreview.map((item) => (
+                <NavLink to="/instructor/review-queues" className="instructor-home-review-row" key={item.title}>
+                  <span className="instructor-review-icon" aria-hidden="true" />
+                  <div>
+                    <strong>{item.title}</strong>
+                    <span>{item.course}</span>
+                  </div>
+                  <em>{item.count}</em>
+                  <span>awaiting review</span>
+                  <span className="student-home-card-action" aria-hidden="true" />
+                </NavLink>
+              ))}
+            </div>
+          </section>
         </section>
       </main>
     </div>
@@ -600,9 +696,11 @@ function InstructorStreamPage() {
 
           <div className="instructor-stat-grid">
             {dashboardStats.map((stat) => (
-              <article className="instructor-stat-card" key={stat.label}>
-                <span>{stat.label}</span>
-                <strong>{stat.value}</strong>
+              <article className="instructor-stat-card instructor-stream-stat-card" key={stat.label}>
+                <div>
+                  <span>{stat.label}</span>
+                  <strong>{stat.value}</strong>
+                </div>
               </article>
             ))}
           </div>
@@ -636,7 +734,7 @@ function InstructorStreamPage() {
               setAnnouncement('')
             }}
           >
-            Enter
+            Post
           </button>
         </section>
 
@@ -742,28 +840,110 @@ function InstructorControls({ primaryLabel }) {
 }
 
 function InstructorActivitiesPage() {
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const assignmentItems = [
+    ...activities.map((activity, index) => ({
+      id: `activity-${activity.title}`,
+      title: activity.title,
+      description: index === 0
+        ? 'Write a Java program that displays a header and formatted output.'
+        : index === 1
+          ? 'Create a program that uses loops and conditional statements.'
+          : index === 2
+            ? 'Implement loop patterns and validate user input.'
+            : 'Develop a program to compute and analyze student grades.',
+      type: 'Activity',
+      due: activity.due,
+      submissions: activity.submissions,
+      status: activity.status === 'Missing' ? 'Draft' : 'Published',
+      path: '/instructor/activity/act-loops-01/monitor',
+      accent: ['blue', 'orange', 'purple', 'green'][index % 4],
+    })),
+    {
+      id: 'project-prelim-1',
+      title: 'Prelim Group Project 1',
+      description: 'Create a team repository and upload project specifications.',
+      type: 'Group Project',
+      due: 'Sep 15, 2026, 11:59 PM',
+      submissions: '8 / 10 teams',
+      status: 'Open',
+      path: '/instructor/projects/prelim-group-project-1',
+      accent: 'pink',
+    },
+  ]
+  const filteredAssignments = assignmentItems.filter((item) => {
+    const typeMatch = typeFilter === 'all'
+      || (typeFilter === 'activities' && item.type === 'Activity')
+      || (typeFilter === 'projects' && item.type === 'Group Project')
+    const statusMatch = statusFilter === 'all' || item.status === statusFilter
+
+    return typeMatch && statusMatch
+  })
+
   return (
     <InstructorClassPage activeTab="assignments">
       <div className="student-assignment-panel instructor-assignment-panel">
-        <div className="instructor-assignment-toolbar">
-          <AssignmentSubTabs active="activities" />
-          <InstructorControls primaryLabel="Create Activity" />
+        <div className="instructor-assignment-toolbar instructor-assignment-toolbar--board">
+          <div className="student-segmented-tabs instructor-assignment-filter-tabs" aria-label="Assignment filters">
+            {[
+              ['all', 'All Assignments'],
+              ['activities', 'Activities'],
+              ['projects', 'Group Projects'],
+            ].map(([value, label]) => (
+              <button
+                type="button"
+                className={typeFilter === value ? 'is-active' : undefined}
+                onClick={() => setTypeFilter(value)}
+                key={value}
+              >
+                <span aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="instructor-assignment-toolbar-actions">
+            <label className="instructor-status-filter">
+              <span>Status</span>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="all">All Status</option>
+                <option value="Published">Published</option>
+                <option value="Draft">Draft</option>
+                <option value="Open">Open</option>
+              </select>
+            </label>
+            <InstructorControls primaryLabel="Create Assignment" />
+          </div>
         </div>
 
-        <div className="instructor-data-table" role="table" aria-label="Programming activities">
+        <div className="instructor-data-table instructor-assignment-board-table" role="table" aria-label="Programming activities">
           <div className="instructor-table-row instructor-table-row--head instructor-activity-row" role="row">
-            <span>Activity</span>
+            <span>Assignment</span>
+            <span>Type</span>
             <span>Due Date</span>
             <span>Submissions</span>
+            <span>Status</span>
             <span>Actions</span>
           </div>
-          {activities.map((activity) => (
-            <div className="instructor-table-row instructor-activity-row" role="row" key={activity.title}>
-              <strong>{activity.title}</strong>
-              <span>{activity.due}</span>
-              <span>{activity.submissions}</span>
+          {filteredAssignments.map((item) => (
+            <div className="instructor-table-row instructor-activity-row" role="row" key={item.id}>
+              <div className="instructor-assignment-name">
+                <span className={`instructor-assignment-file instructor-assignment-file--${item.accent}`} aria-hidden="true" />
+                <div>
+                  <strong>{item.title}</strong>
+                  <span>{item.description}</span>
+                  <em>{item.type}</em>
+                </div>
+              </div>
+              <span>{item.type}</span>
+              <span>{item.due}</span>
+              <span className="instructor-submission-progress">
+                {item.submissions}
+                <i aria-hidden="true" />
+              </span>
+              <em className={`instructor-assignment-status instructor-assignment-status--${item.status.toLowerCase()}`}>{item.status}</em>
               <div>
-                <NavLink to="/instructor/activity/act-loops-01/monitor">Monitor</NavLink>
+                <NavLink to={item.path}>View</NavLink>
                 <NavLink to="/instructor/activity/new">Configure</NavLink>
               </div>
             </div>
@@ -1276,16 +1456,26 @@ function ReviewQueuesPage() {
 
   return (
     <div className="instructor-home-page">
-      <header className="student-home-topbar">
+      <header className="student-home-topbar instructor-dashboard-topbar">
         <InstructorUserArea count={6} />
       </header>
 
       <main className="student-home-content instructor-home-content">
-        <h1>Review Queues</h1>
+        <section className="instructor-review-hero">
+          <span className="instructor-review-hero-icon" aria-hidden="true" />
+          <div>
+            <h1>Review Queues</h1>
+            <p>Check pending class submissions, repository reviews, and activities that need your attention.</p>
+          </div>
+        </section>
 
-        <section className="student-home-classes">
-          <div className="student-home-section-heading">
-            <h2>Choose a Class</h2>
+        <section className="instructor-review-panel">
+          <div className="instructor-review-panel-heading">
+            <span className="instructor-review-panel-icon" aria-hidden="true" />
+            <div>
+              <h2>Choose a Class</h2>
+              <p>Select a class to open its review queue.</p>
+            </div>
           </div>
 
           <div className="instructor-review-class-grid">
@@ -1293,13 +1483,13 @@ function ReviewQueuesPage() {
               const isSelected = selectedClass?.title === item.title
 
               return (
-                <div className="instructor-review-class-block" key={item.title}>
+                <div className={`instructor-review-class-block instructor-review-class-block--${item.tone}`} key={item.title}>
                   <button
                     type="button"
-                    className={isSelected ? 'student-home-class-card is-active' : 'student-home-class-card'}
+                    className={isSelected ? 'instructor-review-class-card is-active' : 'instructor-review-class-card'}
                     onClick={() => setSelectedClass(isSelected ? null : item)}
                   >
-                    <span className={`student-class-dot student-class-dot--${item.title.charAt(0).toLowerCase()}`}>
+                    <span className={`instructor-class-avatar instructor-class-avatar--${item.title.charAt(0).toLowerCase()}`}>
                       {item.title.charAt(0)}
                     </span>
                     <div>
@@ -1307,7 +1497,9 @@ function ReviewQueuesPage() {
                       <span>{item.section}</span>
                       <span>{item.signal}</span>
                     </div>
-                    <span className="student-home-card-action" aria-hidden="true" />
+                    <em>{item.pending}</em>
+                    <em className="is-muted">{item.secondary}</em>
+                    <span className={isSelected ? 'student-home-card-action is-open' : 'student-home-card-action'} aria-hidden="true" />
                   </button>
 
                   {isSelected && (
@@ -1349,7 +1541,7 @@ function ReviewQueuesPage() {
                           <div className="instructor-table-row instructor-review-queue-row" role="row" key={row.title}>
                             <strong>{row.title}</strong>
                             <span>{row.due}</span>
-                            <em>{row.status}</em>
+                            <em className={`instructor-review-status instructor-review-status--${row.status.toLowerCase().replaceAll(' ', '-')}`}>{row.status}</em>
                             <span>{row.reviewState}</span>
                             <div>
                               <NavLink to={row.actionPath}>Review</NavLink>
@@ -1934,16 +2126,34 @@ function InstructorPeoplePage() {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [classCode, setClassCode] = useState('')
   const [copyStatus, setCopyStatus] = useState('')
+  const [rosterRows, setRosterRows] = useState(roster)
+  const [actionStatus, setActionStatus] = useState('')
 
   return (
     <InstructorClassPage activeTab="people">
       <div className="student-people-panel instructor-people-panel">
-        <section className="instructor-people-actions">
-          <div>
+        <section className="instructor-people-hero">
+          <div className="instructor-people-hero-copy">
+            <span className="instructor-people-icon" aria-hidden="true" />
             <h2>Class Roster</h2>
-            <span>38 students</span>
+            <p>Manage enrolled students, invitations, and your class access code.</p>
+            <div className="instructor-people-summary-grid">
+              <article>
+                <strong>{rosterRows.length}</strong>
+                <span>students</span>
+              </article>
+              <article>
+                <strong>{rosterRows.filter((student) => student.invite === 'Invited').length}</strong>
+                <span>pending invites</span>
+              </article>
+              <article>
+                <strong>{classCode || 'None'}</strong>
+                <span>active class code</span>
+              </article>
+            </div>
           </div>
-          <div>
+          <img src="/assets/brand/projex-login-mascot.png" alt="" aria-hidden="true" />
+          <div className="instructor-people-actions">
             <button type="button" className="student-primary-action" onClick={() => setInviteOpen(true)}>
               Invite Students
             </button>
@@ -1959,28 +2169,27 @@ function InstructorPeoplePage() {
             </button>
           </div>
         </section>
-        <section className="instructor-generated-code">
-          <span>Active class code</span>
-          {classCode ? (
-            <>
-              <div className="instructor-code-copy-row">
-                <strong>{classCode}</strong>
-                <button
-                  type="button"
-                  onClick={() => {
-                    copyClassCode(classCode)
-                    setCopyStatus('Copied')
-                  }}
-                >
-                  Copy
-                </button>
-              </div>
-              {copyStatus && <em>{copyStatus}</em>}
-            </>
-          ) : (
-            <p>No active generated code.</p>
-          )}
-        </section>
+
+        {classCode && (
+          <section className="instructor-generated-code">
+            <span>Active class code</span>
+            <div className="instructor-code-copy-row">
+              <strong>{classCode}</strong>
+              <button
+                type="button"
+                onClick={() => {
+                  copyClassCode(classCode)
+                  setCopyStatus('Copied')
+                }}
+              >
+                Copy
+              </button>
+            </div>
+            {copyStatus && <em>{copyStatus}</em>}
+          </section>
+        )}
+
+        {actionStatus && <p className="instructor-people-action-status">{actionStatus}</p>}
 
         <div className="instructor-data-table instructor-people-table" role="table" aria-label="Class roster">
           <div className="instructor-table-row instructor-table-row--head" role="row">
@@ -1991,16 +2200,30 @@ function InstructorPeoplePage() {
             <span>Invite</span>
             <span>Actions</span>
           </div>
-          {roster.map((student) => (
+          {rosterRows.map((student) => (
             <div className="instructor-table-row" role="row" key={student.email}>
-              <strong>{student.name}</strong>
+              <div className="instructor-roster-student">
+                <span>{student.name.split(' ').map((part) => part.charAt(0)).join('').slice(0, 2)}</span>
+                <strong>{student.name}</strong>
+              </div>
               <span>{student.email}</span>
               <span>{student.section}</span>
               <em>{student.status}</em>
-              <span>{student.invite}</span>
+              <em className={student.invite === 'Accepted' ? 'is-approved' : 'is-revision'}>{student.invite}</em>
               <div>
-                <button type="button">Manage</button>
-                <button type="button">Remove</button>
+                <button type="button" onClick={() => setActionStatus(`Manage action opened for ${student.name}.`)}>
+                  Manage
+                </button>
+                <button
+                  type="button"
+                  className="instructor-remove-student"
+                  onClick={() => {
+                    setRosterRows((current) => current.filter((row) => row.email !== student.email))
+                    setActionStatus(`${student.name} removed from the visible roster preview.`)
+                  }}
+                >
+                  Remove
+                </button>
               </div>
             </div>
           ))}
