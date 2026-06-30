@@ -10775,3 +10775,540 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+/* Student side board-flow alignment pass. */
+.student-home-page,
+.student-global-page,
+.student-class-page,
+.student-repository-page {
+  color: #07143a;
+  background:
+    radial-gradient(circle, rgba(106, 151, 210, 0.14) 1px, transparent 1.5px) 0 0 / 18px 18px,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 251, 255, 0.96));
+}
+
+.student-home-topbar,
+.student-repository-topbar {
+  min-height: 86px;
+  padding-inline: clamp(28px, 4vw, 62px);
+}
+
+.student-home-content,
+.student-global-content,
+.student-repository-content {
+  width: min(1540px, 100%);
+  padding: 8px clamp(28px, 4vw, 62px) 72px;
+}
+
+.student-home-content h1,
+.student-global-heading h1,
+.student-repository-hero h1 {
+  color: #07143a;
+  font-size: clamp(34px, 3vw, 46px);
+  letter-spacing: 0;
+  line-height: 1.08;
+}
+
+.student-home-section-heading,
+.student-global-heading {
+  border-color: #dce7f5;
+}
+
+.student-home-section-heading h2,
+.student-panel-heading h2,
+.student-people-heading h2,
+.student-detail-card h2,
+.student-work-card h2 {
+  color: #07143a;
+}
+
+.student-home-section-heading a,
+.student-text-link,
+.student-back-link,
+.student-panel-heading a {
+  color: #0b63ff;
+  font-weight: 900;
+}
+
+.student-home-class-grid {
+  gap: 22px;
+}
+
+.student-home-class-card {
+  min-height: 138px;
+  grid-template-columns: 62px minmax(0, 1fr) minmax(170px, auto) 32px;
+  gap: 22px;
+  padding: 24px 26px;
+  border: 1px solid #dce7f5;
+  border-radius: 14px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(249, 252, 255, 0.9)),
+    #ffffff;
+  box-shadow: 0 18px 42px rgba(37, 54, 89, 0.07);
+}
+
+.student-home-class-card:hover {
+  transform: translateY(-2px);
+  border-color: #b9d1ff;
+  box-shadow: 0 22px 52px rgba(37, 88, 194, 0.1);
+}
+
+.student-home-class-card strong {
+  color: #07143a;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.student-home-class-card span,
+.student-home-class-schedule span {
+  color: #53647d;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.student-class-content:not(.instructor-class-content) {
+  padding: 28px clamp(28px, 4vw, 62px) 72px;
+  background: transparent;
+}
+
+.student-class-content:not(.instructor-class-content):not(.student-class-content--wide) {
+  background: transparent;
+}
+
+.student-class-content:not(.instructor-class-content) .student-assignment-panel,
+.student-class-content:not(.instructor-class-content) .student-people-panel,
+.student-class-content:not(.instructor-class-content) .student-class-stream-shell {
+  width: min(1460px, 100%);
+}
+
+.student-assignment-panel,
+.student-people-panel,
+.student-global-panel,
+.student-detail-card,
+.student-work-card,
+.student-repository-hero,
+.student-repository-toolbar,
+.student-view-instructions-card {
+  border: 1px solid #dce7f5;
+  border-radius: 14px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(249, 252, 255, 0.9)),
+    #ffffff;
+  box-shadow: 0 18px 46px rgba(37, 54, 89, 0.07);
+}
+
+.student-assignment-panel {
+  padding: 24px;
+}
+
+.student-assignment-toolbar {
+  gap: 18px;
+  padding-bottom: 18px;
+}
+
+.student-segmented-tabs {
+  padding: 5px;
+  border: 1px solid #dce7f5;
+  border-radius: 12px;
+  background: rgba(248, 251, 255, 0.94);
+}
+
+.student-segmented-tabs a {
+  min-height: 42px;
+  padding-inline: 20px;
+  border-radius: 9px;
+  color: #31435f;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.student-segmented-tabs a.is-active {
+  color: #0b63ff;
+  background: #edf3ff;
+  box-shadow: inset 0 0 0 1px #cfe0ff;
+}
+
+.student-sort-control {
+  color: #53647d;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.student-sort-control select,
+.student-filter-select select,
+.student-action-form-grid input,
+.student-action-form-grid select,
+.student-single-field input {
+  min-height: 44px;
+  border-color: #d6e2f1;
+  border-radius: 10px;
+  color: #14233d;
+  background: #ffffff;
+  font-size: 14px;
+}
+
+.student-list-table {
+  overflow: hidden;
+  border: 1px solid #dce7f5;
+  border-radius: 13px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(37, 54, 89, 0.04);
+}
+
+.student-class-content:not(.instructor-class-content) .student-list-header,
+.student-class-content:not(.instructor-class-content) .student-row-summary {
+  grid-template-columns: 48px minmax(380px, 1fr) minmax(240px, 0.48fr) 42px;
+  min-height: 66px;
+  padding-inline: 20px;
+}
+
+.student-list-header {
+  color: #5c6e89;
+  background: #f8fbff;
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 0.01em;
+}
+
+.student-activity-row {
+  border-color: #e2ebf7;
+}
+
+.student-row-summary strong,
+.student-row-title-link {
+  color: #07143a;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.student-row-summary > span:not(.student-row-icon),
+.student-expanded-activity small,
+.student-expanded-activity .student-activity-status {
+  color: #53647d;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.student-row-icon,
+.student-detail-icon,
+.student-post-icon,
+.student-file-icon {
+  box-shadow: inset 0 0 0 1px rgba(11, 99, 255, 0.08);
+}
+
+.student-expanded-activity {
+  padding: 20px 24px 24px 88px;
+  background:
+    linear-gradient(180deg, rgba(248, 251, 255, 0.95), rgba(255, 255, 255, 0.98)),
+    #ffffff;
+}
+
+.student-attachment {
+  min-height: 76px;
+  border-color: #dce7f5;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.student-attachment strong,
+.student-work-submitted strong,
+.student-empty-work strong,
+.student-todo-item strong,
+.student-repository-index-row strong,
+.student-invitation-card strong {
+  color: #07143a;
+  font-size: 15px;
+}
+
+.student-detail-layout {
+  width: min(1460px, 100%);
+  gap: 24px;
+}
+
+.student-detail-card,
+.student-work-card {
+  padding: 28px;
+}
+
+.student-detail-heading {
+  gap: 18px;
+}
+
+.student-detail-heading h2 {
+  font-size: clamp(25px, 2vw, 34px);
+  line-height: 1.12;
+}
+
+.student-detail-heading p,
+.student-detail-due,
+.student-comments-block,
+.student-work-card,
+.student-private-card,
+.student-work-submitted span,
+.student-empty-work span {
+  color: #53647d;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.student-work-card {
+  gap: 18px;
+}
+
+.student-work-status,
+.student-activity-status,
+.student-todo-type {
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.student-primary-action,
+.student-outline-action,
+.student-global-action,
+.student-comment-button,
+.student-stream-comment-form button,
+.student-composer-card button {
+  min-height: 46px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.student-primary-action,
+.student-global-action,
+.student-composer-card button {
+  background: #0b63ff;
+  box-shadow: 0 12px 28px rgba(11, 99, 255, 0.17);
+}
+
+.student-outline-action,
+.student-comment-button,
+.student-stream-comment-form button {
+  border-color: #cfe0ff;
+  color: #0b63ff;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.student-class-content:not(.instructor-class-content) .student-stream-card {
+  overflow: hidden;
+  border: 1px solid #dce7f5;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 18px 46px rgba(37, 54, 89, 0.07);
+}
+
+.student-class-content:not(.instructor-class-content) .student-composer-card {
+  padding: 22px 24px;
+  border-bottom-color: #dce7f5;
+}
+
+.student-composer-card textarea,
+.student-stream-comment-form input {
+  border-color: #d6e2f1;
+  border-radius: 12px;
+  color: #14233d;
+  background: #ffffff;
+  font-size: 15px;
+}
+
+.student-stream-post {
+  min-height: 88px;
+  padding: 20px 24px;
+  border-color: #e2ebf7;
+}
+
+.student-stream-post p {
+  color: #14233d;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.student-stream-comments {
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.student-stream-comments p {
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.student-people-panel {
+  padding: 30px 34px;
+}
+
+.student-people-list {
+  gap: 10px;
+}
+
+.student-person-row {
+  min-height: 66px;
+  padding: 0 14px;
+  border: 1px solid #e2ebf7;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.student-person-row strong {
+  color: #07143a;
+  font-size: 15px;
+}
+
+.student-person-row span {
+  color: #53647d;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.student-global-panel {
+  gap: 16px;
+  padding: 24px;
+}
+
+.student-collapsible-section {
+  border-color: #dce7f5;
+  border-radius: 13px;
+  box-shadow: 0 10px 28px rgba(37, 54, 89, 0.04);
+}
+
+.student-collapsible-section > button {
+  min-height: 64px;
+  padding-inline: 20px;
+  background: #f8fbff;
+  font-size: 15px;
+}
+
+.student-todo-list,
+.student-repository-index-list,
+.student-invitation-list {
+  gap: 12px;
+  padding: 14px;
+}
+
+.student-todo-item,
+.student-repository-index-row,
+.student-invitation-card {
+  min-height: 82px;
+  padding: 18px;
+  border-color: #dce7f5;
+  border-radius: 13px;
+  box-shadow: 0 10px 28px rgba(37, 54, 89, 0.04);
+}
+
+.student-todo-item:hover,
+.student-repository-index-row:hover,
+.student-invitation-card:hover {
+  transform: translateY(-1px);
+  border-color: #b9d1ff;
+}
+
+.student-repository-hero {
+  padding: clamp(28px, 4vw, 44px);
+}
+
+.student-repository-hero p,
+.student-repository-breadcrumb,
+.student-repository-toolbar span,
+.student-repository-index-row span,
+.student-repository-index-row em {
+  color: #53647d;
+}
+
+.student-repository-toolbar {
+  min-height: 66px;
+  padding: 12px 16px;
+}
+
+.student-repository-grid {
+  gap: 18px;
+}
+
+.student-repo-card,
+.student-spec-card,
+.student-commit-list,
+.student-code-card,
+.student-repository-file-panel {
+  border: 1px solid #dce7f5;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 18px 46px rgba(37, 54, 89, 0.07);
+}
+
+.student-action-modal,
+.student-feedback-modal,
+.student-submit-modal {
+  border: 1px solid rgba(220, 231, 246, 0.9);
+  border-radius: 20px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.9)),
+    #ffffff;
+  box-shadow: 0 28px 80px rgba(16, 31, 58, 0.22);
+}
+
+@media (max-width: 1100px) {
+  .student-home-class-card,
+  .student-class-content:not(.instructor-class-content) .student-list-header,
+  .student-class-content:not(.instructor-class-content) .student-row-summary {
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+  }
+
+  .student-home-card-action,
+  .student-class-content:not(.instructor-class-content) .student-list-header span:last-child,
+  .student-class-content:not(.instructor-class-content) .student-row-summary .student-more {
+    display: none;
+  }
+
+  .student-detail-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .student-home-topbar,
+  .student-repository-topbar {
+    min-height: 70px;
+    padding-inline: 18px;
+  }
+
+  .student-home-content,
+  .student-global-content,
+  .student-repository-content,
+  .student-class-content:not(.instructor-class-content) {
+    padding: 16px 18px 44px;
+  }
+
+  .student-home-class-card,
+  .student-todo-item,
+  .student-repository-index-row,
+  .student-invitation-card {
+    grid-template-columns: 1fr;
+  }
+
+  .student-assignment-panel,
+  .student-people-panel,
+  .student-detail-card,
+  .student-work-card,
+  .student-global-panel {
+    padding: 20px;
+  }
+
+  .student-assignment-toolbar,
+  .student-global-heading,
+  .student-panel-heading {
+    align-items: stretch;
+  }
+
+  .student-segmented-tabs,
+  .student-assignment-toolbar {
+    width: 100%;
+  }
+
+  .student-segmented-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .student-expanded-activity {
+    padding: 18px;
+  }
+}
