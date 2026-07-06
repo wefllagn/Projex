@@ -1000,10 +1000,60 @@ function ActivityDetailPage({ initialSubmitted = false, openFeedback = false }) 
 }
 
 function CodingWorkspacePage() {
-  const [resultState, setResultState] = useState('success')
+  const [resultState, setResultState] = useState('idle')
+  const [activeEditorTab, setActiveEditorTab] = useState('Exercise1.java')
+  const [paneSizes, setPaneSizes] = useState({
+    instructions: 360,
+    explorer: 240,
+    output: 470,
+    tests: 190,
+  })
   const [confirmOpen, setConfirmOpen] = useState(false)
   const navigate = useNavigate()
   const failed = resultState === 'error'
+  const passed = resultState === 'success'
+  const readmePreview = '# Prelim Programming Exercise 1\n\nWrite and run the Java hello world activity.'
+
+  const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
+  const startPaneResize = (pane, event) => {
+    event.preventDefault()
+    const startX = event.clientX
+    const startY = event.clientY
+    const startSizes = paneSizes
+
+    const handleMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX
+      const deltaY = moveEvent.clientY - startY
+
+      setPaneSizes(() => {
+        if (pane === 'instructions') {
+          return { ...startSizes, instructions: clamp(startSizes.instructions + deltaX, 300, 620) }
+        }
+
+        if (pane === 'explorer') {
+          return { ...startSizes, explorer: clamp(startSizes.explorer + deltaX, 150, 360) }
+        }
+
+        if (pane === 'output') {
+          return { ...startSizes, output: clamp(startSizes.output - deltaX, 320, 760) }
+        }
+
+        return { ...startSizes, tests: clamp(startSizes.tests - deltaY, 170, 420) }
+      })
+    }
+
+    const stopResize = () => {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', stopResize)
+    }
+
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', stopResize)
+  }
+
+  const runTests = () => {
+    setResultState((current) => (current === 'success' ? 'error' : 'success'))
+  }
 
   return (
     <div className="student-coding-page">
@@ -1013,27 +1063,21 @@ function CodingWorkspacePage() {
           <span>Lab Activity 1</span>
           <strong>Exercise1.java</strong>
         </nav>
-        <div className="student-coding-toolbar" aria-label="Workspace actions">
-          <button type="button" className="student-workspace-button student-workspace-button--save">
-            Save
-          </button>
-          <button type="button" className="student-workspace-button student-workspace-button--fullscreen">
-            Fullscreen
-          </button>
-          <button type="button" className="student-workspace-button student-workspace-button--run" onClick={() => setResultState('success')}>
-            Run Code
-          </button>
-          <button type="button" className="student-workspace-button student-workspace-button--more" aria-label="More workspace actions">
-            <span aria-hidden="true" />
-          </button>
-        </div>
         <div className="student-coding-user">
           <StudentNotificationMenu count={2} />
           <StudentProfileMenu />
         </div>
       </header>
 
-      <main className="student-coding-shell">
+      <main
+        className="student-coding-shell"
+        style={{
+          '--instruction-pane-width': `${paneSizes.instructions}px`,
+          '--explorer-pane-width': `${paneSizes.explorer}px`,
+          '--output-pane-width': `${paneSizes.output}px`,
+          '--tests-pane-height': `${paneSizes.tests}px`,
+        }}
+      >
         <aside className="student-coding-instructions">
           <div className="student-coding-activity-title">
             <span>Lab Activity 1</span>
@@ -1075,32 +1119,62 @@ function CodingWorkspacePage() {
             <span>Saved a few seconds ago</span>
           </div>
         </aside>
+        <div
+          className="student-pane-resizer student-pane-resizer--instructions"
+          onPointerDown={(event) => startPaneResize('instructions', event)}
+          role="separator"
+          aria-label="Resize activity instructions pane"
+          tabIndex="0"
+        />
 
         <section className="student-editor-area">
           <div className="student-editor-tabs">
-            <span>Exercise1.java</span>
-            <button type="button" aria-label="Close file">×</button>
+            {['Exercise1.java', 'README.md'].map((tab) => (
+              <button
+                type="button"
+                className={activeEditorTab === tab ? 'is-active' : undefined}
+                onClick={() => setActiveEditorTab(tab)}
+                key={tab}
+              >
+                {tab}
+              </button>
+            ))}
+            <button type="button" className="student-editor-tab-add" aria-label="Add editor tab">+</button>
           </div>
           <div className="student-editor-workbench">
             <aside className="student-editor-explorer" aria-label="Project files">
               <strong>EXPLORER</strong>
               <span className="is-open">PRELIM-PROGRAMMING-EXERCISE-1</span>
               <span className="is-folder">src</span>
-              <em className="is-file is-active">Exercise1.java</em>
+              <em className={activeEditorTab === 'Exercise1.java' ? 'is-file is-active' : 'is-file'}>Exercise1.java</em>
               <span className="is-folder">docs</span>
-              <em className="is-file">README.md</em>
+              <em className={activeEditorTab === 'README.md' ? 'is-file is-active' : 'is-file'}>README.md</em>
               <em className="is-file">.gitignore</em>
-              <small>OUTLINE</small>
-              <small>TIMELINE</small>
             </aside>
-            <pre className="student-code-editor">{workspaceCode}</pre>
+            <div
+              className="student-pane-resizer student-pane-resizer--explorer"
+              onPointerDown={(event) => startPaneResize('explorer', event)}
+              role="separator"
+              aria-label="Resize file explorer pane"
+              tabIndex="0"
+            />
+            <pre className="student-code-editor">
+              {activeEditorTab === 'Exercise1.java' ? workspaceCode : readmePreview}
+            </pre>
           </div>
           <footer className="student-editor-status">
             <span>Line 13, Col 42</span>
             <span>Spaces: 4</span>
-            <span>Java</span>
+            <span>{activeEditorTab.endsWith('.java') ? 'Java' : 'Markdown'}</span>
           </footer>
         </section>
+        <div
+          className="student-pane-resizer student-pane-resizer--output"
+          onPointerDown={(event) => startPaneResize('output', event)}
+          role="separator"
+          aria-label="Resize output pane"
+          tabIndex="0"
+        />
 
         <section className="student-output-area">
           <div className="student-output-header">
@@ -1116,7 +1190,6 @@ function CodingWorkspacePage() {
 Process finished with exit code 0`}</pre>
           {failed && (
             <div className="student-result-details">
-              <button type="button" aria-label="Close result details" />
               <h2>Result Details</h2>
               <strong>Wrong Answer</strong>
               <span>Testcase 2</span>
@@ -1129,13 +1202,20 @@ Process finished with exit code 0`}</pre>
             </div>
           )}
         </section>
+        <div
+          className="student-pane-resizer student-pane-resizer--tests"
+          onPointerDown={(event) => startPaneResize('tests', event)}
+          role="separator"
+          aria-label="Resize test results pane"
+          tabIndex="0"
+        />
 
         <section className="student-tests-area">
           <div className="student-tests-tabs">
             <button type="button" className="is-active">Sample Input Testcases</button>
             <button type="button">Custom Input Testcase</button>
             <span className={failed ? 'student-test-summary is-error' : 'student-test-summary'}>
-              {failed ? '1 of 2 sample tests failed' : 'All sample tests passed'}
+              {failed ? '1 of 2 sample tests failed' : passed ? 'All sample tests passed' : 'Run tests to see result'}
             </span>
           </div>
 
@@ -1154,8 +1234,8 @@ Process finished with exit code 0`}</pre>
 *         hello world         *
 *                             *
 *******************************`}</pre>
-              <strong className={failed ? 'is-failed' : 'is-passed'}>
-                {failed ? 'Failed' : 'Passed'}
+              <strong className={failed ? 'is-failed' : passed ? 'is-passed' : undefined}>
+                {failed ? 'Failed' : passed ? 'Passed' : 'Not run'}
               </strong>
             </div>
           </div>
@@ -1163,25 +1243,10 @@ Process finished with exit code 0`}</pre>
       </main>
 
       <footer className="student-coding-actions">
-        <div className="student-state-switch">
-          <button
-            type="button"
-            className={!failed ? 'is-active' : undefined}
-            onClick={() => setResultState('success')}
-          >
-            Pass state
-          </button>
-          <button
-            type="button"
-            className={failed ? 'is-active' : undefined}
-            onClick={() => setResultState('error')}
-          >
-            Failed testcase
-          </button>
-        </div>
         {failed && <span className="student-coding-failure">1 of 2 sample tests failed</span>}
-        <button type="button" className="student-run-tests" onClick={() => setResultState('success')}>
-          Run Tests
+        {passed && <span className="student-coding-success">All sample tests passed</span>}
+        <button type="button" className="student-run-tests" onClick={runTests}>
+          Run Code
         </button>
         <button type="button" className="student-submit-code" onClick={() => setConfirmOpen(true)}>
           Submit

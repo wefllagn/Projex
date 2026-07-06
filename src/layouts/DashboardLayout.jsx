@@ -3,16 +3,16 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { courseOptions, roles, sectionOptions } from '../data/projexData.js'
 
 const studentClasses = [
-  { label: 'IT 112 - Computer Programming 1', initial: 'I', active: true },
-  { label: 'CS 111', initial: 'C' },
-  { label: 'IT 123', initial: 'I' },
-  { label: 'MATH 101', initial: 'M' },
+  { label: 'IT 112 - Computer Programming 1', code: 'IT 112', classCode: '9346', name: 'Computer Programming', initial: 'I', active: true },
+  { label: 'CS 111', code: 'CS 111', name: 'Introduction to Computing', initial: 'C' },
+  { label: 'IT 123', code: 'IT 123', name: 'Platform Technologies', initial: 'I' },
+  { label: 'MATH 101', code: 'MATH 101', name: 'College Algebra', initial: 'M' },
 ]
 
 const instructorClasses = [
-  { label: 'IT 112 - Computer Programming 1', initial: 'I', active: true },
-  { label: 'CS 111', initial: 'C' },
-  { label: 'IT 123', initial: 'I' },
+  { label: 'IT 112 - Computer Programming 1', code: 'IT 112', classCode: '9446', name: 'Computer Programming 1', initial: 'I', active: true },
+  { label: 'CS 111', code: 'CS 111', name: 'Introduction to Computing', initial: 'C' },
+  { label: 'IT 123', code: 'IT 123', name: 'Platform Technologies', initial: 'I' },
 ]
 
 function generateClassCode() {
@@ -33,6 +33,44 @@ function StudentSidebarLink({ to, children, end = false, count, icon }) {
       <span className={`student-sidebar__icon student-sidebar__icon--${icon}`} aria-hidden="true" />
       <span>{children}</span>
       {count && <span className="student-sidebar__count">{count}</span>}
+    </NavLink>
+  )
+}
+
+function SidebarBrand({ to, label, collapsed, onToggle }) {
+  return (
+    <div className="student-sidebar-brand-row">
+      <button
+        type="button"
+        className="student-sidebar-toggle"
+        onClick={onToggle}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        <span aria-hidden="true" />
+      </button>
+      <NavLink to={to} className="student-brand" aria-label={label}>
+        <img src="/assets/brand/projex-sidebar-logo.png" alt="Projex" />
+      </NavLink>
+    </div>
+  )
+}
+
+function SidebarClassLink({ item, to, active }) {
+  return (
+    <NavLink
+      to={to}
+      className={active ? 'student-class-link is-active' : 'student-class-link'}
+    >
+      <span className={`student-class-dot student-class-dot--${item.initial.toLowerCase()}`}>
+        {item.initial}
+      </span>
+      <span className="student-class-link__text">
+        <strong>
+          {item.code}
+          {item.classCode ? ` - ${item.classCode}` : ''}
+        </strong>
+        <small>{item.name}</small>
+      </span>
     </NavLink>
   )
 }
@@ -105,14 +143,18 @@ function CreateClassModal({ onClose }) {
 
 function InstructorDashboardLayout() {
   const [createClassOpen, setCreateClassOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const location = useLocation()
 
   return (
-    <div className="student-app-shell">
+    <div className={sidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'}>
       <aside className="student-sidebar">
-        <NavLink to="/instructor" className="student-brand" aria-label="Projex instructor home">
-          <img src="/assets/brand/projex-sidebar-logo.png" alt="Projex" />
-        </NavLink>
+        <SidebarBrand
+          to="/instructor"
+          label="Projex instructor home"
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((current) => !current)}
+        />
 
         <nav className="student-sidebar__nav" aria-label="Instructor navigation">
           <StudentSidebarLink to="/instructor" end icon="home">
@@ -126,16 +168,12 @@ function InstructorDashboardLayout() {
             <p>MY CLASSES</p>
             <div className="student-class-list">
               {instructorClasses.map((item) => (
-                <NavLink
+                <SidebarClassLink
                   key={item.label}
                   to="/instructor/classes"
-                  className={item.active && location.pathname.startsWith('/instructor/classes') ? 'student-class-link is-active' : 'student-class-link'}
-                >
-                  <span className={`student-class-dot student-class-dot--${item.initial.toLowerCase()}`}>
-                    {item.initial}
-                  </span>
-                  <span>{item.label}</span>
-                </NavLink>
+                  item={item}
+                  active={item.active && location.pathname.startsWith('/instructor/classes')}
+                />
               ))}
             </div>
           </div>
@@ -160,16 +198,22 @@ function InstructorDashboardLayout() {
 
 function StudentDashboardLayout() {
   const location = useLocation()
+  const isCodingWorkspace = location.pathname.includes('/workspace')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(isCodingWorkspace)
+  const effectiveSidebarCollapsed = sidebarCollapsed || isCodingWorkspace
   const isInsideStudentClass = location.pathname.startsWith('/student/classes')
     || location.pathname.startsWith('/student/activity')
     || location.pathname.startsWith('/student/projects')
 
   return (
-    <div className="student-app-shell">
+    <div className={`${effectiveSidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'}${isCodingWorkspace ? ' is-coding-workspace' : ''}`}>
       <aside className="student-sidebar">
-        <NavLink to="/student" className="student-brand" aria-label="Projex student home">
-          <img src="/assets/brand/projex-sidebar-logo.png" alt="Projex" />
-        </NavLink>
+        <SidebarBrand
+          to="/student"
+          label="Projex student home"
+          collapsed={effectiveSidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((current) => !current)}
+        />
 
         <nav className="student-sidebar__nav" aria-label="Student navigation">
           <StudentSidebarLink to="/student" end icon="home">
@@ -183,16 +227,12 @@ function StudentDashboardLayout() {
             <p>MY CLASSES</p>
             <div className="student-class-list">
               {studentClasses.map((item) => (
-                <NavLink
+                <SidebarClassLink
                   key={item.label}
                   to="/student/classes"
-                  className={item.active && isInsideStudentClass ? 'student-class-link is-active' : 'student-class-link'}
-                >
-                  <span className={`student-class-dot student-class-dot--${item.initial.toLowerCase()}`}>
-                    {item.initial}
-                  </span>
-                  <span>{item.label}</span>
-                </NavLink>
+                  item={item}
+                  active={item.active && isInsideStudentClass}
+                />
               ))}
             </div>
           </div>

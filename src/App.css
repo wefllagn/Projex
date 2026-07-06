@@ -3071,7 +3071,7 @@ textarea:focus-visible {
 .student-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 1000;
   display: grid;
   place-items: center;
   padding: 24px;
@@ -3733,7 +3733,7 @@ textarea:focus-visible {
 .student-submit-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 30;
+  z-index: 1000;
   display: grid;
   place-items: center;
   padding: 24px;
@@ -12221,4 +12221,492 @@ textarea:focus-visible {
   .student-assignment-toolbar--board .student-sort-control {
     grid-template-columns: 1fr;
   }
+}
+
+/* Sidebar collapse and compiler workspace pane controls. */
+.student-app-shell {
+  transition: grid-template-columns 180ms ease;
+}
+
+.student-app-shell.is-sidebar-collapsed {
+  grid-template-columns: 84px minmax(0, 1fr);
+}
+
+.student-sidebar {
+  transition: width 180ms ease, padding 180ms ease;
+}
+
+.student-sidebar-brand-row {
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.student-sidebar-toggle {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: #23334f;
+  background: rgba(226, 236, 250, 0.78);
+  cursor: pointer;
+}
+
+.student-sidebar-toggle:hover {
+  background: #e4edff;
+}
+
+.student-sidebar-toggle span,
+.student-sidebar-toggle span::before,
+.student-sidebar-toggle span::after {
+  width: 17px;
+  height: 2px;
+  display: block;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.student-sidebar-toggle span {
+  position: relative;
+}
+
+.student-sidebar-toggle span::before,
+.student-sidebar-toggle span::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+
+.student-sidebar-toggle span::before {
+  top: -6px;
+}
+
+.student-sidebar-toggle span::after {
+  top: 6px;
+}
+
+.student-sidebar-brand-row .student-brand {
+  min-width: 0;
+}
+
+.student-class-link {
+  grid-template-columns: 42px minmax(0, 1fr);
+  min-height: 64px;
+  padding: 10px 12px;
+}
+
+.student-class-link__text {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  overflow: visible;
+  white-space: normal;
+}
+
+.student-class-link__text strong,
+.student-class-link__text small {
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-class-link__text strong {
+  color: inherit;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.student-class-link__text small {
+  color: #53647d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.student-class-link.is-active .student-class-link__text small,
+.student-class-link:hover .student-class-link__text small {
+  color: #315fbd;
+}
+
+.student-app-shell.is-sidebar-collapsed .student-sidebar {
+  padding-inline: 14px;
+  overflow-x: hidden;
+}
+
+.student-app-shell.is-sidebar-collapsed .student-sidebar-brand-row {
+  grid-template-columns: 1fr;
+}
+
+.student-app-shell.is-sidebar-collapsed .student-brand,
+.student-app-shell.is-sidebar-collapsed .student-sidebar__link > span:not(.student-sidebar__icon):not(.student-sidebar__count),
+.student-app-shell.is-sidebar-collapsed .student-sidebar__group p,
+.student-app-shell.is-sidebar-collapsed .student-class-link__text {
+  display: none;
+}
+
+.student-app-shell.is-sidebar-collapsed .student-sidebar__link,
+.student-app-shell.is-sidebar-collapsed .student-class-link,
+.student-app-shell.is-sidebar-collapsed .instructor-sidebar-button {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  min-height: 50px;
+  padding: 10px;
+}
+
+.student-app-shell.is-sidebar-collapsed .student-sidebar__count {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.student-app-shell.is-sidebar-collapsed .student-sidebar__link,
+.student-app-shell.is-sidebar-collapsed .student-class-link {
+  position: relative;
+}
+
+.student-app-shell.is-sidebar-collapsed .student-sidebar__icon,
+.student-app-shell.is-sidebar-collapsed .student-class-dot {
+  margin: 0;
+}
+
+.student-app-shell.is-coding-workspace .student-sidebar {
+  border-right-color: #dce7f5;
+}
+
+.student-coding-shell {
+  grid-template-columns:
+    var(--instruction-pane-width, 360px)
+    8px
+    minmax(430px, 1fr)
+    8px
+    var(--output-pane-width, 470px);
+  grid-template-rows: minmax(0, 1fr) 8px var(--tests-pane-height, 250px);
+  padding: 16px 24px 0;
+}
+
+.student-coding-instructions {
+  grid-column: 1;
+  grid-row: 1 / 4;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  margin-right: 0;
+}
+
+.student-coding-activity-title {
+  padding: 22px 24px 18px;
+}
+
+.student-coding-activity-title h1 {
+  max-width: 270px;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.student-coding-tabs button {
+  min-height: 48px;
+}
+
+.student-coding-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 26px 22px;
+  scrollbar-color: #b9c9e2 transparent;
+}
+
+.student-coding-scroll h2 {
+  margin: 0 0 14px;
+  font-size: 16px;
+}
+
+.student-coding-scroll h2:not(:first-child) {
+  margin-top: 26px;
+}
+
+.student-coding-scroll ol {
+  gap: 14px;
+  padding-left: 24px;
+}
+
+.student-coding-scroll li {
+  padding-left: 4px;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.student-editor-area {
+  grid-column: 3;
+  grid-row: 1;
+  border-radius: 10px 0 0 0;
+}
+
+.student-output-area {
+  grid-column: 5;
+  grid-row: 1;
+  border-radius: 0 10px 0 0;
+}
+
+.student-tests-area {
+  grid-column: 3 / 6;
+  grid-row: 3;
+}
+
+.student-editor-workbench {
+  grid-template-columns: var(--explorer-pane-width, 240px) 8px minmax(0, 1fr);
+}
+
+.student-code-editor {
+  grid-column: 3;
+  overflow: auto;
+}
+
+.student-pane-resizer {
+  position: relative;
+  z-index: 7;
+  background:
+    linear-gradient(90deg, transparent 0 3px, rgba(11, 99, 255, 0.22) 3px 5px, transparent 5px);
+  touch-action: none;
+}
+
+.student-pane-resizer:hover,
+.student-pane-resizer:focus-visible {
+  background:
+    linear-gradient(90deg, transparent 0 2px, rgba(11, 99, 255, 0.48) 2px 6px, transparent 6px);
+  outline: none;
+}
+
+.student-pane-resizer--instructions {
+  grid-column: 2;
+  grid-row: 1 / 4;
+  cursor: col-resize;
+}
+
+.student-pane-resizer--output {
+  grid-column: 4;
+  grid-row: 1;
+  cursor: col-resize;
+}
+
+.student-pane-resizer--explorer {
+  grid-column: 2;
+  grid-row: 1;
+  cursor: col-resize;
+  background:
+    linear-gradient(90deg, transparent 0 3px, rgba(106, 130, 166, 0.38) 3px 5px, transparent 5px);
+}
+
+.student-pane-resizer--tests {
+  grid-column: 3 / 6;
+  grid-row: 2;
+  cursor: row-resize;
+  background:
+    linear-gradient(180deg, transparent 0 3px, rgba(11, 99, 255, 0.24) 3px 5px, transparent 5px);
+}
+
+.student-pane-resizer--tests:hover,
+.student-pane-resizer--tests:focus-visible {
+  background:
+    linear-gradient(180deg, transparent 0 2px, rgba(11, 99, 255, 0.5) 2px 6px, transparent 6px);
+}
+
+.student-editor-tabs {
+  display: flex;
+  align-items: end;
+  gap: 4px;
+  padding-left: 14px;
+}
+
+.student-editor-tabs button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 6px;
+  padding: 0 16px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #c8d5e6;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.student-editor-tabs button.is-active {
+  color: #ffffff;
+  border-bottom-color: #1f6fff;
+  background: rgba(31, 111, 255, 0.14);
+}
+
+.student-editor-tabs .student-editor-tab-add {
+  width: 38px;
+  padding: 0;
+  color: #79a8ff;
+  font-size: 24px;
+}
+
+.student-result-details {
+  right: 18px;
+  bottom: 18px;
+}
+
+.student-test-summary:not(.is-error)::after {
+  opacity: 0.35;
+}
+
+.student-tests-row strong:not(.is-passed):not(.is-failed) {
+  color: #60718c;
+}
+
+.student-coding-actions {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.student-coding-success {
+  justify-self: end;
+  color: #10864c;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+@media (max-width: 1280px) {
+  .student-coding-shell {
+    grid-template-columns:
+      minmax(280px, var(--instruction-pane-width, 340px))
+      8px
+      minmax(380px, 1fr)
+      8px
+      minmax(300px, var(--output-pane-width, 420px));
+  }
+}
+
+@media (max-width: 900px) {
+  .student-app-shell.is-sidebar-collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .student-coding-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+    overflow: auto;
+  }
+
+  .student-coding-instructions,
+  .student-editor-area,
+  .student-output-area,
+  .student-tests-area {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .student-pane-resizer {
+    display: none;
+  }
+}
+
+/* Compiler action cleanup. */
+.student-coding-topbar {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.student-coding-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 28;
+  min-height: 78px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-self: end;
+  border-top: 1px solid #dfe7f1;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(18px);
+}
+
+.student-run-tests {
+  border-color: #243451;
+  color: #14233d;
+  background: #ffffff;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.student-run-tests:hover,
+.student-run-tests:focus-visible {
+  border-color: #0b63ff;
+  color: #ffffff;
+  background: #0b63ff;
+  box-shadow: 0 12px 26px rgba(11, 99, 255, 0.18);
+  outline: none;
+}
+
+/* Compiler viewport fit: keep nav/actions visible and scroll inside panes only. */
+.student-app-shell.is-coding-workspace,
+.student-main:has(.student-coding-page) {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+.student-coding-page {
+  height: 100vh;
+  max-height: 100vh;
+  min-height: 0;
+  grid-template-rows: 72px minmax(0, 1fr) 66px;
+  overflow: hidden;
+}
+
+.student-coding-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  min-height: 72px;
+}
+
+.student-coding-shell {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  grid-template-rows: minmax(0, 1fr) 8px minmax(145px, var(--tests-pane-height, 190px));
+  padding: 12px 20px 0;
+}
+
+.student-coding-instructions,
+.student-editor-area,
+.student-output-area,
+.student-tests-area {
+  min-height: 0;
+}
+
+.student-coding-instructions {
+  overflow: hidden;
+}
+
+.student-coding-scroll {
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.student-tests-area {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.student-tests-table {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.student-coding-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 70;
+  min-height: 66px;
+  padding-block: 10px;
 }
