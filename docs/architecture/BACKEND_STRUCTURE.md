@@ -1,0 +1,216 @@
+# Projex Backend Structure
+
+## Decision
+
+Projex will use a **feature-based modular monolith** for the planned Node.js/Express/TypeScript backend. This document describes a future structure; Phase 0 does not create these folders or implement backend code.
+
+The frontend remains in its current React/Vite JavaScript/JSX structure. The backend is added alongside it only in a later approved phase.
+
+## Proposed structure
+
+```text
+backend/
+  src/
+    app.ts
+    server.ts
+    config/
+      env.ts
+    middleware/
+      authenticate.ts
+      authorize.ts
+      csrf.ts
+      error-handler.ts
+      request-context.ts
+      rate-limit.ts
+    features/
+      auth/
+      users/
+      classes/
+      class-members/
+      activities/
+      test-cases/
+      submissions/
+      assessments/
+      feedback/
+      project-tasks/
+      teams/
+      repositories/
+      repository-members/
+      repository-invitations/
+      notifications/
+      analytics/
+    infrastructure/
+      database/
+      git/
+      java/
+      job-queue/
+      storage/
+      logging/
+    shared/
+      errors/
+      http/
+      ids/
+      pagination/
+      time/
+      types/
+  prisma/
+    schema.prisma
+    migrations/
+    seed.ts
+  tests/
+    integration/
+    support/
+```
+
+Each feature directory should normally contain:
+
+```text
+feature-name/
+  feature.routes.ts
+  feature.controller.ts
+  feature.service.ts
+  feature.repository.ts
+  feature.schemas.ts
+  feature.types.ts
+  feature.test.ts
+```
+
+Names may be singular when the feature represents a process rather than a collection, but the role of each file must remain recognizable. Small modules may begin with fewer files; they must not combine HTTP, business rules, and persistence in one large file.
+
+## Layer responsibilities
+
+### Routes
+
+- Declare paths beneath `/api/v1`.
+- Apply authentication, role/permission, CSRF, rate-limit, and validation middleware.
+- Bind HTTP methods to controllers.
+- Contain no database calls or domain decisions.
+
+### Controllers
+
+- Translate validated HTTP input into a service command/query.
+- Read the authenticated principal from server-created request context.
+- Select the correct HTTP status and standard response envelope.
+- Pass errors to the central error handler.
+- Contain no Prisma calls, shell execution, or complex authorization logic.
+
+### Services
+
+- Own use-case orchestration and business rules.
+- Enforce backend role, ownership, membership, lifecycle, deadline, and visibility checks.
+- Coordinate transactions through repositories/database infrastructure.
+- Enqueue work and call infrastructure through typed interfaces.
+- Build role-appropriate result objects; for example, exclude hidden tests and detailed similarity information from student results.
+
+### Repositories
+
+- Encapsulate Prisma queries for the owning feature.
+- Use explicit selections rather than returning every column by default.
+- Accept transaction clients when a service coordinates an atomic operation.
+- Keep persistence mapping out of controllers.
+- Do not perform authorization merely because a matching row exists; services authorize the action.
+
+### Validation schemas
+
+- Use Zod for params, query strings, request bodies, environment variables, job payloads, and infrastructure results.
+- Reject unknown or unsafe fields when appropriate.
+- Normalize only safe transport concerns; business defaults remain in services.
+- Export inferred TypeScript input types where useful.
+- Never accept a frontend-provided role, owner ID, storage path, compiler command, or Git command as authoritative.
+
+### Tests
+
+- Unit-test service rules and validation schemas.
+- Integration-test routes, middleware, Prisma repositories, transactions, and authorization against a test database.
+- Contract-test standard response envelopes and student/instructor/admin data visibility.
+- Concurrency-test server-assigned submission attempt numbering, attempt limits, idempotent retries, and immutable attempt history.
+- Worker-test Java timeouts/limits and Git path/argument validation.
+- Add regression tests before changing a functionalized UI workflow.
+
+## Feature ownership
+
+| Feature | Primary responsibility |
+| --- | --- |
+| `auth` | Login, logout, session creation/rotation/revocation, current principal, password verification. |
+| `users` | User profiles, account status, and `STUDENT`, `INSTRUCTOR`, `ADMIN` role assignments. |
+| `classes` | Class workspace identity, course/section/term context, instructor assignment, and unique class-code generation/rotation/revocation. |
+| `class-members` | Code-based student join, duplicate prevention, active/deactivated membership state, historical membership preservation, and authorization queries. Full class invitation lifecycle is a later enhancement. |
+| `activities` | Title/instructions, publication state, due date, visibility, `maxAttempts` (1-3), starter code, total points, programming-language setting, and activity lifecycle. |
+| `test-cases` | Visible/hidden test authoring, ordering, points, secure retrieval for workers. |
+| `submissions` | Immutable submission attempts, server-owned attempt numbering, source snapshots, submitted timestamps, late/status fields, assessment initiation, and attempt-history retrieval. |
+| `assessments` | Compiler/test jobs, preserved per-test results, `automatedScore`, optional test-level adjusted points, `instructorAdjustment`, derived `finalScore`, review timestamps, and similarity review references. |
+| `feedback` | Instructor-only feedback/grading drafts, rubric results, release timestamp, released student projection, and notification coordination. |
+| `project-tasks` | Repository-linked academic tasks, assignees, status, due dates, linked commits. |
+| `teams` | Project teams, members, representative, team membership rules. |
+| `repositories` | Repository lifecycle, local bare-repository identity, branches/commits/files view, project linkage and readiness. |
+| `repository-members` | Repository collaborator membership, permissions and removal. |
+| `repository-invitations` | Repository invite creation, acceptance, decline, expiry and audit state. |
+| `notifications` | In-app notification creation, listing, unread counts and read state. |
+| `analytics` | Authorized read models derived from persisted academic activity; no ownership of source transactions. |
+
+## Infrastructure ownership
+
+| Infrastructure module | Responsibility | Must not do |
+| --- | --- | --- |
+| `database` | Prisma singleton/factory, transaction helpers, health checks, migration support | Decide feature authorization or expose Prisma directly to controllers. |
+| `git` | Validated Git argument arrays, bare repos, worktrees, locks, result parsing | Accept shell strings, client paths, or use GitHub/GitLab APIs for core behavior. |
+| `java` | Worker protocol, compile/run limits, output normalization, temp cleanup | Execute in the API process or accept client shell commands. |
+| `job-queue` | Initially PostgreSQL-backed durable job records, atomic claim/lease, retry fields, bounded concurrency, terminal state, and separate worker coordination | Require Redis/RabbitMQ, hide business transitions, or run arbitrary payloads. |
+| `storage` | Server-owned paths, file metadata, bounded reads/writes, cleanup | Trust filenames/paths from clients or expose storage roots. |
+| `logging` | Structured logs, redaction, correlation IDs, security/job events | Log secrets, cookies, passwords, full source code or hidden tests. |
+
+## Dependency direction
+
+```mermaid
+flowchart LR
+    Routes --> Controllers
+    Controllers --> Services
+    Services --> FeatureRepositories["Feature repositories"]
+    Services --> InfraInterfaces["Infrastructure interfaces"]
+    FeatureRepositories --> Database["Database infrastructure"]
+    InfraInterfaces --> Git["Git infrastructure"]
+    InfraInterfaces --> Java["Java infrastructure"]
+    InfraInterfaces --> Queue["Job queue"]
+    InfraInterfaces --> Storage["Storage"]
+```
+
+Dependencies point inward toward use cases. Infrastructure must not import Express controllers or frontend code. Controllers must not import Prisma, child-process APIs, or filesystem APIs.
+
+## Cross-feature collaboration
+
+- A service may call another feature's public service/query interface; it must not reach into that feature's repository tables casually.
+- The owning service controls mutations. For example, feedback release may ask submissions for authorization/status, but it must not rewrite submission rows directly.
+- Transactions spanning features are coordinated at the service layer with an explicit transaction client.
+- Notifications and analytics should consume committed domain events or explicit post-transaction calls. They must not make the primary academic transaction dependent on optional analytics work.
+- Circular dependencies are resolved by extracting a narrow shared contract or orchestrator, not by importing internal files in both directions.
+
+## Submission and assessment collaboration
+
+- `activities` supplies lifecycle, due date, allowed total score, programming language, visibility, and `maxAttempts`.
+- `submissions` atomically determines the next attempt number; no controller or frontend payload may choose it.
+- A submission attempt becomes immutable after successful creation and permanently retains its snapshot and academic history.
+- `submissions` requests assessment through the queue after the attempt transaction commits.
+- `assessments` preserves deterministic test-case results and `automatedScore`; instructor review records adjustments separately.
+- `feedback` controls draft/release visibility and timestamps without overwriting automated assessment evidence.
+
+## Error and configuration boundaries
+
+- Services throw typed application errors with stable machine codes.
+- The global error handler maps known errors to the API error envelope and hides internal details.
+- `config/env.ts` validates environment variables with Zod at startup; the server fails fast on invalid configuration.
+- Feature modules receive configuration or infrastructure clients through explicit construction/composition in `app.ts`, not by reading environment variables throughout the codebase.
+
+## Initial implementation order
+
+1. Application/configuration, error envelope, logging, database, and health endpoint.
+2. Auth, users, sessions, and all three role foundations.
+3. Classes and simplified code-based class membership.
+4. Activities and test-cases.
+5. PostgreSQL-backed execution queue and local Java workers.
+6. Immutable submission attempts and automated assessment.
+7. Instructor score adjustment and feedback release.
+8. Teams, repositories, repository members/invitations, Git infrastructure, and project tasks.
+9. Admin UI functionalization.
+10. Notifications, analytics, similarity, security/integration/laboratory testing, and temporary internet deployment.
+
+Only the approved feature should be functionalized at each step. Unrelated frontend mocks stay in place until their feature phase begins.
