@@ -1,16 +1,23 @@
-# React + Vite
+# Projex
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Projex is a web-based academic repository-learning platform prototype for programming education at Saint Louis University.
 
-Currently, two official plugins are available:
+## Frontend
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The existing React 19, Vite, and JavaScript/JSX frontend is located in [`client/`](client/).
 
-## React Compiler
+Install its dependencies:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```powershell
+cd client
+npm install
+```
 
-## Expanding the ESLint configuration
+Run the frontend locally:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```powershell
+cd client
+npm run dev
+```
+
+The product and architecture documentation remains in [`docs/`](docs/).
