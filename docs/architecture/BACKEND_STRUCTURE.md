@@ -9,7 +9,7 @@ The frontend remains in its current React/Vite JavaScript/JSX structure. The bac
 ## Proposed structure
 
 ```text
-backend/
+server/
   src/
     app.ts
     server.ts
@@ -22,7 +22,7 @@ backend/
       error-handler.ts
       request-context.ts
       rate-limit.ts
-    features/
+    modules/
       auth/
       users/
       classes/
