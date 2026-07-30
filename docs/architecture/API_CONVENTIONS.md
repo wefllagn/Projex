@@ -14,7 +14,7 @@ Illustrative routes:
 ```text
 POST   /api/v1/auth/login
 POST   /api/v1/auth/logout
-GET    /api/v1/auth/session
+GET    /api/v1/auth/me
 GET    /api/v1/classes
 GET    /api/v1/classes/:classId/members
 POST   /api/v1/activities
@@ -28,7 +28,7 @@ POST   /api/v1/repositories/:repositoryId/invitations
 GET    /api/v1/notifications
 ```
 
-These examples do not authorize implementation during Phase 0 and are not a complete endpoint inventory.
+Implemented examples reflect their actual contracts. Future-feature examples remain illustrative, do not authorize implementation, and are not a complete endpoint inventory.
 
 ## Naming and data representation
 

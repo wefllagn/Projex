@@ -1,250 +1,202 @@
 # Projex Full-Stack Phase Checklist
 
-## Purpose
+## Purpose and authority
 
 This checklist gates the transition from the hardcoded UI to a functional full-stack system. It does not authorize implementation beyond the phase explicitly requested and accepted.
 
+The earlier UI implementation checklist under `docs/PROJEX_IMPLEMENTATION_CHECKLIST.md` uses a separate historical phase numbering scheme. It remains an accurate record of the UI build, but this file is authoritative for the current full-stack roadmap.
+
 Status markers:
 
-- `[x]` documented/completed in the current phase.
+- `[x]` completed and accepted.
 - `[ ]` pending.
-- `[~]` partially complete or requires acceptance/verification.
+- `[~]` approved or partially complete but not yet implemented and accepted.
 
-## Phase 0: architecture and development standards
+## Current status
 
-### Confirmed decisions
+| Phase | Scope | Status | Baseline commit |
+| --- | --- | --- | --- |
+| 0 | Architecture and planning | Complete | `55b65e9` |
+| 1 | Backend foundation | Complete | `bd45349` |
+| 2 | Database foundation | Complete | `3cf0354` |
+| 3 | Authentication and authorization | Complete | `bf45efd` |
+| 4 | User and Class Management | Approved for planning; implementation not started | Pending |
+| 5-11 | Later functionalization, integration, and hardening | Pending | Pending |
 
-- [x] Existing frontend recorded as React 19, Vite, JavaScript/JSX, React Router, and existing CSS.
-- [x] Frontend TypeScript migration explicitly excluded.
-- [x] Existing UI, CSS, routes, responsive behavior, and interactions identified as protected.
-- [x] Planned backend recorded as Node.js, Express, TypeScript, Zod, Prisma ORM, and PostgreSQL.
-- [x] Feature-based modular-monolith decision recorded.
-- [x] API prefix fixed at `/api/v1`.
-- [x] Roles fixed as `STUDENT`, `INSTRUCTOR`, and `ADMIN` from the authorization foundation.
-- [x] Student and Instructor end-to-end academic workflows prioritized before Admin UI functionalization.
-- [x] Admin retained in scope with a dedicated later phase and the existing admin prototype preserved.
-- [x] Activities own configurable `maxAttempts` from 1 through 3.
-- [x] Submissions defined as immutable, server-numbered attempts with permanent academic history.
-- [x] Two-layer assessment defined through `automatedScore`, `instructorAdjustment`, and derived `finalScore`.
-- [x] PostgreSQL-backed jobs and separate workers approved as the initial free, self-hosted queue.
-- [x] Local-first, cloud-provider-neutral development recorded.
-- [x] Later internet-accessible controlled testing/defense target recorded.
-- [x] University-wide deployment, high availability, multi-server failover, and 24/7 availability recorded as out of scope.
+## Phase 0: architecture and planning — complete
 
-### Required Phase 0 documents
+- [x] Preserve the React 19, Vite, JavaScript/JSX, React Router, and existing CSS frontend.
+- [x] Exclude a frontend TypeScript migration.
+- [x] Select Node.js, Express, TypeScript, Zod, Prisma ORM, and PostgreSQL for the backend.
+- [x] Select a feature-based modular-monolith architecture and `/api/v1` API prefix.
+- [x] Define standard response envelopes, errors, validation, logging, and database conventions.
+- [x] Define `STUDENT`, `INSTRUCTOR`, and `ADMIN` authorization roles.
+- [x] Define one to three immutable, server-numbered submission attempts.
+- [x] Define local, isolated Java execution without an external compiler API.
+- [x] Define local Git CLI operations without GitHub or GitLab APIs.
+- [x] Record local-first, cloud-provider-neutral, controlled deployment boundaries.
+- [x] Create the architecture documents under `docs/architecture/`.
+- [x] Preserve `docs/FUNCTIONALIZATION_AUDIT.md` as a dated historical audit.
 
-- [x] `SYSTEM_ARCHITECTURE.md`
-- [x] `BACKEND_STRUCTURE.md`
-- [x] `API_CONVENTIONS.md`
-- [x] `DATABASE_CONVENTIONS.md`
-- [x] `SECURITY_RULES.md`
-- [x] `DEVELOPMENT_WORKFLOW.md`
-- [x] `PHASE_CHECKLIST.md`
-- [x] `docs/FUNCTIONALIZATION_AUDIT.md` left unchanged.
+The original Phase 0 condition that no backend code existed was true when Phase 0 closed. It is historical and does not describe the current repository.
 
-### Architecture coverage
+## Phase 1: backend foundation — complete
 
-- [x] Domain feature modules listed: auth, users, classes, class-members, activities, test-cases, submissions, assessments, feedback, project-tasks, teams, repositories, repository-members, repository-invitations, notifications, analytics.
-- [x] Infrastructure modules listed: database, Git, Java execution, job queue, storage, logging.
-- [x] Routes, controllers, services, repositories, validation schemas, and tests have defined responsibilities.
-- [x] Success, paginated list, and machine-coded error response formats defined.
-- [x] Attempt numbering, idempotency, immutability, history, constraints, and atomic limit checks defined.
-- [x] Automated/test-level scores, instructor adjustments, final score, review time, and release time defined.
-- [x] Prisma/PostgreSQL naming, UUIDs, timestamps, archives, constraints, transactions, migrations, and seeds defined.
-- [x] Secure sessions, HTTP-only cookies, CSRF, backend role checks, ownership, and membership checks defined.
-- [x] Local OpenJDK queue/worker isolation and resource boundaries defined with no external compiler API.
-- [x] Local Git CLI/bare repository/worktree/path/lock boundaries defined with no GitHub/GitLab API.
-- [x] `.env`, `.env.example`, secrets, and separate hosted/local configuration rules defined.
-- [x] Branch, commit, verification, deployment, and Codex workflows defined.
+- [x] Move the protected frontend into `client/` without changing its behavior.
+- [x] Add the Express/TypeScript backend under `server/`.
+- [x] Add Zod-validated environment configuration and placeholder-only `.env.example`.
+- [x] Add JSON parsing, restricted CORS, request IDs, structured logging, and error handling.
+- [x] Add graceful shutdown.
+- [x] Add Prisma/PostgreSQL connectivity and `GET /api/v1/health`.
+- [x] Add lint, type-check, test, build, and Prisma scripts.
+- [x] Preserve the frontend and verify its lint/build checks.
 
-### Phase 0 acceptance gate
+## Phase 2: database foundation — complete
 
-- [x] No backend code implemented.
-- [x] No package installed.
-- [x] No application source modified.
-- [x] No configuration changed.
-- [x] No folder reorganized.
-- [x] Only existing files under `docs/architecture/` revised.
-- [x] `docs/FUNCTIONALIZATION_AUDIT.md` not modified.
-- [ ] Revised documents reviewed and accepted by the project owner.
+- [x] Define the initial PostgreSQL/Prisma academic schema and enums.
+- [x] Use UUID primary keys, snake_case database mappings, timestamps, indexes, and constraints.
+- [x] Define users, classes, memberships, programming activities, test cases, submissions, execution results, feedback, project tasks, and repository records.
+- [x] Preserve academic records through status/archive semantics rather than broad hard deletion.
+- [x] Create and apply the committed initial migration without `prisma db push` or destructive reset.
+- [x] Document cross-model invariants that services and transactions must enforce.
 
-Do not begin Phase 1 until the final Phase 0 item is accepted.
+## Phase 3: authentication and authorization — complete
 
-## Phase 1: backend and PostgreSQL foundation
+- [x] Implement provisioned accounts with no public registration.
+- [x] Implement `SETUP_PENDING`, single-use account setup, and Argon2id password hashing.
+- [x] Implement access, refresh, and CSRF cookies.
+- [x] Implement refresh rotation, reuse detection, separate sessions, logout, and logout-all.
+- [x] Revoke other sessions after password changes and account-status changes.
+- [x] Enforce current database role, status, session, ownership, and CSRF checks on the backend.
+- [x] Implement provider-neutral preview and SMTP email transports.
+- [x] Implement controlled initial-administrator creation.
+- [x] Keep frontend authentication integration pending for Phase 10.
+- [x] Verify the isolated authentication/security suite and reported live admin login, `/auth/me`, and protected logout flows.
 
-- [ ] Create a phase branch from `development/fullstack`.
-- [ ] Record frontend lint/build baseline and protected-route desktop/narrow screenshots.
-- [ ] Add the backend package without reorganizing the frontend.
-- [ ] Configure Node.js, Express, TypeScript, Zod, Prisma, and PostgreSQL.
-- [ ] Add validated environment configuration and `.env.example`; keep `.env` uncommitted.
-- [ ] Add `/api/v1`, structured logging, request IDs, standard response envelopes, and central error handling.
-- [ ] Add database health/readiness checks with no sensitive details.
-- [ ] Add Prisma migration and deterministic local seed workflows.
-- [ ] Add backend lint, type-check, build, unit-test, and integration-test commands.
-- [ ] Verify startup and migration on a clean local database.
-- [ ] Confirm the existing frontend still builds and renders unchanged.
-- [ ] Report every changed file and stop.
+## Phase 4: User and Class Management — approved, not implemented
 
-## Phase 2: authentication, users, sessions, and role foundation
+### Scope boundaries
 
-- [ ] Implement users/accounts and `STUDENT`, `INSTRUCTOR`, `ADMIN` roles from the beginning.
-- [ ] Implement password hashing and server-side session storage.
-- [ ] Implement HTTP-only secure cookies, session rotation, expiry, logout, and CSRF.
-- [ ] Implement current-session endpoint and backend role checks.
-- [ ] Implement account status and role-change auditing.
-- [ ] Add login rate limits and safe machine-readable errors.
-- [ ] Bind existing login/profile/sign-out UI without redesign.
-- [ ] Protect student, instructor, and admin APIs/routes appropriately.
-- [ ] Test direct URL access, frontend role spoofing, session fixation, expiry, logout, and disabled accounts.
-- [ ] Preserve the existing Admin prototype even though early Admin UI functionalization is not required.
-- [ ] Keep non-auth mocks unchanged.
-- [ ] Report every changed file and stop.
+- [~] Backend only; do not modify or integrate anything under `client/`.
+- [~] Add an admin-only user directory and safe user detail while preserving existing provisioning/status endpoints.
+- [~] Add class create, role-scoped list, detail, metadata update, archive, and restore operations.
+- [~] Add class roster listing, student join by code, membership removal, and explicit reactivation.
+- [~] Keep public registration, profile editing, role changes, CSV enrollment, invitations, activities, submissions, Java, Git, repositories, and Admin UI out of scope.
 
-## Phase 3: classes and class membership
+### Class and join-code lifecycle
 
-- [ ] Implement course/section/class, instructor assignment, and class membership records needed by the first workflow.
-- [ ] Allow an instructor to create a class.
-- [ ] Generate a unique server-owned class code.
-- [ ] Allow the instructor to rotate or revoke the class code.
-- [ ] Allow a student to join using an active class code.
-- [ ] Prevent duplicate class membership with a database constraint and idempotent workflow.
-- [ ] Allow the instructor to list class members.
-- [ ] Allow deactivation/removal of current membership without deleting academic history.
-- [ ] Check backend class membership/assignment for every protected class operation.
-- [ ] Bind existing class shell, header, people/roster, create-class, and join-code UI without redesign.
-- [ ] Test invalid/revoked codes, duplicate/concurrent joins, removed membership, and cross-class access.
-- [ ] Treat invitation email delivery, invitation acceptance/decline pages, and invitation expiry as later enhancements unless separately required.
-- [ ] Keep repository collaborator invitations in scope for Phase 8.
-- [ ] Keep unrelated activity/repository mocks unchanged.
-- [ ] Verify desktop/narrow UI, report every changed file, and stop.
+- [~] Retain the unique server-owned `Class.classCode` field.
+- [~] Add `classCodeActive` and `classCodeChangedAt`; do not add a class-code history or invitation table.
+- [~] Generate approximately ten uppercase characters with cryptographic randomness and an unambiguous human-readable alphabet.
+- [~] Normalize codes before storage and lookup, retry unique collisions within a strict bound, exclude codes from student responses, and never log them.
+- [~] Restrict join-code view, rotation, and revocation to the class owner or administrator.
+- [~] Archive atomically disables the current code; restore does not reactivate it.
+- [~] Backfill existing ACTIVE classes with `classCodeActive = true` and ARCHIVED classes with `classCodeActive = false`.
+- [~] Safely backfill new `updatedAt` fields and configure Prisma `@updatedAt` where applicable.
 
-## Phase 4: programming activities and test cases
+### Membership lifecycle and projections
 
-- [ ] Implement activity title/instructions, lifecycle, publication state, visibility, due date, starter code, total points, and programming language.
-- [ ] Implement and validate `maxAttempts` from 1 through 3.
-- [ ] Implement visible and hidden test-case authoring, ordering, and automated points.
-- [ ] Prevent hidden test content from student responses.
-- [ ] Bind existing activity lists/detail/create/settings UI through JavaScript adapters and view models.
-- [ ] Preserve current routes and workspace layout.
-- [ ] Test lifecycle transitions, due-date/timezone behavior, points/attempt validation, and cross-class access.
-- [ ] Keep execution and submission behavior simulated until their approved phases.
-- [ ] Report every changed file and stop.
+- [~] ACTIVE membership grants student class and roster access, including read-only archived-class access.
+- [~] REMOVED membership preserves history but grants no class, roster, activity, or archived-class access.
+- [~] Reuse the unique `(classId, studentId)` row and require owner/admin reactivation after removal.
+- [~] Keep PENDING reserved for a future invitation workflow and do not create it in Phase 4.
+- [~] Student roster entries expose only `userId` and `fullName`.
+- [~] Instructor/admin roster entries may also expose university email, user status, membership status, `joinedAt`, `removedAt`, and `lastActivatedAt`.
+- [~] Log class and membership lifecycle events structurally without a persistent audit-event table.
+- [~] Document durable administrative auditing as deferred hardening work.
 
-## Phase 5: local Java execution and execution queue
+### Approved API surface
 
-- [ ] Use a locally managed OpenJDK; do not use an external compiler API.
-- [ ] Implement PostgreSQL-backed job records with atomic claiming, leases, retries, bounded concurrency, and terminal states.
-- [ ] Run a separate worker process; never compile or execute inside the main API process.
-- [ ] Accept bounded source code and stdin only; never client shell commands.
-- [ ] Do not allow clients to select executable paths, compiler/JVM flags, resource limits, environment values, or host paths.
-- [ ] Compile once per submission assessment.
-- [ ] Enforce compile timeout, execution timeout, memory, CPU, process/thread, disk, and output-size limits.
-- [ ] Disable worker network access and restrict filesystem access.
-- [ ] Use a unique temporary directory per job and guarantee cleanup.
-- [ ] Return a safe normalized result without host paths, commands, or hidden tests.
-- [ ] Add Docker/container isolation before internet-hosted execution.
-- [ ] Confirm Redis, RabbitMQ, or another queue product is not required for the controlled pilot.
-- [ ] Test success, compile error, runtime error, timeout, memory/CPU/output limits, worker crash/retry, atomic claim, and cleanup.
-- [ ] Report every changed file and stop.
+- [~] `GET /api/v1/users`
+- [~] `GET /api/v1/users/:userId`
+- [~] `POST /api/v1/classes`
+- [~] `GET /api/v1/classes`
+- [~] `GET /api/v1/classes/:classId`
+- [~] `PATCH /api/v1/classes/:classId`
+- [~] `POST /api/v1/classes/:classId/archive`
+- [~] `POST /api/v1/classes/:classId/restore`
+- [~] `GET /api/v1/classes/:classId/join-code`
+- [~] `POST /api/v1/classes/:classId/join-code/rotate`
+- [~] `POST /api/v1/classes/:classId/join-code/revoke`
+- [~] `POST /api/v1/classes/join`
+- [~] `GET /api/v1/classes/:classId/members`
+- [~] `PATCH /api/v1/classes/:classId/members/:memberId`
 
-## Phase 6: submission attempts and automated assessment
+### Real PostgreSQL integration tests
 
-- [ ] Implement immutable UUID `Submission` attempts.
-- [ ] Add `attemptNumber` starting at 1 and uniqueness on `(activity_id, student_id, attempt_number)`.
-- [ ] Derive student identity and authoritative attempt number on the backend.
-- [ ] Atomically verify membership, activity acceptance, due/late state, existing count below `maxAttempts`, and next attempt number.
-- [ ] Implement idempotency so double-clicks/retries do not create or consume duplicate attempts.
-- [ ] Permanently preserve each attempt's source snapshot, submitted time, late/status values, execution result, automated score, and review state.
-- [ ] Retrieve complete authorized attempt history.
-- [ ] Initiate assessment through the Phase 5 execution queue.
-- [ ] Preserve deterministic per-test-case results and `automatedPoints`.
-- [ ] Compute and store `automatedScore` without instructor overwrite.
-- [ ] Bind existing workspace/submission records to attempts without redesign or broad mock removal.
-- [ ] Use errors including `ATTEMPT_LIMIT_REACHED`, `DUPLICATE_SUBMISSION_REQUEST`, `SUBMISSION_ALREADY_PROCESSING`, `ACTIVITY_NOT_ACCEPTING_SUBMISSIONS`, and `SUBMISSION_NOT_FOUND`.
-- [ ] Test attempt-limit races, double-click, network retry, concurrent tabs, due-date race, immutability, history, and unauthorized access.
-- [ ] Report every changed file and stop.
+- [~] Add a separate `npm run test:integration` suite and keep `npm test` isolated.
+- [~] Require `TEST_DATABASE_URL`; never fall back to `DATABASE_URL`.
+- [~] Abort immediately unless the URL names an explicitly recognized test database such as `projex_test`.
+- [~] Apply committed migrations with `prisma migrate deploy` and run serially unless isolation is implemented.
+- [~] Never run `prisma db push` or `prisma migrate reset`.
+- [~] Test PostgreSQL constraints, transactions, concurrency, ownership, membership, projections, rotation, revocation, archive, removal, and reactivation.
 
-## Phase 7: instructor review, score adjustment, and feedback release
+## Phase 5: programming activities and test cases — pending
 
-- [ ] Preserve `automatedScore` and every automated test result during review.
-- [ ] Implement signed `instructorAdjustment` with reviewer and review timestamp.
-- [ ] Derive `finalScore` consistently within zero and activity total points.
-- [ ] If test-level editing is enabled, preserve both `automatedPoints` and `instructorAdjustedPoints`.
-- [ ] Implement instructor-only grade/feedback drafts.
-- [ ] Atomically release final score/feedback and record `feedbackReleasedAt`.
-- [ ] Keep unreleased drafts invisible to students.
-- [ ] Authorize review to assigned instructors; keep Admin access explicit, minimized, and audited.
-- [ ] Bind existing submission queue/review/feedback UI without redesign.
-- [ ] Test adjustment bounds, concurrent edits, automated-score immutability, draft visibility, release idempotency, timestamps, and cross-class access.
-- [ ] Report every changed file and stop.
+- [ ] Implement activity metadata, lifecycle, publication, due dates, starter code, total points, Java language settings, and `maxAttempts` from one through three.
+- [ ] Implement visible and hidden deterministic test cases with ordering and points.
+- [ ] Prevent hidden test content from reaching student responses.
+- [ ] Enforce class ownership/membership and lifecycle rules.
+- [ ] Keep execution and submission behavior simulated until Phase 6.
 
-## Phase 8: project tasks, teams, repository invitations, and local Git repositories
+## Phase 6: submissions and automated assessment — pending
 
-- [ ] Implement project tasks, teams, team membership, and project requirement linkage.
-- [ ] Implement repository collaborator invitations, acceptance/decline, membership, and authorization.
-- [ ] Implement server-owned repository identifiers and bare local Git repository provisioning.
-- [ ] Use the local Git CLI executable plus argument arrays; never concatenate client input into shell strings.
-- [ ] Never trust repository paths from the frontend.
-- [ ] Validate repository names, repository-relative file paths, and branch/tag names.
-- [ ] Use temporary worktrees with guaranteed cleanup.
-- [ ] Disable unsafe hooks/helpers/config and bound Git process time/output.
-- [ ] Implement per-repository write locks/leases and stale-lock recovery.
-- [ ] Preserve commit, branch, diff, and contribution history.
-- [ ] Bind existing student/instructor repository UI without redesign.
-- [ ] Do not use GitHub or GitLab APIs for core behavior.
-- [ ] Test traversal/ref injection, unauthorized access, invite races, concurrent writes, failed provisioning, lock recovery, and archive read-only state.
-- [ ] Verify desktop/narrow repository UI, report every changed file, and stop.
+- [ ] Implement immutable attempts, server-assigned numbering, idempotency, due-state checks, and concurrency-safe attempt limits.
+- [ ] Implement the PostgreSQL-backed execution queue and separate Java worker.
+- [ ] Compile once per assessment and enforce time, memory, CPU, process, disk, network, and output limits.
+- [ ] Preserve source snapshots, execution results, test-case results, automated scores, and attempt history.
+- [ ] Implement instructor review, signed score adjustment, feedback drafts, and controlled release without overwriting automated results.
+- [ ] Add Docker/container isolation before internet-hosted Java execution.
 
-## Phase 9: Admin functionality
+## Phase 7: project and repository collaboration — pending
 
-- [ ] Preserve explicit `ADMIN` authorization and audit every sensitive action.
-- [ ] Functionalize user-account management and account activation/deactivation.
-- [ ] Functionalize instructor assignment support.
-- [ ] Functionalize class and course oversight.
-- [ ] Functionalize repository and storage monitoring.
-- [ ] Functionalize archive controls and system-health views.
-- [ ] Add only narrowly approved controlled maintenance tools.
-- [ ] Apply data-minimization and privacy rules; Admin does not automatically receive every private field.
-- [ ] Preserve the existing admin routes, components, CSS, and visible structure.
-- [ ] Test role enforcement, auditing, dangerous-action confirmation, archive/history preservation, and student/instructor data visibility.
-- [ ] Report every changed file and stop.
+- [ ] Implement project tasks, teams, memberships, repository metadata, collaborator invitations, and feedback workflows.
+- [ ] Enforce class, project, team, owner, and collaborator authorization.
+- [ ] Keep core Git operations pending for Phase 8.
 
-## Phase 10: integration, hardening, laboratory testing, and temporary internet deployment
+## Phase 8: local Git operations — pending
 
-- [ ] Implement persisted authorized notifications and unread state.
-- [ ] Implement analytics from canonical records with role-specific projections.
-- [ ] Implement general student similarity status and detailed instructor-only similarity indicators.
-- [ ] Complete security hardening, integration tests, end-to-end tests, and laboratory testing.
-- [ ] Confirm all required Student, Instructor, and approved Admin workflows work locally first.
-- [ ] Select a portable temporary VPS, GitHub Student Developer Pack credit, Azure for Students, another student cloud credit, or an SLU host.
-- [ ] Keep core code cloud-provider-neutral and self-host PostgreSQL, OpenJDK/Java, and Git.
-- [ ] Do not make Cloudflare Tunnel or any specific provider mandatory.
-- [ ] Configure TLS reverse proxy, frontend, API, workers, PostgreSQL, and persistent server-owned storage.
-- [ ] Inject separate hosted secrets/environment variables; do not copy or commit local `.env`.
-- [ ] Apply migrations as a controlled release step.
-- [ ] Enable Java execution only after container/no-network isolation and limits pass hosted tests.
-- [ ] Configure restricted test accounts and non-production academic data.
-- [ ] Configure logs, security events, health checks, backups, restore test, and shutdown/incident procedures.
-- [ ] Verify authorization and resource limits from an internet client.
-- [ ] Define the controlled testing/defense availability window.
-- [ ] Document that university-wide rollout, high availability, multi-server failover, and a 24/7 SLA are out of scope.
+- [ ] Provision server-owned bare repositories without GitHub or GitLab APIs.
+- [ ] Execute the local Git CLI through argument arrays without shell-string concatenation.
+- [ ] Validate repository names, paths, refs, branches, and tags.
+- [ ] Use temporary worktrees, bounded process execution, safe configuration, and guaranteed cleanup.
+- [ ] Implement per-repository write locks and preserve commit, branch, diff, and contribution history.
+
+## Phase 9: Admin functionalization — pending
+
+- [ ] Bind the existing Admin UI to approved account, class, repository, storage, archive, and health operations.
+- [ ] Preserve explicit authorization, data minimization, confirmation, and security logging.
+- [ ] Add narrowly approved maintenance controls only.
+
+## Phase 10: frontend integration — pending
+
+- [ ] Integrate the existing React/JavaScript UI with completed backend features without redesign.
+- [ ] Replace mocks one approved workflow at a time through adapters and view models.
+- [ ] Integrate login, session refresh, CSRF, logout, role routing, protected states, and safe errors.
+- [ ] Preserve current routes, CSS, responsive behavior, and unrelated mocks until replaced.
+- [ ] Add persisted notifications, canonical analytics, and role-appropriate similarity projections when their backend support exists.
+
+## Phase 11: hardening, deployment, and evaluation — pending
+
+- [ ] Complete security hardening, durable administrative auditing, integration/end-to-end tests, and laboratory evaluation.
+- [ ] Add hosted TLS, reverse proxy, secret injection, backups, restore testing, health monitoring, and incident/shutdown procedures.
+- [ ] Deploy portably to a temporary VPS, student cloud credit, or approved SLU host for controlled testing and defense.
+- [ ] Enable Java execution only after hosted isolation and resource-limit tests pass.
+- [ ] Keep university-wide rollout, high availability, multi-server failover, and 24/7 service out of scope.
 - [ ] Remove or disable the temporary environment after the approved period.
-- [ ] Report every deployment artifact/change and stop.
 
 ## Every-phase regression gate
 
-- [ ] Scope matches the explicit phase request.
-- [ ] The application works at the end of the phase.
-- [ ] Existing UI and routing preserved.
-- [ ] Existing class names, layout, spacing, and responsive behavior preserved.
-- [ ] No unrelated component redesign.
-- [ ] `src/App.css` unchanged unless minimally required and explicitly justified.
-- [ ] Data/mocks replaced only for the requested feature and workflow.
-- [ ] Unrelated mocks preserved.
-- [ ] Java and Git remain local/self-hosted with no external compiler, GitHub, or GitLab API.
-- [ ] New input validated and backend authorization tested.
-- [ ] Database constraints/transactions cover concurrency and academic-history invariants.
-- [ ] `.env` and secrets absent from the diff; `.env.example` updated if needed.
-- [ ] Relevant tests, lint, type checks, builds, migrations, API contracts, and desktop/narrow UI checks pass.
-- [ ] Every changed file, migration, environment variable, manual step, and known limitation reported.
+- [ ] Scope matches the explicit approved request.
+- [ ] The selected base contains every accepted prior phase.
+- [ ] Existing application behavior remains operational.
+- [ ] Existing UI, routing, CSS, layout, and responsive behavior remain unchanged unless explicitly approved.
+- [ ] Unrelated mocks remain intact.
+- [ ] New input is validated and backend authorization is tested at service/resource boundaries.
+- [ ] Database constraints and transactions cover concurrency and academic-history invariants.
+- [ ] No external compiler, GitHub, or GitLab API is used for core behavior.
+- [ ] No `prisma db push`, `prisma migrate reset`, secret disclosure, or unapproved destructive database action occurs.
+- [ ] `.env`, credentials, tokens, cookies, preview mail, database URLs, and private data are absent from tracked changes and logs.
+- [ ] Relevant Prisma, migration, lint, type-check, test, build, API, and live checks pass.
+- [ ] Every changed file, migration, endpoint, environment variable, command, manual step, and known risk is reported.
 - [ ] Work stops after the requested phase.

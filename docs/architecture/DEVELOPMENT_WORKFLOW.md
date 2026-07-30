@@ -4,7 +4,7 @@
 
 - Development is local-first.
 - The existing React/Vite JavaScript/JSX frontend is preserved.
-- The planned backend is added feature by feature only after Phase 0 approval.
+- The backend is implemented incrementally through explicitly approved phase branches. Completed phases remain the baseline for each subsequent phase.
 - Work remains cloud-provider-neutral and deployable later to a temporary VPS, GitHub Student Developer Pack credits, Azure for Students, another student cloud credit, or an SLU host.
 - Student and Instructor core workflows are implemented first; Admin remains in scope through the role model and receives a dedicated later functionalization phase.
 - Each phase stops when its requested scope is complete; it does not begin the next phase implicitly.
@@ -18,22 +18,25 @@
 | `development/fullstack` | Full-stack integration branch and base for approved phase work. |
 | Phase branches | Short-lived branches for one approved phase or bounded feature slice. |
 
-Phase branches start from the current `development/fullstack` and use a clear name such as:
+Each phase branch starts from the latest accepted full-stack phase commit. Before branching, verify that the selected base contains every accepted prior phase. `development/fullstack` remains the integration branch, but it must not be used as a base while it is behind accepted phase work.
+
+Use clear phase names such as:
 
 ```text
 phase/01-backend-foundation
-phase/02-auth-users
-phase/03-classes-membership
-phase/04-activities-test-cases
-phase/05-java-execution-queue
-phase/06-submission-attempts-assessment
-phase/07-instructor-review-feedback
-phase/08-repositories-git
-phase/09-admin
-phase/10-integration-deployment
+phase/02-database-foundation
+phase/03-authentication-authorization
+phase/04-user-class-management
+phase/05-activities-test-cases
+phase/06-submissions-automated-assessment
+phase/07-project-repository-collaboration
+phase/08-local-git-operations
+phase/09-admin-functionalization
+phase/10-frontend-integration
+phase/11-hardening-deployment-evaluation
 ```
 
-If repository policy later requires a prefix, preserve the phase identity, for example `codex/phase-02-auth-users`.
+If repository policy later requires a prefix, preserve the phase identity, for example `codex/phase-04-user-class-management`.
 
 Rules:
 

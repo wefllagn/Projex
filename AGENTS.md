@@ -2,27 +2,29 @@
 
 ## Project
 
-Projex is a UI-first localhost prototype for a web-based academic repository-learning platform for programming education at Saint Louis University.
+Projex is a UI-first academic programming platform for Saint Louis University that is being functionalized as a local-first full-stack system. The existing React UI remains protected while approved backend phases replace hardcoded behavior incrementally.
 
 ## Current Instruction
 
-Do not code the app until the documentation-first phase is complete and accepted. The initial work is to create and maintain planning documentation only.
+Phases 0 through 3 are complete. Do not implement a new phase until its decisions and implementation plan are approved and the user explicitly says, "Implement the approved decisions."
 
 ## Product Boundaries
 
-For the current prototype:
+For the current phased functionalization:
 
-- Use hardcoded data only.
-- Do not add a backend.
-- Do not add real authentication.
-- Do not call a real GitLab API.
-- Do not add a real compiler backend.
-- Do show almost all product features in the UI.
+- Preserve frontend mocks outside the explicitly approved feature.
+- Preserve the existing backend, database, and authentication implementation.
+- Implement only the explicitly approved phase and stop when its scope is complete.
+- Do not expose secrets or bypass backend authentication, authorization, ownership, or membership checks.
+- Do not call external GitHub or GitLab APIs for core Git behavior.
+- Do not call an external compiler API for core Java behavior.
+- Keep the existing UI feature coverage visible while replacing mocks incrementally.
 
 ## Current Product Corrections
 
-- Activity Mode uses one submission only per student per activity.
-- Do not design repeated attempts or resubmission history unless the user explicitly changes that rule.
+- Each programming activity configures one to three immutable attempts per student.
+- The backend assigns sequential attempt numbers and permanently preserves every accepted attempt.
+- Do not implement mutable resubmission or overwrite a prior attempt; a new submission creates a new immutable attempt until `maxAttempts` is reached.
 - Student submission records should be labeled as My Submissions, Submission Record, or Submitted Activities.
 - Student submitted activity records must show submitted date/time, review status, mock test result summary, grade status, and instructor feedback when available.
 - Student submit controls must become disabled after submission and show a locked state.
@@ -52,7 +54,7 @@ Projex has three role-based views:
 - Instructor View.
 - Admin View.
 
-The prototype may simulate role switching locally. It must not require real login.
+The existing frontend may continue to simulate role switching until its approved integration phase. The backend authentication and authorization implementation is real and must remain authoritative for protected API behavior.
 
 ## Required Feature Visibility
 
@@ -86,26 +88,25 @@ Do not skip these features.
 
 ## Documentation Map
 
-- `docs/PROJEX_UI_DIRECTION.md`: Product and UI direction.
-- `docs/PROJEX_FEATURE_INVENTORY.md`: Required feature inventory.
-- `docs/PROJEX_ROUTES.md`: Proposed route structure.
-- `docs/PROJEX_MOCK_DATA_PLAN.md`: Hardcoded mock data plan.
-- `docs/PROJEX_IMPLEMENTATION_CHECKLIST.md`: Build checklist and guardrails.
+- `docs/architecture/`: Current full-stack architecture, security, API, database, workflow, and phase decisions.
+- `docs/FUNCTIONALIZATION_AUDIT.md`: Dated pre-functionalization audit; preserve its historical findings.
+- `docs/PROJEX_UI_DIRECTION.md`, `docs/PROJEX_FEATURE_INVENTORY.md`, `docs/PROJEX_ROUTES.md`, `docs/PROJEX_MOCK_DATA_PLAN.md`, `docs/PROJEX_IMPLEMENTATION_CHECKLIST.md`, and `docs/instructor-ui-guidelines.txt`: Historical UI-prototype documents. Preserve them as evidence, but do not use superseded rules as current architecture.
 
 ## Implementation Expectations For Future Agents
 
 Before coding:
 
-- Read all documents in `docs/`.
-- Preserve the feature inventory unless the user explicitly changes scope.
-- Use the implementation checklist as the source of truth for progress.
+- Read the relevant current files in `docs/architecture/` and use historical documents only for UI context.
+- Use the repository, committed migrations, automated tests, and current architecture documents as the source-of-truth order.
+- Confirm the approved phase scope, exclusions, migration impact, authorization rules, verification plan, and explicit implementation authorization.
 - Keep changes scoped and avoid unrelated refactors.
 
 When coding begins:
 
 - Prefer existing project patterns.
-- Use client-side state and hardcoded data.
-- Make features visible even when simulated.
-- Add realistic mock data instead of placeholder lorem ipsum.
-- Verify the UI in desktop and narrow/mobile viewports.
-- Run available lint/build checks before final response.
+- Preserve unrelated client-side mocks until their approved functionalization phase.
+- Use the feature-based backend structure, Prisma migrations, backend validation, and service-level authorization.
+- Never use `prisma db push` or `prisma migrate reset`; stop on drift or reset requests.
+- Never expose `.env`, credentials, tokens, cookies, database URLs, SMTP secrets, class join codes, hidden tests, or host paths.
+- Verify the existing UI in desktop and narrow/mobile viewports when an approved phase changes or integrates it.
+- Run the relevant lint, type-check, test, build, migration, and live checks before the final response.

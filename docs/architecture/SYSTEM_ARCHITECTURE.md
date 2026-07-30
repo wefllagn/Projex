@@ -2,18 +2,24 @@
 
 ## Status and scope
 
-This document records the Phase 0 architecture decision for turning the existing Projex UI prototype into a controlled full-stack system.
+This document records the architecture for turning the existing Projex UI prototype into a controlled full-stack system and the durable decisions accepted through Phase 3.
 
-- Current branch: `development/fullstack`.
 - Current frontend: React 19, Vite, JavaScript/JSX, React Router, and the existing CSS.
-- Planned backend: Node.js, Express, TypeScript, Zod, Prisma ORM, and PostgreSQL.
+- Current backend: Node.js, Express, TypeScript, Zod, Prisma ORM, and PostgreSQL.
+- Implementation status: Phases 0 through 3 are complete; Phase 4, User and Class Management, is the next planned phase.
 - Development approach: local-first, feature-by-feature, and cloud-provider-neutral.
 - Roles: `STUDENT`, `INSTRUCTOR`, and `ADMIN` are part of the authorization model from the beginning.
 - Implementation priority: Student and Instructor workflows first, followed by dedicated Admin functionalization.
 - Deployment objective: an internet-accessible temporary environment for controlled testing and project defense.
 - Out of scope: university-wide production deployment, high availability, and a 24/7 service commitment.
 
-`docs/FUNCTIONALIZATION_AUDIT.md` is the baseline inventory. It must remain unchanged during Phase 0.
+## Document authority and historical snapshots
+
+`docs/FUNCTIONALIZATION_AUDIT.md`, the root-level UI direction, feature inventory, route map, mock-data plan, UI implementation checklist, and instructor UI brief are historical snapshots of the hardcoded frontend and the product rules in effect when it was built. They remain valuable evidence and must not be rewritten to imply that the backend or current rules existed at that time.
+
+When a historical snapshot conflicts with the current repository or `docs/architecture/`, the current repository and current architecture documents govern. In particular, the historical one-submission-only rule has been superseded: each programming activity configures one to three immutable, server-numbered attempts whose history is permanently preserved.
+
+Mutable facts such as the checked-out Git branch are intentionally not recorded here; Git is authoritative for the active branch.
 
 ## Architectural goals
 
