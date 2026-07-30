@@ -3,6 +3,416 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+
+  @@map("user_status")
+}
+
+enum ClassStatus {
+  ACTIVE
+  ARCHIVED
+
+  @@map("class_status")
+}
+
+enum ClassMemberStatus {
+  PENDING
+  ACTIVE
+  REMOVED
+
+  @@map("class_member_status")
+}
+
+enum ProgrammingLanguage {
+  JAVA
+
+  @@map("programming_language")
+}
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+
+  @@map("assignment_status")
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+  RELEASED
+
+  @@map("submission_status")
+}
+
+enum CompileStatus {
+  PENDING
+  SUCCESS
+  FAILED
+
+  @@map("compile_status")
+}
+
+enum RuntimeStatus {
+  NOT_RUN
+  PASSED
+  FAILED
+  TIMEOUT
+  ERROR
+
+  @@map("runtime_status")
+}
+
+enum TestCasePassStatus {
+  PENDING
+  PASSED
+  FAILED
+  ERROR
+
+  @@map("test_case_pass_status")
+}
+
+enum RepositoryType {
+  CLASS_PROJECT
+  PERSONAL
+
+  @@map("repository_type")
+}
+
+enum RepositoryVisibility {
+  PRIVATE
+  CLASS_ONLY
+  PUBLIC
+
+  @@map("repository_visibility")
+}
+
+enum RepositoryStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+
+  @@map("repository_status")
+}
+
+enum RepositoryMemberRole {
+  OWNER
+  MEMBER
+  VIEWER
+
+  @@map("repository_member_role")
+}
+
+enum RepositoryMemberStatus {
+  PENDING
+  ACTIVE
+  REMOVED
+
+  @@map("repository_member_status")
+}
+
+enum RepositoryActivityType {
+  COMMIT
+  PUSH
+  MERGE
+  BRANCH
+  PULL
+  OTHER
+
+  @@map("repository_activity_type")
+}
+
+model User {
+  id                           String                @id @default(uuid()) @map("user_id") @db.Uuid
+  fullName                     String                @map("full_name")
+  email                        String                @unique
+  passwordHash                 String                @map("password_hash")
+  role                         UserRole
+  status                       UserStatus            @default(ACTIVE)
+  createdAt                    DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  classesTaught                Class[]               @relation("ClassInstructor")
+  classMemberships             ClassMember[]         @relation("ClassMemberStudent")
+  programmingActivitiesCreated ProgrammingActivity[] @relation("ProgrammingActivityCreator")
+  activitySubmissions          ActivitySubmission[]  @relation("ActivitySubmissionStudent")
+  submissionFeedbackAuthored   SubmissionFeedback[]  @relation("SubmissionFeedbackInstructor")
+  projectTasksCreated          ProjectTask[]         @relation("ProjectTaskCreator")
+  repositoriesOwned            Repository[]          @relation("RepositoryOwner")
+  repositoryMemberships        RepositoryMember[]    @relation("RepositoryMemberStudent")
+  repositoryActivities         RepositoryActivity[]  @relation("RepositoryActivityUser")
+  repositoryFeedbackAuthored   RepositoryFeedback[]  @relation("RepositoryFeedbackInstructor")
+
+  @@index([role, status])
+  @@map("users")
+}
+
+model Class {
+  id                    String                @id @default(uuid()) @map("class_id") @db.Uuid
+  instructorId          String                @map("instructor_id") @db.Uuid
+  className             String                @map("class_name")
+  classCode             String                @unique @map("class_code")
+  section               String
+  semester              String
+  schoolYear            String                @map("school_year")
+  status                ClassStatus           @default(ACTIVE)
+  createdAt             DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  instructor            User                  @relation("ClassInstructor", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  members               ClassMember[]
+  programmingActivities ProgrammingActivity[]
+  projectTasks          ProjectTask[]
+
+  @@index([instructorId])
+  @@index([status])
+  @@index([semester, schoolYear])
+  @@map("classes")
+}
+
+model ClassMember {
+  id        String            @id @default(uuid()) @map("class_member_id") @db.Uuid
+  classId   String            @map("class_id") @db.Uuid
+  studentId String            @map("student_id") @db.Uuid
+  joinedAt  DateTime          @default(now()) @map("joined_at") @db.Timestamptz(3)
+  status    ClassMemberStatus @default(ACTIVE)
+  class     Class             @relation(fields: [classId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  student   User              @relation("ClassMemberStudent", fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([classId, studentId])
+  @@index([studentId])
+  @@index([classId, status])
+  @@map("class_members")
+}
+
+model ProgrammingActivity {
+  id           String               @id @default(uuid()) @map("activity_id") @db.Uuid
+  classId      String               @map("class_id") @db.Uuid
+  createdById  String               @map("created_by") @db.Uuid
+  title        String
+  instructions String               @db.Text
+  dueDate      DateTime             @map("due_date") @db.Timestamptz(3)
+  language     ProgrammingLanguage  @default(JAVA)
+  maxAttempts  Int                  @default(3) @map("max_attempts")
+  status       AssignmentStatus     @default(DRAFT)
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  class        Class                @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy    User                 @relation("ProgrammingActivityCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  testCases    TestCase[]
+  submissions  ActivitySubmission[]
+
+  @@index([classId, status])
+  @@index([dueDate])
+  @@map("programming_activities")
+}
+
+model TestCase {
+  id             String              @id @default(uuid()) @map("test_case_id") @db.Uuid
+  activityId     String              @map("activity_id") @db.Uuid
+  testCaseOrder  Int                 @map("test_case_order")
+  inputData      String?             @map("input_data") @db.Text
+  expectedOutput String              @map("expected_output") @db.Text
+  isHidden       Boolean             @default(true) @map("is_hidden")
+  points         Decimal             @db.Decimal(8, 2)
+  activity       ProgrammingActivity @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  results        TestCaseResult[]
+
+  @@unique([activityId, testCaseOrder])
+  @@map("test_cases")
+}
+
+model ActivitySubmission {
+  id                          String                @id @default(uuid()) @map("submission_id") @db.Uuid
+  activityId                  String                @map("activity_id") @db.Uuid
+  studentId                   String                @map("student_id") @db.Uuid
+  attemptNumber               Int                   @map("attempt_number")
+  sourceCode                  String                @map("source_code") @db.Text
+  submittedAt                 DateTime              @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  submissionStatus            SubmissionStatus      @default(SUBMITTED) @map("submission_status")
+  isLate                      Boolean               @default(false) @map("is_late")
+  automatedScore              Decimal?              @map("automated_score") @db.Decimal(8, 2)
+  instructorAdjustment        Decimal               @default(0) @map("instructor_adjustment") @db.Decimal(8, 2)
+  finalScore                  Decimal?              @map("final_score") @db.Decimal(8, 2)
+  reviewedAt                  DateTime?             @map("reviewed_at") @db.Timestamptz(3)
+  releasedAt                  DateTime?             @map("released_at") @db.Timestamptz(3)
+  activity                    ProgrammingActivity   @relation(fields: [activityId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  student                     User                  @relation("ActivitySubmissionStudent", fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  executions                  SubmissionExecution[]
+  similarityResultsAsSource   SimilarityResult[]    @relation("SimilaritySourceSubmission")
+  similarityResultsAsCompared SimilarityResult[]    @relation("SimilarityComparedSubmission")
+  feedback                    SubmissionFeedback[]
+
+  @@unique([activityId, studentId, attemptNumber])
+  @@index([studentId, submittedAt])
+  @@index([activityId, submissionStatus])
+  @@map("activity_submissions")
+}
+
+model SubmissionExecution {
+  id              String             @id @default(uuid()) @map("execution_id") @db.Uuid
+  submissionId    String             @map("submission_id") @db.Uuid
+  compileStatus   CompileStatus      @default(PENDING) @map("compile_status")
+  runtimeStatus   RuntimeStatus      @default(NOT_RUN) @map("runtime_status")
+  compilerOutput  String?            @map("compiler_output") @db.Text
+  startedAt       DateTime           @default(now()) @map("started_at") @db.Timestamptz(3)
+  completedAt     DateTime?          @map("completed_at") @db.Timestamptz(3)
+  submission      ActivitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  testCaseResults TestCaseResult[]
+
+  @@index([submissionId, startedAt])
+  @@map("submission_executions")
+}
+
+model TestCaseResult {
+  id               String              @id @default(uuid()) @map("test_case_result_id") @db.Uuid
+  executionId      String              @map("execution_id") @db.Uuid
+  testCaseId       String              @map("test_case_id") @db.Uuid
+  passStatus       TestCasePassStatus  @default(PENDING) @map("pass_status")
+  actualOutput     String?             @map("actual_output") @db.Text
+  errorMessage     String?             @map("error_message") @db.Text
+  automatedPoints  Decimal             @default(0) @map("automated_points") @db.Decimal(8, 2)
+  instructorPoints Decimal?            @map("instructor_points") @db.Decimal(8, 2)
+  executionTimeMs  Int?                @map("execution_time_ms")
+  execution        SubmissionExecution @relation(fields: [executionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  testCase         TestCase            @relation(fields: [testCaseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([executionId, testCaseId])
+  @@index([testCaseId])
+  @@map("test_case_results")
+}
+
+model SimilarityResult {
+  id                   String             @id @default(uuid()) @map("similarity_id") @db.Uuid
+  submissionId         String             @map("submission_id") @db.Uuid
+  comparedSubmissionId String             @map("compared_submission_id") @db.Uuid
+  similarityPercentage Decimal            @map("similarity_percentage") @db.Decimal(5, 2)
+  remarks              String?
+  generatedAt          DateTime           @default(now()) @map("generated_at") @db.Timestamptz(3)
+  submission           ActivitySubmission @relation("SimilaritySourceSubmission", fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  comparedSubmission   ActivitySubmission @relation("SimilarityComparedSubmission", fields: [comparedSubmissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([submissionId, comparedSubmissionId])
+  @@index([comparedSubmissionId])
+  @@map("similarity_results")
+}
+
+model SubmissionFeedback {
+  id           String             @id @default(uuid()) @map("feedback_id") @db.Uuid
+  submissionId String             @map("submission_id") @db.Uuid
+  instructorId String             @map("instructor_id") @db.Uuid
+  feedbackText String             @map("feedback_text") @db.Text
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  releasedAt   DateTime?          @map("released_at") @db.Timestamptz(3)
+  submission   ActivitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  instructor   User               @relation("SubmissionFeedbackInstructor", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([submissionId])
+  @@map("submission_feedback")
+}
+
+model ProjectTask {
+  id           String           @id @default(uuid()) @map("project_task_id") @db.Uuid
+  classId      String           @map("class_id") @db.Uuid
+  createdById  String           @map("created_by") @db.Uuid
+  title        String
+  instructions String           @db.Text
+  dueDate      DateTime         @map("due_date") @db.Timestamptz(3)
+  status       AssignmentStatus @default(DRAFT)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  class        Class            @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy    User             @relation("ProjectTaskCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  repositories Repository[]
+
+  @@index([classId, status])
+  @@index([dueDate])
+  @@map("project_tasks")
+}
+
+model Repository {
+  id             String               @id @default(uuid()) @map("repository_id") @db.Uuid
+  projectTaskId  String?              @map("project_task_id") @db.Uuid
+  ownerId        String               @map("owner_id") @db.Uuid
+  repositoryType RepositoryType       @map("repository_type")
+  repositoryName String               @map("repository_name")
+  description    String?              @db.Text
+  storagePath    String               @unique @map("storage_path")
+  defaultBranch  String               @default("main") @map("default_branch")
+  visibility     RepositoryVisibility @default(PRIVATE)
+  status         RepositoryStatus     @default(ACTIVE)
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  projectTask    ProjectTask?         @relation(fields: [projectTaskId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  owner          User                 @relation("RepositoryOwner", fields: [ownerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  members        RepositoryMember[]
+  activities     RepositoryActivity[]
+  feedback       RepositoryFeedback[]
+
+  @@index([ownerId])
+  @@index([projectTaskId])
+  @@index([repositoryType, status])
+  @@map("repositories")
+}
+
+model RepositoryMember {
+  id           String                 @id @default(uuid()) @map("repository_member_id") @db.Uuid
+  repositoryId String                 @map("repository_id") @db.Uuid
+  studentId    String                 @map("student_id") @db.Uuid
+  memberRole   RepositoryMemberRole   @map("member_role")
+  joinedAt     DateTime               @default(now()) @map("joined_at") @db.Timestamptz(3)
+  status       RepositoryMemberStatus @default(ACTIVE)
+  repository   Repository             @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  student      User                   @relation("RepositoryMemberStudent", fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([repositoryId, studentId])
+  @@index([studentId, status])
+  @@map("repository_members")
+}
+
+model RepositoryActivity {
+  id           String                 @id @default(uuid()) @map("repository_activity_id") @db.Uuid
+  repositoryId String                 @map("repository_id") @db.Uuid
+  userId       String                 @map("user_id") @db.Uuid
+  activityType RepositoryActivityType @map("activity_type")
+  commitHash   String?                @map("commit_hash")
+  branchName   String?                @map("branch_name")
+  filePath     String?                @map("file_path")
+  oldPath      String?                @map("old_path")
+  newPath      String?                @map("new_path")
+  message      String?                @db.Text
+  metadataJson Json?                  @map("metadata_json")
+  activityAt   DateTime               @default(now()) @map("activity_at") @db.Timestamptz(3)
+  repository   Repository             @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user         User                   @relation("RepositoryActivityUser", fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([repositoryId, activityAt])
+  @@index([userId, activityAt])
+  @@map("repository_activity")
+}
+
+model RepositoryFeedback {
+  id           String     @id @default(uuid()) @map("feedback_id") @db.Uuid
+  repositoryId String     @map("repository_id") @db.Uuid
+  instructorId String     @map("instructor_id") @db.Uuid
+  feedbackText String     @map("feedback_text") @db.Text
+  grade        Decimal?   @db.Decimal(8, 2)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  releasedAt   DateTime?  @map("released_at") @db.Timestamptz(3)
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  instructor   User       @relation("RepositoryFeedbackInstructor", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([repositoryId])
+  @@map("repository_feedback")
 }
