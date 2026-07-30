@@ -1,6 +1,6 @@
 # Projex Server
 
-Phase 2 provides the Projex API foundation, PostgreSQL health check, core Prisma data model, and initial database migration. It does not contain authentication, business endpoints, seed data, Java execution, or Git integration.
+Phase 3 provides the Projex API foundation, PostgreSQL schema, provisioned-account authentication, refresh sessions, CSRF protection, authorization middleware, email delivery abstraction, and initial-administrator CLI. It does not contain public registration, frontend authentication integration, password reset, class/activity/submission/repository endpoints, seed data, Java execution, or Git integration.
 
 ## Prerequisites
 
@@ -25,6 +25,18 @@ Required variables:
 - `FRONTEND_ORIGIN`
 - `LOG_LEVEL`
 - `REQUEST_BODY_LIMIT`
+- `ACCESS_TOKEN_SECRET`
+- `ACCESS_TOKEN_TTL_MINUTES`
+- `REFRESH_TOKEN_TTL_DAYS`
+- `ACCOUNT_SETUP_TOKEN_TTL_HOURS`
+- `AUTH_COOKIE_SECURE`
+- `AUTH_COOKIE_SAME_SITE`
+- `MAIL_TRANSPORT`
+- `MAIL_FROM_NAME`
+- `MAIL_FROM_ADDRESS`
+- `MAIL_PREVIEW_DIR`
+
+When `MAIL_TRANSPORT=smtp`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, and `SMTP_PASSWORD` are also required. Preview transport is rejected in production.
 
 ## Install and generate Prisma Client
 
@@ -89,6 +101,48 @@ npm test
 npm run build
 npm start
 ```
+
+## Authentication endpoints
+
+All endpoints use `/api/v1` and JSON response envelopes:
+
+```text
+POST  /auth/login
+POST  /auth/refresh
+POST  /auth/logout
+POST  /auth/logout-all
+GET   /auth/me
+POST  /auth/change-password
+POST  /account-setup/complete
+POST  /users/students
+POST  /users/instructors
+POST  /users/:userId/resend-setup
+PATCH /users/:userId/status
+```
+
+There is no public registration endpoint. Cookie-authenticated mutations require `Content-Type: application/json`, the readable `projex_csrf` cookie, and the same value in `X-CSRF-Token`.
+
+## Development email previews
+
+With `MAIL_TRANSPORT=preview`, provisioned-account messages are written to the ignored `.mail-preview/` directory instead of being sent. Logs show only the preview filename. Preview files contain the setup link and must remain local and uncommitted.
+
+For SMTP, configure the validated SMTP variables privately. The implementation is provider-neutral and does not assume Gmail, Google Workspace administration, or a personal SLU password.
+
+## Initial administrator
+
+Set the following only in the private CLI environment:
+
+- `INITIAL_ADMIN_NAME`
+- `INITIAL_ADMIN_EMAIL`
+- `INITIAL_ADMIN_PASSWORD`
+
+Then run once:
+
+```powershell
+npm run admin:create
+```
+
+The command creates an active `ADMIN`, refuses duplicate email, never prints the password, and does not run during normal startup. Students and instructors are not seeded.
 
 Prisma Studio is available for local inspection:
 

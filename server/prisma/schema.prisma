@@ -17,6 +17,7 @@ enum UserRole {
 }
 
 enum UserStatus {
+  SETUP_PENDING
   ACTIVE
   INACTIVE
   SUSPENDED
@@ -143,10 +144,14 @@ model User {
   id                           String                @id @default(uuid()) @map("user_id") @db.Uuid
   fullName                     String                @map("full_name")
   email                        String                @unique
-  passwordHash                 String                @map("password_hash")
+  passwordHash                 String?               @map("password_hash")
   role                         UserRole
-  status                       UserStatus            @default(ACTIVE)
+  status                       UserStatus            @default(SETUP_PENDING)
   createdAt                    DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  passwordChangedAt            DateTime?             @map("password_changed_at") @db.Timestamptz(3)
+  lastLoginAt                  DateTime?             @map("last_login_at") @db.Timestamptz(3)
+  accountSetupTokens           AccountSetupToken[]
+  refreshSessions              RefreshSession[]      @relation("RefreshSessionUser")
   classesTaught                Class[]               @relation("ClassInstructor")
   classMemberships             ClassMember[]         @relation("ClassMemberStudent")
   programmingActivitiesCreated ProgrammingActivity[] @relation("ProgrammingActivityCreator")
@@ -160,6 +165,44 @@ model User {
 
   @@index([role, status])
   @@map("users")
+}
+
+model AccountSetupToken {
+  id            String    @id @default(uuid()) @map("setup_token_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  tokenHash     String    @unique @map("token_hash")
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt        DateTime? @map("used_at") @db.Timestamptz(3)
+  invalidatedAt DateTime? @map("invalidated_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("account_setup_tokens")
+}
+
+model RefreshSession {
+  id                  String          @id @default(uuid()) @map("refresh_session_id") @db.Uuid
+  userId              String          @map("user_id") @db.Uuid
+  familyId            String          @map("family_id") @db.Uuid
+  tokenHash           String          @unique @map("token_hash")
+  csrfTokenHash       String          @map("csrf_token_hash")
+  expiresAt           DateTime        @map("expires_at") @db.Timestamptz(3)
+  revokedAt           DateTime?       @map("revoked_at") @db.Timestamptz(3)
+  replacedBySessionId String?         @unique @map("replaced_by_session_id") @db.Uuid
+  userAgent           String?         @map("user_agent")
+  ipAddress           String?         @map("ip_address")
+  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastUsedAt          DateTime?       @map("last_used_at") @db.Timestamptz(3)
+  user                User            @relation("RefreshSessionUser", fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  replacedBySession   RefreshSession? @relation("RefreshSessionReplacement", fields: [replacedBySessionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  replacesSession     RefreshSession? @relation("RefreshSessionReplacement")
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_sessions")
 }
 
 model Class {
