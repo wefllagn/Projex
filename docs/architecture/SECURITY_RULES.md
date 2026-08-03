@@ -40,6 +40,10 @@ Minimum policy examples:
 | Instructor releases feedback | Assigned instructor, valid review state, grade/feedback validation, transaction. |
 | Repository read/write | Class/project visibility plus repository membership/role and archive/read-only state. |
 | Detailed similarity review | Assigned instructor or narrowly authorized admin; never student payload. |
+| Student views class/roster | Authenticated ACTIVE student and ACTIVE membership; roster projection contains only user ID and full name. |
+| Instructor manages class | Authenticated ACTIVE instructor who owns that exact class; archived classes are read-only. |
+| Admin manages class | Authenticated ACTIVE admin; admin-created classes require an existing ACTIVE instructor. |
+| Student joins class | Authenticated ACTIVE student, valid active server-generated code, active class, and no REMOVED/PENDING membership. |
 
 Projex defines the roles `STUDENT`, `INSTRUCTOR`, and `ADMIN` from the first authentication schema. Student and Instructor workflows are implemented first, but Admin remains in scope and the existing admin prototype is preserved for a dedicated later phase. Admin access remains explicit, authorized, minimized, and audited.
 
@@ -51,6 +55,8 @@ Projex defines the roles `STUDENT`, `INSTRUCTOR`, and `ADMIN` from the first aut
 - Repository clone/download/file APIs enforce membership and visibility on every request.
 - API serializers use explicit field selections for each role. Sending sensitive fields and hiding them with CSS is prohibited.
 - Logs and analytics must minimize personal and source-code data.
+- Class join codes are capability values. Generate them cryptographically, omit ambiguous characters, normalize before lookup, exclude them from student responses, and never place generated or submitted codes in logs or error details.
+- Removed class membership grants no active or archived class, roster, activity, or related student access.
 
 ## Submission and assessment integrity
 

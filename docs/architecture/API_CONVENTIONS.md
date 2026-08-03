@@ -15,8 +15,20 @@ Illustrative routes:
 POST   /api/v1/auth/login
 POST   /api/v1/auth/logout
 GET    /api/v1/auth/me
+GET    /api/v1/users
+GET    /api/v1/users/:userId
+POST   /api/v1/classes
 GET    /api/v1/classes
+GET    /api/v1/classes/:classId
+PATCH  /api/v1/classes/:classId
+POST   /api/v1/classes/:classId/archive
+POST   /api/v1/classes/:classId/restore
+GET    /api/v1/classes/:classId/join-code
+POST   /api/v1/classes/:classId/join-code/rotate
+POST   /api/v1/classes/:classId/join-code/revoke
+POST   /api/v1/classes/join
 GET    /api/v1/classes/:classId/members
+PATCH  /api/v1/classes/:classId/members/:memberId
 POST   /api/v1/activities
 GET    /api/v1/activities/:activityId
 POST   /api/v1/activities/:activityId/submissions
@@ -29,6 +41,16 @@ GET    /api/v1/notifications
 ```
 
 Implemented examples reflect their actual contracts. Future-feature examples remain illustrative, do not authorize implementation, and are not a complete endpoint inventory.
+
+### Phase 4 projection rules
+
+- Global user endpoints are admin-only and use explicit safe user selections.
+- Class lists are scoped by the authenticated role: all classes for admins, owned classes for instructors, and ACTIVE memberships for students.
+- Class responses never include join codes for students.
+- Student roster entries contain only `userId` and `fullName`.
+- Instructor/admin roster entries may additionally contain `memberId`, email, user status, membership status, `joinedAt`, `removedAt`, and `lastActivatedAt`.
+- A successful new class-code join returns `201`; an idempotent existing ACTIVE membership returns `200` with the same membership ID.
+- Class-code errors never echo the submitted code or reveal the target class.
 
 ## Naming and data representation
 

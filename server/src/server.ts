@@ -21,9 +21,16 @@ import {
   createAuthenticationMiddleware,
   createCsrfMiddleware,
 } from './modules/auth/auth.middleware.js'
-import { createUserProvisioningRouter } from './modules/users/user-provisioning.routes.js'
 import { createPrismaUserProvisioningRepository } from './modules/users/user-provisioning.repository.js'
 import { createUserProvisioningService } from './modules/users/user-provisioning.service.js'
+import { createPrismaUserDirectoryRepository } from './modules/users/user-directory.repository.js'
+import { createUserDirectoryService } from './modules/users/user-directory.service.js'
+import { createUsersRouter } from './modules/users/users.routes.js'
+import { createPrismaClassRepository } from './modules/classes/class.repository.js'
+import { createClassService } from './modules/classes/class.service.js'
+import { createClassesRouter } from './modules/classes/classes.routes.js'
+import { createPrismaClassMemberRepository } from './modules/class-members/class-member.repository.js'
+import { createClassMemberService } from './modules/class-members/class-member.service.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
@@ -85,6 +92,19 @@ async function bootstrap(): Promise<void> {
     frontendOrigin: env.frontendOrigin,
     setupTokenTtlHours: env.accountSetupTokenTtlHours,
   })
+  const userDirectoryService = createUserDirectoryService(
+    createPrismaUserDirectoryRepository(prisma),
+  )
+  const classRepository = createPrismaClassRepository(prisma)
+  const classService = createClassService({
+    repository: classRepository,
+    logger,
+  })
+  const classMemberService = createClassMemberService({
+    repository: createPrismaClassMemberRepository(prisma),
+    classRepository,
+    logger,
+  })
   const app = createApp({
     config: {
       frontendOrigin: env.frontendOrigin,
@@ -101,8 +121,15 @@ async function bootstrap(): Promise<void> {
         requireCsrf,
       }),
       accountSetup: createAccountSetupRouter(accountSetupService),
-      users: createUserProvisioningRouter({
-        service: userProvisioningService,
+      users: createUsersRouter({
+        directoryService: userDirectoryService,
+        provisioningService: userProvisioningService,
+        requireAuthentication,
+        requireCsrf,
+      }),
+      classes: createClassesRouter({
+        classService,
+        classMemberService,
         requireAuthentication,
         requireCsrf,
       }),

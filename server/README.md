@@ -1,6 +1,6 @@
 # Projex Server
 
-Phase 3 provides the Projex API foundation, PostgreSQL schema, provisioned-account authentication, refresh sessions, CSRF protection, authorization middleware, email delivery abstraction, and initial-administrator CLI. It does not contain public registration, frontend authentication integration, password reset, class/activity/submission/repository endpoints, seed data, Java execution, or Git integration.
+Phase 4 provides the Projex API foundation, PostgreSQL schema, provisioned-account authentication, administrative user directory, class lifecycle, secure join codes, and class membership management. It remains backend-only and does not contain public registration, frontend integration, password reset, activity/submission/repository endpoints, seed data, Java execution, or Git integration.
 
 ## Prerequisites
 
@@ -9,7 +9,7 @@ Phase 3 provides the Projex API foundation, PostgreSQL schema, provisioned-accou
 - PostgreSQL 18 running locally on Windows
 - The existing `projex` database and `projex_user` database user
 
-Docker is not required for Phase 2.
+Docker is not required for Phase 4.
 
 ## Environment setup
 
@@ -97,12 +97,14 @@ Migration safety rules:
 npm run dev
 npm run lint
 npm run type-check
+npm run type-check:integration
 npm test
+npm run test:integration
 npm run build
 npm start
 ```
 
-## Authentication endpoints
+## API endpoints
 
 All endpoints use `/api/v1` and JSON response envelopes:
 
@@ -118,9 +120,35 @@ POST  /users/students
 POST  /users/instructors
 POST  /users/:userId/resend-setup
 PATCH /users/:userId/status
+GET   /users
+GET   /users/:userId
+POST  /classes
+GET   /classes
+GET   /classes/:classId
+PATCH /classes/:classId
+POST  /classes/:classId/archive
+POST  /classes/:classId/restore
+GET   /classes/:classId/join-code
+POST  /classes/:classId/join-code/rotate
+POST  /classes/:classId/join-code/revoke
+POST  /classes/join
+GET   /classes/:classId/members
+PATCH /classes/:classId/members/:memberId
 ```
 
 There is no public registration endpoint. Cookie-authenticated mutations require `Content-Type: application/json`, the readable `projex_csrf` cookie, and the same value in `X-CSRF-Token`.
+
+Global user listing/detail is admin-only. Class APIs are scoped to admins, owning instructors, and students with ACTIVE membership. Student roster responses contain only user ID and full name. Join codes are available only to the owning instructor or admin and are never logged.
+
+## PostgreSQL integration tests
+
+Real database tests require a private `TEST_DATABASE_URL` whose database name is exactly `projex_test`. The runner never falls back to `DATABASE_URL` and aborts before migration/test execution for any unrecognized name.
+
+```powershell
+npm run test:integration
+```
+
+The command applies committed migrations with `prisma migrate deploy`, runs serially, and cleans only the recognized test database through Prisma. It never runs `prisma db push` or `prisma migrate reset`. Do not reuse the development database or place real credentials in `.env.example`.
 
 ## Development email previews
 

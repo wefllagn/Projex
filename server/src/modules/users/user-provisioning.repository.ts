@@ -11,6 +11,7 @@ export type ProvisioningResult =
   | { kind: 'created'; user: SafeUserProfile }
   | { kind: 'duplicate_email' }
   | { kind: 'class_not_found' }
+  | { kind: 'class_archived' }
   | { kind: 'class_not_owned' }
 
 export type ResendResult =
@@ -85,9 +86,12 @@ export function createPrismaUserProvisioningRepository(
           if (input.classId) {
             const classRecord = await transaction.class.findUnique({
               where: { id: input.classId },
-              select: { id: true, instructorId: true },
+              select: { id: true, instructorId: true, status: true },
             })
             if (!classRecord) return { kind: 'class_not_found' } as const
+            if (classRecord.status === 'ARCHIVED') {
+              return { kind: 'class_archived' } as const
+            }
             if (
               input.callerRole === 'INSTRUCTOR' &&
               classRecord.instructorId !== input.callerId

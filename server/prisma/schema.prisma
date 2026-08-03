@@ -148,6 +148,7 @@ model User {
   role                         UserRole
   status                       UserStatus            @default(SETUP_PENDING)
   createdAt                    DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                    DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
   passwordChangedAt            DateTime?             @map("password_changed_at") @db.Timestamptz(3)
   lastLoginAt                  DateTime?             @map("last_login_at") @db.Timestamptz(3)
   accountSetupTokens           AccountSetupToken[]
@@ -214,7 +215,11 @@ model Class {
   semester              String
   schoolYear            String                @map("school_year")
   status                ClassStatus           @default(ACTIVE)
+  classCodeActive       Boolean               @default(true) @map("class_code_active")
+  classCodeChangedAt    DateTime              @default(now()) @map("class_code_changed_at") @db.Timestamptz(3)
   createdAt             DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  archivedAt            DateTime?             @map("archived_at") @db.Timestamptz(3)
   instructor            User                  @relation("ClassInstructor", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   members               ClassMember[]
   programmingActivities ProgrammingActivity[]
@@ -227,13 +232,16 @@ model Class {
 }
 
 model ClassMember {
-  id        String            @id @default(uuid()) @map("class_member_id") @db.Uuid
-  classId   String            @map("class_id") @db.Uuid
-  studentId String            @map("student_id") @db.Uuid
-  joinedAt  DateTime          @default(now()) @map("joined_at") @db.Timestamptz(3)
-  status    ClassMemberStatus @default(ACTIVE)
-  class     Class             @relation(fields: [classId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  student   User              @relation("ClassMemberStudent", fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  id              String            @id @default(uuid()) @map("class_member_id") @db.Uuid
+  classId         String            @map("class_id") @db.Uuid
+  studentId       String            @map("student_id") @db.Uuid
+  joinedAt        DateTime          @default(now()) @map("joined_at") @db.Timestamptz(3)
+  status          ClassMemberStatus @default(ACTIVE)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  removedAt       DateTime?         @map("removed_at") @db.Timestamptz(3)
+  lastActivatedAt DateTime          @default(now()) @map("last_activated_at") @db.Timestamptz(3)
+  class           Class             @relation(fields: [classId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  student         User              @relation("ClassMemberStudent", fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@unique([classId, studentId])
   @@index([studentId])

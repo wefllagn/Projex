@@ -2,18 +2,22 @@
 
 ## Scope
 
-Phase 2 establishes the core PostgreSQL schema and its initial Prisma migration. It does not implement authentication, HTTP endpoints, Java execution, Git integration, seed data, or frontend integration.
+Phase 2 established the core PostgreSQL schema. Phase 3 added account setup and refresh-session records, and Phase 4 adds user/class/membership lifecycle timestamps and class join-code state. Java execution, Git integration, seed data, and frontend integration remain outside this schema phase.
 
 The authoritative sources are:
 
 - `server/prisma/schema.prisma` for Prisma models, enums, relations, and Prisma-managed indexes.
 - `server/prisma/migrations/20260730000000_init_core_schema/migration.sql` for the applied PostgreSQL schema, including SQL-only checks and the partial unique index.
+- `server/prisma/migrations/20260730044437_auth_status_setup_pending/migration.sql` and `20260730044438_auth_account_sessions/migration.sql` for Phase 3 authentication state.
+- `server/prisma/migrations/20260731000000_phase4_user_class_management/migration.sql` for additive Phase 4 lifecycle fields and safe backfills.
 
 ## Core models
 
 | Prisma model | PostgreSQL table | Purpose |
 | --- | --- | --- |
 | `User` | `users` | Academic identity, role, and account status. |
+| `AccountSetupToken` | `account_setup_tokens` | Single-use provisioned-account setup state. |
+| `RefreshSession` | `refresh_sessions` | Rotatable, revocable browser/device session state. |
 | `Class` | `classes` | Instructor-owned class, section, and term workspace. |
 | `ClassMember` | `class_members` | Student enrollment and membership lifecycle. |
 | `ProgrammingActivity` | `programming_activities` | Programming workspace definition and attempt limit. |
@@ -30,6 +34,15 @@ The authoritative sources are:
 | `RepositoryFeedback` | `repository_feedback` | Instructor repository feedback and grade snapshot. |
 
 The schema uses UUID primary keys, snake-case database names, `timestamptz(3)` event timestamps, fixed-precision decimals for points/scores, explicit foreign-key update/delete actions, and text columns for long-form content.
+
+Phase 4 adds:
+
+- `User.updatedAt` with Prisma `@updatedAt`, backfilled from `createdAt`.
+- `Class.updatedAt` with Prisma `@updatedAt`, `archivedAt`, `classCodeActive`, and `classCodeChangedAt`.
+- `ClassMember.updatedAt` with Prisma `@updatedAt`, `removedAt`, and `lastActivatedAt`.
+- ACTIVE existing classes receive an active code; ARCHIVED existing classes receive an inactive code.
+- Existing class code change times are backfilled from class creation, and membership activation times from original join time.
+- Existing code formatting is normalized transactionally only after preflight validation; invalid legacy codes or normalized collisions abort and roll back the migration for explicit review.
 
 ## Database-enforced invariants
 
@@ -68,10 +81,15 @@ The following rules require transactional application services because they depe
 15. A student may belong to only one repository for the same project task. The service enforces this cross-repository rule transactionally.
 16. Main academic records use archive, inactive, removed, closed, or other lifecycle transitions instead of routine permanent deletion.
 17. `storagePath` is a server-owned internal identifier/path. APIs must never accept it from clients or expose it as unrestricted host filesystem access.
+18. Only an ACTIVE instructor may own a newly created class; instructor ownership cannot be transferred in Phase 4.
+19. Class codes are server-generated, normalized, unique, bounded-retry capabilities. Archive disables the code atomically and restore leaves it disabled.
+20. Joining with an existing ACTIVE membership is idempotent. A REMOVED membership cannot be replaced or rejoined; the existing unique row requires explicit owner/admin reactivation.
+21. PENDING class membership remains reserved and is not created by Phase 4 services.
+22. Only ACTIVE membership grants student access to active or archived class records.
 
 ## Transaction boundaries
 
-Submission attempt allocation, score review, repository creation with owner membership, and class-project membership validation must be atomic. Role and membership checks must occur inside or immediately adjacent to the authoritative transaction so concurrent requests cannot bypass them.
+Submission attempt allocation, score review, repository creation with owner membership, class-project membership validation, class archive/code deactivation, join-by-code, and membership transitions must be atomic. Role and membership checks must occur inside or immediately adjacent to the authoritative transaction so concurrent requests cannot bypass them.
 
 External Git, Java, filesystem, or network work must not execute inside database transactions. Later phases should commit durable job/outbox state first and perform external work separately.
 

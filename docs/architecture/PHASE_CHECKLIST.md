@@ -20,7 +20,7 @@ Status markers:
 | 1 | Backend foundation | Complete | `bd45349` |
 | 2 | Database foundation | Complete | `3cf0354` |
 | 3 | Authentication and authorization | Complete | `bf45efd` |
-| 4 | User and Class Management | Approved for planning; implementation not started | Pending |
+| 4 | User and Class Management | Implemented and verified; pending final review and commit | Working tree |
 | 5-11 | Later functionalization, integration, and hardening | Pending | Pending |
 
 ## Phase 0: architecture and planning — complete
@@ -73,7 +73,7 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - [x] Keep frontend authentication integration pending for Phase 10.
 - [x] Verify the isolated authentication/security suite and reported live admin login, `/auth/me`, and protected logout flows.
 
-## Phase 4: User and Class Management — approved, not implemented
+## Phase 4: User and Class Management — implemented and verified, final review pending
 
 ### Scope boundaries
 
@@ -124,12 +124,22 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 
 ### Real PostgreSQL integration tests
 
-- [~] Add a separate `npm run test:integration` suite and keep `npm test` isolated.
-- [~] Require `TEST_DATABASE_URL`; never fall back to `DATABASE_URL`.
-- [~] Abort immediately unless the URL names an explicitly recognized test database such as `projex_test`.
-- [~] Apply committed migrations with `prisma migrate deploy` and run serially unless isolation is implemented.
-- [~] Never run `prisma db push` or `prisma migrate reset`.
-- [~] Test PostgreSQL constraints, transactions, concurrency, ownership, membership, projections, rotation, revocation, archive, removal, and reactivation.
+- [x] Add a separate `npm run test:integration` suite and keep `npm test` isolated.
+- [x] Require `TEST_DATABASE_URL`; never fall back to `DATABASE_URL`.
+- [x] Abort immediately unless the URL names exactly the recognized `projex_test` database.
+- [x] Configure the guarded runner to apply committed migrations with `prisma migrate deploy` and run serially.
+- [x] Never run `prisma db push` or `prisma migrate reset`.
+- [x] Add PostgreSQL coverage for transactions, concurrency, ownership, membership, projections, archive, removal, and reactivation.
+- [x] Execute the suite against a privately configured `projex_test` database and record the result.
+
+### Verification record
+
+- The committed Phase 4 migration was deployed to the normal development database without reset, `db push`, drift, data loss, or migration failure; all four migrations are applied.
+- The existing ACTIVE administrator account was preserved. The live verification fixtures leave three users, one class, and one membership in the development database.
+- The isolated backend suite passes with seven test files and 59 tests.
+- The guarded PostgreSQL suite passes with three test files and ten tests against exactly `projex_test`; suite cleanup leaves application tables empty while preserving Prisma migration history.
+- Live API verification passes the approved administrator, instructor, and student workflows, including projection boundaries, ownership and membership checks, class-code lifecycle, archive/restore behavior, and structured-log redaction.
+- Backend lint, main and integration type-checks, tests, and build pass. The unchanged frontend lint and build also pass.
 
 ## Phase 5: programming activities and test cases — pending
 

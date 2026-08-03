@@ -26,6 +26,7 @@ export interface AppDependencies {
     auth: Router
     accountSetup: Router
     users: Router
+    classes: Router
   }
 }
 
@@ -68,6 +69,7 @@ export function createApp({
     app.use('/api/v1/auth', featureRouters.auth)
     app.use('/api/v1/account-setup', featureRouters.accountSetup)
     app.use('/api/v1/users', featureRouters.users)
+    app.use('/api/v1/classes', featureRouters.classes)
   }
 
   app.use(notFoundMiddleware)

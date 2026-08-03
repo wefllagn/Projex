@@ -161,6 +161,19 @@ describe('user provisioning policy', () => {
     ).rejects.toMatchObject({ code: 'CLASS_OWNERSHIP_REQUIRED' })
   })
 
+  it('rejects provisioning into an archived class', async () => {
+    const repository = new FakeProvisioningRepository()
+    repository.studentResult = { kind: 'class_archived' }
+    const { service } = createHarness({ repository })
+    await expect(
+      service.provisionStudent(admin, {
+        fullName: 'Student User',
+        universityEmail: 'student@slu.edu',
+        classId,
+      }),
+    ).rejects.toMatchObject({ code: 'CLASS_ARCHIVED', statusCode: 409 })
+  })
+
   it('prevents an instructor from provisioning instructor or admin accounts', async () => {
     const { service } = createHarness()
     await expect(

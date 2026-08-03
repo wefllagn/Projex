@@ -101,6 +101,13 @@ export function createUserProvisioningService(dependencies: {
         message: 'Class not found.',
       })
     }
+    if (kind === 'class_archived') {
+      throw new AppError({
+        statusCode: 409,
+        code: 'CLASS_ARCHIVED',
+        message: 'Archived classes are read-only.',
+      })
+    }
     throw new AppError({
       statusCode: 403,
       code: 'CLASS_OWNERSHIP_REQUIRED',
