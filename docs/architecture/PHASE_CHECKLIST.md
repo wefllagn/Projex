@@ -20,8 +20,9 @@ Status markers:
 | 1 | Backend foundation | Complete | `bd45349` |
 | 2 | Database foundation | Complete | `3cf0354` |
 | 3 | Authentication and authorization | Complete | `bf45efd` |
-| 4 | User and Class Management | Implemented and verified; pending final review and commit | Working tree |
-| 5-11 | Later functionalization, integration, and hardening | Pending | Pending |
+| 4 | User and Class Management | Complete | `985f101` |
+| 5 | Programming Activities and Test Cases | Implemented; test-database verification complete, development migration/live verification pending | Working tree |
+| 6-11 | Later functionalization, integration, and hardening | Pending | Pending |
 
 ## Phase 0: architecture and planning — complete
 
@@ -73,54 +74,54 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - [x] Keep frontend authentication integration pending for Phase 10.
 - [x] Verify the isolated authentication/security suite and reported live admin login, `/auth/me`, and protected logout flows.
 
-## Phase 4: User and Class Management — implemented and verified, final review pending
+## Phase 4: User and Class Management — complete
 
 ### Scope boundaries
 
-- [~] Backend only; do not modify or integrate anything under `client/`.
-- [~] Add an admin-only user directory and safe user detail while preserving existing provisioning/status endpoints.
-- [~] Add class create, role-scoped list, detail, metadata update, archive, and restore operations.
-- [~] Add class roster listing, student join by code, membership removal, and explicit reactivation.
-- [~] Keep public registration, profile editing, role changes, CSV enrollment, invitations, activities, submissions, Java, Git, repositories, and Admin UI out of scope.
+- [x] Backend only; do not modify or integrate anything under `client/`.
+- [x] Add an admin-only user directory and safe user detail while preserving existing provisioning/status endpoints.
+- [x] Add class create, role-scoped list, detail, metadata update, archive, and restore operations.
+- [x] Add class roster listing, student join by code, membership removal, and explicit reactivation.
+- [x] Keep public registration, profile editing, role changes, CSV enrollment, invitations, activities, submissions, Java, Git, repositories, and Admin UI out of scope.
 
 ### Class and join-code lifecycle
 
-- [~] Retain the unique server-owned `Class.classCode` field.
-- [~] Add `classCodeActive` and `classCodeChangedAt`; do not add a class-code history or invitation table.
-- [~] Generate approximately ten uppercase characters with cryptographic randomness and an unambiguous human-readable alphabet.
-- [~] Normalize codes before storage and lookup, retry unique collisions within a strict bound, exclude codes from student responses, and never log them.
-- [~] Restrict join-code view, rotation, and revocation to the class owner or administrator.
-- [~] Archive atomically disables the current code; restore does not reactivate it.
-- [~] Backfill existing ACTIVE classes with `classCodeActive = true` and ARCHIVED classes with `classCodeActive = false`.
-- [~] Safely backfill new `updatedAt` fields and configure Prisma `@updatedAt` where applicable.
+- [x] Retain the unique server-owned `Class.classCode` field.
+- [x] Add `classCodeActive` and `classCodeChangedAt`; do not add a class-code history or invitation table.
+- [x] Generate approximately ten uppercase characters with cryptographic randomness and an unambiguous human-readable alphabet.
+- [x] Normalize codes before storage and lookup, retry unique collisions within a strict bound, exclude codes from student responses, and never log them.
+- [x] Restrict join-code view, rotation, and revocation to the class owner or administrator.
+- [x] Archive atomically disables the current code; restore does not reactivate it.
+- [x] Backfill existing ACTIVE classes with `classCodeActive = true` and ARCHIVED existing classes with `classCodeActive = false`.
+- [x] Safely backfill new `updatedAt` fields and configure Prisma `@updatedAt` where applicable.
 
 ### Membership lifecycle and projections
 
-- [~] ACTIVE membership grants student class and roster access, including read-only archived-class access.
-- [~] REMOVED membership preserves history but grants no class, roster, activity, or archived-class access.
-- [~] Reuse the unique `(classId, studentId)` row and require owner/admin reactivation after removal.
-- [~] Keep PENDING reserved for a future invitation workflow and do not create it in Phase 4.
-- [~] Student roster entries expose only `userId` and `fullName`.
-- [~] Instructor/admin roster entries may also expose university email, user status, membership status, `joinedAt`, `removedAt`, and `lastActivatedAt`.
-- [~] Log class and membership lifecycle events structurally without a persistent audit-event table.
-- [~] Document durable administrative auditing as deferred hardening work.
+- [x] ACTIVE membership grants student class and roster access, including read-only archived-class access.
+- [x] REMOVED membership preserves history but grants no class, roster, activity, or archived-class access.
+- [x] Reuse the unique `(classId, studentId)` row and require owner/admin reactivation after removal.
+- [x] Keep PENDING reserved for a future invitation workflow and do not create it in Phase 4.
+- [x] Student roster entries expose only `userId` and `fullName`.
+- [x] Instructor/admin roster entries may also expose university email, user status, membership status, `joinedAt`, `removedAt`, and `lastActivatedAt`.
+- [x] Log class and membership lifecycle events structurally without a persistent audit-event table.
+- [x] Document durable administrative auditing as deferred hardening work.
 
 ### Approved API surface
 
-- [~] `GET /api/v1/users`
-- [~] `GET /api/v1/users/:userId`
-- [~] `POST /api/v1/classes`
-- [~] `GET /api/v1/classes`
-- [~] `GET /api/v1/classes/:classId`
-- [~] `PATCH /api/v1/classes/:classId`
-- [~] `POST /api/v1/classes/:classId/archive`
-- [~] `POST /api/v1/classes/:classId/restore`
-- [~] `GET /api/v1/classes/:classId/join-code`
-- [~] `POST /api/v1/classes/:classId/join-code/rotate`
-- [~] `POST /api/v1/classes/:classId/join-code/revoke`
-- [~] `POST /api/v1/classes/join`
-- [~] `GET /api/v1/classes/:classId/members`
-- [~] `PATCH /api/v1/classes/:classId/members/:memberId`
+- [x] `GET /api/v1/users`
+- [x] `GET /api/v1/users/:userId`
+- [x] `POST /api/v1/classes`
+- [x] `GET /api/v1/classes`
+- [x] `GET /api/v1/classes/:classId`
+- [x] `PATCH /api/v1/classes/:classId`
+- [x] `POST /api/v1/classes/:classId/archive`
+- [x] `POST /api/v1/classes/:classId/restore`
+- [x] `GET /api/v1/classes/:classId/join-code`
+- [x] `POST /api/v1/classes/:classId/join-code/rotate`
+- [x] `POST /api/v1/classes/:classId/join-code/revoke`
+- [x] `POST /api/v1/classes/join`
+- [x] `GET /api/v1/classes/:classId/members`
+- [x] `PATCH /api/v1/classes/:classId/members/:memberId`
 
 ### Real PostgreSQL integration tests
 
@@ -141,13 +142,30 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - Live API verification passes the approved administrator, instructor, and student workflows, including projection boundaries, ownership and membership checks, class-code lifecycle, archive/restore behavior, and structured-log redaction.
 - Backend lint, main and integration type-checks, tests, and build pass. The unchanged frontend lint and build also pass.
 
-## Phase 5: programming activities and test cases — pending
+## Phase 5: programming activities and test cases — implementation complete, pending review and commit
 
-- [ ] Implement activity metadata, lifecycle, publication, due dates, starter code, total points, Java language settings, and `maxAttempts` from one through three.
-- [ ] Implement visible and hidden deterministic test cases with ordering and points.
-- [ ] Prevent hidden test content from reaching student responses.
-- [ ] Enforce class ownership/membership and lifecycle rules.
-- [ ] Keep execution and submission behavior simulated until Phase 6.
+- [x] Keep Phase 5 backend-only and preserve every file under `client/`.
+- [x] Implement activity metadata, due-state projection, Java starter/entry-class settings, total points, and `maxAttempts` from one through three.
+- [x] Implement `DRAFT`, `PUBLISHED`, `CLOSED`, and `ARCHIVED` lifecycle state with conservative restore behavior.
+- [x] Implement atomic ordered visible/hidden test-case replacement while the activity is a draft.
+- [x] Freeze starter code, language/entry class, total points, and test-case content/visibility/points at publication.
+- [x] Permit only published title/instruction corrections, due-date extensions, and attempt-limit increases.
+- [x] Prevent hidden test rows, values, IDs, visibility flags, and counts from reaching student responses.
+- [x] Enforce active caller, class ownership/membership, class archive, activity visibility, and optimistic-version rules in backend services/repositories.
+- [x] Keep submissions, Java execution, automated scoring, score correction, rubric grading, and final grades out of Phase 5.
+- [x] Preserve the future rule that a professor-facing automated-score correction retains the original result, corrected result, reason, instructor identity, and correction timestamp.
+- [x] Apply the committed Phase 5 migration and pass the guarded serial integration suite against exactly `projex_test`.
+- [x] Apply the migration to the normal development database only after test-database verification, then complete live role verification and final regression checks.
+
+### Verification record
+
+- The committed `20260804000000_phase5_programming_activities_test_cases` migration was deployed first to exactly `projex_test` and then to the normal development database without reset, `db push`, drift, data loss, or migration failure; all five migrations are applied in both databases.
+- The guarded PostgreSQL suite passes with five integration files and 18 tests. Suite cleanup leaves all application tables empty in `projex_test` while preserving five Prisma migration-history rows.
+- The isolated backend suite passes with nine test files and 71 tests. Backend lint, main and integration type-checks, and build pass.
+- Live API verification passes the administrator, instructor, and student workflows for draft visibility, test-case projection, publication, immutable scoring configuration, safe post-publication updates, optimistic concurrency, close/archive/restore, archived-class behavior, and logout.
+- Structured lifecycle events were present and sensitive log-redaction checks passed. The existing ACTIVE administrator remains preserved.
+- The normal development database contains five users, two classes, two memberships, one programming activity, and two test cases after the intentionally retained live-verification fixtures.
+- The unchanged frontend lint and build pass, and `git diff -- client` is empty.
 
 ## Phase 6: submissions and automated assessment — pending
 
@@ -155,7 +173,7 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - [ ] Implement the PostgreSQL-backed execution queue and separate Java worker.
 - [ ] Compile once per assessment and enforce time, memory, CPU, process, disk, network, and output limits.
 - [ ] Preserve source snapshots, execution results, test-case results, automated scores, and attempt history.
-- [ ] Implement instructor review, signed score adjustment, feedback drafts, and controlled release without overwriting automated results.
+- [ ] Implement instructor review, preserved original automated results, separately recorded score corrections/adjustments with actor/reason/time, feedback drafts, and controlled release.
 - [ ] Add Docker/container isolation before internet-hosted Java execution.
 
 ## Phase 7: project and repository collaboration — pending

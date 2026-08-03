@@ -31,6 +31,11 @@ import { createClassService } from './modules/classes/class.service.js'
 import { createClassesRouter } from './modules/classes/classes.routes.js'
 import { createPrismaClassMemberRepository } from './modules/class-members/class-member.repository.js'
 import { createClassMemberService } from './modules/class-members/class-member.service.js'
+import { createPrismaActivityRepository } from './modules/activities/activity.repository.js'
+import { createActivityService } from './modules/activities/activity.service.js'
+import { createActivitiesRouter } from './modules/activities/activities.routes.js'
+import { createPrismaTestCaseRepository } from './modules/test-cases/test-case.repository.js'
+import { createTestCaseService } from './modules/test-cases/test-case.service.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
@@ -105,6 +110,17 @@ async function bootstrap(): Promise<void> {
     classRepository,
     logger,
   })
+  const activityRepository = createPrismaActivityRepository(prisma)
+  const activityService = createActivityService({
+    repository: activityRepository,
+    classRepository,
+    logger,
+  })
+  const testCaseService = createTestCaseService({
+    repository: createPrismaTestCaseRepository(prisma),
+    activityRepository,
+    logger,
+  })
   const app = createApp({
     config: {
       frontendOrigin: env.frontendOrigin,
@@ -130,6 +146,13 @@ async function bootstrap(): Promise<void> {
       classes: createClassesRouter({
         classService,
         classMemberService,
+        activityService,
+        requireAuthentication,
+        requireCsrf,
+      }),
+      activities: createActivitiesRouter({
+        activityService,
+        testCaseService,
         requireAuthentication,
         requireCsrf,
       }),

@@ -1,6 +1,6 @@
 # Projex Server
 
-Phase 4 provides the Projex API foundation, PostgreSQL schema, provisioned-account authentication, administrative user directory, class lifecycle, secure join codes, and class membership management. It remains backend-only and does not contain public registration, frontend integration, password reset, activity/submission/repository endpoints, seed data, Java execution, or Git integration.
+Phase 5 provides the Projex API foundation, PostgreSQL schema, provisioned-account authentication, user/class/membership management, programming-activity lifecycle, and visible/hidden test-case authoring. It remains backend-only and does not contain public registration, frontend integration, password reset, submissions, automated scoring, score correction, rubric grading, repository endpoints, seed data, Java execution, or Git integration.
 
 ## Prerequisites
 
@@ -9,7 +9,7 @@ Phase 4 provides the Projex API foundation, PostgreSQL schema, provisioned-accou
 - PostgreSQL 18 running locally on Windows
 - The existing `projex` database and `projex_user` database user
 
-Docker is not required for Phase 4.
+Docker is not required for Phase 5.
 
 ## Environment setup
 
@@ -134,11 +134,23 @@ POST  /classes/:classId/join-code/revoke
 POST  /classes/join
 GET   /classes/:classId/members
 PATCH /classes/:classId/members/:memberId
+POST  /classes/:classId/activities
+GET   /classes/:classId/activities
+GET   /activities/:activityId
+PATCH /activities/:activityId
+POST  /activities/:activityId/publish
+POST  /activities/:activityId/close
+POST  /activities/:activityId/archive
+POST  /activities/:activityId/restore
+GET   /activities/:activityId/test-cases
+PUT   /activities/:activityId/test-cases
 ```
 
 There is no public registration endpoint. Cookie-authenticated mutations require `Content-Type: application/json`, the readable `projex_csrf` cookie, and the same value in `X-CSRF-Token`.
 
 Global user listing/detail is admin-only. Class APIs are scoped to admins, owning instructors, and students with ACTIVE membership. Student roster responses contain only user ID and full name. Join codes are available only to the owning instructor or admin and are never logged.
+
+Activity authoring is restricted to the owning instructor or an administrator. Students with ACTIVE membership may read only PUBLISHED or CLOSED activities and visible test cases. Hidden test rows and counts are excluded from student responses. Published scoring/test configuration is immutable, and Phase 5 does not execute Java or create/grade submissions.
 
 ## PostgreSQL integration tests
 

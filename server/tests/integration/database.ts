@@ -29,6 +29,17 @@ export async function cleanIntegrationDatabase(
 }
 
 let sequence = 0
+const classCodeAlphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+
+function integrationClassCode(value: number): string {
+  let remainder = value
+  let suffix = ''
+  for (let index = 0; index < 5; index += 1) {
+    suffix = classCodeAlphabet[remainder % classCodeAlphabet.length]! + suffix
+    remainder = Math.floor(remainder / classCodeAlphabet.length)
+  }
+  return `TSTAA${suffix}`
+}
 
 export async function createActiveUser(
   prisma: PrismaClient,
@@ -42,6 +53,40 @@ export async function createActiveUser(
       email: `${role.toLowerCase()}-${sequence}@integration.test`,
       passwordHash: 'integration-test-password-hash',
       role,
+      status: 'ACTIVE',
+    },
+  })
+}
+
+export async function createActiveClass(
+  prisma: PrismaClient,
+  instructorId: string,
+  className = 'Integration Programming Class',
+) {
+  sequence += 1
+  return prisma.class.create({
+    data: {
+      instructorId,
+      className,
+      classCode: integrationClassCode(sequence),
+      classCodeActive: true,
+      section: 'BSIT 2A',
+      semester: 'First Semester',
+      schoolYear: '2026-2027',
+      status: 'ACTIVE',
+    },
+  })
+}
+
+export async function createActiveMembership(
+  prisma: PrismaClient,
+  classId: string,
+  studentId: string,
+) {
+  return prisma.classMember.create({
+    data: {
+      classId,
+      studentId,
       status: 'ACTIVE',
     },
   })

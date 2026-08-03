@@ -50,6 +50,7 @@ Projex defines the roles `STUDENT`, `INSTRUCTOR`, and `ADMIN` from the first aut
 ## Data visibility
 
 - Students may receive visible test summaries but never hidden test inputs, expected outputs, source logic, or worker-only test files.
+- Phase 5 student test-case endpoints query only visible rows; hidden rows, IDs, values, and counts are never loaded into or serialized by the student projection.
 - Students may receive general academic review labels such as `under_review`, `needs_instructor_review`, or `checked` but never exact similarity scores, matched classmates, matched files, or side-by-side comparisons.
 - Grade and feedback drafts are instructor-only until explicitly released.
 - Repository clone/download/file APIs enforce membership and visibility on every request.
@@ -64,8 +65,10 @@ Projex defines the roles `STUDENT`, `INSTRUCTOR`, and `ADMIN` from the first aut
 - Each successfully created attempt is immutable and its source snapshot, submitted timestamp, late/status values, execution result, score, and review state remain preserved.
 - Idempotency and uniqueness on activity, student, and attempt number prevent double-clicks or retries from creating accidental attempts.
 - Deterministic test execution produces `automatedScore` and per-test `automatedPoints`; instructor review never overwrites them.
+- A future instructor correction may change the effective score shown by a professor-facing "Edit Automated Score" workflow only if the original automated result remains preserved alongside the corrected result, reason, instructor identity, and correction timestamp.
 - Instructor changes are stored separately as `instructorAdjustment` and, when enabled, `instructorAdjustedPoints`; `finalScore` is derived within the activity's total points.
 - Review and feedback-release timestamps are recorded, and unreleased drafts remain instructor-only.
+- Phase 5 does not implement automated scoring, corrections, rubrics, or final grades.
 
 ## Input, HTTP, and application security
 

@@ -1,4 +1,6 @@
 import { Router, type RequestHandler } from 'express'
+import { createClassActivityRouter } from '../activities/class-activity.routes.js'
+import type { ActivityService } from '../activities/activity.service.js'
 import { createClassMemberRouter } from '../class-members/class-member.routes.js'
 import type { ClassMemberService } from '../class-members/class-member.service.js'
 import { createClassRouter } from './class.routes.js'
@@ -7,10 +9,18 @@ import type { ClassService } from './class.service.js'
 export function createClassesRouter(dependencies: {
   classService: ClassService
   classMemberService: ClassMemberService
+  activityService: ActivityService
   requireAuthentication: RequestHandler
   requireCsrf: RequestHandler
 }): Router {
   const router = Router()
+  router.use(
+    createClassActivityRouter({
+      service: dependencies.activityService,
+      requireAuthentication: dependencies.requireAuthentication,
+      requireCsrf: dependencies.requireCsrf,
+    }),
+  )
   router.use(
     createClassMemberRouter({
       service: dependencies.classMemberService,

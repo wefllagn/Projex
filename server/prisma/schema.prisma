@@ -46,6 +46,15 @@ enum ProgrammingLanguage {
   @@map("programming_language")
 }
 
+enum ActivityStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+
+  @@map("activity_status")
+}
+
 enum AssignmentStatus {
   DRAFT
   PUBLISHED
@@ -250,20 +259,27 @@ model ClassMember {
 }
 
 model ProgrammingActivity {
-  id           String               @id @default(uuid()) @map("activity_id") @db.Uuid
-  classId      String               @map("class_id") @db.Uuid
-  createdById  String               @map("created_by") @db.Uuid
-  title        String
-  instructions String               @db.Text
-  dueDate      DateTime             @map("due_date") @db.Timestamptz(3)
-  language     ProgrammingLanguage  @default(JAVA)
-  maxAttempts  Int                  @default(3) @map("max_attempts")
-  status       AssignmentStatus     @default(DRAFT)
-  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
-  class        Class                @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  createdBy    User                 @relation("ProgrammingActivityCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  testCases    TestCase[]
-  submissions  ActivitySubmission[]
+  id             String               @id @default(uuid()) @map("activity_id") @db.Uuid
+  classId        String               @map("class_id") @db.Uuid
+  createdById    String               @map("created_by") @db.Uuid
+  title          String
+  instructions   String               @db.Text
+  dueDate        DateTime             @map("due_date") @db.Timestamptz(3)
+  language       ProgrammingLanguage  @default(JAVA)
+  entryClassName String               @default("Main") @map("entry_class_name")
+  starterCode    String               @map("starter_code") @db.Text
+  maxAttempts    Int                  @default(3) @map("max_attempts")
+  totalPoints    Decimal              @map("total_points") @db.Decimal(8, 2)
+  status         ActivityStatus       @default(DRAFT)
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  publishedAt    DateTime?            @map("published_at") @db.Timestamptz(3)
+  closedAt       DateTime?            @map("closed_at") @db.Timestamptz(3)
+  archivedAt     DateTime?            @map("archived_at") @db.Timestamptz(3)
+  class          Class                @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy      User                 @relation("ProgrammingActivityCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  testCases      TestCase[]
+  submissions    ActivitySubmission[]
 
   @@index([classId, status])
   @@index([dueDate])
@@ -273,11 +289,14 @@ model ProgrammingActivity {
 model TestCase {
   id             String              @id @default(uuid()) @map("test_case_id") @db.Uuid
   activityId     String              @map("activity_id") @db.Uuid
+  name           String
   testCaseOrder  Int                 @map("test_case_order")
   inputData      String?             @map("input_data") @db.Text
   expectedOutput String              @map("expected_output") @db.Text
   isHidden       Boolean             @default(true) @map("is_hidden")
   points         Decimal             @db.Decimal(8, 2)
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
   activity       ProgrammingActivity @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   results        TestCaseResult[]
 

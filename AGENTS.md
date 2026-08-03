@@ -6,7 +6,7 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Instruction
 
-Phases 0 through 3 are complete. Do not implement a new phase until its decisions and implementation plan are approved and the user explicitly says, "Implement the approved decisions."
+Phases 0 through 4 are complete. Phase 5 programming-activity and test-case implementation is explicitly approved and active on its phase branch. Do not begin Phase 6 or another phase until its decisions and implementation plan are approved and the user explicitly says, "Implement the approved decisions."
 
 ## Product Boundaries
 
@@ -36,6 +36,8 @@ For the current phased functionalization:
 - Student View must not expose exact similarity scores, matched classmates, matched files, or side-by-side comparison.
 - Student View may show only general academic review statuses such as Under Review, Needs Instructor Review, or Checked.
 - Class membership must be visible through class code joins, pending invitations, enrolled classes, rosters, enrollments, and instructor assignments.
+- Published activity test cases, starter code, language/entry-class settings, and scoring configuration are immutable.
+- A future professor-facing "Edit Automated Score" workflow may correct an individual automated result only by preserving the original result, corrected value, reason, instructor identity, and correction timestamp. Phase 5 does not implement scoring or score correction.
 
 ## Required Product Modes
 

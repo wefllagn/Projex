@@ -29,8 +29,16 @@ POST   /api/v1/classes/:classId/join-code/revoke
 POST   /api/v1/classes/join
 GET    /api/v1/classes/:classId/members
 PATCH  /api/v1/classes/:classId/members/:memberId
-POST   /api/v1/activities
+POST   /api/v1/classes/:classId/activities
+GET    /api/v1/classes/:classId/activities
 GET    /api/v1/activities/:activityId
+PATCH  /api/v1/activities/:activityId
+POST   /api/v1/activities/:activityId/publish
+POST   /api/v1/activities/:activityId/close
+POST   /api/v1/activities/:activityId/archive
+POST   /api/v1/activities/:activityId/restore
+GET    /api/v1/activities/:activityId/test-cases
+PUT    /api/v1/activities/:activityId/test-cases
 POST   /api/v1/activities/:activityId/submissions
 GET    /api/v1/submissions/:submissionId
 POST   /api/v1/submissions/:submissionId/assessments
@@ -51,6 +59,18 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - Instructor/admin roster entries may additionally contain `memberId`, email, user status, membership status, `joinedAt`, `removedAt`, and `lastActivatedAt`.
 - A successful new class-code join returns `201`; an idempotent existing ACTIVE membership returns `200` with the same membership ID.
 - Class-code errors never echo the submitted code or reveal the target class.
+
+### Phase 5 activity and test-case rules
+
+- Activity creation always produces a server-owned `DRAFT`; the client cannot choose the initial status.
+- Activity mutations require `expectedUpdatedAt`. A successful mutation advances the timestamp by at least one millisecond, and stale writes return `STALE_ACTIVITY_VERSION`.
+- Draft test cases are replaced as one ordered transactional set. Array position defines the authoritative one-based order.
+- Publishing requires a future due date, at least one visible test case, positive combined test points, and test points no greater than the activity total.
+- After publication, starter code, Java language/entry-class configuration, total points, and all test-case content/visibility/points are immutable.
+- A published due date may only be extended and `maxAttempts` may only increase. Closed and archived activities are read-only.
+- Student activity access requires ACTIVE class membership and a `PUBLISHED` or `CLOSED` activity.
+- Student test-case lists contain only visible cases. Hidden records do not contribute to the returned list, count, pagination, or error details.
+- Restoring a previously published activity produces `CLOSED`; it never silently republishes or reopens the activity.
 
 ## Naming and data representation
 
@@ -233,11 +253,13 @@ Assessment DTOs keep automated evidence separate from instructor review:
 }
 ```
 
-- `automatedScore` comes from deterministic preserved test-case results and is never overwritten by review.
+- `automatedScore` comes from deterministic preserved test-case results and its original value is never overwritten by review.
+- A future professor-facing action may be labeled `Edit Automated Score`, but a correction must be stored separately with the original result, corrected result, reason, instructor identity, and correction timestamp.
 - `instructorAdjustment` records the explicit increase or decrease.
 - `finalScore` is derived consistently within 0 and the activity's `totalPoints`.
 - If test-level points are editable, each result retains `automatedPoints` and `instructorAdjustedPoints`.
 - Unreleased feedback, score adjustments, and grading drafts are omitted from student responses.
+- Phase 5 defines only activity totals and test-case points. Automated scoring, score correction, rubric grading, and final-grade calculation remain Phase 6 work.
 
 ## Versioning and compatibility
 
