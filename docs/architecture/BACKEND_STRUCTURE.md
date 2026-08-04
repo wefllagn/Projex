@@ -4,7 +4,7 @@
 
 Projex will use a **feature-based modular monolith** for the planned Node.js/Express/TypeScript backend. This document describes a future structure; Phase 0 does not create these folders or implement backend code.
 
-The frontend remains in its current React/Vite JavaScript/JSX structure. The backend is added alongside it only in a later approved phase.
+The frontend remains in its current React/Vite JavaScript/JSX structure under `client/`. The feature-based Express/TypeScript backend exists under `server/`; Phase 6 adds the submissions module plus Java and PostgreSQL job-queue infrastructure without changing the frontend.
 
 ## Proposed structure
 
@@ -137,9 +137,9 @@ Names may be singular when the feature represents a process rather than a collec
 | `class-members` | Code-based student join, duplicate prevention, active/deactivated membership state, historical membership preservation, and authorization queries. Full class invitation lifecycle is a later enhancement. |
 | `activities` | Title/instructions, publication state, due date, visibility, `maxAttempts` (1-3), starter code, total points, programming-language setting, and activity lifecycle. |
 | `test-cases` | Visible/hidden test authoring, ordering, points, secure retrieval for workers. |
-| `submissions` | Immutable submission attempts, server-owned attempt numbering, source snapshots, submitted timestamps, late/status fields, assessment initiation, and attempt-history retrieval. |
-| `assessments` | Compiler/test jobs, preserved per-test results, `automatedScore`, optional test-level adjusted points, `instructorAdjustment`, derived `finalScore`, review timestamps, and similarity review references. |
-| `feedback` | Instructor-only feedback/grading drafts, rubric results, release timestamp, released student projection, and notification coordination. |
+| `submissions` | Immutable official attempts and visible-only practice runs, server-owned chronological numbering, counting-attempt enforcement, scoped idempotency, snapshots, durable job creation, instructor review/corrections, infrastructure-failure resolution/replacement, release, and role-safe history retrieval. |
+| `assessments` | Logical assessment boundary currently coordinated by submissions plus Java/job-queue infrastructure: preserved per-test results, original/effective automated scores, instructor points, bounded final score, and execution lifecycle. It may become a separate feature only when its responsibilities warrant extraction. |
+| `feedback` | Submission-owned instructor feedback drafts and controlled release in Phase 6; rubric results and notification coordination remain later work. |
 | `project-tasks` | Repository-linked academic tasks, assignees, status, due dates, linked commits. |
 | `teams` | Project teams, members, representative, team membership rules. |
 | `repositories` | Repository lifecycle, local bare-repository identity, branches/commits/files view, project linkage and readiness. |
@@ -189,9 +189,10 @@ Dependencies point inward toward use cases. Infrastructure must not import Expre
 - `activities` supplies lifecycle, due date, allowed total score, programming language, visibility, and `maxAttempts`.
 - `submissions` atomically determines the next attempt number; no controller or frontend payload may choose it.
 - A submission attempt becomes immutable after successful creation and permanently retains its snapshot and academic history.
-- `submissions` requests assessment through the queue after the attempt transaction commits.
-- `assessments` preserves deterministic test-case results and `automatedScore`; instructor review records adjustments separately.
-- `feedback` controls draft/release visibility and timestamps without overwriting automated assessment evidence.
+- `submissions` creates the durable assessment job in the same transaction as the immutable attempt and idempotency record; the separate worker claims it only after commit.
+- Java/job-queue infrastructure preserves deterministic test-case results and `originalAutomatedScore`; instructor review records append-only corrections and distinct instructor points.
+- Submission feedback controls draft/release visibility and timestamps without overwriting automated assessment evidence.
+- Infrastructure retries reuse the same immutable submission. A replacement is a new linked submission created only by atomically consuming one unexpired grant.
 
 ## Error and configuration boundaries
 
@@ -206,11 +207,12 @@ Dependencies point inward toward use cases. Infrastructure must not import Expre
 2. Auth, users, sessions, and all three role foundations.
 3. Classes and simplified code-based class membership.
 4. Activities and test-cases.
-5. PostgreSQL-backed execution queue and local Java workers.
-6. Immutable submission attempts and automated assessment.
-7. Instructor score adjustment and feedback release.
-8. Teams, repositories, repository members/invitations, Git infrastructure, and project tasks.
-9. Admin UI functionalization.
-10. Notifications, analytics, similarity, security/integration/laboratory testing, and temporary internet deployment.
+5. PostgreSQL-backed execution queue and controlled-local Java worker.
+6. Immutable submission attempts, Run Visible Tests, automated assessment, append-only correction, instructor review, failure resolution/replacement, and release.
+7. Project tasks, teams, repository metadata, members/invitations, and collaboration workflows.
+8. Local Git infrastructure and repository operations.
+9. Backend-focused Admin capabilities and safe operational projections.
+10. Frontend integration, including a Phase 10D Admin redesign based on the student/instructor visual language.
+11. Notifications, analytics, similarity, security/integration/laboratory testing, and temporary internet deployment.
 
 Only the approved feature should be functionalized at each step. Unrelated frontend mocks stay in place until their feature phase begins.

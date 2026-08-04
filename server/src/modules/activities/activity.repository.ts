@@ -48,6 +48,7 @@ export type ActivityWriteFailure =
   | { kind: 'class_archived' }
   | { kind: 'invalid_state' }
   | { kind: 'stale' }
+  | { kind: 'unfinished_submission_work' }
   | { kind: 'test_case_points_exceed_total' }
 
 export type ActivityWriteResult =
@@ -436,6 +437,36 @@ export function createPrismaActivityRepository(
     },
     archive(input) {
       return prisma.$transaction(async (transaction) => {
+        await transaction.$queryRaw`
+          SELECT "activity_id"
+          FROM "programming_activities"
+          WHERE "activity_id" = ${input.activityId}::uuid
+          FOR UPDATE
+        `
+        const unfinished = await transaction.activitySubmission.count({
+          where: {
+            activityId: input.activityId,
+            submissionStatus: { notIn: ['RELEASED', 'FAILED_RESOLVED'] },
+          },
+        })
+        const activeReplacement =
+          await transaction.submissionFailureResolution.count({
+            where: {
+              failedSubmission: { activityId: input.activityId },
+              resolutionType: 'REPLACEMENT_GRANTED',
+              replacementSubmissionId: null,
+              replacementExpiresAt: { gt: input.now },
+            },
+          })
+        const activePractice = await transaction.practiceExecution.count({
+          where: {
+            activityId: input.activityId,
+            status: { in: ['QUEUED', 'RUNNING'] },
+          },
+        })
+        if (unfinished > 0 || activeReplacement > 0 || activePractice > 0) {
+          return { kind: 'unfinished_submission_work' } as const
+        }
         const versionTimestamp = nextUpdatedAt(input.expectedUpdatedAt, input.now)
         const result = await transaction.programmingActivity.updateMany({
           where: {

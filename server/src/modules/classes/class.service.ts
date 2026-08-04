@@ -252,6 +252,13 @@ export function createClassService(dependencies: {
       await loadOwnerAccess(caller, classId)
       const result = await repository.archive(classId, now())
       if (result.kind === 'not_found') throw classNotFound()
+      if (result.kind === 'unfinished_submission_work') {
+        throw new AppError({
+          statusCode: 409,
+          code: 'CLASS_HAS_UNFINISHED_SUBMISSION_WORK',
+          message: 'The class cannot be archived while submission work remains unfinished.',
+        })
+      }
       if (result.changed) {
         logger.info(
           { event: 'class.archived', actorId: caller.id, classId },
@@ -264,6 +271,13 @@ export function createClassService(dependencies: {
       await loadOwnerAccess(caller, classId)
       const result = await repository.restore(classId)
       if (result.kind === 'not_found') throw classNotFound()
+      if (result.kind === 'unfinished_submission_work') {
+        throw new AppError({
+          statusCode: 409,
+          code: 'CLASS_HAS_UNFINISHED_SUBMISSION_WORK',
+          message: 'The class cannot be restored while submission work remains unfinished.',
+        })
+      }
       if (result.changed) {
         logger.info(
           { event: 'class.restored', actorId: caller.id, classId },

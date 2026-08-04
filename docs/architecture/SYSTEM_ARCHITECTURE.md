@@ -2,11 +2,11 @@
 
 ## Status and scope
 
-This document records the architecture for turning the existing Projex UI prototype into a controlled full-stack system and the durable decisions accepted through Phase 3.
+This document records the architecture for turning the existing Projex UI prototype into a controlled full-stack system and the durable decisions accepted through Phase 6.
 
 - Current frontend: React 19, Vite, JavaScript/JSX, React Router, and the existing CSS.
 - Current backend: Node.js, Express, TypeScript, Zod, Prisma ORM, and PostgreSQL.
-- Implementation status: Phases 0 through 3 are complete; Phase 4, User and Class Management, is the next planned phase.
+- Implementation status: Phases 0 through 5 are complete; Phase 6 submissions and automated assessment is implemented and verified on its phase branch and awaits pre-commit review.
 - Development approach: local-first, feature-by-feature, and cloud-provider-neutral.
 - Roles: `STUDENT`, `INSTRUCTOR`, and `ADMIN` are part of the authorization model from the beginning.
 - Implementation priority: Student and Instructor workflows first, followed by dedicated Admin functionalization.
@@ -127,9 +127,8 @@ sequenceDiagram
     Route->>Route: Validate with Zod
     Route->>Service: Authenticated command
     Service->>Service: Check role, membership, deadline, ownership
-    Service->>Repo: Atomically allocate next attempt and create immutable submission
-    Repo->>DB: INSERT with activity/student/attempt uniqueness
-    Service->>Queue: Enqueue assessment job
+    Service->>Repo: Atomically allocate attempt + idempotency + immutable snapshots + job
+    Repo->>DB: Serializable transaction with scope lock and uniqueness
     Route-->>UI: 201 success response
     Queue->>Worker: Claim job
     Worker-->>Queue: Bounded compile/test result
@@ -143,10 +142,10 @@ The controlled pilot does not require Redis, RabbitMQ, or another dedicated queu
 
 ## Submission-attempt model
 
-- Each programming activity configures `maxAttempts` from 1 through 3.
+- Each programming activity configures `maxAttempts` from 1 through 3 usable attempts.
 - Each `Submission` is one immutable attempt with a server-assigned `attemptNumber` starting at 1.
-- Multiple submissions may exist for the same activity and student, up to the activity limit.
-- The backend atomically reads/counts existing attempts, verifies the activity is accepting submissions, checks `existingAttempts < activity.maxAttempts`, selects the next attempt number, and creates the attempt.
+- Ordinary submissions count toward the usable limit. Infrastructure-failed records granted a replacement become non-counting but remain immutable, so chronological `attemptNumber` may exceed `maxAttempts`.
+- The backend atomically counts records with `countsTowardAttemptLimit=true`, verifies lifecycle/deadline or a valid replacement exception, selects the next chronological number, and creates the attempt, idempotency row, immutable test snapshots, and execution job.
 - The frontend never chooses the authoritative attempt number.
 - Idempotency plus database uniqueness on `(activityId, studentId, attemptNumber)` prevents a double-click or retry from creating duplicate attempts.
 - Every attempt permanently preserves its source-code snapshot, submitted timestamp, execution result, score, late status, and review state as academic history.
@@ -155,19 +154,18 @@ The controlled pilot does not require Redis, RabbitMQ, or another dedicated queu
 
 Projex separates deterministic automated assessment from instructor review:
 
-- `automatedScore` is calculated from preserved per-test-case automated results.
-- Instructor review never overwrites `automatedScore`.
-- `instructorAdjustment` records the instructor's explicit increase or decrease.
-- `finalScore` is derived consistently from `automatedScore + instructorAdjustment`, clamped or validated to the activity's allowed total score.
-- If instructors can adjust test-level points, both `automatedPoints` and `instructorAdjustedPoints` are retained.
+- `originalAutomatedScore` is calculated from preserved per-test-case automated results and never overwritten.
+- `effectiveAutomatedScore` is the latest valid append-only correction, or the original score when no correction exists.
+- Every correction preserves the original score, previous effective score, new effective score, mandatory reason, instructor identity, and timestamp.
+- `automatedMaximum` is the test-point sum and `instructorMaximum` is the remaining activity total. `finalScore = effectiveAutomatedScore + instructorPoints` within those bounds.
 - Review timestamps and feedback-release timestamps are recorded.
 - Grading and feedback drafts remain instructor-only until release.
 
 ## Role priority and Admin scope
 
-Student and Instructor workflows are the first implementation priority because they provide the initial end-to-end academic test path. `ADMIN` remains in the user-role and authorization design from the beginning, and the current admin prototype is preserved for later integration.
+Student and Instructor workflows are the first implementation priority because they provide the initial end-to-end academic test path. `ADMIN` remains in the user-role and authorization design from the beginning. In Phase 6, administrators have safe read-only submission visibility and cannot grade, correct, release, retry, or resolve failures.
 
-Early phases do not have to functionalize the Admin UI. A later dedicated phase covers account management, activation/deactivation, instructor assignment support, class/course oversight, repository/storage monitoring, archive controls, system-health views, and controlled maintenance tools. Admin access is explicit and audited; it does not automatically bypass data-minimization, ownership, or privacy rules.
+The current admin frontend is only a temporary mock and feature inventory; it is not an approved final design or visual source of truth. Phase 9 remains backend-focused and defines approved account, class, repository, storage, archive, health, authorization, safe-projection, and operational-summary capabilities. Phase 10D will redesign and integrate the admin interface using the polished student/instructor interface as the visual source of truth. Admin access is explicit and audited; it does not automatically bypass data minimization, ownership, or privacy rules.
 
 ## Initial class-membership scope
 
@@ -219,7 +217,7 @@ flowchart TB
     end
 ```
 
-The deployable unit should use standard containers or ordinary Node/PostgreSQL processes, filesystem mounts, and environment variables. It must not require provider-specific databases, queues, object stores, identity systems, or serverless runtimes. PostgreSQL, OpenJDK/Java workers, and Git are self-hosted. A temporary VPS, GitHub Student Developer Pack credit, Azure for Students, another student cloud credit, or an SLU host may supply the infrastructure later. Cloudflare Tunnel and any particular cloud provider are optional, never mandatory.
+The deployable unit should use standard containers or ordinary Node/PostgreSQL processes, filesystem mounts, and environment variables. It must not require provider-specific databases, queues, object stores, identity systems, or serverless runtimes. PostgreSQL, OpenJDK/Java workers, and Git are self-hosted. A temporary VPS, GitHub Student Developer Pack credit, Azure for Students, another student cloud credit, or an SLU host may supply the infrastructure later. Cloudflare Tunnel and any particular cloud provider are optional, never mandatory. Java assessment remains disabled on an internet-accessible host until container or equivalent isolation is implemented and verified.
 
 The hosted system is for controlled testing and defense only. It should have a defined test window, restricted accounts, backups appropriate to the demonstration, and a shutdown/removal plan. University-wide rollout, horizontal scaling, multi-region failover, and continuous availability are not Phase goals.
 

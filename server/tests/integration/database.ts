@@ -9,8 +9,14 @@ export function createIntegrationPrisma(): PrismaClient {
 export async function cleanIntegrationDatabase(
   prisma: PrismaClient,
 ): Promise<void> {
+  await prisma.executionJob.deleteMany()
+  await prisma.practiceExecutionCase.deleteMany()
+  await prisma.practiceExecution.deleteMany()
   await prisma.testCaseResult.deleteMany()
   await prisma.submissionFeedback.deleteMany()
+  await prisma.submissionScoreCorrection.deleteMany()
+  await prisma.submissionFailureResolution.deleteMany()
+  await prisma.submissionIdempotency.deleteMany()
   await prisma.similarityResult.deleteMany()
   await prisma.submissionExecution.deleteMany()
   await prisma.activitySubmission.deleteMany()

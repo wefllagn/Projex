@@ -152,6 +152,13 @@ function mapWriteFailure(result: ActivityWriteFailure): never {
       message: 'Test-case points cannot exceed the activity total.',
     })
   }
+  if (result.kind === 'unfinished_submission_work') {
+    throw new AppError({
+      statusCode: 409,
+      code: 'ACTIVITY_HAS_UNFINISHED_SUBMISSION_WORK',
+      message: 'The activity cannot be archived while submission work remains unfinished.',
+    })
+  }
   throw new AppError({
     statusCode: 409,
     code: 'INVALID_ACTIVITY_TRANSITION',

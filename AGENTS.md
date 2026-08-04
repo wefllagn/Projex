@@ -6,7 +6,7 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Instruction
 
-Phases 0 through 4 are complete. Phase 5 programming-activity and test-case implementation is explicitly approved and active on its phase branch. Do not begin Phase 6 or another phase until its decisions and implementation plan are approved and the user explicitly says, "Implement the approved decisions."
+Phases 0 through 5 are complete. Phase 6 submissions and automated assessment is explicitly approved and active on its phase branch. Do not begin Phase 7 or another phase until its decisions and implementation plan are approved and the user explicitly says, "Implement the approved decisions."
 
 ## Product Boundaries
 
@@ -24,20 +24,30 @@ For the current phased functionalization:
 
 - Each programming activity configures one to three immutable attempts per student.
 - The backend assigns sequential attempt numbers and permanently preserves every accepted attempt.
-- Do not implement mutable resubmission or overwrite a prior attempt; a new submission creates a new immutable attempt until `maxAttempts` is reached.
+- Do not implement mutable resubmission or overwrite a prior attempt. Ordinary submissions count toward `maxAttempts`; a formally granted replacement for an infrastructure failure creates another immutable record without renumbering or deleting the failed submission.
 - Student submission records should be labeled as My Submissions, Submission Record, or Submitted Activities.
 - Student submitted activity records must show submitted date/time, review status, mock test result summary, grade status, and instructor feedback when available.
 - Student submit controls must become disabled after submission and show a locked state.
 - Student submit controls must also be disabled after the deadline if no submission exists.
 - Activity Mode must show deadlines and due states.
-- Automated checking remains simulated.
-- Students may see visible mock test summaries, but not hidden test logic.
+- Phase 6 automated checking is real only through the separate controlled-local Java worker. It remains disabled by default and unavailable for internet hosting until container or equivalent isolation is implemented.
+- Students may see visible-test outcomes immediately, but never hidden-test inputs, expected outputs, identifiers, names, outcomes, points, or counts.
 - Detailed similarity review is primarily instructor-facing.
 - Student View must not expose exact similarity scores, matched classmates, matched files, or side-by-side comparison.
 - Student View may show only general academic review statuses such as Under Review, Needs Instructor Review, or Checked.
 - Class membership must be visible through class code joins, pending invitations, enrolled classes, rosters, enrollments, and instructor assignments.
 - Published activity test cases, starter code, language/entry-class settings, and scoring configuration are immutable.
-- A future professor-facing "Edit Automated Score" workflow may correct an individual automated result only by preserving the original result, corrected value, reason, instructor identity, and correction timestamp. Phase 5 does not implement scoring or score correction.
+- The professor-facing "Edit Automated Score" workflow creates append-only corrections preserving the original score, previous effective score, new effective score, mandatory reason, instructor identity, and correction timestamp.
+- Numeric scores, instructor points, final score, feedback, and correction history remain hidden from students until release; released student responses still omit all hidden-test breakdowns.
+- Infrastructure failures retry the same immutable submission and do not stop counting toward the allowance unless an instructor formally grants a time-limited replacement. Grant consumption and replacement creation are atomic.
+- Released submissions are immutable during Phase 6. Post-release correction/versioning remains deferred.
+
+## Admin frontend direction
+
+- The current admin frontend is a temporary mock and feature inventory, not an approved visual source of truth.
+- Phase 9 defines backend admin capabilities, authorization, safe projections, and operational summaries and remains backend-focused unless separately approved.
+- Phase 10D redesigns and integrates the admin frontend using the student and instructor interface as the visual source of truth.
+- Do not functionalize the current dense admin UI as-is, and do not modify admin frontend files before an explicitly approved frontend phase.
 
 ## Required Product Modes
 

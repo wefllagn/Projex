@@ -152,19 +152,19 @@ Structured events contain actor, class, activity, and bounded count identifiers 
 
 Request bodies, starter/source code, test-case arrays, inputs, expected outputs, hidden test values, cookies, tokens, and database URLs are not logged and are included in logger redaction paths.
 
-## Future automated-score corrections
+## Phase 6 automated-score corrections
 
-Published scoring configuration remains immutable, but this does not prohibit a future instructor from correcting an individual automated result.
+Published scoring configuration remains immutable, but this does not prohibit an instructor from correcting an individual automated result.
 
-A Phase 6 professor-facing workflow may use the label `Edit Automated Score`. Its persistence model must retain, rather than overwrite:
+The Phase 6 professor-facing workflow may use the label `Edit Automated Score`. Its append-only persistence model retains, rather than overwrites:
 
 - The original automated result and points.
-- The corrected result/points.
+- The previous and new effective automated score.
 - A required correction reason.
 - The correcting instructor identity.
 - The correction timestamp.
 
-Phase 5 implements none of those scoring or correction behaviors.
+Phase 5 implemented none of those behaviors; Phase 6 implements them while leaving the published Phase 5 configuration immutable.
 
 ## Verification
 

@@ -36,6 +36,9 @@ import { createActivityService } from './modules/activities/activity.service.js'
 import { createActivitiesRouter } from './modules/activities/activities.routes.js'
 import { createPrismaTestCaseRepository } from './modules/test-cases/test-case.repository.js'
 import { createTestCaseService } from './modules/test-cases/test-case.service.js'
+import { createPrismaSubmissionRepository } from './modules/submissions/submission.repository.js'
+import { createSubmissionService } from './modules/submissions/submission.service.js'
+import { createSubmissionRouter } from './modules/submissions/submission.routes.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
@@ -121,6 +124,17 @@ async function bootstrap(): Promise<void> {
     activityRepository,
     logger,
   })
+  const submissionService = createSubmissionService({
+    repository: createPrismaSubmissionRepository(prisma),
+    logger,
+    config: {
+      mode: env.javaExecutionMode,
+      sourceLimitBytes: env.javaSourceLimitBytes,
+      practiceRunTtlHours: env.practiceRunTtlHours,
+      practiceRunsPerMinute: env.practiceRunsPerMinute,
+      practiceMaxActivePerActivity: env.practiceMaxActivePerActivity,
+    },
+  })
   const app = createApp({
     config: {
       frontendOrigin: env.frontendOrigin,
@@ -153,6 +167,11 @@ async function bootstrap(): Promise<void> {
       activities: createActivitiesRouter({
         activityService,
         testCaseService,
+        requireAuthentication,
+        requireCsrf,
+      }),
+      submissions: createSubmissionRouter({
+        service: submissionService,
         requireAuthentication,
         requireCsrf,
       }),

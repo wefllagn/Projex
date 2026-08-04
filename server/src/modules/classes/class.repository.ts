@@ -31,6 +31,7 @@ export const classRecordSelect = {
 export type ClassWriteResult =
   | { kind: 'updated'; classRecord: ClassRecord; changed: boolean }
   | { kind: 'not_found' }
+  | { kind: 'unfinished_submission_work' }
 
 export type ClassCodeWriteResult =
   | { kind: 'updated'; classRecord: ClassRecord }
@@ -196,11 +197,43 @@ export function createPrismaClassRepository(
     },
     async archive(classId, now) {
       return prisma.$transaction(async (transaction) => {
+        await transaction.$queryRaw`
+          SELECT "class_id"
+          FROM "classes"
+          WHERE "class_id" = ${classId}::uuid
+          FOR UPDATE
+        `
         const existing = await transaction.class.findUnique({
           where: { id: classId },
           select: { status: true },
         })
         if (!existing) return { kind: 'not_found' } as const
+        if (existing.status !== 'ARCHIVED') {
+          const unfinished = await transaction.activitySubmission.count({
+            where: {
+              activity: { classId },
+              submissionStatus: { notIn: ['RELEASED', 'FAILED_RESOLVED'] },
+            },
+          })
+          const activeReplacement =
+            await transaction.submissionFailureResolution.count({
+              where: {
+                failedSubmission: { activity: { classId } },
+                resolutionType: 'REPLACEMENT_GRANTED',
+                replacementSubmissionId: null,
+                replacementExpiresAt: { gt: now },
+              },
+            })
+          const activePractice = await transaction.practiceExecution.count({
+            where: {
+              activity: { classId },
+              status: { in: ['QUEUED', 'RUNNING'] },
+            },
+          })
+          if (unfinished > 0 || activeReplacement > 0 || activePractice > 0) {
+            return { kind: 'unfinished_submission_work' } as const
+          }
+        }
         const changed = existing.status !== 'ARCHIVED'
         const classRecord = changed
           ? await transaction.class.update({

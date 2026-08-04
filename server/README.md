@@ -1,6 +1,6 @@
 # Projex Server
 
-Phase 5 provides the Projex API foundation, PostgreSQL schema, provisioned-account authentication, user/class/membership management, programming-activity lifecycle, and visible/hidden test-case authoring. It remains backend-only and does not contain public registration, frontend integration, password reset, submissions, automated scoring, score correction, rubric grading, repository endpoints, seed data, Java execution, or Git integration.
+Phase 6 provides the Projex API foundation, PostgreSQL schema, provisioned-account authentication, user/class/membership management, programming activities/test cases, immutable submissions, a durable execution queue, controlled-local Java assessment, Run Visible Tests, instructor score correction/review/feedback, infrastructure-failure replacement, and release. It remains backend-only and does not contain public registration, frontend integration, password reset, rubric/course-grade calculation, post-release correction, repository endpoints, seed data, hosted Java execution, or Git integration.
 
 ## Prerequisites
 
@@ -8,8 +8,9 @@ Phase 5 provides the Projex API foundation, PostgreSQL schema, provisioned-accou
 - npm
 - PostgreSQL 18 running locally on Windows
 - The existing `projex` database and `projex_user` database user
+- A local JDK with `javac`/`java` available for `npm run test:java` or controlled-local worker verification (JDK 23 is supported; Projex compiles with `--release 17`)
 
-Docker is not required for Phase 5.
+Docker is not required for controlled local Phase 6 development. Java execution must stay disabled on an internet-accessible deployment until Docker or equivalent isolation is implemented and verified.
 
 ## Environment setup
 
@@ -35,6 +36,21 @@ Required variables:
 - `MAIL_FROM_NAME`
 - `MAIL_FROM_ADDRESS`
 - `MAIL_PREVIEW_DIR`
+- `JAVA_EXECUTION_MODE` (`disabled` by default; `local_process` is development-only)
+- `JAVA_EXECUTABLE`
+- `JAVAC_EXECUTABLE`
+- `JAVA_RELEASE` (must be `17`)
+- `JAVA_JOB_ROOT`
+- `JAVA_SOURCE_LIMIT_BYTES`
+- `JAVA_COMPILE_TIMEOUT_MS`
+- `JAVA_TEST_TIMEOUT_MS`
+- `JAVA_OUTPUT_LIMIT_BYTES`
+- `JAVA_MEMORY_LIMIT_MB`
+- `EXECUTION_JOB_LEASE_MS`
+- `EXECUTION_WORKER_POLL_MS`
+- `PRACTICE_RUN_TTL_HOURS`
+- `PRACTICE_RUNS_PER_MINUTE`
+- `PRACTICE_MAX_ACTIVE_PER_ACTIVITY`
 
 When `MAIL_TRANSPORT=smtp`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, and `SMTP_PASSWORD` are also required. Preview transport is rejected in production.
 
@@ -95,13 +111,16 @@ Migration safety rules:
 
 ```powershell
 npm run dev
+npm run dev:worker
 npm run lint
 npm run type-check
 npm run type-check:integration
 npm test
+npm run test:java
 npm run test:integration
 npm run build
 npm start
+npm run start:worker
 ```
 
 ## API endpoints
@@ -144,13 +163,38 @@ POST  /activities/:activityId/archive
 POST  /activities/:activityId/restore
 GET   /activities/:activityId/test-cases
 PUT   /activities/:activityId/test-cases
+POST  /activities/:activityId/submissions
+GET   /activities/:activityId/submissions
+POST  /activities/:activityId/visible-test-runs
+GET   /visible-test-runs/:runId
+GET   /submissions/:submissionId
+POST  /submissions/:submissionId/score-corrections
+PUT   /submissions/:submissionId/review
+POST  /submissions/:submissionId/release
+POST  /submissions/:submissionId/assessment/retry
+POST  /submissions/:submissionId/assessment/resolve-failure
 ```
 
 There is no public registration endpoint. Cookie-authenticated mutations require `Content-Type: application/json`, the readable `projex_csrf` cookie, and the same value in `X-CSRF-Token`.
 
 Global user listing/detail is admin-only. Class APIs are scoped to admins, owning instructors, and students with ACTIVE membership. Student roster responses contain only user ID and full name. Join codes are available only to the owning instructor or admin and are never logged.
 
-Activity authoring is restricted to the owning instructor or an administrator. Students with ACTIVE membership may read only PUBLISHED or CLOSED activities and visible test cases. Hidden test rows and counts are excluded from student responses. Published scoring/test configuration is immutable, and Phase 5 does not execute Java or create/grade submissions.
+Activity authoring is restricted to the owning instructor or an administrator. Students with ACTIVE membership may read only PUBLISHED or CLOSED activities and visible test cases. Hidden test rows and counts are excluded from student responses. Published scoring/test configuration is immutable.
+
+Official submissions require Java execution to be enabled, Java source, and an `Idempotency-Key`. Ordinary attempts are limited by the activity's one-to-three usable-attempt setting. Infrastructure retries reuse the original record; an owning instructor may formally grant one future-expiring replacement, which may cross a deadline/CLOSED state but cannot bypass archive, inactive account, removed membership, expiration, or single-use rules.
+
+Run Visible Tests uses only visible server-owned cases, accepts no custom stdin, and creates no official attempt or score. Students see visible outcomes immediately but see numeric scores, instructor points, released final score, and feedback only after release. Hidden-test definitions, IDs, names, outcomes, points, and counts are never returned to students. Administrators have safe read-only submission visibility and cannot grade or resolve failures.
+
+## Controlled-local Java worker
+
+Keep `JAVA_EXECUTION_MODE=disabled` unless running an explicitly controlled local verification. To process accepted jobs locally, set the private environment to `local_process`, run the API and worker as separate processes, and never expose that configuration to the internet:
+
+```powershell
+npm run dev
+npm run dev:worker
+```
+
+The worker compiles with `--release 17`, uses argument arrays without a shell, creates a unique temporary directory per job, bounds time/memory/output, and cleans the directory. These local controls are not container isolation; network, filesystem, CPU, and process boundaries required for hostile internet-submitted code remain deferred.
 
 ## PostgreSQL integration tests
 

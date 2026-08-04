@@ -61,14 +61,17 @@ Projex defines the roles `STUDENT`, `INSTRUCTOR`, and `ADMIN` from the first aut
 
 ## Submission and assessment integrity
 
-- Activities permit 1 through 3 attempts. The backend atomically enforces the activity limit and assigns `attemptNumber`; the frontend cannot choose it.
+- Activities permit 1 through 3 usable attempts. The backend atomically enforces the counting-attempt limit and assigns a positive chronological `attemptNumber`; the frontend cannot choose it, and preserved replacement history may make the sequence exceed `maxAttempts`.
 - Each successfully created attempt is immutable and its source snapshot, submitted timestamp, late/status values, execution result, score, and review state remain preserved.
 - Idempotency and uniqueness on activity, student, and attempt number prevent double-clicks or retries from creating accidental attempts.
-- Deterministic test execution produces `automatedScore` and per-test `automatedPoints`; instructor review never overwrites them.
-- A future instructor correction may change the effective score shown by a professor-facing "Edit Automated Score" workflow only if the original automated result remains preserved alongside the corrected result, reason, instructor identity, and correction timestamp.
-- Instructor changes are stored separately as `instructorAdjustment` and, when enabled, `instructorAdjustedPoints`; `finalScore` is derived within the activity's total points.
+- Deterministic test execution produces `originalAutomatedScore` and per-test `automatedPoints`; instructor review never overwrites them.
+- “Edit Automated Score” appends a correction preserving the original score, previous effective score, new effective score, mandatory reason, instructor identity, and timestamp. Earlier corrections are immutable.
+- Instructor points are stored as a distinct bounded component. `finalScore = effectiveAutomatedScore + instructorPoints` and must remain within the activity total.
 - Review and feedback-release timestamps are recorded, and unreleased drafts remain instructor-only.
-- Phase 5 does not implement automated scoring, corrections, rubrics, or final grades.
+- Student responses expose only visible-test outcomes before release. Numeric scores, corrections, instructor points, final score, and feedback remain instructor-only until release; hidden-test definitions and breakdowns are never released.
+- Infrastructure failures retry the same immutable submission. After retry exhaustion, an instructor must resolve the failure and may issue one future-expiring replacement grant with a mandatory reason.
+- A replacement grant is single-use, cannot bypass inactive users, removed membership, or archived class/activity state, and is consumed atomically with idempotency and replacement creation/linkage.
+- Released submissions are immutable in Phase 6. Rubrics, course-grade calculation, and post-release correction/versioning remain deferred.
 
 ## Input, HTTP, and application security
 
@@ -88,11 +91,12 @@ Core Java checking must not use an external compiler API.
 
 The server uses a locally managed OpenJDK toolchain. A temporary hosted environment also self-hosts its Java runtime and workers.
 
-### Accepted client inputs
+### Accepted Phase 6 client inputs
 
-- Java source files/content within configured count and byte limits.
-- Standard input (`stdin`) within a configured byte limit.
+- One Java source string within the configured byte limit.
 - A server-selected activity/test-case identifier.
+
+Official assessments execute server-owned visible and hidden test snapshots. Run Visible Tests executes only server-owned visible snapshots. Phase 6 rejects arbitrary client-supplied standard input.
 
 Clients must never submit a shell command, executable path, JVM flag, compiler flag, classpath, host path, timeout, memory limit, CPU limit, test visibility, or arbitrary environment variable.
 
@@ -117,18 +121,19 @@ flowchart LR
 - Run with a minimal environment and no inherited secrets.
 - Use a unique server-created temporary directory per job under an approved execution root.
 - Canonicalize and verify every path remains under the job root; reject symlinks or unsafe file layouts as appropriate.
-- Set separate compile timeout and execution timeout, memory limit, CPU quota/time, process-count/thread limit, file-size/disk limit, and stdout/stderr/output-size limits.
+- The controlled-local runner sets separate compile/test timeouts, a JVM heap limit, one active processor hint, and a combined stdout/stderr limit. These controls reduce risk but are not a complete hostile-code sandbox.
+- Hosted execution additionally requires enforced CPU quota/time, process/thread, filesystem/disk, and network isolation through a container or equivalent boundary.
 - Kill the entire process tree/container when a limit is reached.
 - Truncate or terminate on output overflow and return a stable `output_limit_exceeded` result.
-- Disable network access for execution workers.
-- Restrict filesystem access to the job directory and required read-only runtime files.
+- Disable network access for hosted execution workers.
+- Restrict hosted worker filesystem access to the job directory and required read-only runtime files.
 - Do not run as root. Use a dedicated low-privilege OS identity.
 - Always clean temporary directories after success, failure, timeout, and worker restart recovery.
 - Persist only the bounded result and required source snapshot; do not retain arbitrary runtime files.
 - Return a safe normalized execution result; never expose host paths, raw process commands, hidden tests, or worker internals.
 - Add Docker/container isolation in the hosted phase. Container isolation is defense-in-depth, not permission to relax validation or limits.
 
-Until safe isolation is implemented and verified, Java execution must remain disabled outside an explicitly controlled local development setup.
+`JAVA_EXECUTION_MODE=disabled` is the safe default. `local_process` is permitted only for explicitly controlled local development and is rejected when `NODE_ENV=production`. Until container or equivalent isolation is implemented and verified, internet-hosted Java assessment is unavailable.
 
 ## Local Git boundary
 

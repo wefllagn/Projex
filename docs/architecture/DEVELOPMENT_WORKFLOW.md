@@ -6,7 +6,7 @@
 - The existing React/Vite JavaScript/JSX frontend is preserved.
 - The backend is implemented incrementally through explicitly approved phase branches. Completed phases remain the baseline for each subsequent phase.
 - Work remains cloud-provider-neutral and deployable later to a temporary VPS, GitHub Student Developer Pack credits, Azure for Students, another student cloud credit, or an SLU host.
-- Student and Instructor core workflows are implemented first; Admin remains in scope through the role model and receives a dedicated later functionalization phase.
+- Student and Instructor core workflows are implemented first. Phase 9 defines backend Admin capabilities; the current admin mock is not the final visual design, and Phase 10D will redesign it from the student/instructor visual language.
 - Each phase stops when its requested scope is complete; it does not begin the next phase implicitly.
 
 ## Branch model
@@ -50,7 +50,7 @@ Rules:
 - Make small, coherent commits that can be reviewed and reverted independently.
 - Separate schema/migration, backend behavior, frontend adapter, and test changes when doing so keeps each commit valid.
 - Do not mix formatting, CSS redesign, dependency upgrades, and feature functionalization in one commit.
-- Commit messages state the outcome and feature, for example `feat(submissions): enforce one final activity submission`.
+- Commit messages state the outcome and feature, for example `feat: implement submissions and automated assessment`.
 - Never commit `.env`, credentials, generated runtime storage, Java job directories, Git repositories/worktrees, logs, database dumps with private data, or build output.
 - Report every changed file in the phase handoff.
 
@@ -110,9 +110,10 @@ Every phase must end with a working application. An unfinished cross-phase refac
 - Do not run Git or Java through shell-concatenated strings.
 - Do not run Java execution in the API process.
 - Use a free, self-hosted, cloud-provider-neutral initial execution queue, normally PostgreSQL job records plus a separate worker, atomic claim/lease/retry fields, bounded concurrency, and terminal states.
-- Preserve immutable, server-numbered submission attempts up to activity `maxAttempts` and keep automated scores separate from instructor adjustments.
+- Preserve immutable, server-numbered submission records. Enforce `maxAttempts` against counting attempts while preserving non-counting infrastructure failures and linked replacement history.
 - Preserve each attempt's source, submission time, execution result, score, and review state; idempotency and database constraints must protect double-click/retry behavior.
-- Keep `automatedScore` and per-test automated evidence immutable during review; record instructor adjustment and derived final score separately.
+- Keep `originalAutomatedScore` and per-test automated evidence immutable during review; record append-only corrections, distinct instructor points, and the derived released final score separately.
+- Keep Java execution disabled by default. Permit `local_process` only for controlled local development, never production or an internet-accessible deployment.
 - Do not add provider-specific infrastructure without a documented, approved portability exception.
 
 ## Environment workflow
@@ -135,7 +136,7 @@ The exact commands are defined when backend tooling exists. At minimum, a phase 
 | Backend | Type check, lint, unit tests, integration tests, production build/startup validation. |
 | Database | Migration apply on a clean database, migration apply on representative prior state, constraints/transaction tests, seed test. |
 | API | Response-contract, validation, authentication, authorization, pagination, error-code tests. |
-| Java | Compile success/failure, timeout, memory/CPU/output limits, process-tree termination, temp cleanup, no network in hosted isolation. |
+| Java | Separate-worker compile success/failure with `--release 17`, timeout/output boundaries, process-tree termination, temp cleanup, and hosted network/CPU/filesystem isolation before internet enablement. |
 | Git | Argument/path/ref validation, bare-repo/worktree lifecycle, lock contention/recovery, unauthorized access tests. |
 | Security | Secret scan/diff review, cookie/CSRF/CORS/headers, role/ownership tests, student visibility tests. |
 

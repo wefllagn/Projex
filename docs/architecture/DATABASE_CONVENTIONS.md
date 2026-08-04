@@ -127,21 +127,20 @@ Each programming activity configures `maxAttempts` from 1 through 3. Each `Submi
 - Enforce unique attempts with `@@unique([activityId, studentId, attemptNumber])`.
 - `attemptNumber` begins at 1 and is assigned only by the backend.
 - The server derives `studentId` from the authenticated session; it rejects/ignores a client attempt number as authoritative.
-- In one concurrency-safe operation, verify active class membership, activity publication/visibility, database time versus due/close rules, and `existingAttempts < activity.maxAttempts`; then allocate the next attempt number and create the attempt.
+- In one concurrency-safe operation, verify active class membership, activity/class lifecycle, deadline or valid replacement exception, and `count(countsTowardAttemptLimit=true) < activity.maxAttempts`; then allocate the next chronological number and create the attempt.
 - Use an idempotency record/key plus the unique constraint so double-clicks and retries return the original result or a safe conflict rather than consuming another attempt.
 - If competing transactions select the same attempt number, retry the allocation transaction only under a bounded, known unique/serialization conflict policy.
 - Snapshot or content-address source so later editor changes cannot alter the attempt.
 - A successful attempt is immutable and permanently preserves source, submitted timestamp, late/status values, assessment/execution result, score, and review state.
-- Assessment job retries attach new job-run metadata to the same submission attempt; they do not create a new student attempt.
+- Infrastructure retries reuse the same execution job and immutable submission. After exhaustion, an instructor may preserve the failed record as non-counting and grant one expiring replacement; consumption creates a new linked counting attempt atomically with idempotency.
 
 ## Assessment and score integrity
 
 - Preserve each deterministic per-test-case result and its `automatedPoints`.
-- Store `automatedScore` as the outcome of deterministic test execution; instructor review must not overwrite it.
-- Store `instructorAdjustment` separately as a signed increase/decrease with reviewer and review timestamp.
-- Derive or transactionally set `finalScore` from `automatedScore + instructorAdjustment`, enforcing a range from zero through the activity's total points.
-- If instructors may edit test-level points, store `instructorAdjustedPoints` separately and retain `automatedPoints`.
-- Record `reviewedAt` and `feedbackReleasedAt` independently.
+- Store `originalAutomatedScore` as the outcome of deterministic test execution; instructor review must not overwrite it.
+- Append score corrections with the original score, previous effective score, new effective score, mandatory reason, instructor, sequence, and timestamp. Never update or delete earlier corrections.
+- Keep `effectiveAutomatedScore` within `automatedMaximum`, store distinct nonnegative `instructorPoints` within `instructorMaximum`, and derive `finalScore = effectiveAutomatedScore + instructorPoints` within the activity total.
+- Record `reviewedAt`, feedback `releasedAt`/releaser, and submission `releasedAt` independently.
 - Unreleased grading and feedback remain instructor-only through authorization and response selection.
 - Score/release changes are audited with actor and timestamp.
 

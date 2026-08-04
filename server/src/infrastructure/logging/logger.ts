@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express'
-import pino, { type Logger } from 'pino'
+import pino, { type DestinationStream, type Logger } from 'pino'
 
 const sensitivePaths = [
   'authorization',
@@ -30,10 +30,24 @@ const sensitivePaths = [
   '*.starterCode',
   'sourceCode',
   '*.sourceCode',
+  'sourceHash',
+  '*.sourceHash',
   'inputData',
   '*.inputData',
   'expectedOutput',
   '*.expectedOutput',
+  'inputSnapshot',
+  '*.inputSnapshot',
+  'expectedOutputSnapshot',
+  '*.expectedOutputSnapshot',
+  'actualOutput',
+  '*.actualOutput',
+  'compilerOutput',
+  '*.compilerOutput',
+  'feedbackText',
+  '*.feedbackText',
+  'reason',
+  '*.reason',
   'testCases',
   '*.testCases',
   'smtpPassword',
@@ -52,8 +66,11 @@ const sensitivePaths = [
   'res.headers.set-cookie',
 ]
 
-export function createLogger(level: string): Logger {
-  return pino({
+export function createLogger(
+  level: string,
+  destination?: DestinationStream,
+): Logger {
+  const options = {
     level,
     base: undefined,
     redact: {
@@ -61,7 +78,8 @@ export function createLogger(level: string): Logger {
       censor: '[REDACTED]',
     },
     timestamp: pino.stdTimeFunctions.isoTime,
-  })
+  }
+  return destination ? pino(options, destination) : pino(options)
 }
 
 export function createRequestLogger(logger: Logger): RequestHandler {

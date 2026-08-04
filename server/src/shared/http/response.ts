@@ -1,5 +1,6 @@
 export interface ResponseMeta {
   requestId: string
+  idempotentReplay?: boolean
 }
 
 export interface SuccessResponse<T> {
@@ -33,10 +34,14 @@ export interface ErrorResponse {
   meta: ResponseMeta
 }
 
-export function successResponse<T>(data: T, requestId: string): SuccessResponse<T> {
+export function successResponse<T>(
+  data: T,
+  requestId: string,
+  meta?: Omit<ResponseMeta, 'requestId'>,
+): SuccessResponse<T> {
   return {
     data,
-    meta: { requestId },
+    meta: { requestId, ...meta },
   }
 }
 

@@ -40,9 +40,15 @@ POST   /api/v1/activities/:activityId/restore
 GET    /api/v1/activities/:activityId/test-cases
 PUT    /api/v1/activities/:activityId/test-cases
 POST   /api/v1/activities/:activityId/submissions
+GET    /api/v1/activities/:activityId/submissions
+POST   /api/v1/activities/:activityId/visible-test-runs
+GET    /api/v1/visible-test-runs/:runId
 GET    /api/v1/submissions/:submissionId
-POST   /api/v1/submissions/:submissionId/assessments
-POST   /api/v1/submissions/:submissionId/feedback/release
+POST   /api/v1/submissions/:submissionId/score-corrections
+PUT    /api/v1/submissions/:submissionId/review
+POST   /api/v1/submissions/:submissionId/release
+POST   /api/v1/submissions/:submissionId/assessment/retry
+POST   /api/v1/submissions/:submissionId/assessment/resolve-failure
 GET    /api/v1/repositories/:repositoryId/branches
 POST   /api/v1/repositories/:repositoryId/invitations
 GET    /api/v1/notifications
@@ -71,6 +77,19 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - Student activity access requires ACTIVE class membership and a `PUBLISHED` or `CLOSED` activity.
 - Student test-case lists contain only visible cases. Hidden records do not contribute to the returned list, count, pagination, or error details.
 - Restoring a previously published activity produces `CLOSED`; it never silently republishes or reopens the activity.
+
+### Phase 6 submission, assessment, and visible-test rules
+
+- Submission creation requires an authenticated ACTIVE student, ACTIVE class membership, an ACTIVE class, Java execution enabled for controlled local development, Java source only, and an `Idempotency-Key` header.
+- An ordinary submission requires a `PUBLISHED` activity before its deadline. A valid unconsumed infrastructure-failure replacement grant is the only exception that permits creation after the deadline or while the activity is `CLOSED`.
+- A replacement never bypasses an archived class/activity, inactive account, removed membership, expiration, or single-use consumption.
+- `POST /activities/:activityId/submissions` returns `201` for a new accepted attempt and `200` with `meta.idempotentReplay=true` for an exact replay.
+- `POST /activities/:activityId/visible-test-runs` returns `202`, creates only a short-lived practice job, executes only visible test snapshots, accepts no custom stdin, and creates no submission, attempt, history, or score.
+- Students may immediately receive visible-test outcomes. Before release they receive no numeric score, correction, instructor points, final score, or feedback. After release they receive only the released final score, activity total, and released feedback.
+- Student responses never contain hidden-test inputs, expected outputs, identifiers, names, individual outcomes, individual points, or hidden-test counts.
+- Owning ACTIVE instructors may read detailed assessment evidence, append score corrections, save review/feedback drafts, release results, retry exhausted infrastructure failures, and resolve failures. Administrators have safe read-only submission access and cannot grade, correct, release, retry, or resolve failures.
+- `expectedUpdatedAt` protects correction, review, release, retry, and failure-resolution transitions. Released submissions are immutable during Phase 6.
+- An infrastructure-failure replacement requires a mandatory reason and future `replacementExpiresAt`. The response labels the new record as `Replacement attempt for Attempt N`; the internal chronological `attemptNumber` is not presented as “Attempt N of maxAttempts.”
 
 ## Naming and data representation
 
@@ -201,13 +220,15 @@ Rules:
 
 - An activity permits a configurable maximum of 1 to 3 immutable submission attempts per student.
 - The backend, never the frontend, atomically determines the next `attemptNumber` beginning at 1.
-- Attempt creation verifies the activity is accepting submissions and `existingAttempts < activity.maxAttempts` inside the concurrency-safe operation.
+- Attempt creation verifies the activity is accepting submissions and `count(countsTowardAttemptLimit=true) < activity.maxAttempts` inside the concurrency-safe operation unless it atomically consumes a valid replacement grant.
 - Creation is protected by a database unique constraint on `(activityId, studentId, attemptNumber)` and a transaction/retry strategy.
-- `POST /activities/:activityId/submissions` should accept an `Idempotency-Key` for safe client retry. The key is scoped to the authenticated user and operation.
-- Repeated requests with the same key and same payload return the original attempt; conflicting reuse returns `DUPLICATE_SUBMISSION_REQUEST`.
-- `ATTEMPT_LIMIT_REACHED`, `SUBMISSION_ALREADY_PROCESSING`, `ACTIVITY_NOT_ACCEPTING_SUBMISSIONS`, and `SUBMISSION_NOT_FOUND` distinguish normal submission failures without exposing internals.
+- `POST /activities/:activityId/submissions` requires an `Idempotency-Key`. Its hash is scoped to the authenticated student, activity, and submission endpoint; a different student does not collide.
+- Repeated requests with the same scoped key and source payload return the original attempt; the same scoped key with different source returns `DUPLICATE_SUBMISSION_REQUEST`.
+- `ATTEMPT_LIMIT_REACHED`, `DUPLICATE_SUBMISSION_REQUEST`, `ACTIVITY_NOT_ACCEPTING_SUBMISSIONS`, `EXECUTION_UNAVAILABLE`, and `SUBMISSION_NOT_FOUND` distinguish normal submission failures without exposing internals.
 - A double-click or network retry must not consume two attempt numbers or create duplicate attempts.
-- Successfully created attempts are immutable and preserve their source snapshot, submitted timestamp, execution result, score, late status, and review state.
+- Successfully created attempts are immutable and preserve their source/activity/test snapshots, submitted timestamp, execution result, score evidence, late status, and review state.
+- Infrastructure retries reuse the same submission and job. After retry exhaustion, instructor resolution either closes the failure or grants one expiring replacement; the failed record is never deleted, overwritten, or renumbered.
+- Grant consumption, idempotency persistence, replacement submission/job creation, and linkage to the failed submission occur in one serializable transaction protected by the student/activity allocation lock.
 - Operations such as feedback release, repository-invitation acceptance, and repository readiness require explicit valid state transitions.
 - Update endpoints for concurrently edited records should use a version field or `updatedAt` precondition where lost updates are possible.
 
@@ -233,15 +254,18 @@ For the controlled pilot, jobs may be PostgreSQL-backed and claimed atomically b
 
 ## Assessment score response rules
 
-Assessment DTOs keep automated evidence separate from instructor review:
+Instructor assessment DTOs keep automated evidence separate from instructor review:
 
 ```json
 {
   "data": {
     "submissionId": "3ef272c8-f541-448f-b859-0bc43af617bd",
     "attemptNumber": 2,
-    "automatedScore": 82,
-    "instructorAdjustment": 3,
+    "originalAutomatedScore": 82,
+    "effectiveAutomatedScore": 80,
+    "automatedMaximum": 85,
+    "instructorPoints": 3,
+    "instructorMaximum": 15,
     "finalScore": 85,
     "totalPoints": 100,
     "reviewedAt": "2026-07-29T03:10:00.000Z",
@@ -253,13 +277,13 @@ Assessment DTOs keep automated evidence separate from instructor review:
 }
 ```
 
-- `automatedScore` comes from deterministic preserved test-case results and its original value is never overwritten by review.
-- A future professor-facing action may be labeled `Edit Automated Score`, but a correction must be stored separately with the original result, corrected result, reason, instructor identity, and correction timestamp.
-- `instructorAdjustment` records the explicit increase or decrease.
-- `finalScore` is derived consistently within 0 and the activity's `totalPoints`.
-- If test-level points are editable, each result retains `automatedPoints` and `instructorAdjustedPoints`.
-- Unreleased feedback, score adjustments, and grading drafts are omitted from student responses.
-- Phase 5 defines only activity totals and test-case points. Automated scoring, score correction, rubric grading, and final-grade calculation remain Phase 6 work.
+- `automatedMaximum` is the sum of immutable test-case points; `instructorMaximum = totalPoints - automatedMaximum`.
+- `originalAutomatedScore` comes from preserved automated results and is never overwritten.
+- “Edit Automated Score” appends a correction preserving the original score, previous effective score, new effective score, mandatory reason, instructor identity, and timestamp. The latest valid correction becomes effective while prior corrections remain immutable.
+- `effectiveAutomatedScore` remains within `0..automatedMaximum`; `instructorPoints` remains within `0..instructorMaximum`.
+- `finalScore = effectiveAutomatedScore + instructorPoints` and remains within `0..totalPoints`. It becomes the immutable `releasedFinalScore` on release.
+- Unreleased scores, correction history, instructor points, feedback, and grading drafts are omitted from student responses.
+- Rubric grading, course-grade aggregation, and post-release correction/versioning remain outside Phase 6.
 
 ## Versioning and compatibility
 

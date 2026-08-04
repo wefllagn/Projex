@@ -34,6 +34,21 @@ const envSchema = z
     SMTP_SECURE: booleanString.default(false),
     SMTP_USER: z.string().default(''),
     SMTP_PASSWORD: z.string().default(''),
+    JAVA_EXECUTION_MODE: z.enum(['disabled', 'local_process']).default('disabled'),
+    JAVA_EXECUTABLE: z.string().min(1).default('java'),
+    JAVAC_EXECUTABLE: z.string().min(1).default('javac'),
+    JAVA_RELEASE: z.coerce.number().int().min(17).max(17).default(17),
+    JAVA_JOB_ROOT: z.string().min(1).default('.java-jobs'),
+    JAVA_SOURCE_LIMIT_BYTES: z.coerce.number().int().min(1).max(1_000_000).default(100_000),
+    JAVA_COMPILE_TIMEOUT_MS: z.coerce.number().int().min(100).max(60_000).default(10_000),
+    JAVA_TEST_TIMEOUT_MS: z.coerce.number().int().min(100).max(30_000).default(3_000),
+    JAVA_OUTPUT_LIMIT_BYTES: z.coerce.number().int().min(1_024).max(1_000_000).default(65_536),
+    JAVA_MEMORY_LIMIT_MB: z.coerce.number().int().min(16).max(512).default(64),
+    EXECUTION_JOB_LEASE_MS: z.coerce.number().int().min(5_000).max(300_000).default(60_000),
+    EXECUTION_WORKER_POLL_MS: z.coerce.number().int().min(100).max(60_000).default(1_000),
+    PRACTICE_RUN_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(24),
+    PRACTICE_RUNS_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(5),
+    PRACTICE_MAX_ACTIVE_PER_ACTIVITY: z.coerce.number().int().min(1).max(5).default(1),
   })
   .superRefine((value, context) => {
     if (value.AUTH_COOKIE_SAME_SITE === 'none' && !value.AUTH_COOKIE_SECURE) {
@@ -49,6 +64,17 @@ const envSchema = z
         code: 'custom',
         path: ['MAIL_TRANSPORT'],
         message: 'Preview mail transport is disabled in production',
+      })
+    }
+
+    if (
+      value.NODE_ENV === 'production' &&
+      value.JAVA_EXECUTION_MODE === 'local_process'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['JAVA_EXECUTION_MODE'],
+        message: 'local_process Java execution is forbidden in production',
       })
     }
 
@@ -87,6 +113,21 @@ export interface AppEnv {
   smtpSecure: boolean
   smtpUser: string
   smtpPassword: string
+  javaExecutionMode: z.infer<typeof envSchema>['JAVA_EXECUTION_MODE']
+  javaExecutable: string
+  javacExecutable: string
+  javaRelease: number
+  javaJobRoot: string
+  javaSourceLimitBytes: number
+  javaCompileTimeoutMs: number
+  javaTestTimeoutMs: number
+  javaOutputLimitBytes: number
+  javaMemoryLimitMb: number
+  executionJobLeaseMs: number
+  executionWorkerPollMs: number
+  practiceRunTtlHours: number
+  practiceRunsPerMinute: number
+  practiceMaxActivePerActivity: number
 }
 
 export class EnvironmentValidationError extends Error {
@@ -129,5 +170,20 @@ export function loadEnv(input: NodeJS.ProcessEnv = process.env): AppEnv {
     smtpSecure: result.data.SMTP_SECURE,
     smtpUser: result.data.SMTP_USER,
     smtpPassword: result.data.SMTP_PASSWORD,
+    javaExecutionMode: result.data.JAVA_EXECUTION_MODE,
+    javaExecutable: result.data.JAVA_EXECUTABLE,
+    javacExecutable: result.data.JAVAC_EXECUTABLE,
+    javaRelease: result.data.JAVA_RELEASE,
+    javaJobRoot: result.data.JAVA_JOB_ROOT,
+    javaSourceLimitBytes: result.data.JAVA_SOURCE_LIMIT_BYTES,
+    javaCompileTimeoutMs: result.data.JAVA_COMPILE_TIMEOUT_MS,
+    javaTestTimeoutMs: result.data.JAVA_TEST_TIMEOUT_MS,
+    javaOutputLimitBytes: result.data.JAVA_OUTPUT_LIMIT_BYTES,
+    javaMemoryLimitMb: result.data.JAVA_MEMORY_LIMIT_MB,
+    executionJobLeaseMs: result.data.EXECUTION_JOB_LEASE_MS,
+    executionWorkerPollMs: result.data.EXECUTION_WORKER_POLL_MS,
+    practiceRunTtlHours: result.data.PRACTICE_RUN_TTL_HOURS,
+    practiceRunsPerMinute: result.data.PRACTICE_RUNS_PER_MINUTE,
+    practiceMaxActivePerActivity: result.data.PRACTICE_MAX_ACTIVE_PER_ACTIVITY,
   }
 }

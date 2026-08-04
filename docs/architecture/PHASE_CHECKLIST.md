@@ -21,8 +21,9 @@ Status markers:
 | 2 | Database foundation | Complete | `3cf0354` |
 | 3 | Authentication and authorization | Complete | `bf45efd` |
 | 4 | User and Class Management | Complete | `985f101` |
-| 5 | Programming Activities and Test Cases | Implemented; test-database verification complete, development migration/live verification pending | Working tree |
-| 6-11 | Later functionalization, integration, and hardening | Pending | Pending |
+| 5 | Programming Activities and Test Cases | Complete | `1aa1525` |
+| 6 | Submissions and Automated Assessment | Implemented and verified; pending pre-commit review | Working tree |
+| 7-11 | Later functionalization, integration, and hardening | Pending | Pending |
 
 ## Phase 0: architecture and planning — complete
 
@@ -142,7 +143,7 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - Live API verification passes the approved administrator, instructor, and student workflows, including projection boundaries, ownership and membership checks, class-code lifecycle, archive/restore behavior, and structured-log redaction.
 - Backend lint, main and integration type-checks, tests, and build pass. The unchanged frontend lint and build also pass.
 
-## Phase 5: programming activities and test cases — implementation complete, pending review and commit
+## Phase 5: programming activities and test cases — complete
 
 - [x] Keep Phase 5 backend-only and preserve every file under `client/`.
 - [x] Implement activity metadata, due-state projection, Java starter/entry-class settings, total points, and `maxAttempts` from one through three.
@@ -167,14 +168,34 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - The normal development database contains five users, two classes, two memberships, one programming activity, and two test cases after the intentionally retained live-verification fixtures.
 - The unchanged frontend lint and build pass, and `git diff -- client` is empty.
 
-## Phase 6: submissions and automated assessment — pending
+## Phase 6: submissions and automated assessment — implementation and verification complete, pending pre-commit review
 
-- [ ] Implement immutable attempts, server-assigned numbering, idempotency, due-state checks, and concurrency-safe attempt limits.
-- [ ] Implement the PostgreSQL-backed execution queue and separate Java worker.
-- [ ] Compile once per assessment and enforce time, memory, CPU, process, disk, network, and output limits.
-- [ ] Preserve source snapshots, execution results, test-case results, automated scores, and attempt history.
-- [ ] Implement instructor review, preserved original automated results, separately recorded score corrections/adjustments with actor/reason/time, feedback drafts, and controlled release.
-- [ ] Add Docker/container isolation before internet-hosted Java execution.
+- [x] Keep Phase 6 backend-only and preserve every file under `client/`.
+- [x] Implement immutable source/activity/test snapshots, server-assigned chronological attempt numbering, scoped idempotency, deadline checks, and concurrency-safe usable-attempt limits.
+- [x] Implement a PostgreSQL-backed durable execution queue with atomic claim, lease recovery, bounded retries, and a separate worker process.
+- [x] Compile Java once per job with JDK `--release 17`; execute only server-owned test snapshots through argument arrays without a shell.
+- [x] Keep `JAVA_EXECUTION_MODE=disabled` by default; reject `local_process` in production and document it as controlled-local development only.
+- [x] Implement Run Visible Tests using only visible cases, without custom stdin, submission creation, attempt consumption, score creation, or hidden-test leakage.
+- [x] Preserve original automated results and implement bounded append-only score corrections, instructor points, feedback drafts, review, and controlled release.
+- [x] Keep all numeric grading data and feedback hidden from students until release, and omit hidden-test definitions, results, points, IDs, names, and counts at every stage.
+- [x] Retry infrastructure failures on the same immutable submission; require explicit instructor resolution after retry exhaustion.
+- [x] Implement time-limited, single-use replacement grants that may cross the deadline or CLOSED state but never archive, inactive-user, or removed-membership boundaries.
+- [x] Atomically consume a grant, persist idempotency, create the replacement submission/job, and link it to the preserved failed submission.
+- [x] Block activity/class archive while accepted work or an active unconsumed replacement remains; expired grants no longer block archive.
+- [x] Keep administrators read-only for submission views and keep released submissions immutable during Phase 6.
+- [x] Verify isolated code, real Java execution, and the guarded serial PostgreSQL suite against exactly `projex_test`.
+- [x] Apply the committed Phase 6 migration to the normal development database after test-database verification.
+- [x] Verify cookie/CSRF HTTP role workflows and the durable queue through actual Express routes against `projex_test`, plus controlled-local Java compilation/execution separately.
+- [ ] Add container or equivalent isolation before any internet-hosted Java execution.
+
+### Verification record
+
+- The committed `20260804010000_phase6_submissions_automated_assessment` migration was deployed first to exactly `projex_test` and then to the normal development database without reset, `db push`, drift, data loss, or migration failure; all six migrations are applied in both databases.
+- The normal development database preserved one ACTIVE administrator and the existing five users, two classes, two memberships, one activity, and two test cases. The migration created no submission, job, practice, correction, or failure-resolution fixtures.
+- The guarded PostgreSQL suite passes with seven integration files and 26 tests. Suite cleanup leaves all checked application tables empty in `projex_test` while preserving six Prisma migration-history rows.
+- The isolated backend suite passes with 11 test files and 74 tests, including execution-mode and structured-log-redaction checks.
+- The real Java suite passes with one file and four tests covering Java 17 target compilation, deterministic visible/hidden inputs, compiler rejection, timeout, output overflow, unavailable toolchain classification, process termination, and temporary-directory cleanup.
+- Backend lint, main and integration type-checks, Prisma validation, and production build pass. The unchanged frontend lint and build pass, and `git diff -- client` is empty.
 
 ## Phase 7: project and repository collaboration — pending
 
@@ -190,11 +211,12 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - [ ] Use temporary worktrees, bounded process execution, safe configuration, and guaranteed cleanup.
 - [ ] Implement per-repository write locks and preserve commit, branch, diff, and contribution history.
 
-## Phase 9: Admin functionalization — pending
+## Phase 9: Admin backend capabilities — pending
 
-- [ ] Bind the existing Admin UI to approved account, class, repository, storage, archive, and health operations.
+- [ ] Define and implement approved administrator authorization, APIs, operational summaries, and safe data projections.
 - [ ] Preserve explicit authorization, data minimization, confirmation, and security logging.
-- [ ] Add narrowly approved maintenance controls only.
+- [ ] Keep Phase 9 backend-focused unless a separate frontend change is explicitly approved.
+- [ ] Treat the existing admin frontend only as a temporary mock and feature inventory, never as the final visual source of truth.
 
 ## Phase 10: frontend integration — pending
 
@@ -203,6 +225,7 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - [ ] Integrate login, session refresh, CSRF, logout, role routing, protected states, and safe errors.
 - [ ] Preserve current routes, CSS, responsive behavior, and unrelated mocks until replaced.
 - [ ] Add persisted notifications, canonical analytics, and role-appropriate similarity projections when their backend support exists.
+- [ ] In Phase 10D, redesign and integrate the admin frontend using the student/instructor visual language, spacing, typography, navigation, components, tables, chips, drawers, dialogs, and interaction patterns.
 
 ## Phase 11: hardening, deployment, and evaluation — pending
 

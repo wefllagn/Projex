@@ -65,9 +65,13 @@ enum AssignmentStatus {
 }
 
 enum SubmissionStatus {
-  SUBMITTED
-  GRADED
+  QUEUED
+  ASSESSING
+  ASSESSED
+  ASSESSMENT_FAILED
+  REVIEWED
   RELEASED
+  FAILED_RESOLVED
 
   @@map("submission_status")
 }
@@ -75,7 +79,8 @@ enum SubmissionStatus {
 enum CompileStatus {
   PENDING
   SUCCESS
-  FAILED
+  STUDENT_ERROR
+  INFRASTRUCTURE_ERROR
 
   @@map("compile_status")
 }
@@ -86,6 +91,7 @@ enum RuntimeStatus {
   FAILED
   TIMEOUT
   ERROR
+  OUTPUT_LIMIT
 
   @@map("runtime_status")
 }
@@ -95,8 +101,43 @@ enum TestCasePassStatus {
   PASSED
   FAILED
   ERROR
+  TIMEOUT
+  OUTPUT_LIMIT
 
   @@map("test_case_pass_status")
+}
+
+enum ExecutionJobType {
+  OFFICIAL_ASSESSMENT
+  VISIBLE_TEST_RUN
+
+  @@map("execution_job_type")
+}
+
+enum ExecutionJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+
+  @@map("execution_job_status")
+}
+
+enum FailureResolutionType {
+  CLOSED_WITHOUT_REPLACEMENT
+  REPLACEMENT_GRANTED
+
+  @@map("failure_resolution_type")
+}
+
+enum PracticeExecutionStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  TIMEOUT
+
+  @@map("practice_execution_status")
 }
 
 enum RepositoryType {
@@ -150,28 +191,33 @@ enum RepositoryActivityType {
 }
 
 model User {
-  id                           String                @id @default(uuid()) @map("user_id") @db.Uuid
-  fullName                     String                @map("full_name")
-  email                        String                @unique
-  passwordHash                 String?               @map("password_hash")
+  id                           String                        @id @default(uuid()) @map("user_id") @db.Uuid
+  fullName                     String                        @map("full_name")
+  email                        String                        @unique
+  passwordHash                 String?                       @map("password_hash")
   role                         UserRole
-  status                       UserStatus            @default(SETUP_PENDING)
-  createdAt                    DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                    DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
-  passwordChangedAt            DateTime?             @map("password_changed_at") @db.Timestamptz(3)
-  lastLoginAt                  DateTime?             @map("last_login_at") @db.Timestamptz(3)
+  status                       UserStatus                    @default(SETUP_PENDING)
+  createdAt                    DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                    DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  passwordChangedAt            DateTime?                     @map("password_changed_at") @db.Timestamptz(3)
+  lastLoginAt                  DateTime?                     @map("last_login_at") @db.Timestamptz(3)
   accountSetupTokens           AccountSetupToken[]
-  refreshSessions              RefreshSession[]      @relation("RefreshSessionUser")
-  classesTaught                Class[]               @relation("ClassInstructor")
-  classMemberships             ClassMember[]         @relation("ClassMemberStudent")
-  programmingActivitiesCreated ProgrammingActivity[] @relation("ProgrammingActivityCreator")
-  activitySubmissions          ActivitySubmission[]  @relation("ActivitySubmissionStudent")
-  submissionFeedbackAuthored   SubmissionFeedback[]  @relation("SubmissionFeedbackInstructor")
-  projectTasksCreated          ProjectTask[]         @relation("ProjectTaskCreator")
-  repositoriesOwned            Repository[]          @relation("RepositoryOwner")
-  repositoryMemberships        RepositoryMember[]    @relation("RepositoryMemberStudent")
-  repositoryActivities         RepositoryActivity[]  @relation("RepositoryActivityUser")
-  repositoryFeedbackAuthored   RepositoryFeedback[]  @relation("RepositoryFeedbackInstructor")
+  refreshSessions              RefreshSession[]              @relation("RefreshSessionUser")
+  classesTaught                Class[]                       @relation("ClassInstructor")
+  classMemberships             ClassMember[]                 @relation("ClassMemberStudent")
+  programmingActivitiesCreated ProgrammingActivity[]         @relation("ProgrammingActivityCreator")
+  activitySubmissions          ActivitySubmission[]          @relation("ActivitySubmissionStudent")
+  submissionFeedbackAuthored   SubmissionFeedback[]          @relation("SubmissionFeedbackInstructor")
+  submissionFeedbackReleased   SubmissionFeedback[]          @relation("SubmissionFeedbackReleaser")
+  submissionIdempotencies      SubmissionIdempotency[]
+  scoreCorrectionsAuthored     SubmissionScoreCorrection[]
+  failureResolutionsAuthored   SubmissionFailureResolution[]
+  practiceExecutions           PracticeExecution[]
+  projectTasksCreated          ProjectTask[]                 @relation("ProjectTaskCreator")
+  repositoriesOwned            Repository[]                  @relation("RepositoryOwner")
+  repositoryMemberships        RepositoryMember[]            @relation("RepositoryMemberStudent")
+  repositoryActivities         RepositoryActivity[]          @relation("RepositoryActivityUser")
+  repositoryFeedbackAuthored   RepositoryFeedback[]          @relation("RepositoryFeedbackInstructor")
 
   @@index([role, status])
   @@map("users")
@@ -259,27 +305,29 @@ model ClassMember {
 }
 
 model ProgrammingActivity {
-  id             String               @id @default(uuid()) @map("activity_id") @db.Uuid
-  classId        String               @map("class_id") @db.Uuid
-  createdById    String               @map("created_by") @db.Uuid
-  title          String
-  instructions   String               @db.Text
-  dueDate        DateTime             @map("due_date") @db.Timestamptz(3)
-  language       ProgrammingLanguage  @default(JAVA)
-  entryClassName String               @default("Main") @map("entry_class_name")
-  starterCode    String               @map("starter_code") @db.Text
-  maxAttempts    Int                  @default(3) @map("max_attempts")
-  totalPoints    Decimal              @map("total_points") @db.Decimal(8, 2)
-  status         ActivityStatus       @default(DRAFT)
-  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
-  publishedAt    DateTime?            @map("published_at") @db.Timestamptz(3)
-  closedAt       DateTime?            @map("closed_at") @db.Timestamptz(3)
-  archivedAt     DateTime?            @map("archived_at") @db.Timestamptz(3)
-  class          Class                @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  createdBy      User                 @relation("ProgrammingActivityCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  testCases      TestCase[]
-  submissions    ActivitySubmission[]
+  id                      String                  @id @default(uuid()) @map("activity_id") @db.Uuid
+  classId                 String                  @map("class_id") @db.Uuid
+  createdById             String                  @map("created_by") @db.Uuid
+  title                   String
+  instructions            String                  @db.Text
+  dueDate                 DateTime                @map("due_date") @db.Timestamptz(3)
+  language                ProgrammingLanguage     @default(JAVA)
+  entryClassName          String                  @default("Main") @map("entry_class_name")
+  starterCode             String                  @map("starter_code") @db.Text
+  maxAttempts             Int                     @default(3) @map("max_attempts")
+  totalPoints             Decimal                 @map("total_points") @db.Decimal(8, 2)
+  status                  ActivityStatus          @default(DRAFT)
+  createdAt               DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
+  publishedAt             DateTime?               @map("published_at") @db.Timestamptz(3)
+  closedAt                DateTime?               @map("closed_at") @db.Timestamptz(3)
+  archivedAt              DateTime?               @map("archived_at") @db.Timestamptz(3)
+  class                   Class                   @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy               User                    @relation("ProgrammingActivityCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  testCases               TestCase[]
+  submissions             ActivitySubmission[]
+  submissionIdempotencies SubmissionIdempotency[]
+  practiceExecutions      PracticeExecution[]
 
   @@index([classId, status])
   @@index([dueDate])
@@ -287,43 +335,57 @@ model ProgrammingActivity {
 }
 
 model TestCase {
-  id             String              @id @default(uuid()) @map("test_case_id") @db.Uuid
-  activityId     String              @map("activity_id") @db.Uuid
+  id             String                  @id @default(uuid()) @map("test_case_id") @db.Uuid
+  activityId     String                  @map("activity_id") @db.Uuid
   name           String
-  testCaseOrder  Int                 @map("test_case_order")
-  inputData      String?             @map("input_data") @db.Text
-  expectedOutput String              @map("expected_output") @db.Text
-  isHidden       Boolean             @default(true) @map("is_hidden")
-  points         Decimal             @db.Decimal(8, 2)
-  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
-  activity       ProgrammingActivity @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  testCaseOrder  Int                     @map("test_case_order")
+  inputData      String?                 @map("input_data") @db.Text
+  expectedOutput String                  @map("expected_output") @db.Text
+  isHidden       Boolean                 @default(true) @map("is_hidden")
+  points         Decimal                 @db.Decimal(8, 2)
+  createdAt      DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
+  activity       ProgrammingActivity     @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   results        TestCaseResult[]
+  practiceCases  PracticeExecutionCase[]
 
   @@unique([activityId, testCaseOrder])
   @@map("test_cases")
 }
 
 model ActivitySubmission {
-  id                          String                @id @default(uuid()) @map("submission_id") @db.Uuid
-  activityId                  String                @map("activity_id") @db.Uuid
-  studentId                   String                @map("student_id") @db.Uuid
-  attemptNumber               Int                   @map("attempt_number")
-  sourceCode                  String                @map("source_code") @db.Text
-  submittedAt                 DateTime              @default(now()) @map("submitted_at") @db.Timestamptz(3)
-  submissionStatus            SubmissionStatus      @default(SUBMITTED) @map("submission_status")
-  isLate                      Boolean               @default(false) @map("is_late")
-  automatedScore              Decimal?              @map("automated_score") @db.Decimal(8, 2)
-  instructorAdjustment        Decimal               @default(0) @map("instructor_adjustment") @db.Decimal(8, 2)
-  finalScore                  Decimal?              @map("final_score") @db.Decimal(8, 2)
-  reviewedAt                  DateTime?             @map("reviewed_at") @db.Timestamptz(3)
-  releasedAt                  DateTime?             @map("released_at") @db.Timestamptz(3)
-  activity                    ProgrammingActivity   @relation(fields: [activityId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  student                     User                  @relation("ActivitySubmissionStudent", fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  executions                  SubmissionExecution[]
-  similarityResultsAsSource   SimilarityResult[]    @relation("SimilaritySourceSubmission")
-  similarityResultsAsCompared SimilarityResult[]    @relation("SimilarityComparedSubmission")
-  feedback                    SubmissionFeedback[]
+  id                          String                       @id @default(uuid()) @map("submission_id") @db.Uuid
+  activityId                  String                       @map("activity_id") @db.Uuid
+  studentId                   String                       @map("student_id") @db.Uuid
+  attemptNumber               Int                          @map("attempt_number")
+  sourceCode                  String                       @map("source_code") @db.Text
+  sourceHash                  String                       @map("source_hash")
+  activityTitleSnapshot       String                       @map("activity_title_snapshot")
+  dueDateSnapshot             DateTime                     @map("due_date_snapshot") @db.Timestamptz(3)
+  totalPointsSnapshot         Decimal                      @map("total_points_snapshot") @db.Decimal(8, 2)
+  automatedMaximum            Decimal                      @map("automated_maximum") @db.Decimal(8, 2)
+  instructorMaximum           Decimal                      @map("instructor_maximum") @db.Decimal(8, 2)
+  submittedAt                 DateTime                     @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  updatedAt                   DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  submissionStatus            SubmissionStatus             @default(QUEUED) @map("submission_status")
+  isLate                      Boolean                      @default(false) @map("is_late")
+  countsTowardAttemptLimit    Boolean                      @default(true) @map("counts_toward_attempt_limit")
+  originalAutomatedScore      Decimal?                     @map("original_automated_score") @db.Decimal(8, 2)
+  instructorPoints            Decimal                      @default(0) @map("instructor_points") @db.Decimal(8, 2)
+  releasedFinalScore          Decimal?                     @map("released_final_score") @db.Decimal(8, 2)
+  reviewedAt                  DateTime?                    @map("reviewed_at") @db.Timestamptz(3)
+  releasedAt                  DateTime?                    @map("released_at") @db.Timestamptz(3)
+  activity                    ProgrammingActivity          @relation(fields: [activityId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  student                     User                         @relation("ActivitySubmissionStudent", fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  execution                   SubmissionExecution?
+  executionJob                ExecutionJob?
+  idempotency                 SubmissionIdempotency?
+  scoreCorrections            SubmissionScoreCorrection[]
+  failureResolution           SubmissionFailureResolution? @relation("FailedSubmissionResolution")
+  replacementResolutionUsed   SubmissionFailureResolution? @relation("ReplacementSubmissionResolution")
+  similarityResultsAsSource   SimilarityResult[]           @relation("SimilaritySourceSubmission")
+  similarityResultsAsCompared SimilarityResult[]           @relation("SimilarityComparedSubmission")
+  feedback                    SubmissionFeedback?
 
   @@unique([activityId, studentId, attemptNumber])
   @@index([studentId, submittedAt])
@@ -332,32 +394,38 @@ model ActivitySubmission {
 }
 
 model SubmissionExecution {
-  id              String             @id @default(uuid()) @map("execution_id") @db.Uuid
-  submissionId    String             @map("submission_id") @db.Uuid
-  compileStatus   CompileStatus      @default(PENDING) @map("compile_status")
-  runtimeStatus   RuntimeStatus      @default(NOT_RUN) @map("runtime_status")
-  compilerOutput  String?            @map("compiler_output") @db.Text
-  startedAt       DateTime           @default(now()) @map("started_at") @db.Timestamptz(3)
-  completedAt     DateTime?          @map("completed_at") @db.Timestamptz(3)
-  submission      ActivitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  testCaseResults TestCaseResult[]
+  id                        String             @id @default(uuid()) @map("execution_id") @db.Uuid
+  submissionId              String             @unique @map("submission_id") @db.Uuid
+  compileStatus             CompileStatus      @default(PENDING) @map("compile_status")
+  runtimeStatus             RuntimeStatus      @default(NOT_RUN) @map("runtime_status")
+  compilerOutput            String?            @map("compiler_output") @db.Text
+  infrastructureFailureCode String?            @map("infrastructure_failure_code")
+  startedAt                 DateTime?          @map("started_at") @db.Timestamptz(3)
+  completedAt               DateTime?          @map("completed_at") @db.Timestamptz(3)
+  submission                ActivitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  testCaseResults           TestCaseResult[]
 
   @@index([submissionId, startedAt])
   @@map("submission_executions")
 }
 
 model TestCaseResult {
-  id               String              @id @default(uuid()) @map("test_case_result_id") @db.Uuid
-  executionId      String              @map("execution_id") @db.Uuid
-  testCaseId       String              @map("test_case_id") @db.Uuid
-  passStatus       TestCasePassStatus  @default(PENDING) @map("pass_status")
-  actualOutput     String?             @map("actual_output") @db.Text
-  errorMessage     String?             @map("error_message") @db.Text
-  automatedPoints  Decimal             @default(0) @map("automated_points") @db.Decimal(8, 2)
-  instructorPoints Decimal?            @map("instructor_points") @db.Decimal(8, 2)
-  executionTimeMs  Int?                @map("execution_time_ms")
-  execution        SubmissionExecution @relation(fields: [executionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  testCase         TestCase            @relation(fields: [testCaseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  id                     String              @id @default(uuid()) @map("test_case_result_id") @db.Uuid
+  executionId            String              @map("execution_id") @db.Uuid
+  testCaseId             String              @map("test_case_id") @db.Uuid
+  testNameSnapshot       String              @map("test_name_snapshot")
+  testOrderSnapshot      Int                 @map("test_order_snapshot")
+  inputSnapshot          String?             @map("input_snapshot") @db.Text
+  expectedOutputSnapshot String              @map("expected_output_snapshot") @db.Text
+  isHiddenSnapshot       Boolean             @map("is_hidden_snapshot")
+  maximumPoints          Decimal             @map("maximum_points") @db.Decimal(8, 2)
+  passStatus             TestCasePassStatus  @default(PENDING) @map("pass_status")
+  actualOutput           String?             @map("actual_output") @db.Text
+  errorMessage           String?             @map("error_message") @db.Text
+  automatedPoints        Decimal             @default(0) @map("automated_points") @db.Decimal(8, 2)
+  executionTimeMs        Int?                @map("execution_time_ms")
+  execution              SubmissionExecution @relation(fields: [executionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  testCase               TestCase            @relation(fields: [testCaseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@unique([executionId, testCaseId])
   @@index([testCaseId])
@@ -381,16 +449,141 @@ model SimilarityResult {
 
 model SubmissionFeedback {
   id           String             @id @default(uuid()) @map("feedback_id") @db.Uuid
-  submissionId String             @map("submission_id") @db.Uuid
+  submissionId String             @unique @map("submission_id") @db.Uuid
   instructorId String             @map("instructor_id") @db.Uuid
+  releasedById String?            @map("released_by_id") @db.Uuid
   feedbackText String             @map("feedback_text") @db.Text
   createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   releasedAt   DateTime?          @map("released_at") @db.Timestamptz(3)
   submission   ActivitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   instructor   User               @relation("SubmissionFeedbackInstructor", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  releasedBy   User?              @relation("SubmissionFeedbackReleaser", fields: [releasedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  @@index([submissionId])
   @@map("submission_feedback")
+}
+
+model SubmissionIdempotency {
+  id           String              @id @default(uuid()) @map("submission_idempotency_id") @db.Uuid
+  studentId    String              @map("student_id") @db.Uuid
+  activityId   String              @map("activity_id") @db.Uuid
+  keyHash      String              @map("key_hash")
+  payloadHash  String              @map("payload_hash")
+  submissionId String              @unique @map("submission_id") @db.Uuid
+  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  student      User                @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  activity     ProgrammingActivity @relation(fields: [activityId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  submission   ActivitySubmission  @relation(fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([studentId, activityId, keyHash])
+  @@map("submission_idempotencies")
+}
+
+model SubmissionScoreCorrection {
+  id                     String             @id @default(uuid()) @map("score_correction_id") @db.Uuid
+  submissionId           String             @map("submission_id") @db.Uuid
+  correctionNumber       Int                @map("correction_number")
+  originalAutomatedScore Decimal            @map("original_automated_score") @db.Decimal(8, 2)
+  previousEffectiveScore Decimal            @map("previous_effective_score") @db.Decimal(8, 2)
+  newEffectiveScore      Decimal            @map("new_effective_score") @db.Decimal(8, 2)
+  reason                 String             @db.Text
+  correctedById          String             @map("corrected_by_id") @db.Uuid
+  correctedAt            DateTime           @default(now()) @map("corrected_at") @db.Timestamptz(3)
+  submission             ActivitySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  correctedBy            User               @relation(fields: [correctedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([submissionId, correctionNumber])
+  @@index([correctedById, correctedAt])
+  @@map("submission_score_corrections")
+}
+
+model SubmissionFailureResolution {
+  id                      String                @id @default(uuid()) @map("failure_resolution_id") @db.Uuid
+  failedSubmissionId      String                @unique @map("failed_submission_id") @db.Uuid
+  resolutionType          FailureResolutionType @map("resolution_type")
+  reason                  String                @db.Text
+  resolvedById            String                @map("resolved_by_id") @db.Uuid
+  resolvedAt              DateTime              @default(now()) @map("resolved_at") @db.Timestamptz(3)
+  replacementExpiresAt    DateTime?             @map("replacement_expires_at") @db.Timestamptz(3)
+  replacementSubmissionId String?               @unique @map("replacement_submission_id") @db.Uuid
+  replacementConsumedAt   DateTime?             @map("replacement_consumed_at") @db.Timestamptz(3)
+  failedSubmission        ActivitySubmission    @relation("FailedSubmissionResolution", fields: [failedSubmissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  replacementSubmission   ActivitySubmission?   @relation("ReplacementSubmissionResolution", fields: [replacementSubmissionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  resolvedBy              User                  @relation(fields: [resolvedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([resolvedById, resolvedAt])
+  @@index([replacementExpiresAt])
+  @@map("submission_failure_resolutions")
+}
+
+model ExecutionJob {
+  id                  String              @id @default(uuid()) @map("execution_job_id") @db.Uuid
+  jobType             ExecutionJobType    @map("job_type")
+  submissionId        String?             @unique @map("submission_id") @db.Uuid
+  practiceExecutionId String?             @unique @map("practice_execution_id") @db.Uuid
+  status              ExecutionJobStatus  @default(QUEUED)
+  claimAttempt        Int                 @default(0) @map("claim_attempt")
+  maxClaimAttempts    Int                 @default(3) @map("max_claim_attempts")
+  availableAt         DateTime            @default(now()) @map("available_at") @db.Timestamptz(3)
+  claimedAt           DateTime?           @map("claimed_at") @db.Timestamptz(3)
+  leaseExpiresAt      DateTime?           @map("lease_expires_at") @db.Timestamptz(3)
+  completedAt         DateTime?           @map("completed_at") @db.Timestamptz(3)
+  workerId            String?             @map("worker_id")
+  lastFailureCode     String?             @map("last_failure_code")
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  submission          ActivitySubmission? @relation(fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  practiceExecution   PracticeExecution?  @relation(fields: [practiceExecutionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([status, availableAt])
+  @@index([leaseExpiresAt])
+  @@map("execution_jobs")
+}
+
+model PracticeExecution {
+  id             String                  @id @default(uuid()) @map("practice_execution_id") @db.Uuid
+  activityId     String                  @map("activity_id") @db.Uuid
+  studentId      String                  @map("student_id") @db.Uuid
+  sourceCode     String                  @map("source_code") @db.Text
+  sourceHash     String                  @map("source_hash")
+  entryClassName String                  @map("entry_class_name")
+  status         PracticeExecutionStatus @default(QUEUED)
+  compileStatus  CompileStatus           @default(PENDING) @map("compile_status")
+  runtimeStatus  RuntimeStatus           @default(NOT_RUN) @map("runtime_status")
+  compilerOutput String?                 @map("compiler_output") @db.Text
+  createdAt      DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  startedAt      DateTime?               @map("started_at") @db.Timestamptz(3)
+  completedAt    DateTime?               @map("completed_at") @db.Timestamptz(3)
+  expiresAt      DateTime                @map("expires_at") @db.Timestamptz(3)
+  activity       ProgrammingActivity     @relation(fields: [activityId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  student        User                    @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  cases          PracticeExecutionCase[]
+  executionJob   ExecutionJob?
+
+  @@index([studentId, createdAt])
+  @@index([activityId, status])
+  @@index([expiresAt])
+  @@map("practice_executions")
+}
+
+model PracticeExecutionCase {
+  id                     String             @id @default(uuid()) @map("practice_execution_case_id") @db.Uuid
+  practiceExecutionId    String             @map("practice_execution_id") @db.Uuid
+  testCaseId             String             @map("test_case_id") @db.Uuid
+  testNameSnapshot       String             @map("test_name_snapshot")
+  testOrderSnapshot      Int                @map("test_order_snapshot")
+  inputSnapshot          String?            @map("input_snapshot") @db.Text
+  expectedOutputSnapshot String             @map("expected_output_snapshot") @db.Text
+  passStatus             TestCasePassStatus @default(PENDING) @map("pass_status")
+  actualOutput           String?            @map("actual_output") @db.Text
+  errorMessage           String?            @map("error_message") @db.Text
+  executionTimeMs        Int?               @map("execution_time_ms")
+  practiceExecution      PracticeExecution  @relation(fields: [practiceExecutionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  testCase               TestCase           @relation(fields: [testCaseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([practiceExecutionId, testCaseId])
+  @@unique([practiceExecutionId, testOrderSnapshot])
+  @@map("practice_execution_cases")
 }
 
 model ProjectTask {

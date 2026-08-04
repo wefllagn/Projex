@@ -28,6 +28,7 @@ export interface AppDependencies {
     users: Router
     classes: Router
     activities: Router
+    submissions: Router
   }
 }
 
@@ -72,6 +73,7 @@ export function createApp({
     app.use('/api/v1/users', featureRouters.users)
     app.use('/api/v1/classes', featureRouters.classes)
     app.use('/api/v1/activities', featureRouters.activities)
+    app.use('/api/v1', featureRouters.submissions)
   }
 
   app.use(notFoundMiddleware)
