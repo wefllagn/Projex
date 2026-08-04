@@ -91,7 +91,8 @@ Required examples include:
 - Unique submission attempt number for `(activity_id, student_id, attempt_number)`.
 - Unique repository slug within its owner/class namespace.
 - Unique repository member for `(repository_id, user_id)`.
-- Unique active repository-invitation rules to prevent duplicate pending collaborator invitations for the same target.
+- At most one ACTIVE team membership per student/project task and one PENDING repository invitation per invitee/project task.
+- Server-controlled repository type/visibility pairs and synchronized team/repository membership at transaction commit.
 - Unique branch name within a repository.
 - Non-negative scores, test points, counts, sizes, and resource limits.
 - Grade/score not exceeding the allowed maximum.
@@ -109,7 +110,9 @@ Examples:
 - Atomically allocate and create a numbered immutable submission attempt, source snapshot metadata, and assessment job record.
 - Join a class by active class code and create/activate membership while preventing duplicates.
 - Release grade and feedback, update submission review state, and create a notification/outbox event.
-- Create a repository record, team association, initial owner membership, and Git provisioning job.
+- Create a Phase 7 team, lead membership, metadata-only repository, and owner membership.
+- Accept an invitation or transition a member by updating the invitation, team membership, and repository membership atomically.
+- Release a repository feedback draft atomically with `REQUEST_CHANGES` or optional approval feedback.
 - Archive a repository and record snapshot/audit metadata.
 - Generate or rotate a class code while invalidating the previous active code.
 
@@ -146,7 +149,12 @@ Each programming activity configures `maxAttempts` from 1 through 3. Each `Submi
 
 ## Repository and job concurrency
 
-- Repository metadata stores only server-controlled relative identifiers, never arbitrary client paths.
+- Phase 7 repository metadata has no client-controlled or provisioned filesystem path. Future storage identifiers remain server-owned and are never arbitrary client paths.
+- Class-project creation, invitation acceptance, and member transitions use serializable transactions plus row locks where needed.
+- Deferred database constraints reject a committed mismatch between team and repository membership or between lead and owner.
+- Invitation capacity counts ACTIVE members and unexpired PENDING invitations; unique indexes and serializable retries protect concurrent invitations/acceptance.
+- Optimistic concurrency protects project-task, repository metadata/review, membership, and feedback-draft mutations.
+- `RepositoryActivity` remains unused until Phase 8.
 - A database-backed per-repository lock/lease serializes writes that mutate Git refs or worktrees.
 - Locks have owner/job ID, acquisition time, expiry/lease, and safe recovery rules.
 - Job records have an explicit state machine, attempt count, lease owner/expiry, created/started/finished timestamps, and bounded error summary.

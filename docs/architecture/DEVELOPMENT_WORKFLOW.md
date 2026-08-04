@@ -114,6 +114,8 @@ Every phase must end with a working application. An unfinished cross-phase refac
 - Preserve each attempt's source, submission time, execution result, score, and review state; idempotency and database constraints must protect double-click/retry behavior.
 - Keep `originalAutomatedScore` and per-test automated evidence immutable during review; record append-only corrections, distinct instructor points, and the derived released final score separately.
 - Keep Java execution disabled by default. Permit `local_process` only for controlled local development, never production or an internet-accessible deployment.
+- Keep Phase 7 repository work metadata-only. Do not create bare repositories, worktrees, files, branches, commits, diffs, or `RepositoryActivity` rows before the approved Phase 8 Git implementation.
+- Preserve team/repository membership synchronization through serializable transactions, database constraints, and real PostgreSQL integration tests; never bypass the invariant with direct one-table writes.
 - Do not add provider-specific infrastructure without a documented, approved portability exception.
 
 ## Environment workflow
@@ -136,6 +138,7 @@ The exact commands are defined when backend tooling exists. At minimum, a phase 
 | Backend | Type check, lint, unit tests, integration tests, production build/startup validation. |
 | Database | Migration apply on a clean database, migration apply on representative prior state, constraints/transaction tests, seed test. |
 | API | Response-contract, validation, authentication, authorization, pagination, error-code tests. |
+| Repository collaboration | Lifecycle/deadline rules, server-owned visibility, cross-class concealment, invitation eligibility/expiry/capacity/concurrency, synchronized membership rollback, feedback/review coupling, and archive blockers. |
 | Java | Separate-worker compile success/failure with `--release 17`, timeout/output boundaries, process-tree termination, temp cleanup, and hosted network/CPU/filesystem isolation before internet enablement. |
 | Git | Argument/path/ref validation, bare-repo/worktree lifecycle, lock contention/recovery, unauthorized access tests. |
 | Security | Secret scan/diff review, cookie/CSRF/CORS/headers, role/ownership tests, student visibility tests. |

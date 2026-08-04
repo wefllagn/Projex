@@ -39,6 +39,12 @@ import { createTestCaseService } from './modules/test-cases/test-case.service.js
 import { createPrismaSubmissionRepository } from './modules/submissions/submission.repository.js'
 import { createSubmissionService } from './modules/submissions/submission.service.js'
 import { createSubmissionRouter } from './modules/submissions/submission.routes.js'
+import { createPrismaProjectTaskRepository } from './modules/project-tasks/project-task.repository.js'
+import { createProjectTaskService } from './modules/project-tasks/project-task.service.js'
+import { createProjectTaskRouter } from './modules/project-tasks/project-task.routes.js'
+import { createPrismaRepositoryRepository } from './modules/repositories/repository.repository.js'
+import { createRepositoryService } from './modules/repositories/repository.service.js'
+import { createRepositoryRouter } from './modules/repositories/repository.routes.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
@@ -135,6 +141,15 @@ async function bootstrap(): Promise<void> {
       practiceMaxActivePerActivity: env.practiceMaxActivePerActivity,
     },
   })
+  const projectTaskService = createProjectTaskService({
+    repository: createPrismaProjectTaskRepository(prisma),
+    classRepository,
+    logger,
+  })
+  const repositoryService = createRepositoryService({
+    repository: createPrismaRepositoryRepository(prisma),
+    logger,
+  })
   const app = createApp({
     config: {
       frontendOrigin: env.frontendOrigin,
@@ -161,6 +176,7 @@ async function bootstrap(): Promise<void> {
         classService,
         classMemberService,
         activityService,
+        projectTaskService,
         requireAuthentication,
         requireCsrf,
       }),
@@ -172,6 +188,16 @@ async function bootstrap(): Promise<void> {
       }),
       submissions: createSubmissionRouter({
         service: submissionService,
+        requireAuthentication,
+        requireCsrf,
+      }),
+      projectTasks: createProjectTaskRouter({
+        service: projectTaskService,
+        requireAuthentication,
+        requireCsrf,
+      }),
+      repositories: createRepositoryRouter({
+        service: repositoryService,
         requireAuthentication,
         requireCsrf,
       }),

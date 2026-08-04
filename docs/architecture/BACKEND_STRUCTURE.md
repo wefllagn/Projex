@@ -4,7 +4,7 @@
 
 Projex will use a **feature-based modular monolith** for the planned Node.js/Express/TypeScript backend. This document describes a future structure; Phase 0 does not create these folders or implement backend code.
 
-The frontend remains in its current React/Vite JavaScript/JSX structure under `client/`. The feature-based Express/TypeScript backend exists under `server/`; Phase 6 adds the submissions module plus Java and PostgreSQL job-queue infrastructure without changing the frontend.
+The frontend remains in its current React/Vite JavaScript/JSX structure under `client/`. The feature-based Express/TypeScript backend exists under `server/`; Phase 7 adds project-task and repository-collaboration modules without changing the frontend or implementing Git/filesystem operations.
 
 ## Proposed structure
 
@@ -140,11 +140,11 @@ Names may be singular when the feature represents a process rather than a collec
 | `submissions` | Immutable official attempts and visible-only practice runs, server-owned chronological numbering, counting-attempt enforcement, scoped idempotency, snapshots, durable job creation, instructor review/corrections, infrastructure-failure resolution/replacement, release, and role-safe history retrieval. |
 | `assessments` | Logical assessment boundary currently coordinated by submissions plus Java/job-queue infrastructure: preserved per-test results, original/effective automated scores, instructor points, bounded final score, and execution lifecycle. It may become a separate feature only when its responsibilities warrant extraction. |
 | `feedback` | Submission-owned instructor feedback drafts and controlled release in Phase 6; rubric results and notification coordination remain later work. |
-| `project-tasks` | Repository-linked academic tasks, assignees, status, due dates, linked commits. |
-| `teams` | Project teams, members, representative, team membership rules. |
-| `repositories` | Repository lifecycle, local bare-repository identity, branches/commits/files view, project linkage and readiness. |
-| `repository-members` | Repository collaborator membership, permissions and removal. |
-| `repository-invitations` | Repository invite creation, acceptance, decline, expiry and audit state. |
+| `project-tasks` | Class-linked project requirements, lifecycle, due dates, team summaries, monitoring, and archive gates. |
+| `teams` | Phase 7 persistence owned by the repository-collaboration aggregate: project teams, immutable lead identity, and synchronized membership rules. |
+| `repositories` | Phase 7 repository metadata, server-owned visibility, review lifecycle, textual feedback, and the transaction boundary for teams, members, and invitations. Local Git content begins in Phase 8. |
+| `repository-members` | Phase 7 persistence owned by the repository aggregate: synchronized collaborator membership and removal/reactivation history. |
+| `repository-invitations` | Phase 7 persistence owned by the repository aggregate: eligible collaborator invite creation, acceptance, decline, revoke, expiry, and capacity. |
 | `notifications` | In-app notification creation, listing, unread counts and read state. |
 | `analytics` | Authorized read models derived from persisted academic activity; no ownership of source transactions. |
 

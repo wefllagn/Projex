@@ -29,6 +29,8 @@ export interface AppDependencies {
     classes: Router
     activities: Router
     submissions: Router
+    projectTasks?: Router
+    repositories?: Router
   }
 }
 
@@ -74,6 +76,12 @@ export function createApp({
     app.use('/api/v1/classes', featureRouters.classes)
     app.use('/api/v1/activities', featureRouters.activities)
     app.use('/api/v1', featureRouters.submissions)
+    if (featureRouters.projectTasks) {
+      app.use('/api/v1/project-tasks', featureRouters.projectTasks)
+    }
+    if (featureRouters.repositories) {
+      app.use('/api/v1', featureRouters.repositories)
+    }
   }
 
   app.use(notFoundMiddleware)

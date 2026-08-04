@@ -6,7 +6,7 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Instruction
 
-Phases 0 through 5 are complete. Phase 6 submissions and automated assessment is explicitly approved and active on its phase branch. Do not begin Phase 7 or another phase until its decisions and implementation plan are approved and the user explicitly says, "Implement the approved decisions."
+Phases 0 through 6 are complete. Phase 7 project and repository collaboration is explicitly approved and active on `phase/07-project-repository-collaboration`. Do not begin Phase 8 or another phase until its decisions and implementation plan are approved and the user explicitly says, "Implement the approved decisions."
 
 ## Product Boundaries
 
@@ -41,6 +41,21 @@ For the current phased functionalization:
 - Numeric scores, instructor points, final score, feedback, and correction history remain hidden from students until release; released student responses still omit all hidden-test breakdowns.
 - Infrastructure failures retry the same immutable submission and do not stop counting toward the allowance unless an instructor formally grants a time-limited replacement. Grant consumption and replacement creation are atomic.
 - Released submissions are immutable during Phase 6. Post-release correction/versioning remains deferred.
+
+## Phase 7 Product Rules
+
+- Phase 7 is backend-only. Preserve every file under `client/`.
+- `CLASS_PROJECT` repositories are always `CLASS_ONLY`; `PERSONAL` repositories are always `PRIVATE`. Clients cannot choose or mutate visibility, and `PUBLIC` is rejected.
+- A class-project team and repository are created atomically. Every ACTIVE team member has a matching ACTIVE repository member, and the team lead remains the repository owner.
+- The owner/lead cannot leave or be removed. Ownership transfer is deferred to a separately approved workflow.
+- Invitation acceptance and member removal/reactivation update team and repository membership atomically. Repository membership never creates academic team membership by itself.
+- Invitees must be ACTIVE students with ACTIVE membership in the same class and no ACTIVE team for the same project task. One unexpired PENDING invitation per invitee/project task is allowed.
+- ACTIVE members plus unexpired PENDING invitations cannot exceed `maxTeamSize`; the owner counts toward capacity. Invitations expire at the earlier of seven days or the task deadline.
+- Student mutations require a PUBLISHED task before its deadline. After the deadline or while CLOSED, only the owning instructor may perform reasoned corrective removal/reactivation; ordinary student collaboration remains closed.
+- `REQUEST_CHANGES` is allowed only from `READY_FOR_REVIEW` while the task is PUBLISHED and before its deadline, and atomically releases non-empty textual feedback.
+- The owning instructor may approve previously submitted `READY_FOR_REVIEW` work after the deadline or while CLOSED, with optional released textual feedback. Numeric grades and rubrics remain out of Phase 7.
+- Project-task and class archiving must honor unexpired invitations, nonterminal repository review states, and synchronized membership invariants. Archived records are read-only.
+- `RepositoryActivity` remains unchanged and unused until Phase 8. Do not generate fake Git activity or implement Git CLI/filesystem repository operations in Phase 7.
 
 ## Admin frontend direction
 

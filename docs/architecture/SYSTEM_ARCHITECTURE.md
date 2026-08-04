@@ -2,11 +2,11 @@
 
 ## Status and scope
 
-This document records the architecture for turning the existing Projex UI prototype into a controlled full-stack system and the durable decisions accepted through Phase 6.
+This document records the architecture for turning the existing Projex UI prototype into a controlled full-stack system and the durable decisions accepted through Phase 7.
 
 - Current frontend: React 19, Vite, JavaScript/JSX, React Router, and the existing CSS.
 - Current backend: Node.js, Express, TypeScript, Zod, Prisma ORM, and PostgreSQL.
-- Implementation status: Phases 0 through 5 are complete; Phase 6 submissions and automated assessment is implemented and verified on its phase branch and awaits pre-commit review.
+- Implementation status: Phases 0 through 6 are complete; Phase 7 project and repository collaboration is implemented on its phase branch and has passed guarded PostgreSQL verification against `projex_test`. Normal development-database migration and live verification remain gated review steps.
 - Development approach: local-first, feature-by-feature, and cloud-provider-neutral.
 - Roles: `STUDENT`, `INSTRUCTOR`, and `ADMIN` are part of the authorization model from the beginning.
 - Implementation priority: Student and Instructor workflows first, followed by dedicated Admin functionalization.
@@ -161,9 +161,19 @@ Projex separates deterministic automated assessment from instructor review:
 - Review timestamps and feedback-release timestamps are recorded.
 - Grading and feedback drafts remain instructor-only until release.
 
+## Project collaboration model
+
+- Instructors author class-linked project tasks through `DRAFT`, `PUBLISHED`, `CLOSED`, and `ARCHIVED` lifecycle states.
+- A student creates one class-project team and metadata-only repository atomically. The server fixes visibility to `CLASS_ONLY`; personal repositories are server-fixed to `PRIVATE`.
+- Team and repository memberships are synchronized transactionally. The team lead is the repository owner, cannot be removed, and ownership transfer is deferred.
+- Collaborator invitations require an ACTIVE student and ACTIVE membership in the same class. Capacity includes ACTIVE members plus unexpired PENDING invitations, and expiry is evaluated without a scheduler.
+- Students may submit repository metadata as `READY_FOR_REVIEW` only while the project task is PUBLISHED and before its deadline.
+- `REQUEST_CHANGES` atomically releases non-empty textual feedback and is available only before the deadline. The owning instructor may approve already-submitted review work after the deadline or while the task is CLOSED.
+- Phase 7 stores collaboration and review metadata only. `RepositoryActivity` remains unused; local Git repository creation and every Git command remain Phase 8 work.
+
 ## Role priority and Admin scope
 
-Student and Instructor workflows are the first implementation priority because they provide the initial end-to-end academic test path. `ADMIN` remains in the user-role and authorization design from the beginning. In Phase 6, administrators have safe read-only submission visibility and cannot grade, correct, release, retry, or resolve failures.
+Student and Instructor workflows are the first implementation priority because they provide the initial end-to-end academic test path. `ADMIN` remains in the user-role and authorization design from the beginning. Administrators have safe read-only submission and Phase 7 collaboration visibility; they cannot grade, correct, release, review repositories, change team membership, or resolve failures through instructor workflows.
 
 The current admin frontend is only a temporary mock and feature inventory; it is not an approved final design or visual source of truth. Phase 9 remains backend-focused and defines approved account, class, repository, storage, archive, health, authorization, safe-projection, and operational-summary capabilities. Phase 10D will redesign and integrate the admin interface using the polished student/instructor interface as the visual source of truth. Admin access is explicit and audited; it does not automatically bypass data minimization, ownership, or privacy rules.
 
@@ -229,6 +239,8 @@ The hosted system is for controlled testing and defense only. It should have a d
 - Prisma is accessed through feature repositories or the database infrastructure module, not directly from controllers.
 - Academic records are archived rather than hard-deleted.
 - Cross-record invariants use database constraints and transactions.
+- Class-project team/repository creation, invitation acceptance, and membership removal/reactivation keep team and repository membership synchronized atomically.
+- Repository visibility is server-owned by type: `CLASS_PROJECT` is `CLASS_ONLY`, `PERSONAL` is `PRIVATE`, and `PUBLIC` is unavailable.
 - Activity `maxAttempts` is 1 through 3; immutable submission attempts use server-assigned numbering and permanent history.
 - Automated scores remain distinct from instructor adjustments and derived final scores.
 - Core Git operations use the local Git CLI safely; no GitHub or GitLab API is required.
@@ -238,6 +250,8 @@ The hosted system is for controlled testing and defense only. It should have a d
 - New infrastructure must remain replaceable without changing feature service contracts.
 
 ## Related documents
+
+- `PROJECT_REPOSITORY_COLLABORATION.md` — Phase 7 project-task, team, repository, invitation, review, and archive contract.
 
 - `BACKEND_STRUCTURE.md` — module layout and layer responsibilities.
 - `API_CONVENTIONS.md` — HTTP contracts and response envelopes.

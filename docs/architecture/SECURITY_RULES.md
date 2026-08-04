@@ -44,6 +44,10 @@ Minimum policy examples:
 | Instructor manages class | Authenticated ACTIVE instructor who owns that exact class; archived classes are read-only. |
 | Admin manages class | Authenticated ACTIVE admin; admin-created classes require an existing ACTIVE instructor. |
 | Student joins class | Authenticated ACTIVE student, valid active server-generated code, active class, and no REMOVED/PENDING membership. |
+| Student creates class-project repository | ACTIVE student, ACTIVE same-class membership, PUBLISHED task before deadline, no ACTIVE team for that task, atomic server-owned team/repository/owner creation. |
+| Student invites collaborator | ACTIVE owner/lead, open task before deadline, eligible ACTIVE same-class student, no other active team, no active duplicate invitation, capacity available. |
+| Instructor requests changes | Exact class owner, `READY_FOR_REVIEW`, PUBLISHED task before deadline, current non-empty feedback draft released atomically. |
+| Instructor approves repository | Exact class owner and previously submitted `READY_FOR_REVIEW`; allowed after deadline or while CLOSED, but never after archive. |
 
 Projex defines the roles `STUDENT`, `INSTRUCTOR`, and `ADMIN` from the first authentication schema. Student and Instructor workflows are implemented first, but Admin remains in scope and the existing admin prototype is preserved for a dedicated later phase. Admin access remains explicit, authorized, minimized, and audited.
 
@@ -58,6 +62,21 @@ Projex defines the roles `STUDENT`, `INSTRUCTOR`, and `ADMIN` from the first aut
 - Logs and analytics must minimize personal and source-code data.
 - Class join codes are capability values. Generate them cryptographically, omit ambiguous characters, normalize before lookup, exclude them from student responses, and never place generated or submitted codes in logs or error details.
 - Removed class membership grants no active or archived class, roster, activity, or related student access.
+- Repository visibility is server-owned. `CLASS_PROJECT` is always `CLASS_ONLY`, `PERSONAL` is always `PRIVATE`, and `PUBLIC` is unavailable in Phase 7.
+- Classmate repository roster projections omit email, account status, membership lifecycle timestamps, corrective reasons, and feedback drafts. The owner receives only membership status and the optimistic-concurrency version needed to manage existing members; full lifecycle details remain instructor/admin-only.
+
+## Project collaboration integrity
+
+- The client cannot choose repository visibility, owner, team, class, storage path, Git path, Git command, review authority, or feedback release identity.
+- Team and repository membership are synchronized in a serializable transaction and protected by database constraints. Partial success rolls back.
+- A repository membership never silently grants team or class membership. Invitation acceptance is the only ordinary collaborator-add workflow and creates/reactivates both team and repository rows atomically.
+- Invitees must be ACTIVE STUDENT users with ACTIVE membership in the task's class and no ACTIVE team for the same project task.
+- Capacity includes the immutable owner/lead, all ACTIVE members, and unexpired PENDING invitations. Expired invitations are recognized without trusting client time.
+- The owner/lead cannot be removed or transferred. A future ownership-transfer workflow requires separate approval and explicit audit/security design.
+- After the deadline or while CLOSED, student collaboration mutations fail closed. Only the exact owning instructor may remove/reactivate an existing member as a corrective action, with a non-empty reason recorded in the database operation and a structured security event.
+- Feedback drafts are visible only to the exact owning instructor. `REQUEST_CHANGES` releases non-empty textual feedback atomically and is forbidden after deadline/CLOSED. Approval may release optional textual feedback after cutoff for already-submitted work.
+- Phase 7 never accepts numeric project grades/rubrics and never writes fake repository activity, commits, branches, diffs, or contribution metrics.
+- Logs record actor/resource/event identifiers and whether a corrective reason was supplied, but not the reason text, private feedback body, invitation capability data, repository contents, or future storage paths.
 
 ## Submission and assessment integrity
 

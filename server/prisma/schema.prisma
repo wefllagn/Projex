@@ -55,13 +55,13 @@ enum ActivityStatus {
   @@map("activity_status")
 }
 
-enum AssignmentStatus {
+enum ProjectTaskStatus {
   DRAFT
   PUBLISHED
   CLOSED
   ARCHIVED
 
-  @@map("assignment_status")
+  @@map("project_task_status")
 }
 
 enum SubmissionStatus {
@@ -190,34 +190,86 @@ enum RepositoryActivityType {
   @@map("repository_activity_type")
 }
 
+enum TeamStatus {
+  ACTIVE
+  ARCHIVED
+
+  @@map("team_status")
+}
+
+enum TeamMemberRole {
+  LEAD
+  MEMBER
+
+  @@map("team_member_role")
+}
+
+enum TeamMemberStatus {
+  ACTIVE
+  REMOVED
+
+  @@map("team_member_status")
+}
+
+enum RepositoryReviewStatus {
+  WORKING
+  READY_FOR_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+
+  @@map("repository_review_status")
+}
+
+enum RepositoryInvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+  EXPIRED
+
+  @@map("repository_invitation_status")
+}
+
+enum RepositoryFeedbackStatus {
+  DRAFT
+  RELEASED
+
+  @@map("repository_feedback_status")
+}
+
 model User {
-  id                           String                        @id @default(uuid()) @map("user_id") @db.Uuid
-  fullName                     String                        @map("full_name")
-  email                        String                        @unique
-  passwordHash                 String?                       @map("password_hash")
-  role                         UserRole
-  status                       UserStatus                    @default(SETUP_PENDING)
-  createdAt                    DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                    DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  passwordChangedAt            DateTime?                     @map("password_changed_at") @db.Timestamptz(3)
-  lastLoginAt                  DateTime?                     @map("last_login_at") @db.Timestamptz(3)
-  accountSetupTokens           AccountSetupToken[]
-  refreshSessions              RefreshSession[]              @relation("RefreshSessionUser")
-  classesTaught                Class[]                       @relation("ClassInstructor")
-  classMemberships             ClassMember[]                 @relation("ClassMemberStudent")
-  programmingActivitiesCreated ProgrammingActivity[]         @relation("ProgrammingActivityCreator")
-  activitySubmissions          ActivitySubmission[]          @relation("ActivitySubmissionStudent")
-  submissionFeedbackAuthored   SubmissionFeedback[]          @relation("SubmissionFeedbackInstructor")
-  submissionFeedbackReleased   SubmissionFeedback[]          @relation("SubmissionFeedbackReleaser")
-  submissionIdempotencies      SubmissionIdempotency[]
-  scoreCorrectionsAuthored     SubmissionScoreCorrection[]
-  failureResolutionsAuthored   SubmissionFailureResolution[]
-  practiceExecutions           PracticeExecution[]
-  projectTasksCreated          ProjectTask[]                 @relation("ProjectTaskCreator")
-  repositoriesOwned            Repository[]                  @relation("RepositoryOwner")
-  repositoryMemberships        RepositoryMember[]            @relation("RepositoryMemberStudent")
-  repositoryActivities         RepositoryActivity[]          @relation("RepositoryActivityUser")
-  repositoryFeedbackAuthored   RepositoryFeedback[]          @relation("RepositoryFeedbackInstructor")
+  id                            String                        @id @default(uuid()) @map("user_id") @db.Uuid
+  fullName                      String                        @map("full_name")
+  email                         String                        @unique
+  passwordHash                  String?                       @map("password_hash")
+  role                          UserRole
+  status                        UserStatus                    @default(SETUP_PENDING)
+  createdAt                     DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                     DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  passwordChangedAt             DateTime?                     @map("password_changed_at") @db.Timestamptz(3)
+  lastLoginAt                   DateTime?                     @map("last_login_at") @db.Timestamptz(3)
+  accountSetupTokens            AccountSetupToken[]
+  refreshSessions               RefreshSession[]              @relation("RefreshSessionUser")
+  classesTaught                 Class[]                       @relation("ClassInstructor")
+  classMemberships              ClassMember[]                 @relation("ClassMemberStudent")
+  programmingActivitiesCreated  ProgrammingActivity[]         @relation("ProgrammingActivityCreator")
+  activitySubmissions           ActivitySubmission[]          @relation("ActivitySubmissionStudent")
+  submissionFeedbackAuthored    SubmissionFeedback[]          @relation("SubmissionFeedbackInstructor")
+  submissionFeedbackReleased    SubmissionFeedback[]          @relation("SubmissionFeedbackReleaser")
+  submissionIdempotencies       SubmissionIdempotency[]
+  scoreCorrectionsAuthored      SubmissionScoreCorrection[]
+  failureResolutionsAuthored    SubmissionFailureResolution[]
+  practiceExecutions            PracticeExecution[]
+  projectTasksCreated           ProjectTask[]                 @relation("ProjectTaskCreator")
+  teamsLed                      Team[]                        @relation("TeamLead")
+  teamMemberships               TeamMember[]                  @relation("TeamMemberStudent")
+  repositoriesOwned             Repository[]                  @relation("RepositoryOwner")
+  repositoryMemberships         RepositoryMember[]            @relation("RepositoryMemberStudent")
+  repositoryInvitationsReceived RepositoryInvitation[]        @relation("RepositoryInvitationInvitee")
+  repositoryInvitationsSent     RepositoryInvitation[]        @relation("RepositoryInvitationInviter")
+  repositoryActivities          RepositoryActivity[]          @relation("RepositoryActivityUser")
+  repositoryFeedbackAuthored    RepositoryFeedback[]          @relation("RepositoryFeedbackInstructor")
+  repositoryFeedbackReleased    RepositoryFeedback[]          @relation("RepositoryFeedbackReleaser")
 
   @@index([role, status])
   @@map("users")
@@ -587,61 +639,152 @@ model PracticeExecutionCase {
 }
 
 model ProjectTask {
-  id           String           @id @default(uuid()) @map("project_task_id") @db.Uuid
-  classId      String           @map("class_id") @db.Uuid
-  createdById  String           @map("created_by") @db.Uuid
+  id           String                 @id @default(uuid()) @map("project_task_id") @db.Uuid
+  classId      String                 @map("class_id") @db.Uuid
+  createdById  String                 @map("created_by") @db.Uuid
   title        String
-  instructions String           @db.Text
-  dueDate      DateTime         @map("due_date") @db.Timestamptz(3)
-  status       AssignmentStatus @default(DRAFT)
-  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
-  class        Class            @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  createdBy    User             @relation("ProjectTaskCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  instructions String                 @db.Text
+  dueDate      DateTime               @map("due_date") @db.Timestamptz(3)
+  maxTeamSize  Int                    @default(4) @map("max_team_size")
+  status       ProjectTaskStatus      @default(DRAFT)
+  createdAt    DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  publishedAt  DateTime?              @map("published_at") @db.Timestamptz(3)
+  closedAt     DateTime?              @map("closed_at") @db.Timestamptz(3)
+  archivedAt   DateTime?              @map("archived_at") @db.Timestamptz(3)
+  class        Class                  @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy    User                   @relation("ProjectTaskCreator", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  teams        Team[]
   repositories Repository[]
+  invitations  RepositoryInvitation[]
 
   @@index([classId, status])
   @@index([dueDate])
   @@map("project_tasks")
 }
 
-model Repository {
-  id             String               @id @default(uuid()) @map("repository_id") @db.Uuid
-  projectTaskId  String?              @map("project_task_id") @db.Uuid
-  ownerId        String               @map("owner_id") @db.Uuid
-  repositoryType RepositoryType       @map("repository_type")
-  repositoryName String               @map("repository_name")
-  description    String?              @db.Text
-  storagePath    String               @unique @map("storage_path")
-  defaultBranch  String               @default("main") @map("default_branch")
-  visibility     RepositoryVisibility @default(PRIVATE)
-  status         RepositoryStatus     @default(ACTIVE)
-  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
-  projectTask    ProjectTask?         @relation(fields: [projectTaskId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  owner          User                 @relation("RepositoryOwner", fields: [ownerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  members        RepositoryMember[]
-  activities     RepositoryActivity[]
-  feedback       RepositoryFeedback[]
+model Team {
+  id             String                 @id @default(uuid()) @map("team_id") @db.Uuid
+  projectTaskId  String                 @map("project_task_id") @db.Uuid
+  leadStudentId  String                 @map("lead_student_id") @db.Uuid
+  name           String                 @map("team_name")
+  normalizedName String                 @map("normalized_name")
+  status         TeamStatus             @default(ACTIVE)
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  archivedAt     DateTime?              @map("archived_at") @db.Timestamptz(3)
+  projectTask    ProjectTask            @relation(fields: [projectTaskId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  leadStudent    User                   @relation("TeamLead", fields: [leadStudentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  members        TeamMember[]
+  repository     Repository?
+  invitations    RepositoryInvitation[]
 
+  @@unique([id, projectTaskId])
+  @@unique([id, leadStudentId])
+  @@unique([projectTaskId, normalizedName])
+  @@index([projectTaskId, status])
+  @@index([leadStudentId, status])
+  @@map("teams")
+}
+
+model TeamMember {
+  id              String           @id @default(uuid()) @map("team_member_id") @db.Uuid
+  teamId          String           @map("team_id") @db.Uuid
+  projectTaskId   String           @map("project_task_id") @db.Uuid
+  studentId       String           @map("student_id") @db.Uuid
+  memberRole      TeamMemberRole   @map("member_role")
+  status          TeamMemberStatus @default(ACTIVE)
+  joinedAt        DateTime         @default(now()) @map("joined_at") @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  removedAt       DateTime?        @map("removed_at") @db.Timestamptz(3)
+  lastActivatedAt DateTime         @default(now()) @map("last_activated_at") @db.Timestamptz(3)
+  team            Team             @relation(fields: [teamId, projectTaskId], references: [id, projectTaskId], onDelete: Cascade, onUpdate: Cascade)
+  student         User             @relation("TeamMemberStudent", fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([teamId, studentId])
+  @@index([projectTaskId, studentId, status])
+  @@index([studentId, status])
+  @@map("team_members")
+}
+
+model Repository {
+  id               String                 @id @default(uuid()) @map("repository_id") @db.Uuid
+  projectTaskId    String?                @map("project_task_id") @db.Uuid
+  teamId           String?                @unique @map("team_id") @db.Uuid
+  ownerId          String                 @map("owner_id") @db.Uuid
+  repositoryType   RepositoryType         @map("repository_type")
+  repositoryName   String                 @map("repository_name")
+  slug             String
+  description      String?                @db.Text
+  storagePath      String?                @unique @map("storage_path")
+  defaultBranch    String                 @default("main") @map("default_branch")
+  visibility       RepositoryVisibility
+  status           RepositoryStatus       @default(ACTIVE)
+  reviewStatus     RepositoryReviewStatus @default(WORKING) @map("review_status")
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  readyForReviewAt DateTime?              @map("ready_for_review_at") @db.Timestamptz(3)
+  approvedAt       DateTime?              @map("approved_at") @db.Timestamptz(3)
+  archivedAt       DateTime?              @map("archived_at") @db.Timestamptz(3)
+  projectTask      ProjectTask?           @relation(fields: [projectTaskId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  team             Team?                  @relation(fields: [teamId, projectTaskId], references: [id, projectTaskId], onDelete: Restrict, onUpdate: Cascade)
+  owner            User                   @relation("RepositoryOwner", fields: [ownerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  members          RepositoryMember[]
+  invitations      RepositoryInvitation[]
+  activities       RepositoryActivity[]
+  feedback         RepositoryFeedback[]
+
+  @@unique([teamId, projectTaskId])
   @@index([ownerId])
   @@index([projectTaskId])
   @@index([repositoryType, status])
+  @@index([projectTaskId, reviewStatus])
   @@map("repositories")
 }
 
 model RepositoryMember {
-  id           String                 @id @default(uuid()) @map("repository_member_id") @db.Uuid
-  repositoryId String                 @map("repository_id") @db.Uuid
-  studentId    String                 @map("student_id") @db.Uuid
-  memberRole   RepositoryMemberRole   @map("member_role")
-  joinedAt     DateTime               @default(now()) @map("joined_at") @db.Timestamptz(3)
-  status       RepositoryMemberStatus @default(ACTIVE)
-  repository   Repository             @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  student      User                   @relation("RepositoryMemberStudent", fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  id              String                 @id @default(uuid()) @map("repository_member_id") @db.Uuid
+  repositoryId    String                 @map("repository_id") @db.Uuid
+  studentId       String                 @map("student_id") @db.Uuid
+  memberRole      RepositoryMemberRole   @map("member_role")
+  joinedAt        DateTime               @default(now()) @map("joined_at") @db.Timestamptz(3)
+  status          RepositoryMemberStatus @default(ACTIVE)
+  updatedAt       DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  removedAt       DateTime?              @map("removed_at") @db.Timestamptz(3)
+  lastActivatedAt DateTime               @default(now()) @map("last_activated_at") @db.Timestamptz(3)
+  repository      Repository             @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  student         User                   @relation("RepositoryMemberStudent", fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@unique([repositoryId, studentId])
   @@index([studentId, status])
   @@map("repository_members")
+}
+
+model RepositoryInvitation {
+  id               String                     @id @default(uuid()) @map("invitation_id") @db.Uuid
+  repositoryId     String                     @map("repository_id") @db.Uuid
+  teamId           String                     @map("team_id") @db.Uuid
+  projectTaskId    String                     @map("project_task_id") @db.Uuid
+  inviteeId        String                     @map("invitee_id") @db.Uuid
+  invitedById      String                     @map("invited_by_id") @db.Uuid
+  status           RepositoryInvitationStatus @default(PENDING)
+  createdAt        DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt        DateTime                   @map("expires_at") @db.Timestamptz(3)
+  acceptedAt       DateTime?                  @map("accepted_at") @db.Timestamptz(3)
+  declinedAt       DateTime?                  @map("declined_at") @db.Timestamptz(3)
+  revokedAt        DateTime?                  @map("revoked_at") @db.Timestamptz(3)
+  expiredAt        DateTime?                  @map("expired_at") @db.Timestamptz(3)
+  resolutionReason String?                    @map("resolution_reason") @db.Text
+  repository       Repository                 @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  team             Team                       @relation(fields: [teamId, projectTaskId], references: [id, projectTaskId], onDelete: Cascade, onUpdate: Cascade)
+  projectTask      ProjectTask                @relation(fields: [projectTaskId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  invitee          User                       @relation("RepositoryInvitationInvitee", fields: [inviteeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  invitedBy        User                       @relation("RepositoryInvitationInviter", fields: [invitedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([repositoryId, status, expiresAt])
+  @@index([inviteeId, status, expiresAt])
+  @@index([projectTaskId, status, expiresAt])
+  @@map("repository_invitations")
 }
 
 model RepositoryActivity {
@@ -666,16 +809,20 @@ model RepositoryActivity {
 }
 
 model RepositoryFeedback {
-  id           String     @id @default(uuid()) @map("feedback_id") @db.Uuid
-  repositoryId String     @map("repository_id") @db.Uuid
-  instructorId String     @map("instructor_id") @db.Uuid
-  feedbackText String     @map("feedback_text") @db.Text
-  grade        Decimal?   @db.Decimal(8, 2)
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  releasedAt   DateTime?  @map("released_at") @db.Timestamptz(3)
-  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  instructor   User       @relation("RepositoryFeedbackInstructor", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  id           String                   @id @default(uuid()) @map("feedback_id") @db.Uuid
+  repositoryId String                   @map("repository_id") @db.Uuid
+  instructorId String                   @map("instructor_id") @db.Uuid
+  releasedById String?                  @map("released_by_id") @db.Uuid
+  feedbackText String                   @map("feedback_text") @db.Text
+  grade        Decimal?                 @db.Decimal(8, 2)
+  status       RepositoryFeedbackStatus @default(DRAFT)
+  createdAt    DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  releasedAt   DateTime?                @map("released_at") @db.Timestamptz(3)
+  repository   Repository               @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  instructor   User                     @relation("RepositoryFeedbackInstructor", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  releasedBy   User?                    @relation("RepositoryFeedbackReleaser", fields: [releasedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  @@index([repositoryId])
+  @@index([repositoryId, status, createdAt])
   @@map("repository_feedback")
 }

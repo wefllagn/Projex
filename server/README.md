@@ -1,6 +1,6 @@
 # Projex Server
 
-Phase 6 provides the Projex API foundation, PostgreSQL schema, provisioned-account authentication, user/class/membership management, programming activities/test cases, immutable submissions, a durable execution queue, controlled-local Java assessment, Run Visible Tests, instructor score correction/review/feedback, infrastructure-failure replacement, and release. It remains backend-only and does not contain public registration, frontend integration, password reset, rubric/course-grade calculation, post-release correction, repository endpoints, seed data, hosted Java execution, or Git integration.
+Phase 7 provides the Projex API foundation, PostgreSQL schema, provisioned-account authentication, user/class/membership management, programming activities/test cases, immutable submissions and controlled-local Java assessment, plus project tasks, metadata-only personal/class-project repositories, synchronized teams/collaborators, invitations, textual project feedback, review, monitoring, and archive protection. It remains backend-only and does not contain public registration, frontend integration, password reset, project rubric/grade calculation, post-release submission correction, seed data, hosted Java execution, repository filesystem provisioning, or Git integration.
 
 ## Prerequisites
 
@@ -10,7 +10,7 @@ Phase 6 provides the Projex API foundation, PostgreSQL schema, provisioned-accou
 - The existing `projex` database and `projex_user` database user
 - A local JDK with `javac`/`java` available for `npm run test:java` or controlled-local worker verification (JDK 23 is supported; Projex compiles with `--release 17`)
 
-Docker is not required for controlled local Phase 6 development. Java execution must stay disabled on an internet-accessible deployment until Docker or equivalent isolation is implemented and verified.
+Docker is not required for controlled local Phase 7 development. Java execution must stay disabled on an internet-accessible deployment until Docker or equivalent isolation is implemented and verified.
 
 ## Environment setup
 
@@ -173,11 +173,44 @@ PUT   /submissions/:submissionId/review
 POST  /submissions/:submissionId/release
 POST  /submissions/:submissionId/assessment/retry
 POST  /submissions/:submissionId/assessment/resolve-failure
+POST  /classes/:classId/project-tasks
+GET   /classes/:classId/project-tasks
+GET   /project-tasks/:projectTaskId
+PATCH /project-tasks/:projectTaskId
+POST  /project-tasks/:projectTaskId/publish
+POST  /project-tasks/:projectTaskId/close
+POST  /project-tasks/:projectTaskId/archive
+POST  /project-tasks/:projectTaskId/restore
+GET   /project-tasks/:projectTaskId/teams
+GET   /project-tasks/:projectTaskId/monitoring
+POST  /project-tasks/:projectTaskId/repositories
+POST  /repositories/personal
+GET   /repositories
+GET   /repositories/:repositoryId
+PATCH /repositories/:repositoryId
+POST  /repositories/:repositoryId/ready-for-review
+POST  /repositories/:repositoryId/request-changes
+POST  /repositories/:repositoryId/approve
+POST  /repositories/:repositoryId/archive
+POST  /repositories/:repositoryId/restore
+GET   /repositories/:repositoryId/members
+PATCH /repositories/:repositoryId/members/:memberId
+POST  /repositories/:repositoryId/invitations
+GET   /repositories/:repositoryId/invitations
+GET   /repository-invitations
+POST  /repository-invitations/:invitationId/accept
+POST  /repository-invitations/:invitationId/decline
+POST  /repository-invitations/:invitationId/revoke
+GET   /repositories/:repositoryId/feedback
+POST  /repositories/:repositoryId/feedback-drafts
+PATCH /repository-feedback/:feedbackId
 ```
 
 There is no public registration endpoint. Cookie-authenticated mutations require `Content-Type: application/json`, the readable `projex_csrf` cookie, and the same value in `X-CSRF-Token`.
 
 Global user listing/detail is admin-only. Class APIs are scoped to admins, owning instructors, and students with ACTIVE membership. Student roster responses contain only user ID and full name. Join codes are available only to the owning instructor or admin and are never logged.
+
+Phase 7 repository visibility is server-owned: class-project repositories are `CLASS_ONLY`, personal repositories are `PRIVATE`, and `PUBLIC` is unavailable. Phase 7 stores metadata only; it does not create repository directories or invoke Git. See `docs/architecture/PROJECT_REPOSITORY_COLLABORATION.md` for lifecycle, authorization, invitation, review, and archive rules.
 
 Activity authoring is restricted to the owning instructor or an administrator. Students with ACTIVE membership may read only PUBLISHED or CLOSED activities and visible test cases. Hidden test rows and counts are excluded from student responses. Published scoring/test configuration is immutable.
 

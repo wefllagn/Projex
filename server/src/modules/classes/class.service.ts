@@ -259,6 +259,13 @@ export function createClassService(dependencies: {
           message: 'The class cannot be archived while submission work remains unfinished.',
         })
       }
+      if (result.kind === 'unfinished_project_work') {
+        throw new AppError({
+          statusCode: 409,
+          code: 'CLASS_HAS_UNFINISHED_PROJECT_WORK',
+          message: 'The class cannot be archived while project collaboration work remains unfinished.',
+        })
+      }
       if (result.changed) {
         logger.info(
           { event: 'class.archived', actorId: caller.id, classId },
@@ -276,6 +283,13 @@ export function createClassService(dependencies: {
           statusCode: 409,
           code: 'CLASS_HAS_UNFINISHED_SUBMISSION_WORK',
           message: 'The class cannot be restored while submission work remains unfinished.',
+        })
+      }
+      if (result.kind === 'unfinished_project_work') {
+        throw new AppError({
+          statusCode: 409,
+          code: 'CLASS_HAS_UNFINISHED_PROJECT_WORK',
+          message: 'The class cannot be restored while project collaboration work remains unfinished.',
         })
       }
       if (result.changed) {

@@ -2,7 +2,7 @@
 
 ## Scope
 
-Phase 2 established the core PostgreSQL schema. Phase 3 added account setup and refresh-session records, Phase 4 added user/class/membership lifecycle state, Phase 5 added programming-activity publication and test authoring, and Phase 6 implements immutable submissions, durable execution jobs, Java assessment evidence, score review/release, infrastructure-failure resolution, and visible-test practice runs. Git integration, seed data, rubric/course-grade calculation, post-release score versioning, and frontend integration remain outside Phase 6.
+Phase 2 established the core PostgreSQL schema. Phases 3 through 6 added authentication, user/class management, programming activities, immutable submissions, and automated assessment. Phase 7 adds class-linked project tasks, teams, synchronized collaborator membership, repository metadata, invitations, textual feedback, and review lifecycle. Git operations, repository filesystem storage, numeric project grading/rubrics, seed data, and frontend integration remain outside Phase 7.
 
 The authoritative sources are:
 
@@ -12,6 +12,7 @@ The authoritative sources are:
 - `server/prisma/migrations/20260731000000_phase4_user_class_management/migration.sql` for additive Phase 4 lifecycle fields and safe backfills.
 - `server/prisma/migrations/20260804000000_phase5_programming_activities_test_cases/migration.sql` for Phase 5 activity/test-case lifecycle fields, constraints, and safe backfills.
 - `server/prisma/migrations/20260804010000_phase6_submissions_automated_assessment/migration.sql` for Phase 6 immutable submission snapshots, execution jobs/results, review/release fields, replacement grants, and visible-test practice records.
+- `server/prisma/migrations/20260805000000_phase7_project_repository_collaboration/migration.sql` for Phase 7 project-task lifecycle, teams, synchronized memberships, repository metadata/review state, invitations, feedback release, constraints, indexes, and deferred invariant triggers.
 
 ## Core models
 
@@ -36,10 +37,13 @@ The authoritative sources are:
 | `PracticeExecution` | `practice_executions` | Short-lived Run Visible Tests source/job record that is not a submission. |
 | `PracticeExecutionCase` | `practice_execution_cases` | Visible-only practice test snapshot and outcome. |
 | `ProjectTask` | `project_tasks` | Class project work linked to repositories. |
+| `Team` | `teams` | One class-project team with an immutable lead during Phase 7. |
+| `TeamMember` | `team_members` | Team membership lifecycle synchronized with repository membership. |
 | `Repository` | `repositories` | Server-owned repository metadata and project linkage. |
 | `RepositoryMember` | `repository_members` | Student repository membership and role. |
+| `RepositoryInvitation` | `repository_invitations` | Time-limited collaborator invitation and resolution history. |
 | `RepositoryActivity` | `repository_activity` | Repository contribution and activity record. |
-| `RepositoryFeedback` | `repository_feedback` | Instructor repository feedback and grade snapshot. |
+| `RepositoryFeedback` | `repository_feedback` | Instructor textual feedback draft/release history; numeric grading is unused in Phase 7. |
 
 The schema uses UUID primary keys, snake-case database names, `timestamptz(3)` event timestamps, fixed-precision decimals for points/scores, explicit foreign-key update/delete actions, and text columns for long-form content.
 
@@ -70,6 +74,16 @@ Phase 6 adds:
 - Short-lived practice execution and visible-only case snapshot tables, with a durable job but no submission, attempt, or score relationship.
 - SQL checks for source hashes, scoring component bounds, release state, execution chronology, correction/resolution state, practice chronology, and execution-job target/claim consistency.
 
+Phase 7 adds:
+
+- `ProjectTask.maxTeamSize`, `updatedAt`, and publish/close/archive timestamps, with the dedicated `ProjectTaskStatus` enum retaining the existing database enum name.
+- `Team` and `TeamMember` records with immutable lead ownership, active/removed history, and one active team per student/project task.
+- Repository team linkage, server-generated slug, nullable Phase 7 `storagePath`, optimistic-concurrency and review timestamps, and server-controlled visibility.
+- Repository-member lifecycle timestamps and role/status integrity.
+- Repository invitations with inviter/invitee, project/team/repository scope, lifecycle timestamps, expiry, and corrective resolution reason.
+- Repository textual feedback draft/release state with instructor and releaser identity.
+- SQL checks, partial unique indexes, composite foreign keys, and deferred constraint triggers that reject any committed class-project team/repository membership mismatch or owner/lead mismatch.
+
 ## Database-enforced invariants
 
 - Activity `maxAttempts` remains limited to 1 through 3. Submission `attemptNumber` is a positive chronological record sequence and may exceed three only when preserved infrastructure failures and replacements require it.
@@ -81,6 +95,10 @@ Phase 6 adds:
 - A `CLASS_PROJECT` repository requires `projectTaskId`; a `PERSONAL` repository forbids it.
 - A partial unique index permits multiple personal repositories while allowing only one repository per non-null `(projectTaskId, ownerId)` pair.
 - Compound unique constraints protect class membership, submission attempt numbering, test ordering/results, similarity pairs, and repository membership.
+- Every `CLASS_PROJECT` repository has one team and project task, uses `CLASS_ONLY`, and has an owner matching the ACTIVE team lead and ACTIVE repository owner member.
+- Every `PERSONAL` repository has no team/project task and uses `PRIVATE`; `PUBLIC` is rejected in Phase 7.
+- Partial unique indexes allow only one ACTIVE team per student/project task, one ACTIVE lead per team, one ACTIVE repository owner, and one PENDING invitation per invitee/project task.
+- Deferred constraint triggers require each class-project `TeamMember` to have a matching `RepositoryMember` with the same ACTIVE/REMOVED state and prohibit unmatched repository members.
 
 Prisma cannot represent the `CHECK` constraints or partial unique repository index in the data model. They are intentionally maintained in the migration SQL and must be preserved during future migration review.
 
@@ -105,7 +123,7 @@ The following rules require transactional application services because they depe
 15. A `PERSONAL` repository must not have `projectTaskId`.
 16. A repository owner must also have an active `RepositoryMember` record with role `OWNER`.
 17. For a class project, the owner and members must be actively enrolled in the class connected to the project task.
-18. A student may belong to only one repository for the same project task. The service enforces this cross-repository rule transactionally.
+18. A student may belong to only one ACTIVE team/repository for the same project task. The service and partial unique index enforce this rule transactionally.
 19. Main academic records use archive, inactive, removed, closed, or other lifecycle transitions instead of routine permanent deletion.
 20. `storagePath` is a server-owned internal identifier/path. APIs must never accept it from clients or expose it as unrestricted host filesystem access.
 21. Only an ACTIVE instructor may own a newly created class; instructor ownership cannot be transferred in Phase 4.
@@ -118,12 +136,19 @@ The following rules require transactional application services because they depe
 28. Publishing requires a future due date, at least one visible test case, positive combined test points, and combined test points no greater than `totalPoints`.
 29. Published due dates may only increase, published `maxAttempts` may only increase, and closed/archived activities are read-only.
 30. Restoring a never-published activity produces DRAFT; restoring a previously published activity produces CLOSED and never silently reopens it.
+31. Class-project team/repository/owner creation, invitation acceptance, and member removal/reactivation update all corresponding rows in one serializable transaction.
+32. Invitation eligibility requires an ACTIVE STUDENT with ACTIVE class membership, no other ACTIVE team for the project task, and available capacity including unexpired PENDING invitations.
+33. Invitation expiry is the earlier of seven days after creation or the project-task due date. Expiry is recognized transactionally/read-time and needs no scheduler.
+34. The owner/lead cannot be removed or transferred in Phase 7. Reactivation can reuse only existing synchronized membership rows and never grants class membership.
+35. `REQUEST_CHANGES` requires PUBLISHED, pre-deadline `READY_FOR_REVIEW` state and atomically releases non-empty feedback. `APPROVE` may complete previously submitted work after deadline or while CLOSED.
+36. Project-task/class archive rejects unexpired PENDING invitations, nonterminal class-project repositories, and broken membership invariants. A task archives only when every class-project repository is APPROVED or already ARCHIVED.
+37. `RepositoryActivity` is unchanged and receives no Phase 7 writes.
 
 ## Transaction boundaries
 
-Activity publication, complete draft test-case replacement, lifecycle transitions, submission/idempotency/job allocation, replacement-grant consumption/linkage, score correction, review/release, failure resolution/retry, repository creation with owner membership, class-project membership validation, class archive/code deactivation, join-by-code, and membership transitions must be atomic. Activity and submission mutations use `expectedUpdatedAt` where applicable; every successful write advances the parent timestamp by at least one millisecond so concurrent writes cannot both consume the same version. Role and membership checks must occur inside or immediately adjacent to the authoritative transaction so concurrent requests cannot bypass them.
+Activity publication, complete draft test-case replacement, lifecycle transitions, submission/idempotency/job allocation, replacement-grant consumption/linkage, score correction, review/release, failure resolution/retry, team/repository/owner creation, invitation acceptance/resolution, synchronized member transitions, repository review/feedback release, class archive/code deactivation, join-by-code, and membership transitions must be atomic. Optimistically locked mutations use `expectedUpdatedAt`; every successful write advances the parent timestamp by at least one millisecond so concurrent writes cannot both consume the same version. Role and membership checks occur inside or immediately adjacent to the authoritative transaction so concurrent requests cannot bypass them.
 
-External Git, Java, filesystem, or network work must not execute inside database transactions. Phase 6 commits the durable execution job in the same transaction as the submission/practice record, then a separate worker performs Java work after commit.
+External Git, Java, filesystem, or network work must not execute inside database transactions. Phase 6 commits durable execution work before the separate Java worker runs. Phase 7 creates metadata only and performs no Git or filesystem work.
 
 ## Archive and deletion policy
 

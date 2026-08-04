@@ -32,6 +32,7 @@ export type ClassWriteResult =
   | { kind: 'updated'; classRecord: ClassRecord; changed: boolean }
   | { kind: 'not_found' }
   | { kind: 'unfinished_submission_work' }
+  | { kind: 'unfinished_project_work' }
 
 export type ClassCodeWriteResult =
   | { kind: 'updated'; classRecord: ClassRecord }
@@ -232,6 +233,57 @@ export function createPrismaClassRepository(
           })
           if (unfinished > 0 || activeReplacement > 0 || activePractice > 0) {
             return { kind: 'unfinished_submission_work' } as const
+          }
+          const [activeInvitation, unfinishedRepository, membershipMismatch] =
+            await Promise.all([
+              transaction.repositoryInvitation.count({
+                where: {
+                  projectTask: { classId },
+                  status: 'PENDING',
+                  expiresAt: { gt: now },
+                },
+              }),
+              transaction.repository.count({
+                where: {
+                  projectTask: { classId },
+                  status: { not: 'ARCHIVED' },
+                  reviewStatus: { in: ['WORKING', 'READY_FOR_REVIEW', 'CHANGES_REQUESTED'] },
+                },
+              }),
+              transaction.$queryRaw<Array<{ broken: boolean }>>`
+                SELECT EXISTS (
+                  SELECT 1
+                  FROM "repositories" r
+                  JOIN "project_tasks" pt ON pt."project_task_id" = r."project_task_id"
+                  JOIN "teams" t ON t."team_id" = r."team_id"
+                  WHERE pt."class_id" = ${classId}::uuid
+                    AND r."repository_type" = 'CLASS_PROJECT'
+                    AND (
+                      r."owner_id" <> t."lead_student_id"
+                      OR EXISTS (
+                        SELECT 1 FROM "team_members" tm
+                        LEFT JOIN "repository_members" rm
+                          ON rm."repository_id" = r."repository_id" AND rm."student_id" = tm."student_id"
+                        WHERE tm."team_id" = t."team_id"
+                          AND (rm."repository_member_id" IS NULL OR rm."status"::text <> tm."status"::text)
+                      )
+                      OR EXISTS (
+                        SELECT 1 FROM "repository_members" rm
+                        LEFT JOIN "team_members" tm
+                          ON tm."team_id" = t."team_id" AND tm."student_id" = rm."student_id"
+                        WHERE rm."repository_id" = r."repository_id"
+                          AND (tm."team_member_id" IS NULL OR tm."status"::text <> rm."status"::text)
+                      )
+                    )
+                ) AS broken
+              `,
+            ])
+          if (
+            activeInvitation > 0 ||
+            unfinishedRepository > 0 ||
+            (membershipMismatch[0]?.broken ?? true)
+          ) {
+            return { kind: 'unfinished_project_work' } as const
           }
         }
         const changed = existing.status !== 'ARCHIVED'

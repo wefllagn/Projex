@@ -49,8 +49,38 @@ PUT    /api/v1/submissions/:submissionId/review
 POST   /api/v1/submissions/:submissionId/release
 POST   /api/v1/submissions/:submissionId/assessment/retry
 POST   /api/v1/submissions/:submissionId/assessment/resolve-failure
+POST   /api/v1/classes/:classId/project-tasks
+GET    /api/v1/classes/:classId/project-tasks
+GET    /api/v1/project-tasks/:projectTaskId
+PATCH  /api/v1/project-tasks/:projectTaskId
+POST   /api/v1/project-tasks/:projectTaskId/publish
+POST   /api/v1/project-tasks/:projectTaskId/close
+POST   /api/v1/project-tasks/:projectTaskId/archive
+POST   /api/v1/project-tasks/:projectTaskId/restore
+GET    /api/v1/project-tasks/:projectTaskId/teams
+GET    /api/v1/project-tasks/:projectTaskId/monitoring
+POST   /api/v1/project-tasks/:projectTaskId/repositories
+POST   /api/v1/repositories/personal
+GET    /api/v1/repositories
+GET    /api/v1/repositories/:repositoryId
+PATCH  /api/v1/repositories/:repositoryId
+POST   /api/v1/repositories/:repositoryId/ready-for-review
+POST   /api/v1/repositories/:repositoryId/request-changes
+POST   /api/v1/repositories/:repositoryId/approve
+POST   /api/v1/repositories/:repositoryId/archive
+POST   /api/v1/repositories/:repositoryId/restore
+GET    /api/v1/repositories/:repositoryId/members
+PATCH  /api/v1/repositories/:repositoryId/members/:memberId
 GET    /api/v1/repositories/:repositoryId/branches
 POST   /api/v1/repositories/:repositoryId/invitations
+GET    /api/v1/repositories/:repositoryId/invitations
+GET    /api/v1/repository-invitations
+POST   /api/v1/repository-invitations/:invitationId/accept
+POST   /api/v1/repository-invitations/:invitationId/decline
+POST   /api/v1/repository-invitations/:invitationId/revoke
+GET    /api/v1/repositories/:repositoryId/feedback
+POST   /api/v1/repositories/:repositoryId/feedback-drafts
+PATCH  /api/v1/repository-feedback/:feedbackId
 GET    /api/v1/notifications
 ```
 
@@ -90,6 +120,21 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - Owning ACTIVE instructors may read detailed assessment evidence, append score corrections, save review/feedback drafts, release results, retry exhausted infrastructure failures, and resolve failures. Administrators have safe read-only submission access and cannot grade, correct, release, retry, or resolve failures.
 - `expectedUpdatedAt` protects correction, review, release, retry, and failure-resolution transitions. Released submissions are immutable during Phase 6.
 - An infrastructure-failure replacement requires a mandatory reason and future `replacementExpiresAt`. The response labels the new record as `Replacement attempt for Attempt N`; the internal chronological `attemptNumber` is not presented as “Attempt N of maxAttempts.”
+
+### Phase 7 project and repository collaboration rules
+
+- Project-task creation produces a server-owned `DRAFT`. Instructor mutations require exact class ownership and `expectedUpdatedAt`; students see only `PUBLISHED` and `CLOSED` tasks in classes where they have ACTIVE membership.
+- Class-project creation is student-only, requires an ACTIVE class membership and an open pre-deadline task, and atomically creates the team, lead membership, metadata-only repository, and owner membership.
+- The client supplies no visibility, owner, class, team, repository path, or Git fields. `CLASS_PROJECT` responses always use `CLASS_ONLY`; `PERSONAL` responses always use `PRIVATE`.
+- Repository list/detail responses are role-scoped. Unauthorized and cross-class access is concealed with `404` where revealing existence would disclose protected academic records.
+- Classmate member projections contain member/user IDs, full name, and team/repository role only. The team owner additionally receives membership status and `updatedAt` so authorized removal/reactivation can use optimistic concurrency, while email and account status remain omitted. Full lifecycle detail is limited to the owning instructor and safe administrator views.
+- Invitation creation verifies the invitee is an ACTIVE student with ACTIVE membership in the same class, is not active on another team for the task, and fits capacity. Expiry is the earlier of seven days after creation or the task deadline.
+- Invitation acceptance and membership removal/reactivation synchronize `TeamMember` and `RepositoryMember` in one transaction. The owner/lead cannot be removed, and no endpoint transfers ownership.
+- Repository metadata, ordinary invitations, student membership changes, and `READY_FOR_REVIEW` require a PUBLISHED project task before its deadline. Instructor corrective member changes after cutoff require a non-empty reason.
+- `REQUEST_CHANGES` accepts only a current `READY_FOR_REVIEW` repository while the task is PUBLISHED before its deadline and atomically releases the referenced non-empty feedback draft.
+- `APPROVE` accepts previously submitted `READY_FOR_REVIEW` work while the task is PUBLISHED or CLOSED, including after the deadline. An optional referenced draft is released atomically with approval.
+- Feedback drafts are instructor-only. Student repository feedback responses contain released textual feedback only. Numeric grades and rubrics are not accepted or returned in Phase 7.
+- `RepositoryActivity`, branch, commit, diff, clone, push, pull, and file-content APIs remain unimplemented until Phase 8.
 
 ## Naming and data representation
 

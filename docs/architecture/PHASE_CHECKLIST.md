@@ -22,8 +22,9 @@ Status markers:
 | 3 | Authentication and authorization | Complete | `bf45efd` |
 | 4 | User and Class Management | Complete | `985f101` |
 | 5 | Programming Activities and Test Cases | Complete | `1aa1525` |
-| 6 | Submissions and Automated Assessment | Implemented and verified; pending pre-commit review | Working tree |
-| 7-11 | Later functionalization, integration, and hardening | Pending | Pending |
+| 6 | Submissions and Automated Assessment | Complete | `2ff3e4e` |
+| 7 | Project and Repository Collaboration | Implemented; test-database verification complete, remaining verification gated | Working tree |
+| 8-11 | Later functionalization, integration, and hardening | Pending | Pending |
 
 ## Phase 0: architecture and planning — complete
 
@@ -168,7 +169,7 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - The normal development database contains five users, two classes, two memberships, one programming activity, and two test cases after the intentionally retained live-verification fixtures.
 - The unchanged frontend lint and build pass, and `git diff -- client` is empty.
 
-## Phase 6: submissions and automated assessment — implementation and verification complete, pending pre-commit review
+## Phase 6: submissions and automated assessment — complete
 
 - [x] Keep Phase 6 backend-only and preserve every file under `client/`.
 - [x] Implement immutable source/activity/test snapshots, server-assigned chronological attempt numbering, scoped idempotency, deadline checks, and concurrency-safe usable-attempt limits.
@@ -197,11 +198,24 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - The real Java suite passes with one file and four tests covering Java 17 target compilation, deterministic visible/hidden inputs, compiler rejection, timeout, output overflow, unavailable toolchain classification, process termination, and temporary-directory cleanup.
 - Backend lint, main and integration type-checks, Prisma validation, and production build pass. The unchanged frontend lint and build pass, and `git diff -- client` is empty.
 
-## Phase 7: project and repository collaboration — pending
+## Phase 7: project and repository collaboration — implementation complete, verification in progress
 
-- [ ] Implement project tasks, teams, memberships, repository metadata, collaborator invitations, and feedback workflows.
-- [ ] Enforce class, project, team, owner, and collaborator authorization.
-- [ ] Keep core Git operations pending for Phase 8.
+- [x] Keep Phase 7 backend-only and preserve every file under `client/`.
+- [x] Implement instructor-owned class project tasks with DRAFT, PUBLISHED, CLOSED, and ARCHIVED lifecycle, optimistic concurrency, role-scoped listing, team summaries, and monitoring.
+- [x] Implement student-created metadata-only personal and class-project repositories with server-owned `PRIVATE` and `CLASS_ONLY` visibility respectively; reject all client visibility/path control.
+- [x] Create class-project team, lead, repository, and owner membership atomically and keep ACTIVE/REMOVED team and repository membership synchronized.
+- [x] Keep the owner/team lead immutable and document ownership transfer as deferred.
+- [x] Implement collaborator invitation eligibility, one-active-team protection, one active pending invitation per invitee/task, capacity including pending invitations, and earlier-of-seven-days-or-deadline expiry.
+- [x] Enforce project deadline/CLOSED restrictions and permit only reasoned owning-instructor corrective removal/reactivation after cutoff.
+- [x] Implement WORKING, READY_FOR_REVIEW, CHANGES_REQUESTED, and APPROVED review lifecycle with optimistic concurrency.
+- [x] Require PUBLISHED pre-deadline review work for REQUEST_CHANGES and atomically release non-empty textual feedback.
+- [x] Permit approval of previously submitted review work after deadline or while CLOSED, with optional textual feedback release; exclude project grades and rubrics.
+- [x] Block project-task and class archive for unexpired invitations, nonterminal repository review, or membership invariant failure.
+- [x] Add PostgreSQL constraints, partial unique indexes, composite foreign keys, and deferred invariant triggers for repository type/visibility and synchronized ownership/membership.
+- [x] Verify the committed Phase 7 migration and collaboration/API integration suite against exactly `projex_test` without reset or `db push`.
+- [ ] Apply the reviewed Phase 7 migration to the normal development database after explicit test-database approval.
+- [ ] Complete live role/API verification and the final independent pre-commit review.
+- [x] Leave `RepositoryActivity` unchanged and unused; keep all Git CLI and filesystem repository operations pending for Phase 8.
 
 ## Phase 8: local Git operations — pending
 
