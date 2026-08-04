@@ -3,7 +3,7 @@ import type { DestinationStream } from 'pino'
 import { createLogger } from './logger.js'
 
 describe('structured log redaction', () => {
-  it('redacts Phase 6 source, test, feedback, and environment fields', () => {
+  it('redacts source, test, feedback, database, and Git storage fields', () => {
     const chunks: string[] = []
     const destination: DestinationStream = {
       write(message) {
@@ -23,6 +23,10 @@ describe('structured log redaction', () => {
         feedbackText: 'SENTINEL_FEEDBACK',
         reason: 'SENTINEL_REASON',
         DATABASE_URL: 'SENTINEL_DATABASE',
+        storagePath: 'SENTINEL_STORAGE_PATH',
+        repositoryPath: 'SENTINEL_REPOSITORY_PATH',
+        gitArguments: ['SENTINEL_GIT_ARGUMENT'],
+        GIT_STORAGE_ROOT: 'SENTINEL_GIT_ROOT',
         req: { body: { sourceCode: 'SENTINEL_BODY' } },
       },
       'redaction test',
@@ -39,6 +43,10 @@ describe('structured log redaction', () => {
       'SENTINEL_FEEDBACK',
       'SENTINEL_REASON',
       'SENTINEL_DATABASE',
+      'SENTINEL_STORAGE_PATH',
+      'SENTINEL_REPOSITORY_PATH',
+      'SENTINEL_GIT_ARGUMENT',
+      'SENTINEL_GIT_ROOT',
       'SENTINEL_BODY',
     ]) {
       expect(output).not.toContain(sentinel)

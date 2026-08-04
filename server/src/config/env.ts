@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import path from 'node:path'
 
 const booleanString = z
   .enum(['true', 'false'])
@@ -49,6 +50,15 @@ const envSchema = z
     PRACTICE_RUN_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(24),
     PRACTICE_RUNS_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(5),
     PRACTICE_MAX_ACTIVE_PER_ACTIVITY: z.coerce.number().int().min(1).max(5).default(1),
+    GIT_EXECUTION_MODE: z.enum(['disabled', 'local_process']).default('disabled'),
+    GIT_EXECUTABLE: z.string().default(''),
+    GIT_STORAGE_ROOT: z.string().default(''),
+    GIT_COMMAND_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(30_000),
+    GIT_OUTPUT_LIMIT_BYTES: z.coerce.number().int().min(1_024).max(4_194_304).default(1_048_576),
+    GIT_REPOSITORY_SIZE_LIMIT_BYTES: z.coerce.number().int().min(1_048_576).max(2_147_483_647).default(262_144_000),
+    GIT_PROVISIONING_JOB_LEASE_MS: z.coerce.number().int().min(5_000).max(300_000).default(60_000),
+    GIT_PROVISIONING_WORKER_POLL_MS: z.coerce.number().int().min(100).max(60_000).default(1_000),
+    GIT_PROVISIONING_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
   })
   .superRefine((value, context) => {
     if (value.AUTH_COOKIE_SAME_SITE === 'none' && !value.AUTH_COOKIE_SECURE) {
@@ -76,6 +86,26 @@ const envSchema = z
         path: ['JAVA_EXECUTION_MODE'],
         message: 'local_process Java execution is forbidden in production',
       })
+    }
+
+    if (value.NODE_ENV === 'production' && value.GIT_EXECUTION_MODE === 'local_process') {
+      context.addIssue({
+        code: 'custom',
+        path: ['GIT_EXECUTION_MODE'],
+        message: 'local_process Git execution is forbidden in production',
+      })
+    }
+
+    if (value.GIT_EXECUTION_MODE === 'local_process') {
+      for (const key of ['GIT_EXECUTABLE', 'GIT_STORAGE_ROOT'] as const) {
+        if (!value[key] || !path.isAbsolute(value[key])) {
+          context.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `${key} must be an absolute path when Git execution is enabled`,
+          })
+        }
+      }
     }
 
     if (value.MAIL_TRANSPORT === 'smtp') {
@@ -128,6 +158,15 @@ export interface AppEnv {
   practiceRunTtlHours: number
   practiceRunsPerMinute: number
   practiceMaxActivePerActivity: number
+  gitExecutionMode: z.infer<typeof envSchema>['GIT_EXECUTION_MODE']
+  gitExecutable: string
+  gitStorageRoot: string
+  gitCommandTimeoutMs: number
+  gitOutputLimitBytes: number
+  gitRepositorySizeLimitBytes: number
+  gitProvisioningJobLeaseMs: number
+  gitProvisioningWorkerPollMs: number
+  gitProvisioningMaxAttempts: number
 }
 
 export class EnvironmentValidationError extends Error {
@@ -185,5 +224,14 @@ export function loadEnv(input: NodeJS.ProcessEnv = process.env): AppEnv {
     practiceRunTtlHours: result.data.PRACTICE_RUN_TTL_HOURS,
     practiceRunsPerMinute: result.data.PRACTICE_RUNS_PER_MINUTE,
     practiceMaxActivePerActivity: result.data.PRACTICE_MAX_ACTIVE_PER_ACTIVITY,
+    gitExecutionMode: result.data.GIT_EXECUTION_MODE,
+    gitExecutable: result.data.GIT_EXECUTABLE,
+    gitStorageRoot: result.data.GIT_STORAGE_ROOT,
+    gitCommandTimeoutMs: result.data.GIT_COMMAND_TIMEOUT_MS,
+    gitOutputLimitBytes: result.data.GIT_OUTPUT_LIMIT_BYTES,
+    gitRepositorySizeLimitBytes: result.data.GIT_REPOSITORY_SIZE_LIMIT_BYTES,
+    gitProvisioningJobLeaseMs: result.data.GIT_PROVISIONING_JOB_LEASE_MS,
+    gitProvisioningWorkerPollMs: result.data.GIT_PROVISIONING_WORKER_POLL_MS,
+    gitProvisioningMaxAttempts: result.data.GIT_PROVISIONING_MAX_ATTEMPTS,
   }
 }

@@ -1,6 +1,6 @@
 # Projex Server
 
-Phase 7 provides the Projex API foundation, PostgreSQL schema, provisioned-account authentication, user/class/membership management, programming activities/test cases, immutable submissions and controlled-local Java assessment, plus project tasks, metadata-only personal/class-project repositories, synchronized teams/collaborators, invitations, textual project feedback, review, monitoring, and archive protection. It remains backend-only and does not contain public registration, frontend integration, password reset, project rubric/grade calculation, post-release submission correction, seed data, hosted Java execution, repository filesystem provisioning, or Git integration.
+Phase 8A adds the backend-only controlled-local Git foundation and durable empty bare-repository provisioning to the existing API, PostgreSQL, authentication, academic activity, assessment, and repository-collaboration features. Smart HTTP, Git credentials, clone/fetch/pull/push, refs, commits, history, tree/blob/diff/merge APIs, frontend integration, and hosted Git remain unavailable.
 
 ## Prerequisites
 
@@ -210,7 +210,25 @@ There is no public registration endpoint. Cookie-authenticated mutations require
 
 Global user listing/detail is admin-only. Class APIs are scoped to admins, owning instructors, and students with ACTIVE membership. Student roster responses contain only user ID and full name. Join codes are available only to the owning instructor or admin and are never logged.
 
-Phase 7 repository visibility is server-owned: class-project repositories are `CLASS_ONLY`, personal repositories are `PRIVATE`, and `PUBLIC` is unavailable. Phase 7 stores metadata only; it does not create repository directories or invoke Git. See `docs/architecture/PROJECT_REPOSITORY_COLLABORATION.md` for lifecycle, authorization, invitation, review, and archive rules.
+Repository visibility remains server-owned: class-project repositories are `CLASS_ONLY`, personal repositories are `PRIVATE`, and `PUBLIC` is unavailable. The Phase 7 baseline stored metadata only; Phase 8A adds separate-worker provisioning without changing the Phase 7 lifecycle, authorization, invitation, review, or archive rules documented in `docs/architecture/PROJECT_REPOSITORY_COLLABORATION.md`.
+
+## Phase 8A Git provisioning
+
+Git execution is disabled by default and creates no storage directory. Controlled local development requires an absolute `GIT_EXECUTABLE`, an absolute `GIT_STORAGE_ROOT`, and `GIT_EXECUTION_MODE=local_process`. The tested toolchain is Git for Windows `2.55.0.windows.3`; supported Git for Windows versions must be at least `2.55.0`. Production rejects `local_process`.
+
+Run the separate worker only after the target database and storage root are explicitly approved:
+
+```powershell
+npm run dev:git-worker
+```
+
+Real-Git tests require `TEST_DATABASE_URL` naming `projex_test`, an absolute `GIT_EXECUTABLE`, and a non-overlapping absolute `TEST_GIT_STORAGE_ROOT` ending in `projex_git_test`:
+
+```powershell
+npm run test:git
+```
+
+The migration records pending jobs only. It does not initialize storage. See `docs/architecture/GIT_FOUNDATION_AND_PROVISIONING.md` for the worker, recovery, quarantine, and test-root rules.
 
 Activity authoring is restricted to the owning instructor or an administrator. Students with ACTIVE membership may read only PUBLISHED or CLOSED activities and visible test cases. Hidden test rows and counts are excluded from student responses. Published scoring/test configuration is immutable.
 

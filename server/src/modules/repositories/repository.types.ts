@@ -7,6 +7,7 @@ import type {
   RepositoryMemberRole,
   RepositoryMemberStatus,
   RepositoryReviewStatus,
+  RepositoryStorageStatus,
   RepositoryStatus,
   RepositoryType,
   RepositoryVisibility,
@@ -26,6 +27,7 @@ export interface RepositoryRecord {
   defaultBranch: string
   visibility: RepositoryVisibility
   status: RepositoryStatus
+  storageStatus: RepositoryStorageStatus
   reviewStatus: RepositoryReviewStatus
   createdAt: Date
   updatedAt: Date
@@ -64,6 +66,7 @@ export interface RepositoryProjection {
   defaultBranch: string
   visibility: Exclude<RepositoryVisibility, 'PUBLIC'>
   status: RepositoryStatus
+  storageStatus: RepositoryStorageStatus
   reviewStatus: RepositoryReviewStatus
   owner: { userId: string; fullName: string }
   createdAt: Date
@@ -114,7 +117,7 @@ export interface RepositoryFeedbackProjection {
 }
 
 export function toRepositoryProjection(record: RepositoryRecord): RepositoryProjection {
-  if (record.visibility === 'PUBLIC') throw new Error('PUBLIC repositories are unavailable in Phase 7.')
+  if (record.visibility === 'PUBLIC') throw new Error('PUBLIC repositories are unavailable.')
   return {
     id: record.id,
     projectTaskId: record.projectTaskId,
@@ -126,6 +129,7 @@ export function toRepositoryProjection(record: RepositoryRecord): RepositoryProj
     defaultBranch: record.defaultBranch,
     visibility: record.visibility,
     status: record.status,
+    storageStatus: record.storageStatus,
     reviewStatus: record.reviewStatus,
     owner: { userId: record.owner.id, fullName: record.owner.fullName },
     createdAt: record.createdAt,

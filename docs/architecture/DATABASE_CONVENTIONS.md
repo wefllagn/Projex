@@ -154,7 +154,7 @@ Each programming activity configures `maxAttempts` from 1 through 3. Each `Submi
 - Deferred database constraints reject a committed mismatch between team and repository membership or between lead and owner.
 - Invitation capacity counts ACTIVE members and unexpired PENDING invitations; unique indexes and serializable retries protect concurrent invitations/acceptance.
 - Optimistic concurrency protects project-task, repository metadata/review, membership, and feedback-draft mutations.
-- `RepositoryActivity` remains unused until Phase 8.
+- `RepositoryActivity` was unused through Phase 7. Phase 8A permits only the verified `REPOSITORY_PROVISIONED` system event; later Git activity requires Phase 8B/8C verification rules.
 - A database-backed per-repository lock/lease serializes writes that mutate Git refs or worktrees.
 - Locks have owner/job ID, acquisition time, expiry/lease, and safe recovery rules.
 - Job records have an explicit state machine, attempt count, lease owner/expiry, created/started/finished timestamps, and bounded error summary.
@@ -184,3 +184,7 @@ For the initial pilot, the execution queue is implemented with PostgreSQL-backed
 ## Backup and restoration
 
 For controlled hosted testing, establish a simple PostgreSQL backup plus persistent Git/storage backup before defense-critical sessions. Restoration must be tested at least once. This is demonstration resilience, not a claim of university-grade disaster recovery or 24/7 availability.
+
+## Phase 8A provisioning consistency
+
+Repository creation and its unique provisioning job commit atomically. Filesystem work begins only after that transaction. Workers claim with `FOR UPDATE SKIP LOCKED`, bounded attempts, and expiring leases. Completion atomically writes verified storage metadata, job success, and one system provisioning activity. Migrations record work only and must never invoke Git or touch storage.

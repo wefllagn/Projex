@@ -169,7 +169,7 @@ Projex separates deterministic automated assessment from instructor review:
 - Collaborator invitations require an ACTIVE student and ACTIVE membership in the same class. Capacity includes ACTIVE members plus unexpired PENDING invitations, and expiry is evaluated without a scheduler.
 - Students may submit repository metadata as `READY_FOR_REVIEW` only while the project task is PUBLISHED and before its deadline.
 - `REQUEST_CHANGES` atomically releases non-empty textual feedback and is available only before the deadline. The owning instructor may approve already-submitted review work after the deadline or while the task is CLOSED.
-- Phase 7 stores collaboration and review metadata only. `RepositoryActivity` remains unused; local Git repository creation and every Git command remain Phase 8 work.
+- The Phase 7 baseline stores collaboration and review metadata only. Phase 8A adds verified empty bare-repository provisioning and one system provisioning activity; all transport and content operations remain Phase 8B/8C work.
 
 ## Role priority and Admin scope
 
@@ -244,6 +244,10 @@ The hosted system is for controlled testing and defense only. It should have a d
 - Activity `maxAttempts` is 1 through 3; immutable submission attempts use server-assigned numbering and permanent history.
 - Automated scores remain distinct from instructor adjustments and derived final scores.
 - Core Git operations use the local Git CLI safely; no GitHub or GitLab API is required.
+
+## Phase 8A Git provisioning boundary
+
+The API transaction creates a repository row and durable provisioning job but performs no Git or filesystem work. A separately enabled development-only Git worker derives a UUID storage path, initializes and verifies an empty bare repository, and then atomically records `READY`, job completion, and one system provisioning activity. Smart HTTP and repository content operations remain absent until Phase 8B/8C. See `GIT_FOUNDATION_AND_PROVISIONING.md`.
 - Core Java compilation/execution uses local OpenJDK workers; no external compiler API is allowed.
 - Java workers compile once per submission assessment, then run the preserved compiled output against bounded test inputs.
 - Logs must not contain passwords, session tokens, complete source code, hidden tests, or sensitive feedback.

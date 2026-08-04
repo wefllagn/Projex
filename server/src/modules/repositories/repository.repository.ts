@@ -30,6 +30,7 @@ export const repositoryRecordSelect = {
   defaultBranch: true,
   visibility: true,
   status: true,
+  storageStatus: true,
   reviewStatus: true,
   createdAt: true,
   updatedAt: true,
@@ -338,7 +339,9 @@ async function memberProjection(
 
 export function createPrismaRepositoryRepository(
   prisma: PrismaClient,
+  options: { provisioningMaxAttempts?: number } = {},
 ): RepositoryRepository {
+  const provisioningMaxAttempts = options.provisioningMaxAttempts ?? 3
   async function runSerializable<T>(work: (transaction: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     return prisma.$transaction(work, { isolationLevel: 'Serializable' })
   }
@@ -431,6 +434,15 @@ export function createPrismaRepositoryRepository(
               lastActivatedAt: input.now,
             },
           })
+          await transaction.repositoryProvisioningJob.create({
+            data: {
+              repositoryId: repository.id,
+              maxClaimAttempts: provisioningMaxAttempts,
+              availableAt: input.now,
+              createdAt: input.now,
+              updatedAt: input.now,
+            },
+          })
           return { kind: 'ok', repository } as const
         })
       } catch (error) {
@@ -469,6 +481,15 @@ export function createPrismaRepositoryRepository(
               joinedAt: input.now,
               updatedAt: input.now,
               lastActivatedAt: input.now,
+            },
+          })
+          await transaction.repositoryProvisioningJob.create({
+            data: {
+              repositoryId: repository.id,
+              maxClaimAttempts: provisioningMaxAttempts,
+              availableAt: input.now,
+              createdAt: input.now,
+              updatedAt: input.now,
             },
           })
           return { kind: 'ok', repository } as const

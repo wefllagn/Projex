@@ -162,3 +162,10 @@ Classes, users, memberships, activities, submissions, assessments, feedback, pro
 - Preserve manually authored constraints and indexes when generating later migrations.
 - Do not place credentials in schema, migration, documentation, or command output.
 - Seed data is not part of Phase 2.
+
+## Phase 8A additions
+
+- `Repository.storageStatus`, provisioning/verification timestamps, bounded size, and a safe failure code describe server-owned Git storage without exposing its host path.
+- `RepositoryProvisioningJob` provides one durable leased provisioning job per repository.
+- Existing repositories are backfilled as `PENDING` with idempotent jobs; the migration performs no Git or filesystem work.
+- `RepositoryActivity` supports a nullable user only for an explicitly typed system actor. `REPOSITORY_PROVISIONED` is inserted exactly once after final bare-repository verification.

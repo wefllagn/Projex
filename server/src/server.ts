@@ -147,7 +147,9 @@ async function bootstrap(): Promise<void> {
     logger,
   })
   const repositoryService = createRepositoryService({
-    repository: createPrismaRepositoryRepository(prisma),
+    repository: createPrismaRepositoryRepository(prisma, {
+      provisioningMaxAttempts: env.gitProvisioningMaxAttempts,
+    }),
     logger,
   })
   const app = createApp({

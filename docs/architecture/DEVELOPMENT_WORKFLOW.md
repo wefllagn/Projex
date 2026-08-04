@@ -197,3 +197,11 @@ A phase is ready to merge into `development/fullstack` only when:
 - The UI remains visually equivalent except for explicitly approved functional states.
 - Changed files and known limitations are reported.
 - No secret or untracked runtime data is included.
+
+## Phase 8A verification order
+
+1. Generate Prisma and run lint, type checks, isolated tests, and build.
+2. Apply committed migrations only to `projex_test` and run serial PostgreSQL integration tests.
+3. Run real Git tests only under an explicit non-overlapping `projex_git_test` root; delete only the sentinel-owned run child.
+4. Review results before applying the migration to `projex`.
+5. Review again before enabling the normal provisioning worker. A migration never starts the worker or creates storage.

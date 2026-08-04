@@ -180,6 +180,7 @@ enum RepositoryMemberStatus {
 }
 
 enum RepositoryActivityType {
+  REPOSITORY_PROVISIONED
   COMMIT
   PUSH
   MERGE
@@ -188,6 +189,32 @@ enum RepositoryActivityType {
   OTHER
 
   @@map("repository_activity_type")
+}
+
+enum RepositoryActivityActorType {
+  USER
+  SYSTEM
+
+  @@map("repository_activity_actor_type")
+}
+
+enum RepositoryStorageStatus {
+  PENDING
+  PROVISIONING
+  READY
+  FAILED
+  QUARANTINED
+
+  @@map("repository_storage_status")
+}
+
+enum RepositoryProvisioningJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+
+  @@map("repository_provisioning_job_status")
 }
 
 enum TeamStatus {
@@ -717,6 +744,11 @@ model Repository {
   slug             String
   description      String?                @db.Text
   storagePath      String?                @unique @map("storage_path")
+  storageStatus    RepositoryStorageStatus @default(PENDING) @map("storage_status")
+  provisionedAt    DateTime?              @map("provisioned_at") @db.Timestamptz(3)
+  storageVerifiedAt DateTime?             @map("storage_verified_at") @db.Timestamptz(3)
+  storageSizeBytes BigInt?                @map("storage_size_bytes")
+  storageFailureCode String?              @map("storage_failure_code")
   defaultBranch    String                 @default("main") @map("default_branch")
   visibility       RepositoryVisibility
   status           RepositoryStatus       @default(ACTIVE)
@@ -733,6 +765,7 @@ model Repository {
   invitations      RepositoryInvitation[]
   activities       RepositoryActivity[]
   feedback         RepositoryFeedback[]
+  provisioningJob RepositoryProvisioningJob?
 
   @@unique([teamId, projectTaskId])
   @@index([ownerId])
@@ -740,6 +773,28 @@ model Repository {
   @@index([repositoryType, status])
   @@index([projectTaskId, reviewStatus])
   @@map("repositories")
+}
+
+model RepositoryProvisioningJob {
+  id              String                          @id @default(uuid()) @map("provisioning_job_id") @db.Uuid
+  repositoryId    String                          @unique @map("repository_id") @db.Uuid
+  status          RepositoryProvisioningJobStatus @default(PENDING)
+  claimAttempt    Int                             @default(0) @map("claim_attempt")
+  maxClaimAttempts Int                            @default(3) @map("max_claim_attempts")
+  availableAt     DateTime                        @default(now()) @map("available_at") @db.Timestamptz(3)
+  claimedAt       DateTime?                       @map("claimed_at") @db.Timestamptz(3)
+  leaseExpiresAt  DateTime?                       @map("lease_expires_at") @db.Timestamptz(3)
+  completedAt     DateTime?                       @map("completed_at") @db.Timestamptz(3)
+  workerId        String?                         @map("worker_id")
+  lastFailureCode String?                         @map("last_failure_code")
+  quarantineKey   String?                         @map("quarantine_key")
+  createdAt       DateTime                        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime                        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  repository      Repository                      @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([status, availableAt])
+  @@index([leaseExpiresAt])
+  @@map("repository_provisioning_jobs")
 }
 
 model RepositoryMember {
@@ -790,7 +845,8 @@ model RepositoryInvitation {
 model RepositoryActivity {
   id           String                 @id @default(uuid()) @map("repository_activity_id") @db.Uuid
   repositoryId String                 @map("repository_id") @db.Uuid
-  userId       String                 @map("user_id") @db.Uuid
+  userId       String?                @map("user_id") @db.Uuid
+  actorType    RepositoryActivityActorType @default(USER) @map("actor_type")
   activityType RepositoryActivityType @map("activity_type")
   commitHash   String?                @map("commit_hash")
   branchName   String?                @map("branch_name")
@@ -801,7 +857,7 @@ model RepositoryActivity {
   metadataJson Json?                  @map("metadata_json")
   activityAt   DateTime               @default(now()) @map("activity_at") @db.Timestamptz(3)
   repository   Repository             @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  user         User                   @relation("RepositoryActivityUser", fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  user         User?                  @relation("RepositoryActivityUser", fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([repositoryId, activityAt])
   @@index([userId, activityAt])

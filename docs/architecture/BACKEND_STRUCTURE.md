@@ -4,7 +4,7 @@
 
 Projex will use a **feature-based modular monolith** for the planned Node.js/Express/TypeScript backend. This document describes a future structure; Phase 0 does not create these folders or implement backend code.
 
-The frontend remains in its current React/Vite JavaScript/JSX structure under `client/`. The feature-based Express/TypeScript backend exists under `server/`; Phase 7 adds project-task and repository-collaboration modules without changing the frontend or implementing Git/filesystem operations.
+The frontend remains in its current React/Vite JavaScript/JSX structure under `client/`. The feature-based Express/TypeScript backend exists under `server/`; Phase 8A adds separate-worker Git provisioning to the Phase 7 project/repository metadata without changing the frontend or adding Git transport/content operations.
 
 ## Proposed structure
 
@@ -216,3 +216,7 @@ Dependencies point inward toward use cases. Infrastructure must not import Expre
 11. Notifications, analytics, similarity, security/integration/laboratory testing, and temporary internet deployment.
 
 Only the approved feature should be functionalized at each step. Unrelated frontend mocks stay in place until their feature phase begins.
+
+## Phase 8A process boundary
+
+`src/git-worker.ts` is a separately started development-only process. `infrastructure/git` owns the typed bounded Git runner, `infrastructure/storage` owns canonical UUID-derived paths and guarded cleanup, and `infrastructure/job-queue/repository-provisioning-queue.ts` owns PostgreSQL claim/lease state. The repository feature service coordinates these interfaces. Neither API requests nor migrations execute Git.

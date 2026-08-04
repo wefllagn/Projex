@@ -220,7 +220,7 @@ The committed migration is verified against `projex_test` before explicit approv
 
 ## Deferred work and limitations
 
-- Local Git CLI, bare repositories, worktrees, branches, commits, clone/push/pull, diff/history, and contribution metrics: Phase 8.
+- Phase 8A provisions verified empty server-owned bare repositories through a separate worker. Smart HTTP, worktrees, branches, commits, clone/push/pull, diff/history, and contribution metrics remain deferred to separately reviewed Phase 8B/8C milestones.
 - Ownership/team-lead transfer and member self-leave: separately approved future workflow.
 - Post-deadline revision windows: separately approved server-controlled workflow.
 - Numeric project grades, rubrics, and final-grade calculation: later grading scope.

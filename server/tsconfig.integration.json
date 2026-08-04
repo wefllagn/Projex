@@ -10,9 +10,11 @@
     "src/**/*.d.ts",
     "tests/integration/**/*.ts",
     "tests/java/**/*.ts",
+    "tests/git/**/*.ts",
     "vitest.config.ts",
     "vitest.integration.config.ts",
-    "vitest.java.config.ts"
+    "vitest.java.config.ts",
+    "vitest.git.config.ts"
   ],
   "exclude": ["node_modules", "dist", "coverage", "src/**/*.test.ts"]
 }

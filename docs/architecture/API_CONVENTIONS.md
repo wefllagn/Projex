@@ -342,3 +342,7 @@ Instructor assessment DTOs keep automated evidence separate from instructor revi
 - Accept or generate a request ID and return it as `meta.requestId` and an `X-Request-Id` header.
 - Log method, route template, status, duration, authenticated user ID when permitted, and error code.
 - Never log cookies, authorization secrets, passwords, complete source code, stdin, hidden tests, or sensitive feedback.
+
+## Phase 8A repository storage projection
+
+Existing repository create, list, and detail projections include `storageStatus` with `PENDING`, `PROVISIONING`, `READY`, `FAILED`, or `QUARANTINED`. They never expose `storagePath`, absolute host paths, Git arguments, or quarantine locations. Phase 8A adds no Git transport or repository-content endpoint.

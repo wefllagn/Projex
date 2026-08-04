@@ -213,17 +213,22 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - [x] Block project-task and class archive for unexpired invitations, nonterminal repository review, or membership invariant failure.
 - [x] Add PostgreSQL constraints, partial unique indexes, composite foreign keys, and deferred invariant triggers for repository type/visibility and synchronized ownership/membership.
 - [x] Verify the committed Phase 7 migration and collaboration/API integration suite against exactly `projex_test` without reset or `db push`.
-- [ ] Apply the reviewed Phase 7 migration to the normal development database after explicit test-database approval.
-- [ ] Complete live role/API verification and the final independent pre-commit review.
+- [x] Apply the reviewed Phase 7 migration to the normal development database after explicit test-database approval.
+- [x] Complete live role/API verification and the final independent pre-commit review.
 - [x] Leave `RepositoryActivity` unchanged and unused; keep all Git CLI and filesystem repository operations pending for Phase 8.
 
-## Phase 8: local Git operations — pending
+## Phase 8A: Git foundation and provisioning — active
 
-- [ ] Provision server-owned bare repositories without GitHub or GitLab APIs.
-- [ ] Execute the local Git CLI through argument arrays without shell-string concatenation.
-- [ ] Validate repository names, paths, refs, branches, and tags.
-- [ ] Use temporary worktrees, bounded process execution, safe configuration, and guaranteed cleanup.
-- [ ] Implement per-repository write locks and preserve commit, branch, diff, and contribution history.
+- [x] Phase 8A validates an absolute Git for Windows executable at version 2.55.0 or later and records the detected version.
+- [x] Phase 8A keeps Git disabled by default and rejects local-process execution in production.
+- [x] Add durable storage states and leased provisioning jobs without filesystem work in the migration.
+- [x] Derive server-owned UUID paths and reject traversal, Windows ambiguity, links, junctions, and reparse escapes.
+- [x] Create verified empty bare repositories whose HEAD is `refs/heads/main`, with no refs or synthetic history.
+- [x] Recover idempotently across leases and atomic rename; quarantine unsafe state without overwrite or deletion.
+- [x] Guard `projex_test` and run-specific `projex_git_test` storage independently from normal database/storage.
+- [ ] Apply the reviewed Phase 8A migration to the normal development database after explicit approval.
+- [ ] Start the normal provisioning worker only after a second explicit approval.
+- [ ] Implement Smart HTTP in Phase 8B and repository read/mutation APIs in Phase 8C.
 
 ## Phase 9: Admin backend capabilities — pending
 

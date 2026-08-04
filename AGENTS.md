@@ -6,7 +6,7 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Instruction
 
-Phases 0 through 6 are complete. Phase 7 project and repository collaboration is explicitly approved and active on `phase/07-project-repository-collaboration`. Do not begin Phase 8 or another phase until its decisions and implementation plan are approved and the user explicitly says, "Implement the approved decisions."
+Phases 0 through 7 are complete. Phase 8A Git foundation and repository provisioning is explicitly approved and active on `phase/08-local-git-operations`. Do not begin Phase 8B Smart HTTP or another milestone until its decisions and implementation plan are approved and the user explicitly authorizes implementation.
 
 ## Product Boundaries
 
@@ -55,7 +55,7 @@ For the current phased functionalization:
 - `REQUEST_CHANGES` is allowed only from `READY_FOR_REVIEW` while the task is PUBLISHED and before its deadline, and atomically releases non-empty textual feedback.
 - The owning instructor may approve previously submitted `READY_FOR_REVIEW` work after the deadline or while CLOSED, with optional released textual feedback. Numeric grades and rubrics remain out of Phase 7.
 - Project-task and class archiving must honor unexpired invitations, nonterminal repository review states, and synchronized membership invariants. Archived records are read-only.
-- `RepositoryActivity` remains unchanged and unused until Phase 8. Do not generate fake Git activity or implement Git CLI/filesystem repository operations in Phase 7.
+- Phase 8A may create only verified empty bare repositories and exactly one `REPOSITORY_PROVISIONED` system activity after verification. Do not generate fake commits, refs, history, or other Git activity.
 
 ## Admin frontend direction
 
