@@ -21,6 +21,7 @@
     "test:integration": "tsx tests/integration/run-integration-tests.ts",
     "test:java": "vitest run --config vitest.java.config.ts",
     "test:git": "tsx tests/git/run-git-tests.ts",
+    "test:smart-http": "tsx tests/git/run-smart-http-tests.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:studio": "prisma studio",

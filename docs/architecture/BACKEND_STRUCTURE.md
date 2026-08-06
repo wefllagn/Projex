@@ -220,3 +220,9 @@ Only the approved feature should be functionalized at each step. Unrelated front
 ## Phase 8A process boundary
 
 `src/git-worker.ts` is a separately started development-only process. `infrastructure/git` owns the typed bounded Git runner, `infrastructure/storage` owns canonical UUID-derived paths and guarded cleanup, and `infrastructure/job-queue/repository-provisioning-queue.ts` owns PostgreSQL claim/lease state. The repository feature service coordinates these interfaces. Neither API requests nor migrations execute Git.
+
+## Phase 8B transport boundary
+
+`modules/git-transport` owns credential issuance/revocation, current authorization evaluation, transport route validation, and successful-push activity persistence. `infrastructure/git/git-smart-http.ts` owns the bounded CGI adapter and `git-transport-hook.ts` owns server-generated pre/post-receive policy enforcement. The API may stream only allowlisted Smart HTTP services through the configured absolute `git-http-backend`; it accepts neither commands nor paths and exposes no general Git execution.
+
+The transport is disabled by default, loopback-only in controlled development, and separate from Phase 8A provisioning. Phase 8C repository browsing/read APIs remain unimplemented.

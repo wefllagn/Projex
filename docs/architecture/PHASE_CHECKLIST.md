@@ -217,7 +217,7 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - [x] Complete live role/API verification and the final independent pre-commit review.
 - [x] Leave `RepositoryActivity` unchanged and unused; keep all Git CLI and filesystem repository operations pending for Phase 8.
 
-## Phase 8A: Git foundation and provisioning — active
+## Phase 8A: Git foundation and provisioning — complete
 
 - [x] Phase 8A validates an absolute Git for Windows executable at version 2.55.0 or later and records the detected version.
 - [x] Phase 8A keeps Git disabled by default and rejects local-process execution in production.
@@ -226,9 +226,20 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - [x] Create verified empty bare repositories whose HEAD is `refs/heads/main`, with no refs or synthetic history.
 - [x] Recover idempotently across leases and atomic rename; quarantine unsafe state without overwrite or deletion.
 - [x] Guard `projex_test` and run-specific `projex_git_test` storage independently from normal database/storage.
-- [ ] Apply the reviewed Phase 8A migration to the normal development database after explicit approval.
-- [ ] Start the normal provisioning worker only after a second explicit approval.
-- [ ] Implement Smart HTTP in Phase 8B and repository read/mutation APIs in Phase 8C.
+- [x] Apply the reviewed Phase 8A migration to the normal development database after explicit approval.
+- [x] Start the normal provisioning worker only after a second explicit approval and provision the six retained development repositories.
+
+## Phase 8B: authenticated Git Smart HTTP — test-only implementation complete
+
+- [x] Add short-lived, repository/operation-scoped credentials with one-time secret display, verifier-only persistence, expiry, and revocation.
+- [x] Add loopback-only authenticated clone/fetch/push through the configured absolute `git-http-backend`, with dynamic authorization on every request.
+- [x] Enforce heads-only, fast-forward, protected-main, atomic multi-ref, case-collision, branch/ref/commit/blob/repository limits through server-owned hooks.
+- [x] Stream bounded CGI requests/responses with backpressure, timeout, concurrency, process-tree termination, and guarded request cleanup.
+- [x] Record exactly one safe user-attributed activity per accepted push and none for rejected pushes.
+- [x] Apply the explicit migration only to `projex_test` and verify guarded real-Git Smart HTTP workflows under `projex_git_test`.
+- [ ] Apply the reviewed Phase 8B migration to the normal development database after separate approval.
+- [ ] Enable and validate persistent normal loopback Smart HTTP only after a second separate approval.
+- [ ] Implement repository browsing/read APIs in Phase 8C only after scope approval.
 
 ## Phase 9: Admin backend capabilities — pending
 

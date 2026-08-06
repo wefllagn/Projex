@@ -232,3 +232,13 @@ Expected categories include database URL, session secret/key material, allowed o
 ## Phase 8A enforced Git boundary
 
 The current tested executable is Git for Windows `2.55.0.windows.3`; the worker requires a validated absolute Git for Windows executable at version `2.55.0` or later. It sanitizes inherited Git configuration/environment, disables prompts, uses `shell: false`, bounds time/output, and never logs arguments or paths. Only empty bare initialization and verification operations are available. Unsafe marker, canonical-path, link, junction, reparse, or repository state is quarantined rather than overwritten or deleted.
+
+## Phase 8B authenticated Smart HTTP boundary
+
+- Smart HTTP is disabled by default, permitted only on loopback for controlled development, and rejected with insecure non-loopback or production-local configuration. Future non-loopback use requires TLS and separate hosted-isolation approval.
+- The absolute Git for Windows executable must be version `2.55.0` or later, and the absolute `git-http-backend` must be a plain executable file. PATH resolution, shell command strings, client paths, anonymous transport, SSH, Git daemon, and external Git providers are not used.
+- Credentials contain a 32-byte random secret, expire after 15 minutes by default, are scoped to one active user/repository/operation set, store only a SHA-256 verifier, and are returned exactly once. Current status, membership, ownership, task deadline/lifecycle, repository state, and ref permission are authoritative on every request.
+- Only `refs/heads/*` may be updated. Server-owned hooks reject tags and other namespaces, malformed/case-colliding branches, non-fast-forward or force updates, main deletion, unauthorized main updates, and the entire multi-ref push if any update fails.
+- The CGI adapter uses a sanitized environment, server-derived `PATH_INFO`, canonical READY repository storage, request/response/time/concurrency limits, streaming backpressure, process-tree termination, and sentinel-owned request cleanup.
+- Push receipts contain only a transport request ID, actor/repository IDs, branch names, accepted update count, and timestamp. A validated receipt survives a transient activity-write failure and is replayed idempotently before later transport work. Credentials, authorization headers, pack bytes, source contents, absolute paths, and private environment values are excluded from receipts, activities, and logs.
+- Local-process hooks and request limits are not production-grade isolation. External-network exposure remains prohibited until an approved hosted security boundary is implemented.

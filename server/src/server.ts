@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import { createServer, type Server } from 'node:http'
+import { fileURLToPath } from 'node:url'
 import { createApp } from './app.js'
 import { EnvironmentValidationError, loadEnv } from './config/env.js'
 import {
@@ -45,6 +46,12 @@ import { createProjectTaskRouter } from './modules/project-tasks/project-task.ro
 import { createPrismaRepositoryRepository } from './modules/repositories/repository.repository.js'
 import { createRepositoryService } from './modules/repositories/repository.service.js'
 import { createRepositoryRouter } from './modules/repositories/repository.routes.js'
+import { createRepositoryStorage } from './infrastructure/storage/repository-storage.js'
+import { createGitSmartHttpBackend } from './infrastructure/git/git-smart-http.js'
+import { createPrismaGitTransportRepository } from './modules/git-transport/git-transport.repository.js'
+import { createGitCredentialService } from './modules/git-transport/git-credential.service.js'
+import { createGitTransportService } from './modules/git-transport/git-transport.service.js'
+import { createGitTransportRouter } from './modules/git-transport/git-transport.routes.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
@@ -152,6 +159,42 @@ async function bootstrap(): Promise<void> {
     }),
     logger,
   })
+  const gitTransportRepository = createPrismaGitTransportRepository(prisma)
+  const gitCredentialService = createGitCredentialService({
+    repository: gitTransportRepository,
+    logger,
+    credentialTtlMinutes: env.gitCredentialTtlMinutes,
+  })
+  const gitStorage = createRepositoryStorage({
+    root: env.gitStorageRoot || process.cwd(),
+    repositorySizeLimitBytes: env.gitRepositorySizeLimitBytes,
+  })
+  const gitSmartHttpBackend = createGitSmartHttpBackend({
+    executable: env.gitHttpBackendExecutable || process.execPath,
+    gitExecutable: env.gitExecutable || process.execPath,
+    storageRoot: env.gitStorageRoot || process.cwd(),
+    hookScript: fileURLToPath(new URL('./infrastructure/git/git-transport-hook.js', import.meta.url)),
+    limits: {
+      requestBytes: env.gitHttpRequestLimitBytes,
+      responseBytes: env.gitHttpResponseLimitBytes,
+      timeoutMs: env.gitHttpTimeoutMs,
+      maxConcurrent: env.gitHttpMaxConcurrent,
+      maxBranches: env.gitMaxBranches,
+      maxRefUpdates: env.gitMaxRefUpdates,
+      maxNewCommits: env.gitMaxNewCommits,
+      blobLimitBytes: env.gitBlobLimitBytes,
+      repositoryLimitBytes: env.gitRepositorySizeLimitBytes,
+    },
+  })
+  const gitTransportService = createGitTransportService({
+    enabled: env.gitSmartHttpEnabled,
+    credentialService: gitCredentialService,
+    repository: gitTransportRepository,
+    storage: gitStorage,
+    backend: gitSmartHttpBackend,
+    logger,
+  })
+  await gitTransportService.initialize()
   const app = createApp({
     config: {
       frontendOrigin: env.frontendOrigin,
@@ -203,6 +246,12 @@ async function bootstrap(): Promise<void> {
         requireAuthentication,
         requireCsrf,
       }),
+      gitTransport: createGitTransportRouter({
+        credentialService: gitCredentialService,
+        transportService: gitTransportService,
+        requireAuthentication,
+        requireCsrf,
+      }),
     },
   })
   const httpServer = createServer(app)
@@ -243,11 +292,12 @@ async function bootstrap(): Promise<void> {
     void shutdown('unhandledRejection', 1)
   })
 
-  httpServer.listen(env.port, () => {
+  httpServer.listen(env.port, env.host, () => {
     logger.info(
       {
         nodeEnv: env.nodeEnv,
         port: env.port,
+        host: env.host,
       },
       'Projex API listening',
     )

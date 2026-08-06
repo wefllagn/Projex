@@ -346,3 +346,26 @@ Instructor assessment DTOs keep automated evidence separate from instructor revi
 ## Phase 8A repository storage projection
 
 Existing repository create, list, and detail projections include `storageStatus` with `PENDING`, `PROVISIONING`, `READY`, `FAILED`, or `QUARANTINED`. They never expose `storagePath`, absolute host paths, Git arguments, or quarantine locations. Phase 8A adds no Git transport or repository-content endpoint.
+
+## Phase 8B Git transport contracts
+
+Credential management uses the normal JSON envelope and cookie-session/CSRF rules:
+
+```text
+POST /api/v1/repositories/:repositoryId/git-credentials
+GET  /api/v1/repositories/:repositoryId/git-credentials
+POST /api/v1/git-credentials/:credentialId/revoke
+```
+
+Issuance accepts only a validated operation set (`READ`, `WRITE`), returns the random secret once, and returns expiry plus safe credential metadata. List, revoke, logs, and later reads never return the verifier or secret.
+
+Git clients use only these authenticated Smart HTTP CGI-compatible routes:
+
+```text
+GET  /api/v1/git/repositories/:repositoryId/info/refs?service=git-upload-pack
+GET  /api/v1/git/repositories/:repositoryId/info/refs?service=git-receive-pack
+POST /api/v1/git/repositories/:repositoryId/git-upload-pack
+POST /api/v1/git/repositories/:repositoryId/git-receive-pack
+```
+
+These routes deliberately do not use the JSON success envelope: successful bodies and content types are the bounded byte streams emitted by `git-http-backend`. Before dispatch, Projex authenticates the repository-scoped Basic credential, re-evaluates current user/membership/lifecycle authorization, validates the service/path, and resolves READY storage internally. Rejections are safe and never expose credentials, source, or host paths.

@@ -9,6 +9,7 @@ export function createIntegrationPrisma(): PrismaClient {
 export async function cleanIntegrationDatabase(
   prisma: PrismaClient,
 ): Promise<void> {
+  await prisma.gitCredential.deleteMany()
   await prisma.repositoryProvisioningJob.deleteMany()
   await prisma.executionJob.deleteMany()
   await prisma.practiceExecutionCase.deleteMany()

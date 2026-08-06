@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-Phase 8A adds the controlled-local Git foundation and durable bare-repository provisioning. It is backend-only. It does not add Smart HTTP, credentials, clone, fetch, pull, push, refs, commits, history, tree, blob, diff, merge, or frontend behavior.
+Phase 8A adds the controlled-local Git foundation and durable bare-repository provisioning. Phase 8B builds authenticated loopback-only Smart HTTP on this foundation as documented in `GIT_SMART_HTTP_TRANSPORT.md`; browsing, history, tree, blob, diff, merge, and frontend behavior remain deferred.
 
 The tested Windows toolchain is Git for Windows `2.55.0.windows.3`. The worker accepts supported Git for Windows versions at or above `2.55.0`, records the detected version, and always invokes the validated absolute `GIT_EXECUTABLE`. PATH ordering is never authoritative.
 
@@ -61,7 +61,7 @@ If the process stops after the rename but before database completion, the next l
 
 ## Empty repository rule
 
-A successfully provisioned repository is an empty bare Git repository whose symbolic `HEAD` is `refs/heads/main`. It has no commits, branch refs, tags, README, starter content, or synthetic activity. The first branch and commit remain the responsibility of a future authenticated real push in Phase 8B.
+A successfully provisioned repository is an empty bare Git repository whose symbolic `HEAD` is `refs/heads/main`. It has no commits, branch refs, tags, README, starter content, or synthetic activity. The first branch and commit are created only by an authenticated Phase 8B push; provisioning itself continues to create no history.
 
 ## Test isolation
 

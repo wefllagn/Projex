@@ -144,6 +144,46 @@ export function createRepositoryStorage(options: {
     return { relativeRepositoryPath, repositoryPath, stagingPath, quarantinePath }
   }
 
+  async function resolveManagedRepository(
+    repositoryId: string,
+    relativeRepositoryPath: string,
+  ): Promise<string> {
+    if (!UUID_PATTERN.test(repositoryId)) {
+      throw new RepositoryStorageError('INVALID_STORAGE_IDENTIFIER')
+    }
+    const normalizedId = repositoryId.toLowerCase()
+    const expected = path.join(
+      'repositories',
+      normalizedId.slice(0, 2),
+      normalizedId.slice(2, 4),
+      `${normalizedId}.git`,
+    )
+    if (normalizedForComparison(relativeRepositoryPath) !== normalizedForComparison(expected)) {
+      throw new RepositoryStorageError('STORAGE_PATH_MISMATCH')
+    }
+    const canonicalRoot = await initializeRoot()
+    const candidate = path.resolve(canonicalRoot, relativeRepositoryPath)
+    if (!isWithin(canonicalRoot, candidate) || candidate === canonicalRoot) {
+      throw new RepositoryStorageError('STORAGE_PATH_ESCAPE')
+    }
+    await rejectLinksOnExistingPath(candidate)
+    const canonicalRepository = await realpath(candidate).catch(() => {
+      throw new RepositoryStorageError('REPOSITORY_STORAGE_NOT_FOUND')
+    })
+    if (!isWithin(canonicalRoot, canonicalRepository)) {
+      throw new RepositoryStorageError('STORAGE_PATH_ESCAPE')
+    }
+    const marker = JSON.parse(
+      await readFile(path.join(canonicalRepository, MARKER_FILE), 'utf8').catch(() => {
+        throw new RepositoryStorageError('STORAGE_MARKER_INVALID')
+      }),
+    ) as Partial<Marker>
+    if (marker.version !== 1 || marker.repositoryId !== repositoryId) {
+      throw new RepositoryStorageError('STORAGE_MARKER_MISMATCH')
+    }
+    return canonicalRepository
+  }
+
   async function initializeRoot(): Promise<string> {
     await rejectLinksOnExistingPath(configuredRoot)
     await mkdir(configuredRoot, { recursive: true })
@@ -235,6 +275,7 @@ export function createRepositoryStorage(options: {
   return {
     root: configuredRoot,
     pathsFor,
+    resolveManagedRepository,
     initializeRoot,
     prepareStaging,
     verifyMarker,

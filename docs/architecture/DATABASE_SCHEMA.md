@@ -169,3 +169,10 @@ Classes, users, memberships, activities, submissions, assessments, feedback, pro
 - `RepositoryProvisioningJob` provides one durable leased provisioning job per repository.
 - Existing repositories are backfilled as `PENDING` with idempotent jobs; the migration performs no Git or filesystem work.
 - `RepositoryActivity` supports a nullable user only for an explicitly typed system actor. `REPOSITORY_PROVISIONED` is inserted exactly once after final bare-repository verification.
+
+## Phase 8B additions
+
+- `GitCredential` records a UUID credential identity, one user, one repository, a SHA-256 verifier for a 32-byte random secret, allowed READ/WRITE operations, and issuance/expiry/use/revocation timestamps. Plaintext secrets are never persisted.
+- Credentials are short-lived security capabilities rather than academic evidence. Current account, repository membership, class membership, lifecycle, and operation authorization are re-evaluated on every use.
+- `RepositoryActivity.transportRequestId` is an optional unique UUID idempotency key for one accepted receive-pack operation. Successful pushes create one user-attributed `PUSH_ACCEPTED` activity only after Git accepts all ref updates; rejected pushes create none.
+- The migration creates no credential or activity data, runs no Git command, and changes no repository content or filesystem state.

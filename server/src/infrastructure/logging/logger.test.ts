@@ -27,6 +27,8 @@ describe('structured log redaction', () => {
         repositoryPath: 'SENTINEL_REPOSITORY_PATH',
         gitArguments: ['SENTINEL_GIT_ARGUMENT'],
         GIT_STORAGE_ROOT: 'SENTINEL_GIT_ROOT',
+        secret: 'SENTINEL_GIT_CREDENTIAL',
+        secretHash: 'SENTINEL_GIT_CREDENTIAL_HASH',
         req: { body: { sourceCode: 'SENTINEL_BODY' } },
       },
       'redaction test',
@@ -47,6 +49,8 @@ describe('structured log redaction', () => {
       'SENTINEL_REPOSITORY_PATH',
       'SENTINEL_GIT_ARGUMENT',
       'SENTINEL_GIT_ROOT',
+      'SENTINEL_GIT_CREDENTIAL',
+      'SENTINEL_GIT_CREDENTIAL_HASH',
       'SENTINEL_BODY',
     ]) {
       expect(output).not.toContain(sentinel)

@@ -8,6 +8,7 @@ const booleanString = z
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    HOST: z.string().trim().min(1).default('127.0.0.1'),
     PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
     FRONTEND_ORIGIN: z.url(),
@@ -55,10 +56,21 @@ const envSchema = z
     GIT_STORAGE_ROOT: z.string().default(''),
     GIT_COMMAND_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(30_000),
     GIT_OUTPUT_LIMIT_BYTES: z.coerce.number().int().min(1_024).max(4_194_304).default(1_048_576),
-    GIT_REPOSITORY_SIZE_LIMIT_BYTES: z.coerce.number().int().min(1_048_576).max(2_147_483_647).default(262_144_000),
+    GIT_REPOSITORY_SIZE_LIMIT_BYTES: z.coerce.number().int().min(1_048_576).max(2_147_483_647).default(104_857_600),
     GIT_PROVISIONING_JOB_LEASE_MS: z.coerce.number().int().min(5_000).max(300_000).default(60_000),
     GIT_PROVISIONING_WORKER_POLL_MS: z.coerce.number().int().min(100).max(60_000).default(1_000),
     GIT_PROVISIONING_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
+    GIT_SMART_HTTP_ENABLED: booleanString.default(false),
+    GIT_HTTP_BACKEND_EXECUTABLE: z.string().default(''),
+    GIT_CREDENTIAL_TTL_MINUTES: z.coerce.number().int().min(1).max(15).default(15),
+    GIT_HTTP_REQUEST_LIMIT_BYTES: z.coerce.number().int().min(1_048_576).max(104_857_600).default(26_214_400),
+    GIT_HTTP_RESPONSE_LIMIT_BYTES: z.coerce.number().int().min(1_048_576).max(536_870_912).default(115_343_360),
+    GIT_HTTP_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(300_000).default(60_000),
+    GIT_HTTP_MAX_CONCURRENT: z.coerce.number().int().min(1).max(32).default(4),
+    GIT_MAX_BRANCHES: z.coerce.number().int().min(1).max(1_000).default(100),
+    GIT_MAX_REF_UPDATES: z.coerce.number().int().min(1).max(500).default(50),
+    GIT_MAX_NEW_COMMITS: z.coerce.number().int().min(1).max(10_000).default(200),
+    GIT_BLOB_LIMIT_BYTES: z.coerce.number().int().min(1_024).max(104_857_600).default(10_485_760),
   })
   .superRefine((value, context) => {
     if (value.AUTH_COOKIE_SAME_SITE === 'none' && !value.AUTH_COOKIE_SECURE) {
@@ -108,6 +120,30 @@ const envSchema = z
       }
     }
 
+    if (value.GIT_SMART_HTTP_ENABLED) {
+      if (value.GIT_EXECUTION_MODE !== 'local_process') {
+        context.addIssue({
+          code: 'custom',
+          path: ['GIT_SMART_HTTP_ENABLED'],
+          message: 'Git Smart HTTP requires local_process Git execution',
+        })
+      }
+      if (!value.GIT_HTTP_BACKEND_EXECUTABLE || !path.isAbsolute(value.GIT_HTTP_BACKEND_EXECUTABLE)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['GIT_HTTP_BACKEND_EXECUTABLE'],
+          message: 'GIT_HTTP_BACKEND_EXECUTABLE must be an absolute path',
+        })
+      }
+      if (!['127.0.0.1', '::1', 'localhost'].includes(value.HOST.toLowerCase())) {
+        context.addIssue({
+          code: 'custom',
+          path: ['HOST'],
+          message: 'Phase 8B plaintext Git Smart HTTP must bind to loopback',
+        })
+      }
+    }
+
     if (value.MAIL_TRANSPORT === 'smtp') {
       for (const key of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD'] as const) {
         if (!value[key]) {
@@ -123,6 +159,7 @@ const envSchema = z
 
 export interface AppEnv {
   nodeEnv: z.infer<typeof envSchema>['NODE_ENV']
+  host: string
   port: number
   databaseUrl: string
   frontendOrigin: string
@@ -167,6 +204,17 @@ export interface AppEnv {
   gitProvisioningJobLeaseMs: number
   gitProvisioningWorkerPollMs: number
   gitProvisioningMaxAttempts: number
+  gitSmartHttpEnabled: boolean
+  gitHttpBackendExecutable: string
+  gitCredentialTtlMinutes: number
+  gitHttpRequestLimitBytes: number
+  gitHttpResponseLimitBytes: number
+  gitHttpTimeoutMs: number
+  gitHttpMaxConcurrent: number
+  gitMaxBranches: number
+  gitMaxRefUpdates: number
+  gitMaxNewCommits: number
+  gitBlobLimitBytes: number
 }
 
 export class EnvironmentValidationError extends Error {
@@ -189,6 +237,7 @@ export function loadEnv(input: NodeJS.ProcessEnv = process.env): AppEnv {
 
   return {
     nodeEnv: result.data.NODE_ENV,
+    host: result.data.HOST,
     port: result.data.PORT,
     databaseUrl: result.data.DATABASE_URL,
     frontendOrigin: result.data.FRONTEND_ORIGIN,
@@ -233,5 +282,16 @@ export function loadEnv(input: NodeJS.ProcessEnv = process.env): AppEnv {
     gitProvisioningJobLeaseMs: result.data.GIT_PROVISIONING_JOB_LEASE_MS,
     gitProvisioningWorkerPollMs: result.data.GIT_PROVISIONING_WORKER_POLL_MS,
     gitProvisioningMaxAttempts: result.data.GIT_PROVISIONING_MAX_ATTEMPTS,
+    gitSmartHttpEnabled: result.data.GIT_SMART_HTTP_ENABLED,
+    gitHttpBackendExecutable: result.data.GIT_HTTP_BACKEND_EXECUTABLE,
+    gitCredentialTtlMinutes: result.data.GIT_CREDENTIAL_TTL_MINUTES,
+    gitHttpRequestLimitBytes: result.data.GIT_HTTP_REQUEST_LIMIT_BYTES,
+    gitHttpResponseLimitBytes: result.data.GIT_HTTP_RESPONSE_LIMIT_BYTES,
+    gitHttpTimeoutMs: result.data.GIT_HTTP_TIMEOUT_MS,
+    gitHttpMaxConcurrent: result.data.GIT_HTTP_MAX_CONCURRENT,
+    gitMaxBranches: result.data.GIT_MAX_BRANCHES,
+    gitMaxRefUpdates: result.data.GIT_MAX_REF_UPDATES,
+    gitMaxNewCommits: result.data.GIT_MAX_NEW_COMMITS,
+    gitBlobLimitBytes: result.data.GIT_BLOB_LIMIT_BYTES,
   }
 }

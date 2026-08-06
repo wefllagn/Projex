@@ -6,7 +6,7 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Instruction
 
-Phases 0 through 7 are complete. Phase 8A Git foundation and repository provisioning is explicitly approved and active on `phase/08-local-git-operations`. Do not begin Phase 8B Smart HTTP or another milestone until its decisions and implementation plan are approved and the user explicitly authorizes implementation.
+Phases 0 through 8A are complete. Phase 8B authenticated Git Smart HTTP is approved for test-only implementation; it must not be migrated to the normal database, enabled persistently, committed, or pushed without explicit approval. Do not begin Phase 8C until separately approved.
 
 ## Product Boundaries
 

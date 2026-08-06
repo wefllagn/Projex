@@ -1,6 +1,6 @@
 # Projex Server
 
-Phase 8A adds the backend-only controlled-local Git foundation and durable empty bare-repository provisioning to the existing API, PostgreSQL, authentication, academic activity, assessment, and repository-collaboration features. Smart HTTP, Git credentials, clone/fetch/pull/push, refs, commits, history, tree/blob/diff/merge APIs, frontend integration, and hosted Git remain unavailable.
+Phase 8A provides the controlled-local Git foundation and durable empty bare-repository provisioning. Phase 8B adds disabled-by-default, loopback-only authenticated Smart HTTP for clone, fetch, and policy-controlled push. Pull workflows, repository browsing/history/tree/blob/diff/merge APIs, frontend integration, hosted transport, and public/SSH access remain unavailable.
 
 ## Prerequisites
 
@@ -204,6 +204,13 @@ POST  /repository-invitations/:invitationId/revoke
 GET   /repositories/:repositoryId/feedback
 POST  /repositories/:repositoryId/feedback-drafts
 PATCH /repository-feedback/:feedbackId
+POST  /repositories/:repositoryId/git-credentials
+GET   /repositories/:repositoryId/git-credentials
+POST  /git-credentials/:credentialId/revoke
+GET   /git/repositories/:repositoryId/info/refs?service=git-upload-pack
+GET   /git/repositories/:repositoryId/info/refs?service=git-receive-pack
+POST  /git/repositories/:repositoryId/git-upload-pack
+POST  /git/repositories/:repositoryId/git-receive-pack
 ```
 
 There is no public registration endpoint. Cookie-authenticated mutations require `Content-Type: application/json`, the readable `projex_csrf` cookie, and the same value in `X-CSRF-Token`.
@@ -229,6 +236,20 @@ npm run test:git
 ```
 
 The migration records pending jobs only. It does not initialize storage. See `docs/architecture/GIT_FOUNDATION_AND_PROVISIONING.md` for the worker, recovery, quarantine, and test-root rules.
+
+## Phase 8B authenticated Smart HTTP
+
+`GIT_SMART_HTTP_ENABLED=false` is the safe default. Controlled local use additionally requires the exact absolute `GIT_HTTP_BACKEND_EXECUTABLE`, a validated Git for Windows `2.55.0` or later, an approved READY repository root, and a loopback API host. Production local-process mode and insecure non-loopback listeners are rejected.
+
+Credentials expire after 15 minutes by default, are scoped to one user/repository/operation set, store only a verifier, and return their random secret once. Current user, membership, repository, task, deadline, and ref permissions are checked on every transport request. Never put the secret in a URL or Git configuration.
+
+Guarded end-to-end tests require `TEST_DATABASE_URL` naming exactly `projex_test`, a separate `TEST_GIT_STORAGE_ROOT` ending in `projex_git_test`, and absolute Git/backend executables:
+
+```powershell
+npm run test:smart-http
+```
+
+The test runner deploys committed migrations only to `projex_test`, opens an ephemeral loopback server, and removes only its sentinel-owned run directory. It never falls back to the normal database or Git root. See `docs/architecture/GIT_SMART_HTTP_TRANSPORT.md` for authorization, limits, hook policy, and remaining hosted-isolation limits.
 
 Activity authoring is restricted to the owning instructor or an administrator. Students with ACTIVE membership may read only PUBLISHED or CLOSED activities and visible test cases. Hidden test rows and counts are excluded from student responses. Published scoring/test configuration is immutable.
 

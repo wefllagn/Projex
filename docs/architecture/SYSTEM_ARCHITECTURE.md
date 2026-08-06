@@ -6,7 +6,7 @@ This document records the architecture for turning the existing Projex UI protot
 
 - Current frontend: React 19, Vite, JavaScript/JSX, React Router, and the existing CSS.
 - Current backend: Node.js, Express, TypeScript, Zod, Prisma ORM, and PostgreSQL.
-- Implementation status: Phases 0 through 6 are complete; Phase 7 project and repository collaboration is implemented on its phase branch and has passed guarded PostgreSQL verification against `projex_test`. Normal development-database migration and live verification remain gated review steps.
+- Implementation status: Phases 0 through 8A are complete. Phase 8B authenticated Git Smart HTTP is implemented and verified only against `projex_test` and guarded test storage; its normal-development migration, persistent enablement, commit, and push remain approval gates.
 - Development approach: local-first, feature-by-feature, and cloud-provider-neutral.
 - Roles: `STUDENT`, `INSTRUCTOR`, and `ADMIN` are part of the authorization model from the beginning.
 - Implementation priority: Student and Instructor workflows first, followed by dedicated Admin functionalization.

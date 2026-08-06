@@ -82,4 +82,32 @@ describe('execution environment boundaries', () => {
       ),
     ).toThrow(EnvironmentValidationError)
   })
+
+  it('keeps Smart HTTP disabled by default', () => {
+    const env = loadEnv(validEnvironment())
+    expect(env.host).toBe('127.0.0.1')
+    expect(env.gitSmartHttpEnabled).toBe(false)
+    expect(env.gitCredentialTtlMinutes).toBe(15)
+  })
+
+  it('requires local Git, an absolute backend, and a loopback host for Smart HTTP', () => {
+    const smartHttp = {
+      GIT_EXECUTION_MODE: 'local_process',
+      GIT_EXECUTABLE: 'C:\\Program Files\\Git\\cmd\\git.exe',
+      GIT_STORAGE_ROOT: 'C:\\projex-storage',
+      GIT_SMART_HTTP_ENABLED: 'true',
+      GIT_HTTP_BACKEND_EXECUTABLE: 'C:\\Program Files\\Git\\mingw64\\libexec\\git-core\\git-http-backend.exe',
+    }
+    expect(loadEnv(validEnvironment(smartHttp)).gitSmartHttpEnabled).toBe(true)
+    expect(() => loadEnv(validEnvironment({ ...smartHttp, HOST: '0.0.0.0' }))).toThrow(
+      EnvironmentValidationError,
+    )
+    expect(() => loadEnv(validEnvironment({ ...smartHttp, GIT_HTTP_BACKEND_EXECUTABLE: 'git-http-backend' }))).toThrow(
+      EnvironmentValidationError,
+    )
+    expect(() => loadEnv(validEnvironment({
+      GIT_SMART_HTTP_ENABLED: 'true',
+      GIT_HTTP_BACKEND_EXECUTABLE: 'C:\\backend.exe',
+    }))).toThrow(EnvironmentValidationError)
+  })
 })

@@ -114,7 +114,7 @@ Every phase must end with a working application. An unfinished cross-phase refac
 - Preserve each attempt's source, submission time, execution result, score, and review state; idempotency and database constraints must protect double-click/retry behavior.
 - Keep `originalAutomatedScore` and per-test automated evidence immutable during review; record append-only corrections, distinct instructor points, and the derived released final score separately.
 - Keep Java execution disabled by default. Permit `local_process` only for controlled local development, never production or an internet-accessible deployment.
-- Keep Phase 7 repository work metadata-only. Do not create bare repositories, worktrees, files, branches, commits, diffs, or `RepositoryActivity` rows before the approved Phase 8 Git implementation.
+- Phase 7 repository work remains the academic metadata baseline. Phase 8A may provision verified empty bare repositories; Phase 8B may transport authenticated clone/fetch/push and record only real accepted push activities. Phase 8C content-browsing APIs remain separately gated.
 - Preserve team/repository membership synchronization through serializable transactions, database constraints, and real PostgreSQL integration tests; never bypass the invariant with direct one-table writes.
 - Do not add provider-specific infrastructure without a documented, approved portability exception.
 
@@ -140,7 +140,7 @@ The exact commands are defined when backend tooling exists. At minimum, a phase 
 | API | Response-contract, validation, authentication, authorization, pagination, error-code tests. |
 | Repository collaboration | Lifecycle/deadline rules, server-owned visibility, cross-class concealment, invitation eligibility/expiry/capacity/concurrency, synchronized membership rollback, feedback/review coupling, and archive blockers. |
 | Java | Separate-worker compile success/failure with `--release 17`, timeout/output boundaries, process-tree termination, temp cleanup, and hosted network/CPU/filesystem isolation before internet enablement. |
-| Git | Argument/path/ref validation, bare-repo/worktree lifecycle, lock contention/recovery, unauthorized access tests. |
+| Git | Executable/version and canonical-path validation, bare-repository lifecycle, credential/revocation/current-membership authorization, Smart HTTP streaming limits, ref-policy atomicity, cleanup, and guarded real-Git tests. |
 | Security | Secret scan/diff review, cookie/CSRF/CORS/headers, role/ownership tests, student visibility tests. |
 
 A failing pre-existing check must be reported with evidence. New failures caused by the phase must be fixed before merge.
@@ -205,3 +205,11 @@ A phase is ready to merge into `development/fullstack` only when:
 3. Run real Git tests only under an explicit non-overlapping `projex_git_test` root; delete only the sentinel-owned run child.
 4. Review results before applying the migration to `projex`.
 5. Review again before enabling the normal provisioning worker. A migration never starts the worker or creates storage.
+
+## Phase 8B verification order
+
+1. Review and generate the explicit credential/activity migration; it must not run Git or touch storage.
+2. Apply it only to exactly `projex_test`, then run isolated and PostgreSQL integration tests.
+3. Run Smart HTTP end-to-end tests only on an ephemeral loopback port and inside a sentinel-owned run child under the guarded `projex_git_test` root.
+4. Stop temporary servers, clean test fixtures, remove only the verified run child, and preserve migration history.
+5. Review authorization, hooks, logs, paths, and normal-environment non-contact before separately approving a normal migration. Persistent normal Smart HTTP enablement is a later, distinct gate.
