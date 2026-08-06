@@ -74,6 +74,25 @@ export interface ActivityProjection {
   }
 }
 
+export interface AdminActivityProjection {
+  id: string
+  classId: string
+  title: string
+  dueDate: Date
+  dueState: ActivityDueState
+  language: ProgrammingLanguage
+  entryClassName: string
+  maxAttempts: number
+  totalPoints: number
+  status: ActivityStatus
+  createdAt: Date
+  updatedAt: Date
+  publishedAt: Date | null
+  closedAt: Date | null
+  archivedAt: Date | null
+  createdBy: { userId: string; fullName: string }
+}
+
 export function activityDueState(record: ActivityRecord, now: Date): ActivityDueState {
   if (record.status === 'DRAFT') return 'DRAFT'
   if (record.status === 'ARCHIVED') return 'ARCHIVED'
@@ -95,6 +114,33 @@ export function toActivityProjection(
     language: record.language,
     entryClassName: record.entryClassName,
     starterCode: record.starterCode,
+    maxAttempts: record.maxAttempts,
+    totalPoints: Number(record.totalPoints),
+    status: record.status,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    publishedAt: record.publishedAt,
+    closedAt: record.closedAt,
+    archivedAt: record.archivedAt,
+    createdBy: {
+      userId: record.createdBy.id,
+      fullName: record.createdBy.fullName,
+    },
+  }
+}
+
+export function toAdminActivityProjection(
+  record: ActivityRecord,
+  now: Date,
+): AdminActivityProjection {
+  return {
+    id: record.id,
+    classId: record.classId,
+    title: record.title,
+    dueDate: record.dueDate,
+    dueState: activityDueState(record, now),
+    language: record.language,
+    entryClassName: record.entryClassName,
     maxAttempts: record.maxAttempts,
     totalPoints: Number(record.totalPoints),
     status: record.status,

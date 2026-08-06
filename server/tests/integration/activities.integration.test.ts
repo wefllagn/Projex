@@ -96,7 +96,24 @@ describe('PostgreSQL programming activity lifecycle', () => {
     })
     expect(await prisma.programmingActivity.count()).toBe(1)
     expect((await activityService.list(instructor, classRecord.id, page)).activities).toHaveLength(1)
-    expect((await activityService.list(admin, classRecord.id, page)).activities).toHaveLength(1)
+    const adminActivities = (
+      await activityService.list(admin, classRecord.id, page)
+    ).activities
+    expect(adminActivities).toHaveLength(1)
+    expect(adminActivities[0]).not.toHaveProperty('starterCode')
+    expect(adminActivities[0]).not.toHaveProperty('instructions')
+    await expect(
+      activityService.create(admin, classRecord.id, activityInput('Admin Draft')),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN', statusCode: 403 })
+    await expect(
+      testCaseService.list(admin, draft.id, page),
+    ).rejects.toMatchObject({ code: 'ACTIVITY_NOT_FOUND', statusCode: 404 })
+    await expect(
+      testCaseService.replace(admin, draft.id, {
+        expectedUpdatedAt: draft.updatedAt,
+        testCases: publishableTestCases(),
+      }),
+    ).rejects.toMatchObject({ code: 'ACTIVITY_NOT_FOUND', statusCode: 404 })
     expect((await activityService.list(student, classRecord.id, page)).activities).toEqual([])
     await expect(activityService.get(student, draft.id)).rejects.toMatchObject({
       code: 'ACTIVITY_NOT_FOUND',

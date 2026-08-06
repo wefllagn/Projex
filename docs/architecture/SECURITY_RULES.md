@@ -27,6 +27,8 @@ The hosted target is a controlled testing/defense environment, but internet acce
 - Apply coarse role checks and resource-specific checks. A valid instructor role alone does not grant access to every class.
 - Verify class membership, instructor assignment, repository membership, team membership, record ownership, and lifecycle state as required by the use case.
 - Admin actions require explicit admin authorization and an audit trail; admin does not imply bypassing data-minimization rules.
+- Phase 9A successful account/class/membership mutations use an allowlisted `AdminAuditEvent` written atomically with the mutation. Reasons are bounded, metadata is constructed internally per action, and denied/failed requests remain redacted security logs rather than successful audit records.
+- Administrators cannot disable themselves through the administrative status endpoint, and a database transaction lock prevents concurrent changes from removing the last ACTIVE administrator.
 - Use deny-by-default endpoint policies.
 - Prefer `404` when revealing that a protected resource exists would disclose private information; otherwise return `403`.
 
@@ -36,7 +38,7 @@ Minimum policy examples:
 | --- | --- |
 | Student views activity | Authenticated student, active class membership, activity visible/published. |
 | Student submits | Same as view plus activity accepting submissions, backend-calculated next attempt, and existing attempt count below `maxAttempts`. |
-| Instructor views submission | Authenticated instructor assigned to the submission's class, or explicit authorized admin workflow. |
+| Instructor views full submission evidence | Authenticated instructor assigned to the submission's class. Admin receives only the separate minimized operational projection. |
 | Instructor releases feedback | Assigned instructor, valid review state, grade/feedback validation, transaction. |
 | Repository read/write | Class/project visibility plus repository membership/role and archive/read-only state. |
 | Detailed similarity review | Assigned instructor or narrowly authorized admin; never student payload. |

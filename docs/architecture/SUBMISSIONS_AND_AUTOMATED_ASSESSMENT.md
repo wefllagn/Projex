@@ -112,7 +112,7 @@ Before release, students receive visible-test outcomes but no numeric scores, co
 
 The transaction snapshots only `isHidden=false` test cases and creates a short-lived `PracticeExecution`, visible-case records, and durable `VISIBLE_TEST_RUN` job. It does not create an `ActivitySubmission`, attempt number, idempotency record, score, feedback, or official history.
 
-Creation is protected by a per-student rate limit and per-student/activity active-job capacity. `GET /api/v1/visible-test-runs/:runId` returns only the owning student's result, the owning instructor's result, or an administrator's safe visible-only projection.
+Creation is protected by a per-student rate limit and per-student/activity active-job capacity. `GET /api/v1/visible-test-runs/:runId` returns only the owning student's result or the owning instructor's result. Phase 9A removes administrator access to individual practice-run outcomes.
 
 ## Archive terminal state
 

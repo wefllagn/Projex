@@ -1,5 +1,14 @@
 import { Prisma, type PrismaClient, type UserRole, type UserStatus } from '@prisma/client'
 import type { SafeUserProfile } from '../auth/auth.types.js'
+import {
+  appendAdminAuditEvent,
+  type AdminAuditWriter,
+} from '../admin/admin-audit.js'
+
+interface AdminAuditContext {
+  actorAdminId: string
+  requestId: string
+}
 
 export interface SetupTokenData {
   tokenHash: string
@@ -22,9 +31,11 @@ export type ResendResult =
   | { kind: 'cooldown' }
 
 export type StatusUpdateResult =
-  | { kind: 'updated'; user: SafeUserProfile }
+  | { kind: 'updated'; user: SafeUserProfile; changed: boolean }
   | { kind: 'not_found' }
   | { kind: 'invalid_transition' }
+  | { kind: 'stale' }
+  | { kind: 'last_active_admin' }
 
 export interface UserProvisioningRepository {
   createStudent(input: {
@@ -34,11 +45,13 @@ export interface UserProvisioningRepository {
     email: string
     classId?: string
     token: SetupTokenData
+    adminAudit?: AdminAuditContext
   }): Promise<ProvisioningResult>
   createInstructor(input: {
     fullName: string
     email: string
     token: SetupTokenData
+    adminAudit: AdminAuditContext
   }): Promise<ProvisioningResult>
   replaceSetupToken(input: {
     callerId: string
@@ -46,11 +59,14 @@ export interface UserProvisioningRepository {
     userId: string
     token: SetupTokenData
     cooldownCutoff: Date
+    adminAudit?: AdminAuditContext
   }): Promise<ResendResult>
   updateStatus(input: {
     userId: string
     status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+    expectedUpdatedAt: Date
     changedAt: Date
+    adminAudit: AdminAuditContext & { reason: string }
   }): Promise<StatusUpdateResult>
 }
 
@@ -78,6 +94,7 @@ function isUniqueFailure(error: unknown): boolean {
 
 export function createPrismaUserProvisioningRepository(
   prisma: PrismaClient,
+  auditWriter: AdminAuditWriter = appendAdminAuditEvent,
 ): UserProvisioningRepository {
   return {
     async createStudent(input) {
@@ -124,6 +141,19 @@ export function createPrismaUserProvisioningRepository(
             },
             select: safeUserSelect,
           })
+          if (input.adminAudit) {
+            await auditWriter(transaction, {
+              ...input.adminAudit,
+              action: 'USER_STUDENT_PROVISIONED',
+              targetType: 'USER',
+              targetId: user.id,
+              metadata: {
+                provisionedRole: 'STUDENT',
+                initialClassAssigned: Boolean(input.classId),
+              },
+              createdAt: input.token.createdAt,
+            })
+          }
           return { kind: 'created', user: safeProfile(user) } as const
         })
       } catch (error) {
@@ -133,8 +163,8 @@ export function createPrismaUserProvisioningRepository(
     },
     async createInstructor(input) {
       try {
-        const user = await prisma.user.create({
-          data: {
+        const user = await prisma.$transaction(async (transaction) => {
+          const created = await transaction.user.create({ data: {
             fullName: input.fullName,
             email: input.email,
             passwordHash: null,
@@ -148,7 +178,19 @@ export function createPrismaUserProvisioningRepository(
               },
             },
           },
-          select: safeUserSelect,
+          select: safeUserSelect })
+          await auditWriter(transaction, {
+            ...input.adminAudit,
+            action: 'USER_INSTRUCTOR_PROVISIONED',
+            targetType: 'USER',
+            targetId: created.id,
+            metadata: {
+              provisionedRole: 'INSTRUCTOR',
+              initialClassAssigned: false,
+            },
+            createdAt: input.token.createdAt,
+          })
+          return created
         })
         return { kind: 'created', user: safeProfile(user) }
       } catch (error) {
@@ -211,16 +253,40 @@ export function createPrismaUserProvisioningRepository(
             createdAt: input.token.createdAt,
           },
         })
+        if (input.adminAudit) {
+          await auditWriter(transaction, {
+            ...input.adminAudit,
+            action: 'USER_SETUP_REISSUED',
+            targetType: 'USER',
+            targetId: input.userId,
+            metadata: { setupState: 'SETUP_PENDING' },
+            createdAt: input.token.createdAt,
+          })
+        }
         return { kind: 'created', user: safeProfile(user) } as const
       })
     },
     async updateStatus(input) {
       return prisma.$transaction(async (transaction) => {
+        await transaction.$queryRaw<Array<{ acquired: boolean }>>`
+          SELECT pg_advisory_xact_lock(1948293701) IS NULL AS acquired
+        `
         const existing = await transaction.user.findUnique({
           where: { id: input.userId },
-          select: safeUserSelect,
+          select: { ...safeUserSelect, updatedAt: true },
         })
         if (!existing) return { kind: 'not_found' } as const
+
+        if (existing.status === input.status) {
+          return {
+            kind: 'updated',
+            user: safeProfile(existing),
+            changed: false,
+          } as const
+        }
+        if (existing.updatedAt.getTime() !== input.expectedUpdatedAt.getTime()) {
+          return { kind: 'stale' } as const
+        }
 
         const allowed =
           (existing.status === 'ACTIVE' &&
@@ -229,18 +295,51 @@ export function createPrismaUserProvisioningRepository(
             input.status === 'ACTIVE')
         if (!allowed) return { kind: 'invalid_transition' } as const
 
-        const user = await transaction.user.update({
+        if (
+          existing.role === 'ADMIN' &&
+          existing.status === 'ACTIVE' &&
+          input.status !== 'ACTIVE'
+        ) {
+          const activeAdministrators = await transaction.user.count({
+            where: { role: 'ADMIN', status: 'ACTIVE' },
+          })
+          if (activeAdministrators <= 1) {
+            return { kind: 'last_active_admin' } as const
+          }
+        }
+
+        const changed = await transaction.user.updateMany({
+          where: { id: input.userId, updatedAt: input.expectedUpdatedAt },
+          data: { status: input.status, updatedAt: input.changedAt },
+        })
+        if (changed.count === 0) return { kind: 'stale' } as const
+        const user = await transaction.user.findUniqueOrThrow({
           where: { id: input.userId },
-          data: { status: input.status },
           select: safeUserSelect,
         })
+        let revokedSessionCount = 0
         if (input.status === 'INACTIVE' || input.status === 'SUSPENDED') {
-          await transaction.refreshSession.updateMany({
+          const revoked = await transaction.refreshSession.updateMany({
             where: { userId: input.userId, revokedAt: null },
             data: { revokedAt: input.changedAt },
           })
+          revokedSessionCount = revoked.count
         }
-        return { kind: 'updated', user: safeProfile(user) } as const
+        await auditWriter(transaction, {
+          actorAdminId: input.adminAudit.actorAdminId,
+          action: 'USER_STATUS_CHANGED',
+          targetType: 'USER',
+          targetId: input.userId,
+          reason: input.adminAudit.reason,
+          requestId: input.adminAudit.requestId,
+          metadata: {
+            previousStatus: existing.status,
+            newStatus: input.status,
+            revokedSessionCount,
+          },
+          createdAt: input.changedAt,
+        })
+        return { kind: 'updated', user: safeProfile(user), changed: true } as const
       })
     },
   }

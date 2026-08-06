@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { normalizedEmailSchema } from '../auth/auth.schemas.js'
+import { adminReasonSchema } from '../admin/admin.schemas.js'
 
 export const provisionStudentSchema = z
   .object({
@@ -21,6 +22,8 @@ export const userIdParamsSchema = z.object({ userId: z.uuid() }).strict()
 export const updateUserStatusSchema = z
   .object({
     status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']),
+    reason: adminReasonSchema,
+    expectedUpdatedAt: z.coerce.date(),
   })
   .strict()
 

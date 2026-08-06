@@ -211,6 +211,7 @@ describe('PostgreSQL repository collaboration', () => {
   })
 
   it('couples review transitions to released feedback and permits approval after closing', async () => {
+    const admin = await createActiveUser(prisma, 'ADMIN')
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const owner = await createActiveUser(prisma, 'STUDENT')
     const { classRecord, projectTask } = await publishedTask(instructor.id)
@@ -229,6 +230,9 @@ describe('PostgreSQL repository collaboration', () => {
     })
     expect(created.reviewStatus).toBe('CHANGES_REQUESTED')
     expect((await repositories.listFeedback(owner, created.id))[0]).toMatchObject({ status: 'RELEASED' })
+    const adminFeedback = await repositories.listFeedback(admin, created.id)
+    expect(adminFeedback[0]).toMatchObject({ status: 'RELEASED' })
+    expect(adminFeedback[0]).not.toHaveProperty('feedbackText')
     created = await repositories.readyForReview(owner, created.id, { expectedUpdatedAt: created.updatedAt })
     await projectTasks.close(instructor, projectTask.id, { expectedUpdatedAt: projectTask.updatedAt })
     await expect(

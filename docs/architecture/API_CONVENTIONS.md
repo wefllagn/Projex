@@ -17,6 +17,8 @@ POST   /api/v1/auth/logout
 GET    /api/v1/auth/me
 GET    /api/v1/users
 GET    /api/v1/users/:userId
+GET    /api/v1/admin/users/:userId/account-summary
+POST   /api/v1/admin/users/:userId/sessions/revoke
 POST   /api/v1/classes
 GET    /api/v1/classes
 GET    /api/v1/classes/:classId
@@ -101,6 +103,15 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - Instructor/admin roster entries may additionally contain `memberId`, email, user status, membership status, `joinedAt`, `removedAt`, and `lastActivatedAt`.
 - A successful new class-code join returns `201`; an idempotent existing ACTIVE membership returns `200` with the same membership ID.
 - Class-code errors never echo the submitted code or reveal the target class.
+
+### Phase 9A administrator contracts
+
+- Both new `/api/v1/admin` endpoints require an authenticated ACTIVE administrator at route and service boundaries.
+- Account summaries expose only safe identity/status timestamps, setup state, session counts, and class-membership summaries. They omit hashes, token values, cookies, IP addresses, user agents, setup links, and request secrets.
+- Target-user session revocation requires a trimmed 10-500 character reason, is idempotent, revokes only unexpired active sessions, and records one successful audit event only when sessions change.
+- `PATCH /api/v1/users/:userId/status` requires `status`, `reason`, and `expectedUpdatedAt`. It rejects self-disablement, stale versions, and a transition that would remove the last ACTIVE administrator.
+- Successful admin account/class/membership mutations write an allowlisted audit event in the same database transaction. Failed or denied requests do not create successful audit rows.
+- Administrators receive metadata-only activity projections. They cannot use activity/test-case mutation routes, list test-case definitions, retrieve practice-run outcomes, or receive starter/submitted source through instructor projections.
 
 ### Phase 5 activity and test-case rules
 

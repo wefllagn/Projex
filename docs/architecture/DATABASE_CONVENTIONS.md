@@ -57,6 +57,7 @@ This example records conventions, not a complete production model.
 - Student and Instructor workflows are implemented first, but Admin records/assignments are not removed from the schema.
 - Role changes, account activation/deactivation, and sensitive Admin actions retain actor/timestamp audit history.
 - Admin authorization does not imply selecting or returning every private field.
+- Phase 9A uses `AdminAuditEvent` as a narrow append-only application ledger for successful allowlisted administrative mutations. The mutation and audit insertion share one transaction; no update/delete API exists. Comprehensive retention, export, tamper-evidence, and denied-event analysis remain Phase 11 hardening.
 
 ## Timestamps and time
 

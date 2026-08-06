@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { isValidClassCode, normalizeClassCode } from './class-code.js'
+import { adminReasonSchema } from '../admin/admin.schemas.js'
 
 const classNameSchema = z.string().trim().min(1).max(200)
 const sectionSchema = z.string().trim().min(1).max(100)
@@ -24,11 +25,21 @@ export const updateClassSchema = z
     section: sectionSchema.optional(),
     semester: semesterSchema.optional(),
     schoolYear: schoolYearSchema.optional(),
+    reason: adminReasonSchema.optional(),
   })
   .strict()
-  .refine((value) => Object.keys(value).length > 0, {
-    message: 'At least one class field is required.',
-  })
+  .refine(
+    (value) =>
+      value.className !== undefined ||
+      value.section !== undefined ||
+      value.semester !== undefined ||
+      value.schoolYear !== undefined,
+    { message: 'At least one class field is required.' },
+  )
+
+export const classAdministrativeMutationSchema = z
+  .object({ reason: adminReasonSchema.optional() })
+  .strict()
 
 export const classListQuerySchema = z
   .object({
@@ -50,4 +61,7 @@ export const joinClassSchema = z
 
 export type CreateClassInput = z.infer<typeof createClassSchema>
 export type UpdateClassInput = z.infer<typeof updateClassSchema>
+export type ClassAdministrativeMutationInput = z.infer<
+  typeof classAdministrativeMutationSchema
+>
 export type ClassListQuery = z.infer<typeof classListQuerySchema>

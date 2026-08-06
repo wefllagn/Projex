@@ -22,7 +22,9 @@ The server fixes the created role. Request bodies cannot select `STUDENT`, `INST
 | `INACTIVE` | Administratively deactivated. | Cannot log in or refresh; active sessions are revoked immediately. |
 | `SUSPENDED` | Administratively suspended. | Cannot log in or refresh; active sessions are revoked immediately. |
 
-Allowed administrative transitions are `ACTIVE` to `INACTIVE`/`SUSPENDED` and `INACTIVE`/`SUSPENDED` to `ACTIVE`. Role changes are outside Phase 3.
+Allowed administrative transitions are `ACTIVE` to `INACTIVE`/`SUSPENDED` and `INACTIVE`/`SUSPENDED` to `ACTIVE`. Phase 9A adds a mandatory bounded reason, optimistic concurrency, transactional audit persistence, self-disable rejection, and a PostgreSQL advisory transaction lock that prevents concurrent requests from leaving zero ACTIVE administrators. Role changes remain unavailable over HTTP.
+
+An ACTIVE administrator may request a safe account summary and revoke all active unexpired sessions for a target user. Revocation is idempotent and dynamically effective; projections and audit records never contain refresh tokens, cookies, CSRF hashes, IP addresses, or complete user-agent data.
 
 ## Provisioned account and setup-link flow
 

@@ -2,7 +2,7 @@
 
 ## Scope
 
-Phase 2 established the core PostgreSQL schema. Phases 3 through 6 added authentication, user/class management, programming activities, immutable submissions, and automated assessment. Phase 7 adds class-linked project tasks, teams, synchronized collaborator membership, repository metadata, invitations, textual feedback, and review lifecycle. Git operations, repository filesystem storage, numeric project grading/rubrics, seed data, and frontend integration remain outside Phase 7.
+Phase 2 established the core PostgreSQL schema. Phases 3 through 8 added authentication, user/class management, programming activities, immutable submissions and assessment, project collaboration, Git provisioning, Smart HTTP, and repository inspection. Phase 9A adds only the narrow administrative accountability ledger; frontend integration remains deferred.
 
 The authoritative sources are:
 
@@ -24,6 +24,7 @@ The authoritative sources are:
 | `Class` | `classes` | Instructor-owned class, section, and term workspace. |
 | `ClassMember` | `class_members` | Student enrollment and membership lifecycle. |
 | `ProgrammingActivity` | `programming_activities` | Programming workspace definition and attempt limit. |
+| `AdminAuditEvent` | `admin_audit_events` | Allowlisted successful administrative mutation record with actor, target, bounded reason, request ID, safe metadata, and timestamp. |
 | `TestCase` | `test_cases` | Ordered visible or hidden activity test. |
 | `ActivitySubmission` | `activity_submissions` | Immutable numbered student attempt and score snapshot. |
 | `SubmissionExecution` | `submission_executions` | Compile/runtime execution record for a submission. |
@@ -106,7 +107,7 @@ Prisma cannot represent the `CHECK` constraints or partial unique repository ind
 
 The following rules require transactional application services because they depend on roles, related-row state, historical state, or cross-row calculations that cannot be fully expressed by the current schema alone.
 
-1. Only ACTIVE instructors may own classes. Programming-activity creation and management require the owning ACTIVE instructor or an ACTIVE administrator.
+1. Only ACTIVE instructors may own classes. Programming-activity and test-case authoring require the owning ACTIVE instructor; administrators receive metadata-only oversight and do not inherit academic-author authority.
 2. Only users with role `STUDENT` may be class members, own activity submissions, or be student repository members.
 3. The backend assigns `attemptNumber` atomically; clients never choose the authoritative value.
 4. Ordinary attempt eligibility uses the count of submissions with `countsTowardAttemptLimit = true`, not the chronological `attemptNumber`. The service allocates the next number and enforces the usable allowance in the same serializable transaction.

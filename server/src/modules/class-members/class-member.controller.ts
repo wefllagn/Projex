@@ -53,6 +53,7 @@ export function createClassMemberController(service: ClassMemberService) {
           classId,
           memberId,
           input,
+          request.requestId,
         )
         response.status(200).json(successResponse(member, request.requestId))
       } catch (error) {

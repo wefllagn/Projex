@@ -25,6 +25,7 @@ export interface AppDependencies {
   featureRouters?: {
     auth: Router
     accountSetup: Router
+    admin?: Router
     users: Router
     classes: Router
     activities: Router
@@ -74,6 +75,9 @@ export function createApp({
   if (featureRouters) {
     app.use('/api/v1/auth', featureRouters.auth)
     app.use('/api/v1/account-setup', featureRouters.accountSetup)
+    if (featureRouters.admin) {
+      app.use('/api/v1/admin', featureRouters.admin)
+    }
     app.use('/api/v1/users', featureRouters.users)
     app.use('/api/v1/classes', featureRouters.classes)
     app.use('/api/v1/activities', featureRouters.activities)

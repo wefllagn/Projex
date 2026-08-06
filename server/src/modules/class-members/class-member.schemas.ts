@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { adminReasonSchema } from '../admin/admin.schemas.js'
 
 export const classMemberParamsSchema = z
   .object({
@@ -17,7 +18,11 @@ export const classRosterQuerySchema = z
   .strict()
 
 export const updateClassMemberSchema = z
-  .object({ status: z.enum(['ACTIVE', 'REMOVED']) })
+  .object({
+    status: z.enum(['ACTIVE', 'REMOVED']),
+    reason: adminReasonSchema.optional(),
+    expectedUpdatedAt: z.coerce.date().optional(),
+  })
   .strict()
 
 export type ClassRosterQuery = z.infer<typeof classRosterQuerySchema>

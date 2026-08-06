@@ -56,6 +56,7 @@ export interface ClassMemberService {
     classId: string,
     memberId: string,
     input: UpdateClassMemberInput,
+    requestId?: string,
   ): Promise<DetailedRosterMember>
 }
 
@@ -196,7 +197,7 @@ export function createClassMemberService(dependencies: {
         },
       }
     },
-    async update(caller, classId, memberId, input) {
+    async update(caller, classId, memberId, input, requestId) {
       requireActiveCaller(caller)
       const access = await classRepository.findAccess(classId, caller.id)
       if (!access || !isOwnerOrAdmin(caller, access)) throw classNotFound()
@@ -207,11 +208,37 @@ export function createClassMemberService(dependencies: {
           message: 'Archived classes are read-only.',
         })
       }
+      if (caller.role === 'ADMIN' && !input.reason) {
+        throw new AppError({
+          statusCode: 422,
+          code: 'ADMIN_REASON_REQUIRED',
+          message: 'A reason is required for this administrative action.',
+        })
+      }
+      if (caller.role === 'ADMIN' && !input.expectedUpdatedAt) {
+        throw new AppError({
+          statusCode: 422,
+          code: 'ADMIN_EXPECTED_VERSION_REQUIRED',
+          message: 'The current membership version is required.',
+        })
+      }
+      if (caller.role === 'ADMIN' && !requestId) {
+        throw new Error('Administrative request ID is required.')
+      }
       const result = await repository.transition({
         classId,
         memberId,
         status: input.status,
         now: now(),
+        expectedUpdatedAt: input.expectedUpdatedAt,
+        adminAudit:
+          caller.role === 'ADMIN'
+            ? {
+                actorAdminId: caller.id,
+                requestId: requestId!,
+                reason: input.reason!,
+              }
+            : undefined,
       })
       if (result.kind === 'not_found') {
         throw new AppError({
@@ -232,6 +259,13 @@ export function createClassMemberService(dependencies: {
           statusCode: 409,
           code: 'INVALID_MEMBERSHIP_TRANSITION',
           message: 'The membership status transition is not allowed.',
+        })
+      }
+      if (result.kind === 'stale') {
+        throw new AppError({
+          statusCode: 409,
+          code: 'STALE_CLASS_MEMBER_VERSION',
+          message: 'The class membership changed. Reload it before trying again.',
         })
       }
       if (result.changed) {

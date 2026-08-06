@@ -1,6 +1,6 @@
 import { Router, type RequestHandler } from 'express'
 import { requireJson } from '../../middleware/require-json.js'
-import { requireAnyRole } from '../auth/auth.authorization.js'
+import { requireRole } from '../auth/auth.authorization.js'
 import { createTestCaseController } from './test-case.controller.js'
 import type { TestCaseService } from './test-case.service.js'
 
@@ -22,7 +22,7 @@ export function createTestCaseRouter(dependencies: {
     requireJson,
     dependencies.requireAuthentication,
     dependencies.requireCsrf,
-    requireAnyRole(['INSTRUCTOR', 'ADMIN']),
+    requireRole('INSTRUCTOR'),
     controller.replace,
   )
 

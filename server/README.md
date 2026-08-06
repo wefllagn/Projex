@@ -139,6 +139,8 @@ POST  /users/students
 POST  /users/instructors
 POST  /users/:userId/resend-setup
 PATCH /users/:userId/status
+GET   /admin/users/:userId/account-summary
+POST  /admin/users/:userId/sessions/revoke
 GET   /users
 GET   /users/:userId
 POST  /classes
@@ -257,7 +259,9 @@ When controlled local Git execution is enabled, authenticated users with current
 
 Default inspection limits are configured through `GIT_INSPECTION_FILE_LIMIT_BYTES`, `GIT_INSPECTION_DIFF_LIMIT_BYTES`, and `GIT_INSPECTION_MAX_CHANGED_FILES`. Client filesystem paths, arbitrary revision expressions, binary output, Git arguments/configuration, and host paths are rejected or omitted. Server-created branches, commits, merges, and branch deletion remain deferred. See `docs/architecture/GIT_REPOSITORY_INSPECTION.md`.
 
-Activity authoring is restricted to the owning instructor or an administrator. Students with ACTIVE membership may read only PUBLISHED or CLOSED activities and visible test cases. Hidden test rows and counts are excluded from student responses. Published scoring/test configuration is immutable.
+Activity and test-case authoring are restricted to the owning instructor. Administrators receive metadata-only activity oversight and cannot retrieve test-case definitions, starter source, practice outcomes, or instructor-only academic projections. Students with ACTIVE membership may read only PUBLISHED or CLOSED activities and visible test cases. Hidden test rows and counts are excluded from student responses. Published scoring/test configuration is immutable.
+
+Phase 9A admin account summaries expose safe account/setup state, session counts, and class-membership summaries only. Target-session revocation and disruptive status/class/membership actions require bounded reasons and write allowlisted audit events transactionally. The status endpoint also requires `expectedUpdatedAt`, rejects self-disablement, and preserves at least one ACTIVE administrator under concurrency.
 
 Official submissions require Java execution to be enabled, Java source, and an `Idempotency-Key`. Ordinary attempts are limited by the activity's one-to-three usable-attempt setting. Infrastructure retries reuse the original record; an owning instructor may formally grant one future-expiring replacement, which may cross a deadline/CLOSED state but cannot bypass archive, inactive account, removed membership, expiration, or single-use rules.
 

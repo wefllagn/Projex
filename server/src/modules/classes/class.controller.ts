@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express'
 import { listResponse, successResponse } from '../../shared/http/response.js'
 import { parseRequest } from '../../shared/http/validation.js'
 import {
+  classAdministrativeMutationSchema,
   classIdParamsSchema,
   classListQuerySchema,
   createClassSchema,
@@ -14,7 +15,11 @@ export function createClassController(service: ClassService) {
     create: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const input = parseRequest(createClassSchema, request.body)
-        const classRecord = await service.create(request.auth!.user, input)
+        const classRecord = await service.create(
+          request.auth!.user,
+          input,
+          request.requestId,
+        )
         response.status(201).json(successResponse(classRecord, request.requestId))
       } catch (error) {
         next(error)
@@ -54,6 +59,7 @@ export function createClassController(service: ClassService) {
           request.auth!.user,
           classId,
           input,
+          request.requestId,
         )
         response.status(200).json(successResponse(classRecord, request.requestId))
       } catch (error) {
@@ -63,7 +69,13 @@ export function createClassController(service: ClassService) {
     archive: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const { classId } = parseRequest(classIdParamsSchema, request.params)
-        const classRecord = await service.archive(request.auth!.user, classId)
+        const input = parseRequest(classAdministrativeMutationSchema, request.body)
+        const classRecord = await service.archive(
+          request.auth!.user,
+          classId,
+          input,
+          request.requestId,
+        )
         response.status(200).json(successResponse(classRecord, request.requestId))
       } catch (error) {
         next(error)
@@ -72,7 +84,13 @@ export function createClassController(service: ClassService) {
     restore: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const { classId } = parseRequest(classIdParamsSchema, request.params)
-        const classRecord = await service.restore(request.auth!.user, classId)
+        const input = parseRequest(classAdministrativeMutationSchema, request.body)
+        const classRecord = await service.restore(
+          request.auth!.user,
+          classId,
+          input,
+          request.requestId,
+        )
         response.status(200).json(successResponse(classRecord, request.requestId))
       } catch (error) {
         next(error)
@@ -98,7 +116,13 @@ export function createClassController(service: ClassService) {
     ) => {
       try {
         const { classId } = parseRequest(classIdParamsSchema, request.params)
-        const code = await service.rotateJoinCode(request.auth!.user, classId)
+        const input = parseRequest(classAdministrativeMutationSchema, request.body)
+        const code = await service.rotateJoinCode(
+          request.auth!.user,
+          classId,
+          input,
+          request.requestId,
+        )
         response.status(200).json(successResponse(code, request.requestId))
       } catch (error) {
         next(error)
@@ -111,7 +135,13 @@ export function createClassController(service: ClassService) {
     ) => {
       try {
         const { classId } = parseRequest(classIdParamsSchema, request.params)
-        const code = await service.revokeJoinCode(request.auth!.user, classId)
+        const input = parseRequest(classAdministrativeMutationSchema, request.body)
+        const code = await service.revokeJoinCode(
+          request.auth!.user,
+          classId,
+          input,
+          request.requestId,
+        )
         response.status(200).json(successResponse(code, request.requestId))
       } catch (error) {
         next(error)

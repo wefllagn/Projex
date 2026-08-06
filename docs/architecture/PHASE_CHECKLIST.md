@@ -27,7 +27,7 @@ Status markers:
 | 6 | Submissions and Automated Assessment | Complete | `2ff3e4e` |
 | 7 | Project and Repository Collaboration | Complete | `741ba60` |
 | 8 | Local Git Operations (8A provisioning, 8B Smart HTTP, 8C inspection) | Complete | `893443a` |
-| 9 | Admin backend capabilities | Next; not started | Pending |
+| 9 | Admin backend capabilities | In progress: 9A implemented for review | Pending |
 | 10 | Frontend integration | Pending | Pending |
 | 11 | Hardening, deployment, and evaluation | Pending | Pending |
 
@@ -260,12 +260,23 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Complete the full Phase 8A/8B, PostgreSQL, Java, backend, unchanged-client, cleanup, and security regression sequence.
 - [x] Review, commit, push, and fast-forward-integrate Phase 8C after explicit approval.
 
-## Phase 9: Admin backend capabilities — pending
+## Phase 9: Admin backend capabilities — in progress
 
-- [ ] Define and implement approved administrator authorization, APIs, operational summaries, and safe data projections.
-- [ ] Preserve explicit authorization, data minimization, confirmation, and security logging.
-- [ ] Keep Phase 9 backend-focused unless a separate frontend change is explicitly approved.
-- [ ] Treat the existing admin frontend only as a temporary mock and feature inventory, never as the final visual source of truth.
+### Phase 9A: authorization and accountability foundation
+
+- [x] Add a dedicated admin backend module with active-admin checks at route and service boundaries.
+- [x] Add safe account/setup/session-count/membership summaries and idempotent target-session revocation.
+- [x] Add an allowlisted transactional `AdminAuditEvent` ledger with bounded reasons and action-specific safe metadata.
+- [x] Protect status changes with optimistic concurrency, self-disable rejection, and a transaction lock that preserves one ACTIVE administrator under concurrent requests.
+- [x] Remove administrator activity/test-case authoring, hidden test definitions, starter source, practice outcomes, and repository feedback bodies while preserving safe metadata oversight.
+- [x] Deploy the additive migration to guarded `projex_test` only; do not migrate normal `projex` without a later approval boundary.
+- [ ] Complete the final Phase 9A regression/security review and obtain approval before staging, normal migration, commit, or push.
+
+### Later Phase 9 milestones
+
+- [ ] Phase 9B: implement approved read-only academic and operational summaries.
+- [ ] Phase 9C: implement separately approved Git-credential revocation and safe repository-provisioning recovery.
+- [ ] Keep Phase 9 backend-focused and treat the current admin frontend only as a temporary feature inventory.
 
 ## Phase 10: frontend integration — pending
 

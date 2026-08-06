@@ -56,9 +56,8 @@ function activityNotFound(): AppError {
 
 function isManager(caller: SafeUserProfile, access: ActivityAccessRecord): boolean {
   return (
-    caller.role === 'ADMIN' ||
-    (caller.role === 'INSTRUCTOR' &&
-      caller.id === access.activity.class.instructorId)
+    caller.role === 'INSTRUCTOR' &&
+    caller.id === access.activity.class.instructorId
   )
 }
 

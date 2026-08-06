@@ -14,7 +14,11 @@ export function createUserProvisioningController(service: UserProvisioningServic
     student: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const input = parseRequest(provisionStudentSchema, request.body)
-        const user = await service.provisionStudent(request.auth!.user, input)
+        const user = await service.provisionStudent(
+          request.auth!.user,
+          input,
+          request.requestId,
+        )
         response.status(201).json(successResponse(user, request.requestId))
       } catch (error) {
         next(error)
@@ -23,7 +27,11 @@ export function createUserProvisioningController(service: UserProvisioningServic
     instructor: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const input = parseRequest(provisionInstructorSchema, request.body)
-        const user = await service.provisionInstructor(request.auth!.user, input)
+        const user = await service.provisionInstructor(
+          request.auth!.user,
+          input,
+          request.requestId,
+        )
         response.status(201).json(successResponse(user, request.requestId))
       } catch (error) {
         next(error)
@@ -32,7 +40,7 @@ export function createUserProvisioningController(service: UserProvisioningServic
     resend: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const { userId } = parseRequest(userIdParamsSchema, request.params)
-        await service.resendSetup(request.auth!.user, userId)
+        await service.resendSetup(request.auth!.user, userId, request.requestId)
         response
           .status(200)
           .json(successResponse({ setupLinkSent: true }, request.requestId))
@@ -43,8 +51,13 @@ export function createUserProvisioningController(service: UserProvisioningServic
     status: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const { userId } = parseRequest(userIdParamsSchema, request.params)
-        const { status } = parseRequest(updateUserStatusSchema, request.body)
-        const user = await service.updateStatus(request.auth!.user, userId, status)
+        const input = parseRequest(updateUserStatusSchema, request.body)
+        const user = await service.updateStatus(
+          request.auth!.user,
+          userId,
+          input,
+          request.requestId,
+        )
         response.status(200).json(successResponse(user, request.requestId))
       } catch (error) {
         next(error)

@@ -125,11 +125,21 @@ describe('PostgreSQL class lifecycle', () => {
       section: 'BSIT 2E',
       semester: 'First Semester',
       schoolYear: '2026-2027',
-    })
+    }, '30000000-0000-4000-8000-000000000001')
 
-    await service.archive(admin, created.id)
+    await service.archive(
+      admin,
+      created.id,
+      { reason: 'Administrative academic-record archival correction.' },
+      '30000000-0000-4000-8000-000000000002',
+    )
     expect(await service.getJoinCode(admin, created.id)).toMatchObject({ active: false })
-    const restored = await service.restore(admin, created.id)
+    const restored = await service.restore(
+      admin,
+      created.id,
+      { reason: 'Administrative academic-record restoration correction.' },
+      '30000000-0000-4000-8000-000000000003',
+    )
     expect(restored.status).toBe('ACTIVE')
     expect(await service.getJoinCode(admin, created.id)).toMatchObject({ active: false })
     expect(await prisma.class.findUniqueOrThrow({ where: { id: created.id } })).toMatchObject({
@@ -138,6 +148,9 @@ describe('PostgreSQL class lifecycle', () => {
       classCodeActive: false,
       archivedAt: null,
     })
+    expect(
+      await prisma.adminAuditEvent.count({ where: { actorAdminId: admin.id } }),
+    ).toBe(3)
   })
 
   it('enforces instructor ownership and rejects cross-class access safely', async () => {
@@ -188,6 +201,63 @@ describe('PostgreSQL class lifecycle', () => {
         where: { id: membership.membershipId },
       }),
     ).toMatchObject({ status: 'ACTIVE' })
+  })
+
+  it('applies and audits an optimistic administrative membership correction atomically', async () => {
+    const admin = await createActiveUser(prisma, 'ADMIN')
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const classRepository = createPrismaClassRepository(prisma)
+    const classService = createClassService({
+      repository: classRepository,
+      logger,
+      generateCode: () => 'DEFGH23456',
+    })
+    const memberService = createClassMemberService({
+      repository: createPrismaClassMemberRepository(prisma),
+      classRepository,
+      logger,
+    })
+    const classRecord = await classService.create(instructor, {
+      className: 'IT 116A',
+      section: 'BSIT 2F',
+      semester: 'First Semester',
+      schoolYear: '2026-2027',
+    })
+    const joined = await memberService.join(student, 'DEFGH23456')
+    const membership = await prisma.classMember.findUniqueOrThrow({
+      where: { id: joined.membershipId },
+    })
+
+    await memberService.update(
+      admin,
+      classRecord.id,
+      membership.id,
+      {
+        status: 'REMOVED',
+        expectedUpdatedAt: membership.updatedAt,
+        reason: 'Correcting an invalid administrative enrollment record.',
+      },
+      '30000000-0000-4000-8000-000000000004',
+    )
+
+    expect(
+      await prisma.classMember.findUniqueOrThrow({ where: { id: membership.id } }),
+    ).toMatchObject({ status: 'REMOVED' })
+    expect(
+      await prisma.adminAuditEvent.findMany({ where: { actorAdminId: admin.id } }),
+    ).toEqual([
+      expect.objectContaining({
+        action: 'CLASS_MEMBER_REMOVED',
+        targetId: membership.id,
+        reason: 'Correcting an invalid administrative enrollment record.',
+        metadataJson: {
+          classId: classRecord.id,
+          studentId: student.id,
+          changed: true,
+        },
+      }),
+    ])
   })
 
   it('rolls back an archive when a failure occurs after the transactional write', async () => {

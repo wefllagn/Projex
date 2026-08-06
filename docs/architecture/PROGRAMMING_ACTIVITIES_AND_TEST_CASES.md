@@ -35,7 +35,7 @@ stateDiagram-v2
     ARCHIVED --> CLOSED: Restore previously published activity
 ```
 
-- `DRAFT` is instructor/admin authoring state. Students cannot discover drafts.
+- `DRAFT` is instructor authoring state. Students cannot discover drafts. Administrators receive only the safe metadata oversight projection defined by Phase 9A.
 - Publishing requires a future due date, non-empty starter code, at least one test case, at least one visible test case, positive combined test points, and combined test points no greater than `totalPoints`.
 - `PUBLISHED` is student-visible to ACTIVE class members. Due state is derived from server time as `OPEN` or `PAST_DUE`; passing the deadline does not silently rewrite lifecycle state.
 - Published title and instructions may be corrected. The due date may only be extended and `maxAttempts` may only increase.
@@ -77,12 +77,12 @@ The remaining portion when test-case points total less than `totalPoints` is res
 
 | Action | Student | Instructor | Admin |
 | --- | --- | --- | --- |
-| Create/list draft activities | Denied | Owned active class | Allowed |
-| List/view published or closed | ACTIVE class membership | Owned class | Allowed |
-| Update/publish/close/archive/restore | Denied | Owned active class | Allowed |
-| View all test cases | Denied | Owned class | Allowed |
-| View visible test cases | ACTIVE member, published/closed only | Included above | Included above |
-| Replace test-case set | Denied | Owned active class, draft only | Same lifecycle rule |
+| Create/list draft activities | Denied | Owned active class | Metadata-only list for oversight; cannot create |
+| List/view published or closed | ACTIVE class membership | Owned class | Metadata-only oversight projection |
+| Update/publish/close/archive/restore | Denied | Owned active class | Denied |
+| View all test cases | Denied | Owned class | Denied |
+| View visible test cases | ACTIVE member, published/closed only | Included above | Denied through test-case endpoints |
+| Replace test-case set | Denied | Owned active class, draft only | Denied |
 
 Student test-case repositories query `isHidden = false`; filtering is not performed after loading all rows. Therefore hidden IDs, names, inputs, expected outputs, visibility flags, points, and counts never enter the student result or pagination metadata. Removed/PENDING memberships receive no activity access, including archived-class access.
 
@@ -103,7 +103,7 @@ GET   /api/v1/activities/:activityId/test-cases
 PUT   /api/v1/activities/:activityId/test-cases
 ```
 
-All mutations require JSON, authenticated HTTP-only-cookie session state, CSRF validation, Zod validation, and owning-instructor/admin authorization. Activity creation always produces `DRAFT` regardless of client intent.
+All mutations require JSON, authenticated HTTP-only-cookie session state, CSRF validation, Zod validation, and owning-instructor authorization. Activity creation always produces `DRAFT` regardless of client intent.
 
 Activity list queries accept `page`, `pageSize`, optional `search`, and optional lifecycle `status`. Test-case lists accept `page` and `pageSize` with a maximum of 50.
 

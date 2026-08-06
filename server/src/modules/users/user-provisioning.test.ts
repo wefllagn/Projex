@@ -38,6 +38,8 @@ const student: SafeUserProfile = {
   status: 'SETUP_PENDING',
 }
 const classId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+const requestId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+const expectedUpdatedAt = new Date('2026-07-30T05:59:00.000Z')
 const tempDirectories: string[] = []
 
 afterEach(async () => {
@@ -59,6 +61,7 @@ class FakeProvisioningRepository implements UserProvisioningRepository {
   statusResult: StatusUpdateResult = {
     kind: 'updated',
     user: { ...student, status: 'SUSPENDED' },
+    changed: true,
   }
   lastStudentInput?: Parameters<UserProvisioningRepository['createStudent']>[0]
   lastInstructorInput?: Parameters<
@@ -127,7 +130,7 @@ describe('user provisioning policy', () => {
     const result = await service.provisionStudent(admin, {
       fullName: 'Student User',
       universityEmail: 'student@slu.edu',
-    })
+    }, requestId)
     expect(result.status).toBe('SETUP_PENDING')
     expect(repository.lastStudentInput).not.toHaveProperty('role')
     expect(repository.lastStudentInput?.token.tokenHash).toMatch(/^[a-f0-9]{64}$/)
@@ -170,7 +173,7 @@ describe('user provisioning policy', () => {
         fullName: 'Student User',
         universityEmail: 'student@slu.edu',
         classId,
-      }),
+      }, requestId),
     ).rejects.toMatchObject({ code: 'CLASS_ARCHIVED', statusCode: 409 })
   })
 
@@ -189,7 +192,7 @@ describe('user provisioning policy', () => {
     const result = await service.provisionInstructor(admin, {
       fullName: 'Instructor User',
       universityEmail: 'instructor@slu.edu',
-    })
+    }, requestId)
     expect(result.role).toBe('INSTRUCTOR')
     expect(result.status).toBe('SETUP_PENDING')
     expect(repository.lastInstructorInput).not.toHaveProperty('role')
@@ -203,7 +206,7 @@ describe('user provisioning policy', () => {
       service.provisionStudent(admin, {
         fullName: 'Student User',
         universityEmail: 'student@slu.edu',
-      }),
+      }, requestId),
     ).rejects.toMatchObject({ code: 'EMAIL_ALREADY_EXISTS', statusCode: 409 })
   })
 
@@ -211,7 +214,7 @@ describe('user provisioning policy', () => {
     const repository = new FakeProvisioningRepository()
     repository.resendResult = { kind: 'cooldown' }
     const { service } = createHarness({ repository })
-    await expect(service.resendSetup(admin, student.id)).rejects.toMatchObject({
+    await expect(service.resendSetup(admin, student.id, requestId)).rejects.toMatchObject({
       code: 'SETUP_RESEND_COOLDOWN',
       statusCode: 429,
     })
@@ -219,7 +222,7 @@ describe('user provisioning policy', () => {
 
   it('replaces setup tokens through one repository transaction boundary', async () => {
     const { repository, service } = createHarness()
-    await service.resendSetup(admin, student.id)
+    await service.resendSetup(admin, student.id, requestId)
     expect(repository.lastResendInput?.token.tokenHash).toMatch(/^[a-f0-9]{64}$/)
     expect(repository.lastResendInput?.cooldownCutoff).toEqual(
       new Date('2026-07-30T05:55:00.000Z'),
@@ -228,12 +231,59 @@ describe('user provisioning policy', () => {
 
   it('delegates suspension to the transactional status repository operation', async () => {
     const { repository, service } = createHarness()
-    const result = await service.updateStatus(admin, student.id, 'SUSPENDED')
+    const result = await service.updateStatus(
+      admin,
+      student.id,
+      {
+        status: 'SUSPENDED',
+        reason: 'Investigating a confirmed account security incident.',
+        expectedUpdatedAt,
+      },
+      requestId,
+    )
     expect(result.status).toBe('SUSPENDED')
     expect(repository.lastStatusInput).toMatchObject({
       userId: student.id,
       status: 'SUSPENDED',
+      expectedUpdatedAt,
     })
+  })
+
+  it('rejects administrative self-suspension before the repository mutation', async () => {
+    const { repository, service } = createHarness()
+    await expect(
+      service.updateStatus(
+        admin,
+        admin.id,
+        {
+          status: 'SUSPENDED',
+          reason: 'Routine administrative self-suspension request.',
+          expectedUpdatedAt,
+        },
+        requestId,
+      ),
+    ).rejects.toMatchObject({
+      code: 'ADMIN_SELF_DISABLE_FORBIDDEN',
+      statusCode: 409,
+    })
+    expect(repository.lastStatusInput).toBeUndefined()
+  })
+
+  it('rejects inactive administrators at the service boundary', async () => {
+    const { repository, service } = createHarness()
+    await expect(
+      service.updateStatus(
+        { ...admin, status: 'SUSPENDED' },
+        student.id,
+        {
+          status: 'SUSPENDED',
+          reason: 'Investigating a confirmed account security incident.',
+          expectedUpdatedAt,
+        },
+        requestId,
+      ),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN', statusCode: 403 })
+    expect(repository.lastStatusInput).toBeUndefined()
   })
 
   it('creates an ignored local preview containing a fragment setup link without logging it', async () => {
@@ -249,7 +299,7 @@ describe('user provisioning policy', () => {
     await service.provisionStudent(admin, {
       fullName: 'Student User',
       universityEmail: 'student@slu.edu',
-    })
+    }, requestId)
     const files = await readdir(directory)
     expect(files).toHaveLength(1)
     const content = await readFile(path.join(directory, files[0]!), 'utf8')

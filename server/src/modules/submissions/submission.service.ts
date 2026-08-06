@@ -551,6 +551,9 @@ export function createSubmissionService(dependencies: {
     async getPracticeRun(caller, runId) {
       const record = await repository.findPracticeById(runId)
       if (!record) throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
+      if (caller.role === 'ADMIN') {
+        throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
+      }
       if (caller.role === 'STUDENT' && record.studentId !== caller.id) {
         throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
       }

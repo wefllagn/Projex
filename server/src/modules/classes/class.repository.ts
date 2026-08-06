@@ -8,6 +8,16 @@ import type {
   UpdateClassInput,
 } from './class.schemas.js'
 import type { ClassAccessRecord, ClassRecord } from './class.types.js'
+import {
+  appendAdminAuditEvent,
+  type AdminAuditWriter,
+} from '../admin/admin-audit.js'
+
+interface ClassAdminAuditContext {
+  actorAdminId: string
+  requestId: string
+  reason?: string
+}
 
 export const classRecordSelect = {
   id: true,
@@ -53,6 +63,7 @@ export interface ClassRepository {
     schoolYear: string
     classCode: string
     now: Date
+    adminAudit?: ClassAdminAuditContext
   }): Promise<CreateClassResult>
   list(input: {
     callerId: string
@@ -63,15 +74,17 @@ export interface ClassRepository {
   updateMetadata(
     classId: string,
     input: UpdateClassInput,
+    adminAudit?: ClassAdminAuditContext,
   ): Promise<ClassRecord | null>
-  archive(classId: string, now: Date): Promise<ClassWriteResult>
-  restore(classId: string): Promise<ClassWriteResult>
+  archive(classId: string, now: Date, adminAudit?: ClassAdminAuditContext): Promise<ClassWriteResult>
+  restore(classId: string, adminAudit?: ClassAdminAuditContext): Promise<ClassWriteResult>
   rotateCode(
     classId: string,
     classCode: string,
     now: Date,
+    adminAudit?: ClassAdminAuditContext,
   ): Promise<ClassCodeWriteResult>
-  revokeCode(classId: string, now: Date): Promise<ClassRecord | null>
+  revokeCode(classId: string, now: Date, adminAudit?: ClassAdminAuditContext): Promise<ClassRecord | null>
 }
 
 function isUniqueFailure(error: unknown): boolean {
@@ -83,6 +96,7 @@ function isUniqueFailure(error: unknown): boolean {
 
 export function createPrismaClassRepository(
   prisma: PrismaClient,
+  auditWriter: AdminAuditWriter = appendAdminAuditEvent,
 ): ClassRepository {
   return {
     async create(input) {
@@ -112,6 +126,16 @@ export function createPrismaClassRepository(
             },
             select: classRecordSelect,
           })
+          if (input.adminAudit) {
+            await auditWriter(transaction, {
+              ...input.adminAudit,
+              action: 'CLASS_CREATED',
+              targetType: 'CLASS',
+              targetId: classRecord.id,
+              metadata: { instructorId: input.instructorId },
+              createdAt: input.now,
+            })
+          }
           return { kind: 'created', classRecord } as const
         })
       } catch (error) {
@@ -183,20 +207,31 @@ export function createPrismaClassRepository(
       const { members, ...record } = classRecord
       return { classRecord: record, membership: members[0] ?? null }
     },
-    updateMetadata(classId, input) {
+    updateMetadata(classId, input, adminAudit) {
       return prisma.$transaction(async (transaction) => {
         const result = await transaction.class.updateMany({
           where: { id: classId, status: 'ACTIVE' },
           data: input,
         })
         if (result.count === 0) return null
-        return transaction.class.findUnique({
+        const classRecord = await transaction.class.findUnique({
           where: { id: classId },
           select: classRecordSelect,
         })
+        if (classRecord && adminAudit) {
+          await auditWriter(transaction, {
+            ...adminAudit,
+            action: 'CLASS_UPDATED',
+            targetType: 'CLASS',
+            targetId: classId,
+            metadata: { changed: true },
+            createdAt: classRecord.updatedAt,
+          })
+        }
+        return classRecord
       })
     },
-    async archive(classId, now) {
+    async archive(classId, now, adminAudit) {
       return prisma.$transaction(async (transaction) => {
         await transaction.$queryRaw`
           SELECT "class_id"
@@ -302,10 +337,20 @@ export function createPrismaClassRepository(
               where: { id: classId },
               select: classRecordSelect,
             })
+        if (changed && adminAudit) {
+          await auditWriter(transaction, {
+            ...adminAudit,
+            action: 'CLASS_ARCHIVED',
+            targetType: 'CLASS',
+            targetId: classId,
+            metadata: { changed },
+            createdAt: now,
+          })
+        }
         return { kind: 'updated', classRecord, changed } as const
       })
     },
-    async restore(classId) {
+    async restore(classId, adminAudit) {
       return prisma.$transaction(async (transaction) => {
         const existing = await transaction.class.findUnique({
           where: { id: classId },
@@ -327,10 +372,20 @@ export function createPrismaClassRepository(
               where: { id: classId },
               select: classRecordSelect,
             })
+        if (changed && adminAudit) {
+          await auditWriter(transaction, {
+            ...adminAudit,
+            action: 'CLASS_RESTORED',
+            targetType: 'CLASS',
+            targetId: classId,
+            metadata: { changed },
+            createdAt: classRecord.updatedAt,
+          })
+        }
         return { kind: 'updated', classRecord, changed } as const
       })
     },
-    async rotateCode(classId, classCode, now) {
+    async rotateCode(classId, classCode, now, adminAudit) {
       try {
         const classRecord = await prisma.$transaction(async (transaction) => {
           const result = await transaction.class.updateMany({
@@ -342,10 +397,21 @@ export function createPrismaClassRepository(
             },
           })
           if (result.count === 0) return null
-          return transaction.class.findUnique({
+          const updated = await transaction.class.findUnique({
             where: { id: classId },
             select: classRecordSelect,
           })
+          if (updated && adminAudit) {
+            await auditWriter(transaction, {
+              ...adminAudit,
+              action: 'CLASS_JOIN_CODE_ROTATED',
+              targetType: 'CLASS',
+              targetId: classId,
+              metadata: { changed: true },
+              createdAt: now,
+            })
+          }
+          return updated
         })
         if (!classRecord) return { kind: 'not_found' }
         return { kind: 'updated', classRecord }
@@ -360,17 +426,28 @@ export function createPrismaClassRepository(
         throw error
       }
     },
-    revokeCode(classId, now) {
+    revokeCode(classId, now, adminAudit) {
       return prisma.$transaction(async (transaction) => {
         const result = await transaction.class.updateMany({
           where: { id: classId, status: 'ACTIVE' },
           data: { classCodeActive: false, classCodeChangedAt: now },
         })
         if (result.count === 0) return null
-        return transaction.class.findUnique({
+        const classRecord = await transaction.class.findUnique({
           where: { id: classId },
           select: classRecordSelect,
         })
+        if (classRecord && adminAudit) {
+          await auditWriter(transaction, {
+            ...adminAudit,
+            action: 'CLASS_JOIN_CODE_REVOKED',
+            targetType: 'CLASS',
+            targetId: classId,
+            metadata: { changed: true },
+            createdAt: now,
+          })
+        }
+        return classRecord
       })
     },
   }

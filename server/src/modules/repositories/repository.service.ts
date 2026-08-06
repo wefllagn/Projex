@@ -38,6 +38,11 @@ export interface RepositoryListResult {
   pagination: PaginationMeta
 }
 
+export type AdminRepositoryFeedbackProjection = Omit<
+  RepositoryFeedbackProjection,
+  'feedbackText'
+>
+
 export interface RepositoryService {
   createClassProject(caller: SafeUserProfile, projectTaskId: string, input: CreateClassProjectRepositoryInput): Promise<RepositoryProjection>
   createPersonal(caller: SafeUserProfile, input: CreatePersonalRepositoryInput): Promise<RepositoryProjection>
@@ -59,7 +64,10 @@ export interface RepositoryService {
   revokeInvitation(caller: SafeUserProfile, invitationId: string, input: InvitationActionInput): Promise<RepositoryInvitationProjection>
   createFeedbackDraft(caller: SafeUserProfile, repositoryId: string, input: CreateFeedbackDraftInput): Promise<RepositoryFeedbackProjection>
   updateFeedbackDraft(caller: SafeUserProfile, feedbackId: string, input: UpdateFeedbackDraftInput): Promise<RepositoryFeedbackProjection>
-  listFeedback(caller: SafeUserProfile, repositoryId: string): Promise<RepositoryFeedbackProjection[]>
+  listFeedback(
+    caller: SafeUserProfile,
+    repositoryId: string,
+  ): Promise<Array<RepositoryFeedbackProjection | AdminRepositoryFeedbackProjection>>
 }
 
 function notFound(): AppError {
@@ -345,7 +353,12 @@ export function createRepositoryService(dependencies: {
     },
     async listFeedback(caller, repositoryId) {
       const access = await loadAccess(caller, repositoryId)
-      return repository.listFeedback(repositoryId, instructorOwns(access, caller))
+      const feedback = await repository.listFeedback(
+        repositoryId,
+        instructorOwns(access, caller),
+      )
+      if (caller.role !== 'ADMIN') return feedback
+      return feedback.map(({ feedbackText: _feedbackText, ...metadata }) => metadata)
     },
   }
 }

@@ -581,6 +581,7 @@ describe('Phase 6 PostgreSQL submissions and assessment', () => {
   })
 
   it('runs practice against visible snapshots only without creating an attempt or score', async () => {
+    const admin = await createActiveUser(prisma, 'ADMIN')
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const student = await createActiveUser(prisma, 'STUDENT')
     const classRecord = await createActiveClass(prisma, instructor.id)
@@ -601,6 +602,9 @@ describe('Phase 6 PostgreSQL submissions and assessment', () => {
     })
     expect(practiceCases).toHaveLength(1)
     expect(practiceCases[0]!.testNameSnapshot).toBe('Visible double')
+    await expect(
+      submissions.getPracticeRun(admin, practice.id),
+    ).rejects.toMatchObject({ code: 'PRACTICE_RUN_NOT_FOUND', statusCode: 404 })
     await expect(
       submissions.createPracticeRun(student, activity.id, source),
     ).rejects.toMatchObject({ code: 'EXECUTION_CAPACITY_UNAVAILABLE' })

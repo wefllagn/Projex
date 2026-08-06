@@ -10,6 +10,7 @@ import {
 } from './class-code.js'
 import type { ClassRepository } from './class.repository.js'
 import type {
+  ClassAdministrativeMutationInput,
   ClassListQuery,
   CreateClassInput,
   UpdateClassInput,
@@ -34,16 +35,17 @@ export interface JoinCodeProjection {
 }
 
 export interface ClassService {
-  create(caller: SafeUserProfile, input: CreateClassInput): Promise<ClassProjection>
+  create(caller: SafeUserProfile, input: CreateClassInput, requestId?: string): Promise<ClassProjection>
   list(caller: SafeUserProfile, query: ClassListQuery): Promise<ClassListResult>
   get(caller: SafeUserProfile, classId: string): Promise<ClassProjection>
   update(
     caller: SafeUserProfile,
     classId: string,
     input: UpdateClassInput,
+    requestId?: string,
   ): Promise<ClassProjection>
-  archive(caller: SafeUserProfile, classId: string): Promise<ClassProjection>
-  restore(caller: SafeUserProfile, classId: string): Promise<ClassProjection>
+  archive(caller: SafeUserProfile, classId: string, input?: ClassAdministrativeMutationInput, requestId?: string): Promise<ClassProjection>
+  restore(caller: SafeUserProfile, classId: string, input?: ClassAdministrativeMutationInput, requestId?: string): Promise<ClassProjection>
   getJoinCode(
     caller: SafeUserProfile,
     classId: string,
@@ -51,10 +53,14 @@ export interface ClassService {
   rotateJoinCode(
     caller: SafeUserProfile,
     classId: string,
+    input?: ClassAdministrativeMutationInput,
+    requestId?: string,
   ): Promise<JoinCodeProjection>
   revokeJoinCode(
     caller: SafeUserProfile,
     classId: string,
+    input?: ClassAdministrativeMutationInput,
+    requestId?: string,
   ): Promise<JoinCodeProjection>
 }
 
@@ -133,6 +139,24 @@ export function createClassService(dependencies: {
     generateCode = generateClassCode,
   } = dependencies
 
+  function adminAudit(
+    caller: SafeUserProfile,
+    requestId: string | undefined,
+    reason?: string,
+    reasonRequired = true,
+  ) {
+    if (caller.role !== 'ADMIN') return undefined
+    if (!requestId) throw new Error('Administrative request ID is required.')
+    if (reasonRequired && !reason) {
+      throw new AppError({
+        statusCode: 422,
+        code: 'ADMIN_REASON_REQUIRED',
+        message: 'A reason is required for this administrative action.',
+      })
+    }
+    return { actorAdminId: caller.id, requestId, reason }
+  }
+
   async function loadAccess(
     caller: SafeUserProfile,
     classId: string,
@@ -155,7 +179,7 @@ export function createClassService(dependencies: {
   }
 
   return {
-    async create(caller, input) {
+    async create(caller, input, requestId) {
       requireActiveCaller(caller)
       if (caller.role !== 'INSTRUCTOR' && caller.role !== 'ADMIN') {
         throw forbidden()
@@ -186,6 +210,7 @@ export function createClassService(dependencies: {
           schoolYear: input.schoolYear,
           classCode: normalizeClassCode(generateCode()),
           now: now(),
+          adminAudit: adminAudit(caller, requestId, undefined, false),
         })
         if (result.kind === 'instructor_not_active') {
           throw new AppError({
@@ -237,10 +262,15 @@ export function createClassService(dependencies: {
       const access = await loadAccess(caller, classId)
       return toClassProjection(access.classRecord)
     },
-    async update(caller, classId, input) {
+    async update(caller, classId, input, requestId) {
       const access = await loadOwnerAccess(caller, classId)
       requireMutable(access.classRecord)
-      const classRecord = await repository.updateMetadata(classId, input)
+      const { reason, ...fields } = input
+      const classRecord = await repository.updateMetadata(
+        classId,
+        fields,
+        adminAudit(caller, requestId, reason),
+      )
       if (!classRecord) throw classNotFound()
       logger.info(
         { event: 'class.metadata_updated', actorId: caller.id, classId },
@@ -248,9 +278,13 @@ export function createClassService(dependencies: {
       )
       return toClassProjection(classRecord)
     },
-    async archive(caller, classId) {
+    async archive(caller, classId, input, requestId) {
       await loadOwnerAccess(caller, classId)
-      const result = await repository.archive(classId, now())
+      const result = await repository.archive(
+        classId,
+        now(),
+        adminAudit(caller, requestId, input?.reason),
+      )
       if (result.kind === 'not_found') throw classNotFound()
       if (result.kind === 'unfinished_submission_work') {
         throw new AppError({
@@ -274,9 +308,12 @@ export function createClassService(dependencies: {
       }
       return toClassProjection(result.classRecord)
     },
-    async restore(caller, classId) {
+    async restore(caller, classId, input, requestId) {
       await loadOwnerAccess(caller, classId)
-      const result = await repository.restore(classId)
+      const result = await repository.restore(
+        classId,
+        adminAudit(caller, requestId, input?.reason),
+      )
       if (result.kind === 'not_found') throw classNotFound()
       if (result.kind === 'unfinished_submission_work') {
         throw new AppError({
@@ -304,7 +341,7 @@ export function createClassService(dependencies: {
       const access = await loadOwnerAccess(caller, classId)
       return joinCodeProjection(access.classRecord)
     },
-    async rotateJoinCode(caller, classId) {
+    async rotateJoinCode(caller, classId, input, requestId) {
       const access = await loadOwnerAccess(caller, classId)
       requireMutable(access.classRecord)
       for (let attempt = 0; attempt < CLASS_CODE_COLLISION_RETRIES; attempt += 1) {
@@ -314,6 +351,7 @@ export function createClassService(dependencies: {
           classId,
           nextCode,
           now(),
+          adminAudit(caller, requestId, input?.reason),
         )
         if (result.kind === 'not_found') throw classNotFound()
         if (result.kind === 'updated') {
@@ -330,10 +368,14 @@ export function createClassService(dependencies: {
         message: 'A unique class code could not be generated.',
       })
     },
-    async revokeJoinCode(caller, classId) {
+    async revokeJoinCode(caller, classId, input, requestId) {
       const access = await loadOwnerAccess(caller, classId)
       requireMutable(access.classRecord)
-      const classRecord = await repository.revokeCode(classId, now())
+      const classRecord = await repository.revokeCode(
+        classId,
+        now(),
+        adminAudit(caller, requestId, input?.reason),
+      )
       if (!classRecord) throw classNotFound()
       logger.info(
         { event: 'class.join_code_revoked', actorId: caller.id, classId },

@@ -6,7 +6,7 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Boundary
 
-Phase 0 (architecture and planning) and implementation Phases 1 through 8 are complete, accepted, and integrated. Phase 9 is the next roadmap phase, but it has not started and is not authorized by completion of earlier work. Do not begin a new phase or unrelated subsystem without an explicitly approved scope.
+Phase 0 (architecture and planning) and implementation Phases 1 through 8 are complete, accepted, and integrated. Phase 9A authorization and accountability work is the current approved backend-only milestone on `phase/09-admin-functionalization`; Phase 9B/9C, the normal Phase 9A migration, frontend work, and later phases remain separate approval boundaries.
 
 ## Live-State Authority
 

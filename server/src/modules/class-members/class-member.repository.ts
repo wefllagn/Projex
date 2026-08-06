@@ -6,6 +6,10 @@ import {
 } from '@prisma/client'
 import { classRecordSelect } from '../classes/class.repository.js'
 import type { ClassRecord } from '../classes/class.types.js'
+import {
+  appendAdminAuditEvent,
+  type AdminAuditWriter,
+} from '../admin/admin-audit.js'
 import type { ClassRosterQuery } from './class-member.schemas.js'
 
 export interface ClassMemberRecord {
@@ -40,6 +44,7 @@ export type MemberTransitionResult =
   | { kind: 'not_found' }
   | { kind: 'class_archived' }
   | { kind: 'invalid_transition' }
+  | { kind: 'stale' }
 
 export interface ClassMemberRepository {
   joinByCode(input: {
@@ -56,6 +61,12 @@ export interface ClassMemberRepository {
     memberId: string
     status: 'ACTIVE' | 'REMOVED'
     now: Date
+    expectedUpdatedAt?: Date
+    adminAudit?: {
+      actorAdminId: string
+      requestId: string
+      reason: string
+    }
   }): Promise<MemberTransitionResult>
 }
 
@@ -87,6 +98,7 @@ function isRetryableTransactionFailure(error: unknown): boolean {
 
 export function createPrismaClassMemberRepository(
   prisma: PrismaClient,
+  auditWriter: AdminAuditWriter = appendAdminAuditEvent,
 ): ClassMemberRepository {
   return {
     async joinByCode(input) {
@@ -192,6 +204,12 @@ export function createPrismaClassMemberRepository(
           return { kind: 'updated', member: existing, changed: false } as const
         }
         if (
+          input.expectedUpdatedAt &&
+          existing.updatedAt.getTime() !== input.expectedUpdatedAt.getTime()
+        ) {
+          return { kind: 'stale' } as const
+        }
+        if (
           !(
             (existing.status === 'ACTIVE' && input.status === 'REMOVED') ||
             (existing.status === 'REMOVED' && input.status === 'ACTIVE')
@@ -211,6 +229,23 @@ export function createPrismaClassMemberRepository(
                 },
           select: classMemberSelect,
         })
+        if (input.adminAudit) {
+          await auditWriter(transaction, {
+            ...input.adminAudit,
+            action:
+              input.status === 'REMOVED'
+                ? 'CLASS_MEMBER_REMOVED'
+                : 'CLASS_MEMBER_REACTIVATED',
+            targetType: 'CLASS_MEMBER',
+            targetId: input.memberId,
+            metadata: {
+              classId: input.classId,
+              studentId: member.studentId,
+              changed: true,
+            },
+            createdAt: input.now,
+          })
+        }
         return { kind: 'updated', member, changed: true } as const
       })
     },

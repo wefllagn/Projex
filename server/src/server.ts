@@ -55,6 +55,9 @@ import { createGitTransportRouter } from './modules/git-transport/git-transport.
 import { createGitRepositoryReader } from './infrastructure/git/git-repository-reader.js'
 import { createRepositoryContentService } from './modules/repository-content/repository-content.service.js'
 import { createRepositoryContentRouter } from './modules/repository-content/repository-content.routes.js'
+import { createPrismaAdminRepository } from './modules/admin/admin.repository.js'
+import { createAdminService } from './modules/admin/admin.service.js'
+import { createAdminRouter } from './modules/admin/admin.routes.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
@@ -119,6 +122,9 @@ async function bootstrap(): Promise<void> {
   const userDirectoryService = createUserDirectoryService(
     createPrismaUserDirectoryRepository(prisma),
   )
+  const adminService = createAdminService({
+    repository: createPrismaAdminRepository(prisma),
+  })
   const classRepository = createPrismaClassRepository(prisma)
   const classService = createClassService({
     repository: classRepository,
@@ -230,6 +236,11 @@ async function bootstrap(): Promise<void> {
         requireCsrf,
       }),
       accountSetup: createAccountSetupRouter(accountSetupService),
+      admin: createAdminRouter({
+        service: adminService,
+        requireAuthentication,
+        requireCsrf,
+      }),
       users: createUsersRouter({
         directoryService: userDirectoryService,
         provisioningService: userProvisioningService,

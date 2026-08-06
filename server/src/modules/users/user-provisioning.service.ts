@@ -5,6 +5,7 @@ import { AppError } from '../../shared/errors/app-error.js'
 import { SETUP_RESEND_COOLDOWN_MS } from '../auth/auth.constants.js'
 import type { TokenService } from '../auth/auth.tokens.js'
 import type { SafeUserProfile } from '../auth/auth.types.js'
+import type { UpdateUserStatusInput } from './user-provisioning.schemas.js'
 import type {
   ProvisionInstructorInput,
   ProvisionStudentInput,
@@ -15,16 +16,19 @@ export interface UserProvisioningService {
   provisionStudent(
     caller: SafeUserProfile,
     input: ProvisionStudentInput,
+    requestId?: string,
   ): Promise<SafeUserProfile>
   provisionInstructor(
     caller: SafeUserProfile,
     input: ProvisionInstructorInput,
+    requestId?: string,
   ): Promise<SafeUserProfile>
-  resendSetup(caller: SafeUserProfile, userId: string): Promise<void>
+  resendSetup(caller: SafeUserProfile, userId: string, requestId?: string): Promise<void>
   updateStatus(
     caller: SafeUserProfile,
     userId: string,
-    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED',
+    input: UpdateUserStatusInput,
+    requestId?: string,
   ): Promise<SafeUserProfile>
 }
 
@@ -46,6 +50,25 @@ export function createUserProvisioningService(dependencies: {
     setupTokenTtlHours,
     now = () => new Date(),
   } = dependencies
+
+  function requireAdminRequestId(
+    caller: SafeUserProfile,
+    requestId: string | undefined,
+  ): void {
+    if (caller.role === 'ADMIN' && !requestId) {
+      throw new Error('Administrative request ID is required.')
+    }
+  }
+
+  function requireActiveCaller(caller: SafeUserProfile): void {
+    if (caller.status !== 'ACTIVE') {
+      throw new AppError({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: 'Not authorized.',
+      })
+    }
+  }
 
   function createToken() {
     const rawToken = tokenService.createOpaqueToken()
@@ -116,10 +139,12 @@ export function createUserProvisioningService(dependencies: {
   }
 
   return {
-    async provisionStudent(caller, input) {
+    async provisionStudent(caller, input, requestId) {
+      requireActiveCaller(caller)
       if (caller.role !== 'INSTRUCTOR' && caller.role !== 'ADMIN') {
         throw new AppError({ statusCode: 403, code: 'FORBIDDEN', message: 'Not authorized.' })
       }
+      requireAdminRequestId(caller, requestId)
       if (caller.role === 'INSTRUCTOR' && !input.classId) {
         throw new AppError({
           statusCode: 400,
@@ -135,6 +160,10 @@ export function createUserProvisioningService(dependencies: {
         email: input.universityEmail,
         classId: input.classId,
         token: token.record,
+        adminAudit:
+          caller.role === 'ADMIN'
+            ? { actorAdminId: caller.id, requestId: requestId! }
+            : undefined,
       })
       if (result.kind !== 'created') duplicateOrClassError(result.kind)
       await sendSetupEmail(result.user, token.rawToken)
@@ -144,15 +173,18 @@ export function createUserProvisioningService(dependencies: {
       )
       return result.user
     },
-    async provisionInstructor(caller, input) {
+    async provisionInstructor(caller, input, requestId) {
+      requireActiveCaller(caller)
       if (caller.role !== 'ADMIN') {
         throw new AppError({ statusCode: 403, code: 'FORBIDDEN', message: 'Not authorized.' })
       }
+      requireAdminRequestId(caller, requestId)
       const token = createToken()
       const result = await repository.createInstructor({
         fullName: input.fullName,
         email: input.universityEmail,
         token: token.record,
+        adminAudit: { actorAdminId: caller.id, requestId: requestId! },
       })
       if (result.kind !== 'created') duplicateOrClassError(result.kind)
       await sendSetupEmail(result.user, token.rawToken)
@@ -162,10 +194,12 @@ export function createUserProvisioningService(dependencies: {
       )
       return result.user
     },
-    async resendSetup(caller, userId) {
+    async resendSetup(caller, userId, requestId) {
+      requireActiveCaller(caller)
       if (caller.role !== 'INSTRUCTOR' && caller.role !== 'ADMIN') {
         throw new AppError({ statusCode: 403, code: 'FORBIDDEN', message: 'Not authorized.' })
       }
+      requireAdminRequestId(caller, requestId)
       const token = createToken()
       const result = await repository.replaceSetupToken({
         callerId: caller.id,
@@ -173,6 +207,10 @@ export function createUserProvisioningService(dependencies: {
         userId,
         token: token.record,
         cooldownCutoff: new Date(token.record.createdAt.getTime() - SETUP_RESEND_COOLDOWN_MS),
+        adminAudit:
+          caller.role === 'ADMIN'
+            ? { actorAdminId: caller.id, requestId: requestId! }
+            : undefined,
       })
       if (result.kind === 'cooldown') {
         throw new AppError({
@@ -200,11 +238,30 @@ export function createUserProvisioningService(dependencies: {
         'setup link resent',
       )
     },
-    async updateStatus(caller, userId, status) {
+    async updateStatus(caller, userId, input, requestId) {
+      requireActiveCaller(caller)
       if (caller.role !== 'ADMIN') {
         throw new AppError({ statusCode: 403, code: 'FORBIDDEN', message: 'Not authorized.' })
       }
-      const result = await repository.updateStatus({ userId, status, changedAt: now() })
+      requireAdminRequestId(caller, requestId)
+      if (caller.id === userId && input.status !== 'ACTIVE') {
+        throw new AppError({
+          statusCode: 409,
+          code: 'ADMIN_SELF_DISABLE_FORBIDDEN',
+          message: 'Administrators cannot disable their own account.',
+        })
+      }
+      const result = await repository.updateStatus({
+        userId,
+        status: input.status,
+        expectedUpdatedAt: input.expectedUpdatedAt,
+        changedAt: now(),
+        adminAudit: {
+          actorAdminId: caller.id,
+          requestId: requestId!,
+          reason: input.reason,
+        },
+      })
       if (result.kind === 'not_found') {
         throw new AppError({ statusCode: 404, code: 'USER_NOT_FOUND', message: 'User not found.' })
       }
@@ -215,12 +272,27 @@ export function createUserProvisioningService(dependencies: {
           message: 'The requested account status transition is not allowed.',
         })
       }
+      if (result.kind === 'stale') {
+        throw new AppError({
+          statusCode: 409,
+          code: 'STALE_USER_VERSION',
+          message: 'The user account changed. Reload it before trying again.',
+        })
+      }
+      if (result.kind === 'last_active_admin') {
+        throw new AppError({
+          statusCode: 409,
+          code: 'LAST_ACTIVE_ADMIN_REQUIRED',
+          message: 'At least one active administrator must remain.',
+        })
+      }
       logger.info(
         {
           event: 'user.status.changed',
           userId: result.user.id,
           actorId: caller.id,
-          status,
+          status: input.status,
+          changed: result.changed,
         },
         'user status changed',
       )

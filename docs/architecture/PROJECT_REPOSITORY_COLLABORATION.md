@@ -115,7 +115,7 @@ Acceptance locks and validates the invitation, then creates or reactivates both 
 | Draft feedback | No | Yes | Concealed | No |
 | Request changes | No | Yes, before cutoff only | Concealed | No |
 | Approve submitted review work | No | Yes, including after cutoff/CLOSED | Concealed | No |
-| View feedback | Released only | Draft and released | Concealed | Released safe view only |
+| View feedback | Released only | Draft and released | Concealed | Metadata only; feedback text omitted |
 | View monitoring/teams | ACTIVE same-class member receives non-sensitive team summary | Yes | Concealed | Yes, safe summary |
 | Archive/restore class-project records | No | Yes when gates pass | Concealed | No Phase 7 mutation |
 

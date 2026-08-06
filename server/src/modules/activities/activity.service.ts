@@ -15,13 +15,15 @@ import type {
   UpdateActivityInput,
 } from './activity.schemas.js'
 import {
+  toAdminActivityProjection,
   toActivityProjection,
+  type AdminActivityProjection,
   type ActivityAccessRecord,
   type ActivityProjection,
 } from './activity.types.js'
 
 export interface ActivityListResult {
-  activities: ActivityProjection[]
+  activities: Array<ActivityProjection | AdminActivityProjection>
   pagination: PaginationMeta
 }
 
@@ -36,7 +38,10 @@ export interface ActivityService {
     classId: string,
     query: ActivityListQuery,
   ): Promise<ActivityListResult>
-  get(caller: SafeUserProfile, activityId: string): Promise<ActivityProjection>
+  get(
+    caller: SafeUserProfile,
+    activityId: string,
+  ): Promise<ActivityProjection | AdminActivityProjection>
   update(
     caller: SafeUserProfile,
     activityId: string,
@@ -101,14 +106,12 @@ function requireActiveCaller(caller: SafeUserProfile): void {
 }
 
 function isManager(caller: SafeUserProfile, instructorId: string): boolean {
-  return (
-    caller.role === 'ADMIN' ||
-    (caller.role === 'INSTRUCTOR' && caller.id === instructorId)
-  )
+  return caller.role === 'INSTRUCTOR' && caller.id === instructorId
 }
 
 function canViewClass(caller: SafeUserProfile, access: ClassAccessRecord): boolean {
   return (
+    caller.role === 'ADMIN' ||
     isManager(caller, access.classRecord.instructorId) ||
     (caller.role === 'STUDENT' && access.membership?.status === 'ACTIVE')
   )
@@ -118,6 +121,7 @@ function canViewActivity(
   caller: SafeUserProfile,
   access: ActivityAccessRecord,
 ): boolean {
+  if (caller.role === 'ADMIN') return true
   if (isManager(caller, access.activity.class.instructorId)) return true
   return (
     caller.role === 'STUDENT' &&
@@ -214,7 +218,7 @@ export function createActivityService(dependencies: {
   return {
     async create(caller, classId, input) {
       requireActiveCaller(caller)
-      if (caller.role !== 'INSTRUCTOR' && caller.role !== 'ADMIN') {
+      if (caller.role !== 'INSTRUCTOR') {
         throw forbidden()
       }
       const classAccess = await classRepository.findAccess(classId, caller.id)
@@ -258,7 +262,9 @@ export function createActivityService(dependencies: {
       const currentTime = now()
       return {
         activities: result.activities.map((activity) =>
-          toActivityProjection(activity, currentTime),
+          caller.role === 'ADMIN'
+            ? toAdminActivityProjection(activity, currentTime)
+            : toActivityProjection(activity, currentTime),
         ),
         pagination: {
           page: query.page,
@@ -272,7 +278,10 @@ export function createActivityService(dependencies: {
     },
     async get(caller, activityId) {
       const access = await loadAccess(caller, activityId)
-      return toActivityProjection(access.activity, now())
+      const currentTime = now()
+      return caller.role === 'ADMIN'
+        ? toAdminActivityProjection(access.activity, currentTime)
+        : toActivityProjection(access.activity, currentTime)
     },
     async update(caller, activityId, input) {
       const access = await loadManagerAccess(caller, activityId)

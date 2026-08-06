@@ -1,6 +1,6 @@
 import { Router, type RequestHandler } from 'express'
 import { requireJson } from '../../middleware/require-json.js'
-import { requireAnyRole } from '../auth/auth.authorization.js'
+import { requireRole } from '../auth/auth.authorization.js'
 import { createActivityController } from './activity.controller.js'
 import type { ActivityService } from './activity.service.js'
 
@@ -15,7 +15,7 @@ export function createActivityRouter(dependencies: {
     requireJson,
     dependencies.requireAuthentication,
     dependencies.requireCsrf,
-    requireAnyRole(['INSTRUCTOR', 'ADMIN']),
+    requireRole('INSTRUCTOR'),
   ]
 
   router.get('/:activityId', dependencies.requireAuthentication, controller.get)

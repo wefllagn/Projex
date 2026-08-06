@@ -25,6 +25,28 @@ enum UserStatus {
   @@map("user_status")
 }
 
+enum AdminAuditAction {
+  USER_STUDENT_PROVISIONED
+  USER_INSTRUCTOR_PROVISIONED
+  USER_SETUP_REISSUED
+  USER_STATUS_CHANGED
+  USER_SESSIONS_REVOKED
+  CLASS_CREATED
+  CLASS_UPDATED
+  CLASS_ARCHIVED
+  CLASS_RESTORED
+  CLASS_JOIN_CODE_ROTATED
+  CLASS_JOIN_CODE_REVOKED
+  CLASS_MEMBER_REMOVED
+  CLASS_MEMBER_REACTIVATED
+}
+
+enum AdminAuditTargetType {
+  USER
+  CLASS
+  CLASS_MEMBER
+}
+
 enum ClassStatus {
   ACTIVE
   ARCHIVED
@@ -305,9 +327,28 @@ model User {
   repositoryFeedbackAuthored    RepositoryFeedback[]          @relation("RepositoryFeedbackInstructor")
   repositoryFeedbackReleased    RepositoryFeedback[]          @relation("RepositoryFeedbackReleaser")
   gitCredentials                GitCredential[]
+  adminAuditEvents              AdminAuditEvent[]              @relation("AdminAuditActor")
 
   @@index([role, status])
   @@map("users")
+}
+
+model AdminAuditEvent {
+  id           String               @id @default(uuid()) @map("admin_audit_event_id") @db.Uuid
+  actorAdminId String               @map("actor_admin_id") @db.Uuid
+  action       AdminAuditAction
+  targetType   AdminAuditTargetType @map("target_type")
+  targetId     String?              @map("target_id") @db.Uuid
+  reason       String?              @db.VarChar(500)
+  requestId    String               @map("request_id") @db.Uuid
+  metadataJson Json?                @map("metadata_json")
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  actorAdmin   User                 @relation("AdminAuditActor", fields: [actorAdminId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([actorAdminId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId, createdAt])
+  @@map("admin_audit_events")
 }
 
 model AccountSetupToken {

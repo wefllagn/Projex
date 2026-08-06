@@ -86,6 +86,8 @@ Structured events record actor and resource IDs for class creation/update/archiv
 
 Phase 4 does not add a persistent audit-event table. Durable administrative audit storage remains Phase 11 hardening work.
 
+Phase 9A later adds a narrow `AdminAuditEvent` ledger for successful allowlisted admin account/class/membership mutations. This preserves the historical Phase 4 statement while moving atomic accountability for current admin mutations earlier; Phase 11 still owns comprehensive retention, export, tamper-evidence, and broader security-event hardening.
+
 ## PostgreSQL integration tests
 
 `npm test` remains the isolated suite. `npm run test:integration` uses a guarded launcher that:
