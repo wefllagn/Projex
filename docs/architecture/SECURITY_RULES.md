@@ -242,3 +242,12 @@ The current tested executable is Git for Windows `2.55.0.windows.3`; the worker 
 - The CGI adapter uses a sanitized environment, server-derived `PATH_INFO`, canonical READY repository storage, request/response/time/concurrency limits, streaming backpressure, process-tree termination, and sentinel-owned request cleanup.
 - Push receipts contain only a transport request ID, actor/repository IDs, branch names, accepted update count, and timestamp. A validated receipt survives a transient activity-write failure and is replayed idempotently before later transport work. Credentials, authorization headers, pack bytes, source contents, absolute paths, and private environment values are excluded from receipts, activities, and logs.
 - Local-process hooks and request limits are not production-grade isolation. External-network exposure remains prohibited until an approved hosted security boundary is implemented.
+
+## Phase 8C repository-inspection boundary
+
+- Every inspection request requires cookie authentication and re-evaluates current user, repository, class, team, membership, lifecycle, and READY-storage authority. Personal source remains private, same-class nonmembers remain denied, owning instructors remain read-only, and administrators remain metadata-only.
+- Only full reachable commit IDs and current `refs/heads/*` branches may be inspected. Abbreviated/object expressions, tags, notes, reflogs, arbitrary namespaces, raw object IDs, and client Git arguments/configuration are rejected.
+- Repository paths use a conservative normalized relative grammar. Absolute paths, traversal, `.git`, alternate streams, backslashes, pathspec expressions, and unsupported names are rejected before Git invocation.
+- Text files must be bounded valid UTF-8 without NUL bytes. Binary content is never returned. Diff, history, tree, changed-file, process-output, and execution-time limits fail closed.
+- Fixed read-only commands use the validated absolute executable, sanitized environment, argument arrays, `shell: false`, disabled external diff/text conversion, and server-resolved marker-owned storage. Logs contain only the operation category and safe actor/repository IDs, never path, source, diff, stderr, command arguments, or host locations.
+- Server-created branches, commits, merges, conflict workflows, and deletion remain deferred until a database-backed write lock, temporary-worktree ownership/recovery, idempotency, author identity, and durable audit model are separately approved.

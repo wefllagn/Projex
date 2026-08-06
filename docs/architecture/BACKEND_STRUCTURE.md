@@ -4,7 +4,7 @@
 
 Projex will use a **feature-based modular monolith** for the planned Node.js/Express/TypeScript backend. This document describes a future structure; Phase 0 does not create these folders or implement backend code.
 
-The frontend remains in its current React/Vite JavaScript/JSX structure under `client/`. The feature-based Express/TypeScript backend exists under `server/`; Phase 8A adds separate-worker Git provisioning to the Phase 7 project/repository metadata without changing the frontend or adding Git transport/content operations.
+The frontend remains in its current React/Vite JavaScript/JSX structure under `client/`. The feature-based Express/TypeScript backend exists under `server/`; Phases 8A through 8C add controlled-local provisioning, authenticated transport, and read-only repository inspection without changing the frontend.
 
 ## Proposed structure
 
@@ -142,7 +142,8 @@ Names may be singular when the feature represents a process rather than a collec
 | `feedback` | Submission-owned instructor feedback drafts and controlled release in Phase 6; rubric results and notification coordination remain later work. |
 | `project-tasks` | Class-linked project requirements, lifecycle, due dates, team summaries, monitoring, and archive gates. |
 | `teams` | Phase 7 persistence owned by the repository-collaboration aggregate: project teams, immutable lead identity, and synchronized membership rules. |
-| `repositories` | Phase 7 repository metadata, server-owned visibility, review lifecycle, textual feedback, and the transaction boundary for teams, members, and invitations. Local Git content begins in Phase 8. |
+| `repositories` | Phase 7 repository metadata, server-owned visibility, review lifecycle, textual feedback, and the transaction boundary for teams, members, and invitations. |
+| `repository-content` | Phase 8C authenticated read-only summary, branch, reachable commit, tree, bounded text-file, and diff projections over READY managed Git storage. |
 | `repository-members` | Phase 7 persistence owned by the repository aggregate: synchronized collaborator membership and removal/reactivation history. |
 | `repository-invitations` | Phase 7 persistence owned by the repository aggregate: eligible collaborator invite creation, acceptance, decline, revoke, expiry, and capacity. |
 | `notifications` | In-app notification creation, listing, unread counts and read state. |
@@ -225,4 +226,8 @@ Only the approved feature should be functionalized at each step. Unrelated front
 
 `modules/git-transport` owns credential issuance/revocation, current authorization evaluation, transport route validation, and successful-push activity persistence. `infrastructure/git/git-smart-http.ts` owns the bounded CGI adapter and `git-transport-hook.ts` owns server-generated pre/post-receive policy enforcement. The API may stream only allowlisted Smart HTTP services through the configured absolute `git-http-backend`; it accepts neither commands nor paths and exposes no general Git execution.
 
-The transport is disabled by default, loopback-only in controlled development, and separate from Phase 8A provisioning. Phase 8C repository browsing/read APIs remain unimplemented.
+The transport is disabled by default, loopback-only in controlled development, and separate from Phase 8A provisioning.
+
+## Phase 8C read boundary
+
+The `repository-content` feature owns HTTP validation, current source authorization, safe projections, and error mapping. The Git reader infrastructure owns fixed command shapes, reachable-revision checks, output parsing, time/size limits, and binary rejection. It receives only server-resolved canonical repository paths and never imports Express or Prisma. No database migration or write worker is added.

@@ -10,6 +10,7 @@ function access(overrides: Partial<GitTransportAccess> = {}): GitTransportAccess
     status: 'ACTIVE',
     storageStatus: 'READY',
     storagePath: 'repositories/11/11/repository.git',
+    defaultBranch: 'main',
     reviewStatus: 'WORKING',
     user: { id: '22222222-2222-4222-8222-222222222222', role: 'STUDENT', status: 'ACTIVE' },
     repositoryMember: { memberRole: 'OWNER', status: 'ACTIVE' },

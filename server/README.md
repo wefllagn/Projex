@@ -251,6 +251,12 @@ npm run test:smart-http
 
 The test runner deploys committed migrations only to `projex_test`, opens an ephemeral loopback server, and removes only its sentinel-owned run directory. It never falls back to the normal database or Git root. See `docs/architecture/GIT_SMART_HTTP_TRANSPORT.md` for authorization, limits, hook policy, and remaining hosted-isolation limits.
 
+### Phase 8C repository inspection
+
+When controlled local Git execution is enabled, authenticated users with current source READ authority can inspect READY repositories through `/api/v1/repositories/:repositoryId/source/*`. The API supports summary, branches, paginated reachable commits, commit detail, tree browsing, bounded UTF-8 file viewing, and bounded diff. Smart HTTP may remain disabled for inspection.
+
+Default inspection limits are configured through `GIT_INSPECTION_FILE_LIMIT_BYTES`, `GIT_INSPECTION_DIFF_LIMIT_BYTES`, and `GIT_INSPECTION_MAX_CHANGED_FILES`. Client filesystem paths, arbitrary revision expressions, binary output, Git arguments/configuration, and host paths are rejected or omitted. Server-created branches, commits, merges, and branch deletion remain deferred. See `docs/architecture/GIT_REPOSITORY_INSPECTION.md`.
+
 Activity authoring is restricted to the owning instructor or an administrator. Students with ACTIVE membership may read only PUBLISHED or CLOSED activities and visible test cases. Hidden test rows and counts are excluded from student responses. Published scoring/test configuration is immutable.
 
 Official submissions require Java execution to be enabled, Java source, and an `Idempotency-Key`. Ordinary attempts are limited by the activity's one-to-three usable-attempt setting. Infrastructure retries reuse the original record; an owning instructor may formally grant one future-expiring replacement, which may cross a deadline/CLOSED state but cannot bypass archive, inactive account, removed membership, expiration, or single-use rules.

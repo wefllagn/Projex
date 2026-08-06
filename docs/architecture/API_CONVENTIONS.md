@@ -71,7 +71,13 @@ POST   /api/v1/repositories/:repositoryId/archive
 POST   /api/v1/repositories/:repositoryId/restore
 GET    /api/v1/repositories/:repositoryId/members
 PATCH  /api/v1/repositories/:repositoryId/members/:memberId
-GET    /api/v1/repositories/:repositoryId/branches
+GET    /api/v1/repositories/:repositoryId/source/summary
+GET    /api/v1/repositories/:repositoryId/source/branches
+GET    /api/v1/repositories/:repositoryId/source/commits
+GET    /api/v1/repositories/:repositoryId/source/commits/:commitId
+GET    /api/v1/repositories/:repositoryId/source/tree
+GET    /api/v1/repositories/:repositoryId/source/file
+GET    /api/v1/repositories/:repositoryId/source/diff
 POST   /api/v1/repositories/:repositoryId/invitations
 GET    /api/v1/repositories/:repositoryId/invitations
 GET    /api/v1/repository-invitations
@@ -134,7 +140,7 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - `REQUEST_CHANGES` accepts only a current `READY_FOR_REVIEW` repository while the task is PUBLISHED before its deadline and atomically releases the referenced non-empty feedback draft.
 - `APPROVE` accepts previously submitted `READY_FOR_REVIEW` work while the task is PUBLISHED or CLOSED, including after the deadline. An optional referenced draft is released atomically with approval.
 - Feedback drafts are instructor-only. Student repository feedback responses contain released textual feedback only. Numeric grades and rubrics are not accepted or returned in Phase 7.
-- `RepositoryActivity`, branch, commit, diff, clone, push, pull, and file-content APIs remain unimplemented until Phase 8.
+- Phase 7 creates no fake repository activity or Git history. Phase 8A provisions empty repositories, Phase 8B supplies authenticated transport, and Phase 8C supplies authenticated read-only source inspection.
 
 ## Naming and data representation
 
@@ -369,3 +375,13 @@ POST /api/v1/git/repositories/:repositoryId/git-receive-pack
 ```
 
 These routes deliberately do not use the JSON success envelope: successful bodies and content types are the bounded byte streams emitted by `git-http-backend`. Before dispatch, Projex authenticates the repository-scoped Basic credential, re-evaluates current user/membership/lifecycle authorization, validates the service/path, and resolves READY storage internally. Rejections are safe and never expose credentials, source, or host paths.
+
+## Phase 8C repository-inspection contracts
+
+The seven `/repositories/:repositoryId/source/*` endpoints use cookie authentication and the standard JSON envelope. They re-evaluate the same current source-read authorization as Phase 8B and resolve only READY marker-owned storage. Smart HTTP need not be enabled, but controlled local Git execution must be enabled outside production.
+
+History accepts an optional validated `branchName`, `page`, and `limit` capped at 50. Tree and file accept either a validated branch name or a full reachable 40-character commit ID, never both; omitting both selects the server-owned default branch. Diff accepts two full reachable commit IDs and an optional normalized path. Commit detail accepts only a full reachable commit ID.
+
+Responses may include branch names, commit IDs, bounded author display names, timestamps, subjects, safe tree entries, bounded UTF-8 file content, and bounded unified patches. They omit author emails, storage paths, credentials/verifiers, environment/configuration, raw stderr, unsupported binary data, and arbitrary Git objects. Empty repositories return explicit empty projections.
+
+Stable inspection errors include `GIT_INSPECTION_UNAVAILABLE`, `GIT_REVISION_NOT_FOUND`, `GIT_CONTENT_NOT_FOUND`, `GIT_BINARY_FILE_UNSUPPORTED`, operation-specific limit errors, and the generic safe `GIT_INSPECTION_FAILED`. Validation errors never echo a host path or unrestricted revision expression.

@@ -2,7 +2,7 @@
 
 ## Scope and deployment boundary
 
-Phase 8B adds backend-only authenticated Git Smart HTTP for controlled loopback development and tests. It uses the validated local `git-http-backend` executable and supports clone/fetch for authorized readers and push for authorized writers. SSH, anonymous/public access, external Git APIs, frontend integration, browsing/history/diff REST APIs, server-created commits, merge/conflict APIs, LFS, CI/CD, physical deletion, production deployment, and external exposure remain excluded.
+Phase 8B adds backend-only authenticated Git Smart HTTP for controlled loopback development and tests. It uses the validated local `git-http-backend` executable and supports clone/fetch for authorized readers and push for authorized writers. Browsing/history/diff REST APIs are a separate read-only Phase 8C boundary documented in `GIT_REPOSITORY_INSPECTION.md`. SSH, anonymous/public access, external Git APIs, frontend integration, server-created commits, merge/conflict APIs, LFS, CI/CD, physical deletion, production deployment, and external exposure remain excluded from Phase 8B.
 
 `GIT_SMART_HTTP_ENABLED=false` is the safe default. Enabling it requires `GIT_EXECUTION_MODE=local_process`, an absolute validated backend executable, and an API host of `127.0.0.1`, `::1`, or `localhost`. Production rejects local-process Git. Plain HTTP is permitted only on loopback; future non-loopback service requires TLS and a separate deployment review.
 

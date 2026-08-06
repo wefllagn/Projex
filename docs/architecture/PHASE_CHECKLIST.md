@@ -229,7 +229,7 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - [x] Apply the reviewed Phase 8A migration to the normal development database after explicit approval.
 - [x] Start the normal provisioning worker only after a second explicit approval and provision the six retained development repositories.
 
-## Phase 8B: authenticated Git Smart HTTP — test-only implementation complete
+## Phase 8B: authenticated Git Smart HTTP — complete
 
 - [x] Add short-lived, repository/operation-scoped credentials with one-time secret display, verifier-only persistence, expiry, and revocation.
 - [x] Add loopback-only authenticated clone/fetch/push through the configured absolute `git-http-backend`, with dynamic authorization on every request.
@@ -237,9 +237,21 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - [x] Stream bounded CGI requests/responses with backpressure, timeout, concurrency, process-tree termination, and guarded request cleanup.
 - [x] Record exactly one safe user-attributed activity per accepted push and none for rejected pushes.
 - [x] Apply the explicit migration only to `projex_test` and verify guarded real-Git Smart HTTP workflows under `projex_git_test`.
-- [ ] Apply the reviewed Phase 8B migration to the normal development database after separate approval.
+- [x] Apply the reviewed Phase 8B migration to the normal development database after separate approval.
 - [ ] Enable and validate persistent normal loopback Smart HTTP only after a second separate approval.
-- [ ] Implement repository browsing/read APIs in Phase 8C only after scope approval.
+- [x] Complete controlled normal-development read-only clone/fetch validation with one revoked short-lived READ credential and unchanged repository fingerprints.
+
+## Phase 8C: repository inspection — implementation complete; pre-commit verification pending
+
+- [x] Add authenticated safe summary, branch, paginated history, reachable commit, tree, bounded UTF-8 file, and bounded diff endpoints.
+- [x] Reuse dynamic Phase 8 source authorization and READY marker-owned storage resolution; retain instructor-read/admin-metadata-only and removed/inactive fail-closed rules.
+- [x] Accept only conservative branch names, full reachable commit IDs, normalized repository-relative paths, and bounded pagination/output.
+- [x] Reject binary files, oversized text/diffs/commit-file lists, traversal, Git internals, arbitrary revisions, raw commands/configuration, and host paths.
+- [x] Preserve empty repositories without synthetic branches, commits, history, files, or activities.
+- [x] Keep all Git mutations on the existing Phase 8B path; defer server-created branch/commit/merge/delete and contributor attribution pending separate lock/worktree/audit/identity design.
+- [x] Add guarded real-Git/PostgreSQL/API coverage under `projex_test` and sentinel-owned `projex_git_test` storage.
+- [x] Complete the full Phase 8A/8B, PostgreSQL, Java, backend, unchanged-client, cleanup, and security regression sequence.
+- [ ] Review, commit, and push Phase 8C only after explicit approval.
 
 ## Phase 9: Admin backend capabilities — pending
 

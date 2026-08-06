@@ -71,6 +71,9 @@ const envSchema = z
     GIT_MAX_REF_UPDATES: z.coerce.number().int().min(1).max(500).default(50),
     GIT_MAX_NEW_COMMITS: z.coerce.number().int().min(1).max(10_000).default(200),
     GIT_BLOB_LIMIT_BYTES: z.coerce.number().int().min(1_024).max(104_857_600).default(10_485_760),
+    GIT_INSPECTION_FILE_LIMIT_BYTES: z.coerce.number().int().min(1_024).max(1_048_576).default(262_144),
+    GIT_INSPECTION_DIFF_LIMIT_BYTES: z.coerce.number().int().min(4_096).max(4_194_304).default(524_288),
+    GIT_INSPECTION_MAX_CHANGED_FILES: z.coerce.number().int().min(1).max(2_000).default(500),
   })
   .superRefine((value, context) => {
     if (value.AUTH_COOKIE_SAME_SITE === 'none' && !value.AUTH_COOKIE_SECURE) {
@@ -215,6 +218,9 @@ export interface AppEnv {
   gitMaxRefUpdates: number
   gitMaxNewCommits: number
   gitBlobLimitBytes: number
+  gitInspectionFileLimitBytes: number
+  gitInspectionDiffLimitBytes: number
+  gitInspectionMaxChangedFiles: number
 }
 
 export class EnvironmentValidationError extends Error {
@@ -293,5 +299,8 @@ export function loadEnv(input: NodeJS.ProcessEnv = process.env): AppEnv {
     gitMaxRefUpdates: result.data.GIT_MAX_REF_UPDATES,
     gitMaxNewCommits: result.data.GIT_MAX_NEW_COMMITS,
     gitBlobLimitBytes: result.data.GIT_BLOB_LIMIT_BYTES,
+    gitInspectionFileLimitBytes: result.data.GIT_INSPECTION_FILE_LIMIT_BYTES,
+    gitInspectionDiffLimitBytes: result.data.GIT_INSPECTION_DIFF_LIMIT_BYTES,
+    gitInspectionMaxChangedFiles: result.data.GIT_INSPECTION_MAX_CHANGED_FILES,
   }
 }

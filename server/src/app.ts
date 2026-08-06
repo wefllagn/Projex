@@ -32,6 +32,7 @@ export interface AppDependencies {
     projectTasks?: Router
     repositories?: Router
     gitTransport?: Router
+    repositoryContent?: Router
   }
 }
 
@@ -85,6 +86,9 @@ export function createApp({
     }
     if (featureRouters.gitTransport) {
       app.use('/api/v1', featureRouters.gitTransport)
+    }
+    if (featureRouters.repositoryContent) {
+      app.use('/api/v1', featureRouters.repositoryContent)
     }
   }
 

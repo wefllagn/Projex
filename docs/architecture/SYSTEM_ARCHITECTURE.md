@@ -6,7 +6,7 @@ This document records the architecture for turning the existing Projex UI protot
 
 - Current frontend: React 19, Vite, JavaScript/JSX, React Router, and the existing CSS.
 - Current backend: Node.js, Express, TypeScript, Zod, Prisma ORM, and PostgreSQL.
-- Implementation status: Phases 0 through 8A are complete. Phase 8B authenticated Git Smart HTTP is implemented and verified only against `projex_test` and guarded test storage; its normal-development migration, persistent enablement, commit, and push remain approval gates.
+- Implementation status: Phases 0 through 8B are complete. Phase 8C adds an approved backend-only, read-only repository-inspection API in the current phase branch; normal repository contents, frontend integration, server-side Git mutations, commit, and push remain approval gates.
 - Development approach: local-first, feature-by-feature, and cloud-provider-neutral.
 - Roles: `STUDENT`, `INSTRUCTOR`, and `ADMIN` are part of the authorization model from the beginning.
 - Implementation priority: Student and Instructor workflows first, followed by dedicated Admin functionalization.
@@ -247,7 +247,11 @@ The hosted system is for controlled testing and defense only. It should have a d
 
 ## Phase 8A Git provisioning boundary
 
-The API transaction creates a repository row and durable provisioning job but performs no Git or filesystem work. A separately enabled development-only Git worker derives a UUID storage path, initializes and verifies an empty bare repository, and then atomically records `READY`, job completion, and one system provisioning activity. Smart HTTP and repository content operations remain absent until Phase 8B/8C. See `GIT_FOUNDATION_AND_PROVISIONING.md`.
+The API transaction creates a repository row and durable provisioning job but performs no Git or filesystem work. A separately enabled development-only Git worker derives a UUID storage path, initializes and verifies an empty bare repository, and then atomically records `READY`, job completion, and one system provisioning activity. Phase 8B supplies protected loopback Smart HTTP; Phase 8C supplies authenticated read-only repository inspection. See `GIT_FOUNDATION_AND_PROVISIONING.md`, `GIT_SMART_HTTP_TRANSPORT.md`, and `GIT_REPOSITORY_INSPECTION.md`.
+
+## Phase 8C repository-inspection boundary
+
+Phase 8C reuses the current source-access policy for each cookie-authenticated request, resolves only READY marker-owned bare repositories, and runs fixed read-only Git operations through the validated executable. It exposes summary, branch, reachable commit, tree, bounded UTF-8 file, and bounded diff projections without host paths or author email addresses. Server-created commits/branches/merges and contribution attribution remain deferred because they require a separately approved lock/worktree/audit and identity design.
 - Core Java compilation/execution uses local OpenJDK workers; no external compiler API is allowed.
 - Java workers compile once per submission assessment, then run the preserved compiled output against bounded test inputs.
 - Logs must not contain passwords, session tokens, complete source code, hidden tests, or sensitive feedback.

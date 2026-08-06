@@ -16,6 +16,8 @@ describe('structured log redaction', () => {
       {
         sourceCode: 'SENTINEL_SOURCE',
         sourceHash: 'SENTINEL_HASH',
+        content: 'SENTINEL_REPOSITORY_CONTENT',
+        patch: 'SENTINEL_REPOSITORY_DIFF',
         inputSnapshot: 'SENTINEL_INPUT',
         expectedOutputSnapshot: 'SENTINEL_EXPECTED',
         actualOutput: 'SENTINEL_ACTUAL',
@@ -38,6 +40,8 @@ describe('structured log redaction', () => {
     for (const sentinel of [
       'SENTINEL_SOURCE',
       'SENTINEL_HASH',
+      'SENTINEL_REPOSITORY_CONTENT',
+      'SENTINEL_REPOSITORY_DIFF',
       'SENTINEL_INPUT',
       'SENTINEL_EXPECTED',
       'SENTINEL_ACTUAL',

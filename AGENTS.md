@@ -6,7 +6,7 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Instruction
 
-Phases 0 through 8A are complete. Phase 8B authenticated Git Smart HTTP is approved for test-only implementation; it must not be migrated to the normal database, enabled persistently, committed, or pushed without explicit approval. Do not begin Phase 8C until separately approved.
+Phases 0 through 8B are complete. Phase 8C is the approved backend-only, read-only repository-inspection slice. Preserve its strict source authorization, bounded Git execution, test-only storage boundary, and deferred server-side mutation design. Do not apply normal-data changes, modify the frontend, commit/push Phase 8C, or begin Phase 9 without explicit approval.
 
 ## Product Boundaries
 
@@ -56,6 +56,7 @@ For the current phased functionalization:
 - The owning instructor may approve previously submitted `READY_FOR_REVIEW` work after the deadline or while CLOSED, with optional released textual feedback. Numeric grades and rubrics remain out of Phase 7.
 - Project-task and class archiving must honor unexpired invitations, nonterminal repository review states, and synchronized membership invariants. Archived records are read-only.
 - Phase 8A may create only verified empty bare repositories and exactly one `REPOSITORY_PROVISIONED` system activity after verification. Do not generate fake commits, refs, history, or other Git activity.
+- Phase 8C may inspect only reachable branch history, trees, bounded UTF-8 files, and bounded diffs through authenticated APIs. It does not create branches, commits, merges, tags, refs, or contribution claims.
 
 ## Admin frontend direction
 

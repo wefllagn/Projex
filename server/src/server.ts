@@ -52,6 +52,9 @@ import { createPrismaGitTransportRepository } from './modules/git-transport/git-
 import { createGitCredentialService } from './modules/git-transport/git-credential.service.js'
 import { createGitTransportService } from './modules/git-transport/git-transport.service.js'
 import { createGitTransportRouter } from './modules/git-transport/git-transport.routes.js'
+import { createGitRepositoryReader } from './infrastructure/git/git-repository-reader.js'
+import { createRepositoryContentService } from './modules/repository-content/repository-content.service.js'
+import { createRepositoryContentRouter } from './modules/repository-content/repository-content.routes.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
@@ -169,6 +172,22 @@ async function bootstrap(): Promise<void> {
     root: env.gitStorageRoot || process.cwd(),
     repositorySizeLimitBytes: env.gitRepositorySizeLimitBytes,
   })
+  const repositoryContentService = createRepositoryContentService({
+    enabled: env.gitExecutionMode === 'local_process',
+    accessRepository: gitTransportRepository,
+    storage: gitStorage,
+    reader: createGitRepositoryReader({
+      executable: env.gitExecutable || process.execPath,
+      timeoutMs: env.gitCommandTimeoutMs,
+      commandOutputLimitBytes: env.gitOutputLimitBytes,
+      fileLimitBytes: env.gitInspectionFileLimitBytes,
+      diffLimitBytes: env.gitInspectionDiffLimitBytes,
+      maxChangedFiles: env.gitInspectionMaxChangedFiles,
+      maxBranches: env.gitMaxBranches,
+      maxConcurrent: env.gitHttpMaxConcurrent,
+    }),
+    logger,
+  })
   const gitSmartHttpBackend = createGitSmartHttpBackend({
     executable: env.gitHttpBackendExecutable || process.execPath,
     gitExecutable: env.gitExecutable || process.execPath,
@@ -251,6 +270,10 @@ async function bootstrap(): Promise<void> {
         transportService: gitTransportService,
         requireAuthentication,
         requireCsrf,
+      }),
+      repositoryContent: createRepositoryContentRouter({
+        service: repositoryContentService,
+        requireAuthentication,
       }),
     },
   })

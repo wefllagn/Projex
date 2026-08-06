@@ -114,7 +114,7 @@ Every phase must end with a working application. An unfinished cross-phase refac
 - Preserve each attempt's source, submission time, execution result, score, and review state; idempotency and database constraints must protect double-click/retry behavior.
 - Keep `originalAutomatedScore` and per-test automated evidence immutable during review; record append-only corrections, distinct instructor points, and the derived released final score separately.
 - Keep Java execution disabled by default. Permit `local_process` only for controlled local development, never production or an internet-accessible deployment.
-- Phase 7 repository work remains the academic metadata baseline. Phase 8A may provision verified empty bare repositories; Phase 8B may transport authenticated clone/fetch/push and record only real accepted push activities. Phase 8C content-browsing APIs remain separately gated.
+- Phase 7 repository work remains the academic metadata baseline. Phase 8A provisions verified empty bare repositories; Phase 8B transports authenticated clone/fetch/push and records only real accepted push activities; Phase 8C provides authenticated read-only repository inspection without creating Git history.
 - Preserve team/repository membership synchronization through serializable transactions, database constraints, and real PostgreSQL integration tests; never bypass the invariant with direct one-table writes.
 - Do not add provider-specific infrastructure without a documented, approved portability exception.
 
@@ -213,3 +213,11 @@ A phase is ready to merge into `development/fullstack` only when:
 3. Run Smart HTTP end-to-end tests only on an ephemeral loopback port and inside a sentinel-owned run child under the guarded `projex_git_test` root.
 4. Stop temporary servers, clean test fixtures, remove only the verified run child, and preserve migration history.
 5. Review authorization, hooks, logs, paths, and normal-environment non-contact before separately approving a normal migration. Persistent normal Smart HTTP enablement is a later, distinct gate.
+
+## Phase 8C verification order
+
+1. Validate strict branch, full commit-ID, portable repository-path, pagination, file-size, diff-size, and changed-file limits.
+2. Run isolated authorization/input tests and integration type-checking.
+3. Run the guarded real-Git/API suite against exactly `projex_test` and a sentinel-owned `projex_git_test` child; verify complete read projections, empty repositories, binary/limit rejection, and current role/membership enforcement.
+4. Re-run Phase 8A provisioning, Phase 8B Smart HTTP, PostgreSQL integration, Java, backend, and unchanged-client regressions as affected.
+5. Confirm the normal database and normal managed repositories were never selected by a Phase 8C test, then verify test application cleanup and preserved migration history.

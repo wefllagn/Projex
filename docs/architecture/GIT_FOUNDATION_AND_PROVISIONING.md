@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-Phase 8A adds the controlled-local Git foundation and durable bare-repository provisioning. Phase 8B builds authenticated loopback-only Smart HTTP on this foundation as documented in `GIT_SMART_HTTP_TRANSPORT.md`; browsing, history, tree, blob, diff, merge, and frontend behavior remain deferred.
+Phase 8A adds the controlled-local Git foundation and durable bare-repository provisioning. Phase 8B builds authenticated loopback-only Smart HTTP on this foundation as documented in `GIT_SMART_HTTP_TRANSPORT.md`. Phase 8C adds the read-only browsing, history, tree, bounded text-file, and diff boundary documented in `GIT_REPOSITORY_INSPECTION.md`; merge, server-created history, contribution attribution, and frontend behavior remain deferred.
 
 The tested Windows toolchain is Git for Windows `2.55.0.windows.3`. The worker accepts supported Git for Windows versions at or above `2.55.0`, records the detected version, and always invokes the validated absolute `GIT_EXECUTABLE`. PATH ordering is never authoritative.
 

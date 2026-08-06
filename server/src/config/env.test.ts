@@ -88,6 +88,9 @@ describe('execution environment boundaries', () => {
     expect(env.host).toBe('127.0.0.1')
     expect(env.gitSmartHttpEnabled).toBe(false)
     expect(env.gitCredentialTtlMinutes).toBe(15)
+    expect(env.gitInspectionFileLimitBytes).toBe(262_144)
+    expect(env.gitInspectionDiffLimitBytes).toBe(524_288)
+    expect(env.gitInspectionMaxChangedFiles).toBe(500)
   })
 
   it('requires local Git, an absolute backend, and a loopback host for Smart HTTP', () => {

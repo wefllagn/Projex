@@ -21,6 +21,7 @@ export interface GitTransportAccess {
   status: RepositoryStatus
   storageStatus: RepositoryStorageStatus
   storagePath: string | null
+  defaultBranch: string
   reviewStatus: RepositoryReviewStatus
   user: { id: string; role: UserRole; status: UserStatus }
   repositoryMember: {

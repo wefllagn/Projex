@@ -64,6 +64,7 @@ export function createPrismaGitTransportRepository(prisma: PrismaClient): GitTra
             status: true,
             storageStatus: true,
             storagePath: true,
+            defaultBranch: true,
             reviewStatus: true,
             members: {
               where: { studentId: userId },
@@ -108,6 +109,7 @@ export function createPrismaGitTransportRepository(prisma: PrismaClient): GitTra
         status: repository.status,
         storageStatus: repository.storageStatus,
         storagePath: repository.storagePath,
+        defaultBranch: repository.defaultBranch,
         reviewStatus: repository.reviewStatus,
         user,
         repositoryMember: repository.members[0] ?? null,
