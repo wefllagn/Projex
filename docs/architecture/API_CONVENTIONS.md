@@ -19,6 +19,18 @@ GET    /api/v1/users
 GET    /api/v1/users/:userId
 GET    /api/v1/admin/users/:userId/account-summary
 POST   /api/v1/admin/users/:userId/sessions/revoke
+GET    /api/v1/admin/overview
+GET    /api/v1/admin/academic/classes
+GET    /api/v1/admin/academic/activities
+GET    /api/v1/admin/academic/submissions
+GET    /api/v1/admin/academic/project-tasks
+GET    /api/v1/admin/academic/repositories
+GET    /api/v1/admin/operations/health
+GET    /api/v1/admin/operations/storage
+GET    /api/v1/admin/operations/execution-jobs
+GET    /api/v1/admin/operations/repository-provisioning-jobs
+GET    /api/v1/admin/operations/git-credentials
+GET    /api/v1/admin/audit-events
 POST   /api/v1/classes
 GET    /api/v1/classes
 GET    /api/v1/classes/:classId
@@ -112,6 +124,17 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - `PATCH /api/v1/users/:userId/status` requires `status`, `reason`, and `expectedUpdatedAt`. It rejects self-disablement, stale versions, and a transition that would remove the last ACTIVE administrator.
 - Successful admin account/class/membership mutations write an allowlisted audit event in the same database transaction. Failed or denied requests do not create successful audit rows.
 - Administrators receive metadata-only activity projections. They cannot use activity/test-case mutation routes, list test-case definitions, retrieve practice-run outcomes, or receive starter/submitted source through instructor projections.
+
+### Phase 9B administrator oversight contracts
+
+- All oversight routes repeat the authenticated ACTIVE-admin check at route and service boundaries. Instructor, student, and inactive-admin callers fail closed.
+- Academic lists use explicit allowlisted projections. They omit instructions, starter/submitted source, test definitions/evidence, compiler/process output, correction reasons, feedback bodies, storage paths, and Git transport/history details.
+- Submission summaries expose `releasedScore` only for a `RELEASED` submission; otherwise it is `null`.
+- Operational job lists expose safe related IDs, lifecycle/lease timestamps, claim bounds, sanitized failure codes, and a lease-derived `stuck` flag. They omit worker IDs, raw failure messages, output, storage paths, and quarantine keys.
+- Storage reports known measured bytes as a decimal string plus measured/unmeasured record counts. No capacity or utilization is inferred.
+- Health separates API, database, and persisted queue observations. `workerHealth.status` remains `not_observed` because job/lease records do not prove worker availability.
+- Git-credential lists expose IDs, allowed operations, and lifecycle timestamps only. Audit lists expose bounded reasons and action-specific metadata allowlists; arbitrary stored metadata is discarded.
+- Oversight lists accept only endpoint-specific status/type/resource/search filters, explicit sort fields/directions, and `pageSize` from 1 through 100. Phase 9B introduces no mutation endpoint.
 
 ### Phase 5 activity and test-case rules
 

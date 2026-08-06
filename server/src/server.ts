@@ -58,6 +58,8 @@ import { createRepositoryContentRouter } from './modules/repository-content/repo
 import { createPrismaAdminRepository } from './modules/admin/admin.repository.js'
 import { createAdminService } from './modules/admin/admin.service.js'
 import { createAdminRouter } from './modules/admin/admin.routes.js'
+import { createPrismaAdminOversightRepository } from './modules/admin/admin-oversight.repository.js'
+import { createAdminOversightService } from './modules/admin/admin-oversight.service.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
@@ -124,6 +126,10 @@ async function bootstrap(): Promise<void> {
   )
   const adminService = createAdminService({
     repository: createPrismaAdminRepository(prisma),
+  })
+  const adminOversightService = createAdminOversightService({
+    repository: createPrismaAdminOversightRepository(prisma),
+    databaseHealth: createPrismaDatabaseHealth(prisma),
   })
   const classRepository = createPrismaClassRepository(prisma)
   const classService = createClassService({
@@ -238,6 +244,7 @@ async function bootstrap(): Promise<void> {
       accountSetup: createAccountSetupRouter(accountSetupService),
       admin: createAdminRouter({
         service: adminService,
+        oversightService: adminOversightService,
         requireAuthentication,
         requireCsrf,
       }),

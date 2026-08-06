@@ -269,12 +269,19 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Add an allowlisted transactional `AdminAuditEvent` ledger with bounded reasons and action-specific safe metadata.
 - [x] Protect status changes with optimistic concurrency, self-disable rejection, and a transaction lock that preserves one ACTIVE administrator under concurrent requests.
 - [x] Remove administrator activity/test-case authoring, hidden test definitions, starter source, practice outcomes, and repository feedback bodies while preserving safe metadata oversight.
-- [x] Deploy the additive migration to guarded `projex_test` only; do not migrate normal `projex` without a later approval boundary.
-- [ ] Complete the final Phase 9A regression/security review and obtain approval before staging, normal migration, commit, or push.
+- [x] Deploy and verify the additive migration through the separately approved guarded-test and normal-development boundaries.
+- [x] Complete the Phase 9A regression/security review, commit, push, and normal-development validation.
+
+### Phase 9B: read-only academic and operational oversight
+
+- [x] Add active-admin-only overview, safe academic lists, health/storage/job/credential inspection, and allowlisted audit-event listing.
+- [x] Derive aggregates from authoritative records without cached counters or unsupported health/capacity claims.
+- [x] Use explicit safe database projections, bounded filters/sorting/pagination, released-score rules, sanitized job failures, and typed audit metadata.
+- [x] Keep the milestone read-only with no schema change, migration, dependency, environment, normal-database, client, or Phase 9C work.
+- [ ] Complete final Phase 9B review, staging, commit, push, and any separately approved live acceptance.
 
 ### Later Phase 9 milestones
 
-- [ ] Phase 9B: implement approved read-only academic and operational summaries.
 - [ ] Phase 9C: implement separately approved Git-credential revocation and safe repository-provisioning recovery.
 - [ ] Keep Phase 9 backend-focused and treat the current admin frontend only as a temporary feature inventory.
 

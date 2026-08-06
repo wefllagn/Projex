@@ -21,3 +21,17 @@ export function requireAnyRole(roles: readonly UserRole[]): RequestHandler {
 export function requireRole(role: UserRole): RequestHandler {
   return requireAnyRole([role])
 }
+
+export const requireActiveUser: RequestHandler = (request, _response, next) => {
+  if (!request.auth || request.auth.user.status !== 'ACTIVE') {
+    next(
+      new AppError({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: 'You are not authorized to perform this action.',
+      }),
+    )
+    return
+  }
+  next()
+}

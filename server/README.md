@@ -141,6 +141,18 @@ POST  /users/:userId/resend-setup
 PATCH /users/:userId/status
 GET   /admin/users/:userId/account-summary
 POST  /admin/users/:userId/sessions/revoke
+GET   /admin/overview
+GET   /admin/academic/classes
+GET   /admin/academic/activities
+GET   /admin/academic/submissions
+GET   /admin/academic/project-tasks
+GET   /admin/academic/repositories
+GET   /admin/operations/health
+GET   /admin/operations/storage
+GET   /admin/operations/execution-jobs
+GET   /admin/operations/repository-provisioning-jobs
+GET   /admin/operations/git-credentials
+GET   /admin/audit-events
 GET   /users
 GET   /users/:userId
 POST  /classes
@@ -262,6 +274,8 @@ Default inspection limits are configured through `GIT_INSPECTION_FILE_LIMIT_BYTE
 Activity and test-case authoring are restricted to the owning instructor. Administrators receive metadata-only activity oversight and cannot retrieve test-case definitions, starter source, practice outcomes, or instructor-only academic projections. Students with ACTIVE membership may read only PUBLISHED or CLOSED activities and visible test cases. Hidden test rows and counts are excluded from student responses. Published scoring/test configuration is immutable.
 
 Phase 9A admin account summaries expose safe account/setup state, session counts, and class-membership summaries only. Target-session revocation and disruptive status/class/membership actions require bounded reasons and write allowlisted audit events transactionally. The status endpoint also requires `expectedUpdatedAt`, rejects self-disablement, and preserves at least one ACTIVE administrator under concurrency.
+
+Phase 9B adds ACTIVE-admin-only read-only oversight. Academic lists expose lifecycle, identity, ownership, released-score, storage-measurement, and bounded-count metadata through explicit allowlists; they never return source, hidden tests, assessment evidence, feedback text, or host paths. Operational lists expose sanitized job/credential/audit lifecycle metadata. Health distinguishes API, database, and persisted queue observations and reports worker health as `not_observed`. All lists use endpoint-specific filters and pagination capped at 100; no Phase 9B request changes application records.
 
 Official submissions require Java execution to be enabled, Java source, and an `Idempotency-Key`. Ordinary attempts are limited by the activity's one-to-three usable-attempt setting. Infrastructure retries reuse the original record; an owning instructor may formally grant one future-expiring replacement, which may cross a deadline/CLOSED state but cannot bypass archive, inactive account, removed membership, expiration, or single-use rules.
 

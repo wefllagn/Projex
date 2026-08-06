@@ -6,6 +6,7 @@ import { createErrorHandler } from '../../middleware/error-handler.js'
 import { requestIdMiddleware } from '../../middleware/request-id.js'
 import type { SafeUserProfile } from '../auth/auth.types.js'
 import type { AdminRepository } from './admin.repository.js'
+import type { AdminOversightService } from './admin-oversight.service.js'
 import { createAdminRouter } from './admin.routes.js'
 import { createAdminService } from './admin.service.js'
 
@@ -62,10 +63,14 @@ function createApp(caller: SafeUserProfile) {
     next()
   }
   const pass: RequestHandler = (_req, _res, next) => next()
+  const oversightService = {
+    overview: async () => ({ generatedAt: fixedNow }),
+  } as unknown as AdminOversightService
   app.use(
     '/api/v1/admin',
     createAdminRouter({
       service: createAdminService({ repository, now: () => fixedNow }),
+      oversightService,
       requireAuthentication: authenticate,
       requireCsrf: pass,
     }),
