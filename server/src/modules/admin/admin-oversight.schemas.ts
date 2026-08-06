@@ -93,8 +93,11 @@ export const adminAuditEventQuerySchema = z.object({
     'USER_STATUS_CHANGED', 'USER_SESSIONS_REVOKED', 'CLASS_CREATED', 'CLASS_UPDATED',
     'CLASS_ARCHIVED', 'CLASS_RESTORED', 'CLASS_JOIN_CODE_ROTATED',
     'CLASS_JOIN_CODE_REVOKED', 'CLASS_MEMBER_REMOVED', 'CLASS_MEMBER_REACTIVATED',
+    'GIT_CREDENTIAL_REVOKED', 'REPOSITORY_PROVISIONING_RETRY_QUEUED',
   ]).optional(),
-  targetType: z.enum(['USER', 'CLASS', 'CLASS_MEMBER']).optional(),
+  targetType: z.enum([
+    'USER', 'CLASS', 'CLASS_MEMBER', 'GIT_CREDENTIAL', 'REPOSITORY_PROVISIONING_JOB',
+  ]).optional(),
 }).strict()
 
 export type AdminClassQuery = z.infer<typeof adminClassQuerySchema>

@@ -1,6 +1,6 @@
 # Projex Server
 
-Phase 8A provides the controlled-local Git foundation and durable empty bare-repository provisioning. Phase 8B adds disabled-by-default, loopback-only authenticated Smart HTTP for clone, fetch, and policy-controlled push. Pull workflows, repository browsing/history/tree/blob/diff/merge APIs, frontend integration, hosted transport, and public/SSH access remain unavailable.
+Phases 8A through 8C provide controlled-local Git provisioning, disabled-by-default loopback Smart HTTP, and bounded repository inspection. Phase 9 adds minimized administrator account, academic, and operational oversight plus two controlled recovery actions. Frontend integration, hosted transport, public/SSH access, arbitrary infrastructure control, and admin source/grade authority remain unavailable.
 
 ## Prerequisites
 
@@ -152,6 +152,8 @@ GET   /admin/operations/storage
 GET   /admin/operations/execution-jobs
 GET   /admin/operations/repository-provisioning-jobs
 GET   /admin/operations/git-credentials
+POST  /admin/operations/git-credentials/:credentialId/revoke
+POST  /admin/operations/repository-provisioning-jobs/:jobId/retry
 GET   /admin/audit-events
 GET   /users
 GET   /users/:userId
@@ -276,6 +278,8 @@ Activity and test-case authoring are restricted to the owning instructor. Admini
 Phase 9A admin account summaries expose safe account/setup state, session counts, and class-membership summaries only. Target-session revocation and disruptive status/class/membership actions require bounded reasons and write allowlisted audit events transactionally. The status endpoint also requires `expectedUpdatedAt`, rejects self-disablement, and preserves at least one ACTIVE administrator under concurrency.
 
 Phase 9B adds ACTIVE-admin-only read-only oversight. Academic lists expose lifecycle, identity, ownership, released-score, storage-measurement, and bounded-count metadata through explicit allowlists; they never return source, hidden tests, assessment evidence, feedback text, or host paths. Operational lists expose sanitized job/credential/audit lifecycle metadata. Health distinguishes API, database, and persisted queue observations and reports worker health as `not_observed`. All lists use endpoint-specific filters and pagination capped at 100; no Phase 9B request changes application records.
+
+Phase 9C adds two narrow ACTIVE-admin operations. Credential revocation is monotonic and returns safe metadata only; Smart HTTP denies a revoked credential on its next request. Provisioning retry requires a current version and an eligible exhausted FAILED job, preserves diagnostics, grants one additional claim, and writes its audit event atomically. The API never executes Git or touches storage; only the separate Git worker performs the later claim. Quarantine recovery, generic/Java retry, repository repair, and admin Git/source authority remain unavailable.
 
 Official submissions require Java execution to be enabled, Java source, and an `Idempotency-Key`. Ordinary attempts are limited by the activity's one-to-three usable-attempt setting. Infrastructure retries reuse the original record; an owning instructor may formally grant one future-expiring replacement, which may cross a deadline/CLOSED state but cannot bypass archive, inactive account, removed membership, expiration, or single-use rules.
 

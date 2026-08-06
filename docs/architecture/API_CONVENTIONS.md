@@ -30,6 +30,8 @@ GET    /api/v1/admin/operations/storage
 GET    /api/v1/admin/operations/execution-jobs
 GET    /api/v1/admin/operations/repository-provisioning-jobs
 GET    /api/v1/admin/operations/git-credentials
+POST   /api/v1/admin/operations/git-credentials/:credentialId/revoke
+POST   /api/v1/admin/operations/repository-provisioning-jobs/:jobId/retry
 GET    /api/v1/admin/audit-events
 POST   /api/v1/classes
 GET    /api/v1/classes
@@ -135,6 +137,14 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - Health separates API, database, and persisted queue observations. `workerHealth.status` remains `not_observed` because job/lease records do not prove worker availability.
 - Git-credential lists expose IDs, allowed operations, and lifecycle timestamps only. Audit lists expose bounded reasons and action-specific metadata allowlists; arbitrary stored metadata is discarded.
 - Oversight lists accept only endpoint-specific status/type/resource/search filters, explicit sort fields/directions, and `pageSize` from 1 through 100. Phase 9B introduces no mutation endpoint.
+
+### Phase 9C controlled operational contracts
+
+- Both Phase 9C POST routes require an authenticated ACTIVE administrator at route and service layers, JSON, CSRF validation, and a trimmed reason from 10 through 500 characters.
+- Credential revocation uses a monotonic `revokedAt IS NULL` compare-and-set. An active or expired unrevoked credential returns safe metadata with `changed: true`; an already-revoked credential returns `changed: false` and creates no duplicate audit event. Responses never include the secret or verifier.
+- Provisioning retry requires `expectedUpdatedAt` and requeues only the same eligible exhausted FAILED job. It preserves `claimAttempt`, adds exactly one to `maxClaimAttempts`, and returns only job/repository IDs, queue state/counts, availability/version timestamps, and `queued: true`.
+- Stable retry errors are `PROVISIONING_JOB_NOT_FOUND`, `PROVISIONING_JOB_NOT_FAILED`, `STALE_PROVISIONING_JOB_VERSION`, `REPOSITORY_NOT_PROVISIONABLE`, `PROVISIONING_QUARANTINED`, `PROVISIONING_STORAGE_STATE_UNSAFE`, `PROVISIONING_RETRY_LIMIT_REACHED`, and the established `GIT_EXECUTION_DISABLED` when controlled-local Git is unavailable.
+- The API mutation never executes Git or accesses repository storage. Smart HTTP continues to perform current credential and authorization checks per transport request.
 
 ### Phase 5 activity and test-case rules
 

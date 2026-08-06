@@ -6,7 +6,7 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Boundary
 
-Phase 0 (architecture and planning) and implementation Phases 1 through 8 are complete, accepted, and integrated. Phase 9A authorization and accountability work is the current approved backend-only milestone on `phase/09-admin-functionalization`; Phase 9B/9C, the normal Phase 9A migration, frontend work, and later phases remain separate approval boundaries.
+Phase 0 (architecture and planning) and implementation Phases 1 through 8 are complete, accepted, and integrated. Phase 9A authorization/accountability and Phase 9B read-only oversight are complete on `phase/09-admin-functionalization`. Phase 9C controlled operational recovery is the current approved backend-only milestone; its additive migration is verified only on `projex_test`, while normal migration, commit/push, frontend work, and later phases remain separate approval boundaries.
 
 ## Live-State Authority
 

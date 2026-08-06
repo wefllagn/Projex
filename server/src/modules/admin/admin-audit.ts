@@ -60,6 +60,27 @@ export type AdminAuditInput =
       targetType: 'CLASS_MEMBER'
       metadata: { classId: string; studentId: string; changed: boolean }
     })
+  | (AuditBase & {
+      action: 'GIT_CREDENTIAL_REVOKED'
+      targetType: 'GIT_CREDENTIAL'
+      metadata: {
+        userId: string
+        repositoryId: string
+        previousLifecycle: 'ACTIVE' | 'EXPIRED'
+      }
+    })
+  | (AuditBase & {
+      action: 'REPOSITORY_PROVISIONING_RETRY_QUEUED'
+      targetType: 'REPOSITORY_PROVISIONING_JOB'
+      metadata: {
+        repositoryId: string
+        claimAttempt: number
+        previousMaxClaimAttempts: number
+        newMaxClaimAttempts: number
+        previousFailureCode: string | null
+        previousCompletedAt: string
+      }
+    })
 
 export type AdminAuditWriter = (
   transaction: Prisma.TransactionClient,

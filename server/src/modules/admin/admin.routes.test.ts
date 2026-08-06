@@ -19,7 +19,11 @@ const admin: SafeUserProfile = {
   status: 'ACTIVE',
 }
 
-function createApp(caller: SafeUserProfile) {
+function createApp(
+  caller: SafeUserProfile,
+  overrides: Partial<AdminRepository> = {},
+  gitProvisioningRetryEnabled = true,
+) {
   const repository: AdminRepository = {
     async findAccountSummary(userId) {
       return {
@@ -42,6 +46,13 @@ function createApp(caller: SafeUserProfile) {
     async revokeUserSessions() {
       return { kind: 'revoked', revokedSessionCount: 0, revokedAt: fixedNow }
     },
+    async revokeGitCredential() {
+      return { kind: 'not_found' }
+    },
+    async retryRepositoryProvisioningJob() {
+      return { kind: 'not_found' }
+    },
+    ...overrides,
   }
   const app = express()
   app.use(requestIdMiddleware)
@@ -69,7 +80,11 @@ function createApp(caller: SafeUserProfile) {
   app.use(
     '/api/v1/admin',
     createAdminRouter({
-      service: createAdminService({ repository, now: () => fixedNow }),
+      service: createAdminService({
+        repository,
+        now: () => fixedNow,
+        gitProvisioningRetryEnabled,
+      }),
       oversightService,
       requireAuthentication: authenticate,
       requireCsrf: pass,
@@ -112,5 +127,81 @@ describe('Phase 9A admin HTTP contracts', () => {
       .post('/api/v1/admin/users/44444444-4444-4444-8444-444444444444/sessions/revoke')
       .send({ reason: 'x'.repeat(501) })
       .expect(400)
+  })
+
+  it('returns safe envelopes for credential revocation and provisioning retry', async () => {
+    const credentialId = '55555555-5555-4555-8555-555555555555'
+    const repositoryId = '66666666-6666-4666-8666-666666666666'
+    const jobId = '77777777-7777-4777-8777-777777777777'
+    const app = createApp(admin, {
+      async revokeGitCredential() {
+        return {
+          kind: 'revoked',
+          credential: {
+            id: credentialId,
+            userId: admin.id,
+            repositoryId,
+            allowedOperations: ['READ'],
+            createdAt: fixedNow,
+            expiresAt: new Date(fixedNow.getTime() + 60_000),
+            lastUsedAt: null,
+            revokedAt: fixedNow,
+          },
+        }
+      },
+      async retryRepositoryProvisioningJob() {
+        return {
+          kind: 'queued',
+          job: {
+            id: jobId,
+            repositoryId,
+            status: 'PENDING',
+            claimAttempt: 3,
+            maxClaimAttempts: 4,
+            availableAt: fixedNow,
+            updatedAt: fixedNow,
+          },
+        }
+      },
+    })
+
+    const revoked = await request(app)
+      .post(`/api/v1/admin/operations/git-credentials/${credentialId}/revoke`)
+      .send({ reason: 'Confirmed bounded credential response.' })
+      .expect(200)
+    expect(revoked.body).toMatchObject({
+      data: { credentialId, lifecycle: 'REVOKED', changed: true },
+      meta: { requestId: expect.any(String) },
+    })
+    expect(JSON.stringify(revoked.body)).not.toMatch(/secret|hash|verifier/i)
+
+    const retried = await request(app)
+      .post(`/api/v1/admin/operations/repository-provisioning-jobs/${jobId}/retry`)
+      .send({
+        reason: 'Approved bounded provisioning recovery.',
+        expectedUpdatedAt: fixedNow.toISOString(),
+      })
+      .expect(200)
+    expect(retried.body).toMatchObject({
+      data: { jobId, repositoryId, status: 'PENDING', queued: true },
+      meta: { requestId: expect.any(String) },
+    })
+  })
+
+  it('validates mutation bodies and denies non-admin callers', async () => {
+    const credentialId = '55555555-5555-4555-8555-555555555555'
+    const jobId = '77777777-7777-4777-8777-777777777777'
+    await request(createApp(admin))
+      .post(`/api/v1/admin/operations/git-credentials/${credentialId}/revoke`)
+      .send({ reason: 'short' })
+      .expect(400)
+    await request(createApp(admin))
+      .post(`/api/v1/admin/operations/repository-provisioning-jobs/${jobId}/retry`)
+      .send({ reason: 'Approved bounded provisioning recovery.', expectedUpdatedAt: 'not-a-date' })
+      .expect(400)
+    await request(createApp({ ...admin, role: 'INSTRUCTOR' }))
+      .post(`/api/v1/admin/operations/git-credentials/${credentialId}/revoke`)
+      .send({ reason: 'Confirmed bounded credential response.' })
+      .expect(403)
   })
 })

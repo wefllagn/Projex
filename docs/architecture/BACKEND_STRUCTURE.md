@@ -132,7 +132,7 @@ Names may be singular when the feature represents a process rather than a collec
 
 | Feature | Primary responsibility |
 | --- | --- |
-| `admin` | Phase 9 account summaries, active-admin service authorization, target-session revocation, append-only administrative audit writing, and read-only academic/operational oversight through explicit safe projections. It provides no instructor, grading, repository-source, Git-worker, arbitrary query, or process-execution authority. |
+| `admin` | Phase 9 account summaries, active-admin service authorization, target-session revocation, append-only administrative audit writing, read-only oversight, monotonic Git-credential revocation, and bounded requeue of eligible failed repository-provisioning jobs. It provides no instructor, grading, repository-source, Git/filesystem worker, arbitrary query, or process-execution authority. |
 | `auth` | Login, logout, session creation/rotation/revocation, current principal, password verification. |
 | `users` | User profiles, account status, and `STUDENT`, `INSTRUCTOR`, `ADMIN` role assignments. |
 | `classes` | Class workspace identity, course/section/term context, instructor assignment, and unique class-code generation/rotation/revocation. |

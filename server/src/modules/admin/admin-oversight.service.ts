@@ -131,6 +131,44 @@ function safeAuditMetadata(action: string, value: Prisma.JsonValue | null): Reco
         ? { classId, studentId, changed }
         : null
     }
+    case 'GIT_CREDENTIAL_REVOKED': {
+      const userId = stringValue(value, 'userId')
+      const repositoryId = stringValue(value, 'repositoryId')
+      const previousLifecycle = stringValue(value, 'previousLifecycle')
+      return userId && repositoryId &&
+        uuidPattern.test(userId) && uuidPattern.test(repositoryId) &&
+        (previousLifecycle === 'ACTIVE' || previousLifecycle === 'EXPIRED')
+        ? { userId, repositoryId, previousLifecycle }
+        : null
+    }
+    case 'REPOSITORY_PROVISIONING_RETRY_QUEUED': {
+      const repositoryId = stringValue(value, 'repositoryId')
+      const claimAttempt = numberValue(value, 'claimAttempt')
+      const previousMaxClaimAttempts = numberValue(value, 'previousMaxClaimAttempts')
+      const newMaxClaimAttempts = numberValue(value, 'newMaxClaimAttempts')
+      const previousFailure = value.previousFailureCode
+      const previousCompletedAt = stringValue(value, 'previousCompletedAt')
+      const previousFailureCode =
+        previousFailure === null
+          ? null
+          : typeof previousFailure === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(previousFailure)
+            ? previousFailure
+            : undefined
+      return repositoryId && uuidPattern.test(repositoryId) &&
+        claimAttempt !== undefined && previousMaxClaimAttempts !== undefined &&
+        newMaxClaimAttempts === previousMaxClaimAttempts + 1 && newMaxClaimAttempts <= 10 &&
+        previousFailureCode !== undefined && previousCompletedAt &&
+        Number.isFinite(Date.parse(previousCompletedAt))
+        ? {
+            repositoryId,
+            claimAttempt,
+            previousMaxClaimAttempts,
+            newMaxClaimAttempts,
+            previousFailureCode,
+            previousCompletedAt,
+          }
+        : null
+    }
     default:
       return null
   }

@@ -28,6 +28,7 @@ The hosted target is a controlled testing/defense environment, but internet acce
 - Verify class membership, instructor assignment, repository membership, team membership, record ownership, and lifecycle state as required by the use case.
 - Admin actions require explicit admin authorization and an audit trail; admin does not imply bypassing data-minimization rules.
 - Phase 9A successful account/class/membership mutations use an allowlisted `AdminAuditEvent` written atomically with the mutation. Reasons are bounded, metadata is constructed internally per action, and denied/failed requests remain redacted security logs rather than successful audit records.
+- Phase 9C Git-credential revocation and eligible provisioning retry require an ACTIVE administrator at route and service boundaries, CSRF, bounded reasons, monotonic/optimistic concurrency, and transactional allowlisted audit rows. They expose no credential verifier, host path, worker identity, raw failure output, Git/source authority, or process execution.
 - Administrators cannot disable themselves through the administrative status endpoint, and a database transaction lock prevents concurrent changes from removing the last ACTIVE administrator.
 - Use deny-by-default endpoint policies.
 - Prefer `404` when revealing that a protected resource exists would disclose private information; otherwise return `403`.

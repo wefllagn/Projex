@@ -4,7 +4,7 @@
 
 Phase 9 is backend-focused. The existing admin React pages remain a temporary mock and feature inventory; Phase 10D owns their redesign and integration using the student/instructor visual language.
 
-Phase 9A implements authorization and accountability. Phase 9B implements bounded read-only academic and operational oversight. Phase 9C Git-credential revocation and repository-provisioning recovery remain a separate approval boundary.
+Phase 9A implements authorization and accountability. Phase 9B implements bounded read-only academic and operational oversight. Phase 9C adds only controlled Git-credential revocation and eligible repository-provisioning recovery.
 
 ## Administrator role
 
@@ -76,12 +76,25 @@ Operational job projections contain safe related IDs, state, claim counts, confi
 
 Administrative health distinguishes API availability, PostgreSQL connectivity, and queue-query availability. It explicitly reports worker health as `not_observed`; it never promotes jobs or leases into a health claim. Git-credential listings expose lifecycle timestamps, resource IDs, and allowed operations only, never the secret or verifier. Audit listings rebuild typed metadata from an action-specific allowlist and discard arbitrary stored keys.
 
-Unsupported claims deliberately include capacity utilization, percentages, email delivery success, archive integrity, raw-log summaries, and worker/process health. The admin remains unable to author academic content, view hidden tests or source, grade or release work, author feedback, inspect Git history/source, issue credentials, retry jobs, revoke credentials, execute processes, or query arbitrary infrastructure.
+Unsupported claims deliberately include capacity utilization, percentages, email delivery success, archive integrity, raw-log summaries, and worker/process health. The admin remains unable to author academic content, view hidden tests or source, grade or release work, author feedback, inspect Git history/source, issue credentials, execute processes, or query arbitrary infrastructure. The only Phase 9 operational mutations are the narrowly constrained revocation and retry actions below.
 
-## Phase 9C boundary
+## Phase 9C controlled operational recovery
 
-Phase 9B adds no status change, archive/restore, retry, credential revocation, session revocation expansion, audit mutation, or other operational action. Phase 9A mutations remain unchanged. Any Phase 9C recovery or revocation behavior requires separate approval and tests.
+Every Phase 9C route repeats the authenticated ACTIVE-admin requirement at route and service boundaries and requires cookie authentication, CSRF validation, JSON input, and a trimmed reason of 10 through 500 characters.
+
+```text
+POST /api/v1/admin/operations/git-credentials/:credentialId/revoke
+POST /api/v1/admin/operations/repository-provisioning-jobs/:jobId/retry
+```
+
+Credential revocation is monotonic. An unrevoked credential is updated only when `revokedAt IS NULL`; active and expired credentials can be revoked, while an already-revoked credential returns `changed: false` without another audit row. The response reuses the safe credential metadata projection and omits the secret/verifier. Inactive users and inactive repositories do not prevent defensive revocation. Smart HTTP re-evaluates the persisted credential on every request, so revocation denies later transport requests immediately.
+
+Provisioning retry is limited to the existing failed job for an ACTIVE repository in safe failed storage state. It requires an exact `expectedUpdatedAt`, no storage path, worker, active lease, or quarantine state, an exhausted claim budget below 10, and—for class projects—an ACTIVE class/team with a PUBLISHED or CLOSED task. A successful retry preserves `claimAttempt` and failure diagnostics, increments `maxClaimAttempts` by exactly one, returns the same job to `PENDING`, and moves repository storage from `FAILED` to `PENDING`. The API performs no Git or filesystem operation; only the separate provisioning worker may claim the added attempt.
+
+Both changes and their action-specific `AdminAuditEvent` are committed in one transaction. Credential metadata is limited to user/repository IDs and the previous ACTIVE/EXPIRED lifecycle. Retry metadata is limited to repository ID, claim count, previous/new maximum, sanitized failure code, and previous completion time. Audit failure rolls back the state change. Concurrent credential revocations produce one change; concurrent retries produce one requeue and one stale-version response.
+
+Phase 9C does not add credential issuance, generic job mutation, Java retry, quarantine recovery, repository repair, Git/source access, process execution, or frontend behavior.
 
 ## Verification boundary
 
-The additive Phase 9A migration is applied to both approved databases. Phase 9B needs no migration and uses only guarded `projex_test` for database-backed implementation verification. Tests cover route/service denial, bounded filters and pagination, aggregate accuracy, released-score behavior, stuck-job derivation, measured/unmeasured storage, health semantics, audit metadata allowlisting, empty states, and deliberate sensitive fixtures. Authenticated normal-environment validation remains a final Phase 9 acceptance item under a separately approved credential workflow. Phase 9C, frontend work, commit, push, and integration remain separate boundaries.
+The additive Phase 9A migration is applied to both approved databases. Phase 9B needs no migration. Phase 9C adds only four enum values for its two audit actions/targets; migration 11 is applied to `projex_test` only until normal migration is separately approved. Verification covers real cookie/CSRF authentication, route/service denial, compare-and-set concurrency, idempotency, audit rollback, safe projections, guarded worker-only Git provisioning, and immediate loopback Smart HTTP denial after revocation. Authenticated normal-environment validation, normal migration, frontend work, commit/push, and integration remain separate boundaries.

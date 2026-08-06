@@ -60,6 +60,14 @@ class FakeAdminRepository implements AdminRepository {
     this.revokeInput = input
     return this.revokeResult
   }
+
+  async revokeGitCredential() {
+    return { kind: 'not_found' as const }
+  }
+
+  async retryRepositoryProvisioningJob() {
+    return { kind: 'not_found' as const }
+  }
 }
 
 describe('Phase 9A admin account service', () => {

@@ -13,6 +13,8 @@ import { createPostgresRepositoryProvisioningQueue } from '../../src/infrastruct
 import { createErrorHandler } from '../../src/middleware/error-handler.js'
 import { requestIdMiddleware } from '../../src/middleware/request-id.js'
 import { createRepositoryStorage } from '../../src/infrastructure/storage/repository-storage.js'
+import { createPrismaAdminRepository } from '../../src/modules/admin/admin.repository.js'
+import { createAdminService } from '../../src/modules/admin/admin.service.js'
 import { createGitCredentialService } from '../../src/modules/git-transport/git-credential.service.js'
 import { createPrismaGitTransportRepository } from '../../src/modules/git-transport/git-transport.repository.js'
 import { createGitTransportRouter } from '../../src/modules/git-transport/git-transport.routes.js'
@@ -313,7 +315,15 @@ describe('authenticated Git Smart HTTP', () => {
     await runGit(['add', 'Main.java'], allowed)
     await runGit(['commit', '-m', 'No write scope'], allowed)
     expect((await runGit(['push', 'origin', 'main'], allowed, authorization)).code).not.toBe(0)
-    await credentialService.revoke(first.owner, readCredential.credentialId)
+    const admin = await createActiveUser(prisma, 'ADMIN', 'Credential Revocation Admin')
+    const adminService = createAdminService({ repository: createPrismaAdminRepository(prisma) })
+    const revoked = await adminService.revokeGitCredential(
+      admin,
+      readCredential.credentialId,
+      { reason: 'Confirmed repository credential security response.' },
+      crypto.randomUUID(),
+    )
+    expect(revoked).toMatchObject({ changed: true, lifecycle: 'REVOKED' })
     expect((await runGit(['fetch', 'origin'], allowed, authorization)).code).not.toBe(0)
     const replacement = await issue(first.owner, first.repository.id, ['READ'])
     await prisma.user.update({ where: { id: first.owner.id }, data: { status: 'SUSPENDED' } })

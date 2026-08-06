@@ -2,7 +2,7 @@
 
 ## Scope
 
-Phase 2 established the core PostgreSQL schema. Phases 3 through 8 added authentication, user/class management, programming activities, immutable submissions and assessment, project collaboration, Git provisioning, Smart HTTP, and repository inspection. Phase 9A adds only the narrow administrative accountability ledger; frontend integration remains deferred.
+Phase 2 established the core PostgreSQL schema. Phases 3 through 8 added authentication, user/class management, programming activities, immutable submissions and assessment, project collaboration, Git provisioning, Smart HTTP, and repository inspection. Phase 9A adds only the narrow administrative accountability ledger; Phase 9B adds no schema; Phase 9C adds only two audit actions and two audit target types. Frontend integration remains deferred.
 
 The authoritative sources are:
 
@@ -24,7 +24,7 @@ The authoritative sources are:
 | `Class` | `classes` | Instructor-owned class, section, and term workspace. |
 | `ClassMember` | `class_members` | Student enrollment and membership lifecycle. |
 | `ProgrammingActivity` | `programming_activities` | Programming workspace definition and attempt limit. |
-| `AdminAuditEvent` | `admin_audit_events` | Allowlisted successful administrative mutation record with actor, target, bounded reason, request ID, safe metadata, and timestamp. |
+| `AdminAuditEvent` | `admin_audit_events` | Allowlisted successful administrative mutation record with actor, target, bounded reason, request ID, safe metadata, and timestamp. Phase 9C includes transactional Git-credential revocation and provisioning-retry actions; no credential secret, storage path, worker identity, or raw failure output is stored. |
 | `TestCase` | `test_cases` | Ordered visible or hidden activity test. |
 | `ActivitySubmission` | `activity_submissions` | Immutable numbered student attempt and score snapshot. |
 | `SubmissionExecution` | `submission_executions` | Compile/runtime execution record for a submission. |

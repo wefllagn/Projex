@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { PrismaClient } from '@prisma/client'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
@@ -8,6 +8,8 @@ import { createGitCommandRunner } from '../../src/infrastructure/git/git-command
 import { createPostgresRepositoryProvisioningQueue } from '../../src/infrastructure/job-queue/repository-provisioning-queue.js'
 import { createLogger } from '../../src/infrastructure/logging/logger.js'
 import { createRepositoryStorage } from '../../src/infrastructure/storage/repository-storage.js'
+import { createPrismaAdminRepository } from '../../src/modules/admin/admin.repository.js'
+import { createAdminService } from '../../src/modules/admin/admin.service.js'
 import { createPrismaRepositoryRepository } from '../../src/modules/repositories/repository.repository.js'
 import { createRepositoryProvisioningService } from '../../src/modules/repositories/repository-provisioning.service.js'
 import {
@@ -46,9 +48,12 @@ describe('real Git repository provisioning', () => {
     await prisma.$disconnect()
   })
 
-  async function fixture() {
+  async function fixture(maxClaimAttempts?: number) {
     const owner = await createActiveUser(prisma, 'STUDENT')
-    const repository = createPrismaRepositoryRepository(prisma)
+    const repository = createPrismaRepositoryRepository(
+      prisma,
+      maxClaimAttempts ? { provisioningMaxAttempts: maxClaimAttempts } : undefined,
+    )
     const created = await repository.createPersonal({
       ownerId: owner.id,
       repository: { repositoryName: 'Real Git Fixture', description: null },
@@ -60,6 +65,16 @@ describe('real Git repository provisioning', () => {
     if (!job) throw new Error('Provisioning job fixture was not claimable.')
     const service = createRepositoryProvisioningService({ queue, git, storage, logger })
     return { created: created.repository, job, queue, service }
+  }
+
+  async function exists(target: string): Promise<boolean> {
+    try {
+      await lstat(target)
+      return true
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+      throw error
+    }
   }
 
   it('creates exactly one verified empty bare repository with HEAD on main', async () => {
@@ -112,5 +127,51 @@ describe('real Git repository provisioning', () => {
     expect(stored.storagePath).toBeNull()
     expect(storedJob.status).toBe('FAILED')
     expect(await prisma.repositoryActivity.count({ where: { repositoryId: created.id } })).toBe(0)
+  })
+
+  it('performs no filesystem work while an administrator queues one bounded retry, then provisions through the worker', async () => {
+    const { created, job, queue, service } = await fixture(1)
+    await expect(queue.fail({
+      job,
+      failureCode: 'TEST_TRANSIENT_GIT_FAILURE',
+      now: new Date(),
+    })).resolves.toBe('failed')
+    const failed = await prisma.repositoryProvisioningJob.findUniqueOrThrow({ where: { id: job.id } })
+    const paths = storage.pathsFor(created.id, job.id)
+    expect(await exists(paths.repositoryPath)).toBe(false)
+    expect(await exists(paths.stagingPath)).toBe(false)
+
+    const admin = await createActiveUser(prisma, 'ADMIN')
+    const adminService = createAdminService({
+      repository: createPrismaAdminRepository(prisma),
+      gitProvisioningRetryEnabled: true,
+    })
+    await expect(adminService.retryRepositoryProvisioningJob(
+      admin,
+      job.id,
+      {
+        reason: 'Approved bounded retry after confirming a transient Git failure.',
+        expectedUpdatedAt: failed.updatedAt,
+      },
+      randomUUID(),
+    )).resolves.toMatchObject({ status: 'PENDING', maxClaimAttempts: 2 })
+    expect(await exists(paths.repositoryPath)).toBe(false)
+    expect(await exists(paths.stagingPath)).toBe(false)
+
+    const retried = await queue.claimNext({ workerId: randomUUID(), now: new Date(), leaseMs: 60_000 })
+    expect(retried).not.toBeNull()
+    await service.process(retried!)
+    const stored = await prisma.repository.findUniqueOrThrow({
+      where: { id: created.id },
+      include: { provisioningJob: true, activities: true },
+    })
+    expect(stored.storageStatus).toBe('READY')
+    expect(stored.provisioningJob).toMatchObject({
+      status: 'SUCCEEDED',
+      claimAttempt: 2,
+      maxClaimAttempts: 2,
+    })
+    expect(stored.activities.filter(({ activityType }) => activityType === 'REPOSITORY_PROVISIONED')).toHaveLength(1)
+    await expect(git.verifyEmptyBare(paths.repositoryPath)).resolves.toBeUndefined()
   })
 })

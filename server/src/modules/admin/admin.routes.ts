@@ -38,5 +38,19 @@ export function createAdminRouter(dependencies: {
     dependencies.requireCsrf,
     controller.revokeUserSessions,
   )
+  router.post(
+    '/operations/git-credentials/:credentialId/revoke',
+    requireJson,
+    ...activeAdmin,
+    dependencies.requireCsrf,
+    controller.revokeGitCredential,
+  )
+  router.post(
+    '/operations/repository-provisioning-jobs/:jobId/retry',
+    requireJson,
+    ...activeAdmin,
+    dependencies.requireCsrf,
+    controller.retryRepositoryProvisioningJob,
+  )
   return router
 }

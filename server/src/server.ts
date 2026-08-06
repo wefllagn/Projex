@@ -126,6 +126,8 @@ async function bootstrap(): Promise<void> {
   )
   const adminService = createAdminService({
     repository: createPrismaAdminRepository(prisma),
+    logger,
+    gitProvisioningRetryEnabled: env.gitExecutionMode === 'local_process',
   })
   const adminOversightService = createAdminOversightService({
     repository: createPrismaAdminOversightRepository(prisma),

@@ -278,12 +278,17 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Derive aggregates from authoritative records without cached counters or unsupported health/capacity claims.
 - [x] Use explicit safe database projections, bounded filters/sorting/pagination, released-score rules, sanitized job failures, and typed audit metadata.
 - [x] Keep the milestone read-only with no schema change, migration, dependency, environment, normal-database, client, or Phase 9C work.
-- [ ] Complete final Phase 9B review, staging, commit, push, and any separately approved live acceptance.
+- [x] Complete final Phase 9B review, staging, commit, and push; retain authenticated normal-environment acceptance for the complete Phase 9 boundary.
 
-### Later Phase 9 milestones
+### Phase 9C: controlled operational recovery
 
-- [ ] Phase 9C: implement separately approved Git-credential revocation and safe repository-provisioning recovery.
-- [ ] Keep Phase 9 backend-focused and treat the current admin frontend only as a temporary feature inventory.
+- [x] Add ACTIVE-admin-only monotonic Git-credential revocation with idempotent compare-and-set behavior and immediate dynamic Smart HTTP denial.
+- [x] Add optimistic, bounded requeue of the existing eligible failed repository-provisioning job without Git/filesystem work in the API.
+- [x] Persist both successful state changes with allowlisted audit metadata in the same transaction and prove rollback on audit failure.
+- [x] Add focused, PostgreSQL, guarded real-Git, and loopback Smart HTTP coverage, including concurrency and real cookie/CSRF authentication.
+- [ ] Apply the additive Phase 9C enum migration to normal development only after separate approval.
+- [ ] Complete final Phase 9C review, staging, commit, push, normal live acceptance, and Phase 9 integration after their separate approval gates.
+- [x] Keep Phase 9 backend-focused and treat the current admin frontend only as a temporary feature inventory.
 
 ## Phase 10: frontend integration — pending
 

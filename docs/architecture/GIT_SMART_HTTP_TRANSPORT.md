@@ -73,6 +73,8 @@ The post-receive hook writes a request-scoped receipt only after acceptance. The
 
 Git and hook processes inherit only required OS and Git quarantine variables. Database URLs, cookies, credential material, mail secrets, authorization headers, and unrelated environment values are absent. Execution uses exact paths, argument arrays, `shell: false`, Projex-owned hooks, bounded output, and no global `safe.directory` exception.
 
+Phase 9C permits an ACTIVE administrator to revoke an existing credential defensively, including one that is expired or belongs to an inactive user/repository. Revocation is a monotonic database compare-and-set and returns no secret/verifier. Smart HTTP resolves the credential and current authority on every request, so a credential revoked through the admin API is rejected immediately without changing repository membership or granting the administrator transport/source access.
+
 ## Test isolation
 
 `npm run test:smart-http` requires exactly `projex_test`, explicit absolute Git/backend executables, and a guarded `TEST_GIT_STORAGE_ROOT` ending in `projex_git_test`. It builds the hook runtime, deploys committed migrations to the test database, binds an ephemeral loopback port, keeps credentials in child-process memory, and deletes only its sentinel-owned run child. It never falls back to the normal database or normal Git root.

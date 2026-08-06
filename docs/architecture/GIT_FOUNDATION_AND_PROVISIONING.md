@@ -59,6 +59,12 @@ Filesystem/Git work cannot share a PostgreSQL transaction, so recovery uses an o
 
 If the process stops after the rename but before database completion, the next lease holder validates the matching final marker and completes idempotently. Mismatched or unexpected state is never overwritten or deleted; it is quarantined and processing stops.
 
+## Phase 9C bounded failed-job retry
+
+An ACTIVE administrator may requeue only the existing exhausted FAILED provisioning job when both job and repository storage state are safe, the repository remains provisionable, no path/worker/lease/quarantine state exists, and the supplied `expectedUpdatedAt` is current. The same transaction preserves `claimAttempt` and failure diagnostics, adds exactly one to `maxClaimAttempts` (never beyond 10), returns the job to `PENDING`, moves storage to `PENDING`, and writes one allowlisted audit event.
+
+This admin API does not resolve a storage path, inspect or create a directory, execute Git, or start the worker. Only a later separate-worker claim clears the retained failure fields and performs provisioning. Quarantined storage requires a separately approved recovery design and is never requeued through Phase 9C.
+
 ## Empty repository rule
 
 A successfully provisioned repository is an empty bare Git repository whose symbolic `HEAD` is `refs/heads/main`. It has no commits, branch refs, tags, README, starter content, or synthetic activity. The first branch and commit are created only by an authenticated Phase 8B push; provisioning itself continues to create no history.
