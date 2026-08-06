@@ -4,7 +4,7 @@
 
 - Development is local-first.
 - The existing React/Vite JavaScript/JSX frontend is preserved.
-- The backend is implemented incrementally through explicitly approved phase branches. Completed phases remain the baseline for each subsequent phase.
+- The backend is implemented incrementally through explicitly approved task or phase branches. Completed phases remain the baseline for each subsequent phase.
 - Work remains cloud-provider-neutral and deployable later to a temporary VPS, GitHub Student Developer Pack credits, Azure for Students, another student cloud credit, or an SLU host.
 - Student and Instructor core workflows are implemented first. Phase 9 defines backend Admin capabilities; the current admin mock is not the final visual design, and Phase 10D will redesign it from the student/instructor visual language.
 - Each phase stops when its requested scope is complete; it does not begin the next phase implicitly.
@@ -16,9 +16,9 @@
 | `main` | Stable accepted baseline. Only verified phase integrations are merged here. |
 | `backup/ui-hardcoded` | Preserved hardcoded UI reference. Do not rewrite it as an active development branch. |
 | `development/fullstack` | Full-stack integration branch and base for approved phase work. |
-| Phase branches | Short-lived branches for one approved phase or bounded feature slice. |
+| Task or phase branches | Short-lived branches for one approved phase, feature slice, or documentation task. |
 
-Each phase branch starts from the latest accepted full-stack phase commit. Before branching, verify that the selected base contains every accepted prior phase. `development/fullstack` remains the integration branch, but it must not be used as a base while it is behind accepted phase work.
+Each task or phase branch starts from the latest accepted full-stack commit unless the approved work requires another explicit base. Before branching, verify that the selected base contains every accepted prior phase. `development/fullstack` remains the integration branch, but it must not be used as a base while it is behind accepted phase work.
 
 Use clear phase names such as:
 
@@ -41,9 +41,11 @@ If repository policy later requires a prefix, preserve the phase identity, for e
 Rules:
 
 - Do not commit directly to `main` for feature work.
-- Do not merge a phase branch until its checklist, migrations, tests, lint/build, and UI regression checks pass.
+- Do not merge a task or phase branch until its acceptance criteria and relevant migrations, tests, lint/build, and UI regression checks pass.
 - Keep `backup/ui-hardcoded` available as a visual/behavioral comparison; do not use destructive history rewriting to maintain it.
 - Rebase/merge policy may be chosen by the maintainers, but shared history must not be force-pushed without explicit coordination.
+- Codex may stage, commit, and push to the current task or phase branch only when the approved work order explicitly authorizes those operations and all required checks pass.
+- Merging into `development/fullstack` or `main` is always a separate approval gate.
 
 ## Commit discipline
 
@@ -58,8 +60,8 @@ Rules:
 
 ```mermaid
 flowchart LR
-    Scope["Approved phase scope"] --> Read["Read audit + architecture docs"]
-    Read --> Branch["Create phase branch"]
+    Scope["Approved bounded scope"] --> Read["Load task-relevant context"]
+    Read --> Branch["Use task or phase branch"]
     Branch --> Baseline["Record checks and UI baseline"]
     Baseline --> Implement["Implement smallest vertical slice"]
     Implement --> Verify["Tests + lint + build + UI checks"]
@@ -70,20 +72,34 @@ flowchart LR
     Accept -->|"No"| Implement
 ```
 
-For each phase:
+For each bounded task or phase:
 
 1. Confirm branch and clean/understood worktree.
-2. Read `docs/FUNCTIONALIZATION_AUDIT.md`, all files in `docs/architecture/`, and feature-relevant product docs.
-3. Restate scope, protected UI, data ownership, security rules, and acceptance criteria.
-4. Record baseline lint/build results and capture relevant desktop/narrow UI views before a frontend binding change.
-5. Implement one end-to-end feature slice behind the existing UI.
+2. Read effective `AGENTS.md`, inspect actual Git state, inspect target source and nearest tests, and load the owning subsystem document.
+3. Load additional API, security, database, Git, Java, frontend, or historical documents only when the affected boundary or a discovered dependency requires them.
+4. Record relevant baseline failures and capture desktop/narrow UI views before an approved frontend binding change.
+5. Implement the smallest coherent approved slice.
 6. Keep unrelated mocks and routes intact.
 7. Add/update unit, integration, authorization, transaction, and regression tests proportional to the change.
 8. Run the required checks and inspect the actual diff.
-9. Report changed files, migrations, environment additions, checks, known limits, and manual test steps.
-10. Stop. Do not begin the next phase without approval.
+9. Report the outcome, logical changes, checks actually run, known limits, and next approval gate.
+10. Stop before the next phase or unrelated task unless it is explicitly authorized.
 
-Every phase must end with a working application. An unfinished cross-phase refactor, disabled unrelated route, or partially replaced global mock layer is not an acceptable handoff.
+Every phase or bounded task must leave the affected application and documentation coherent. An unfinished cross-phase refactor, disabled unrelated route, or partially replaced global mock layer is not an acceptable handoff.
+
+## Task intake and selective context
+
+An effective bounded work order identifies:
+
+- the desired outcome;
+- included and excluded scope;
+- observable acceptance criteria;
+- authority for migrations, credentials, Git operations, deployment, or other protected actions; and
+- the next stop boundary.
+
+Low-risk implementation may proceed without a separate planning round when the requested behavior is already explicit, bounded, and authorized. New phases, ambiguous product behavior, schema design, major architecture, security boundaries, hosted exposure, frontend redesign, and meaningful dependency changes require planning or clarification before implementation.
+
+Repository evidence outranks stale status text and conversation summaries. Verify mutable facts rather than copying them into additional tracking files. Do not reread or summarize unchanged documents unless a task-relevant conflict requires it.
 
 ## Frontend preservation rules
 
@@ -170,21 +186,48 @@ Deployment comes after local functionality and isolation controls pass.
 
 University-wide deployment, high availability, multi-server failover, autoscaling, on-call operations, and a 24/7 SLA are out of scope.
 
-## Codex rules
+## Codex execution and approval boundaries
 
-For every Codex-assisted implementation phase:
+Within an explicitly approved scope, Codex may inspect the repository, choose implementation details consistent with accepted architecture, implement the behavior, fix directly related defects, update directly related tests/documentation, run focused and affected regression checks, repeat the diagnose/fix/test cycle, review the final diff and security boundaries, and provide one completion report.
 
-- Preserve the UI.
-- Do not redesign unrelated components.
-- Do not change `src/App.css` unless required by the requested feature.
-- Do not remove mocks outside the requested feature.
-- Do not use external Git or compiler APIs.
-- Read the audit and architecture documents before changing code.
-- Keep changes scoped to the requested phase and respect existing user changes.
-- Report every changed file and summarize the reason.
-- Run configured checks appropriate to the changed code and report results.
-- Report any migration, new environment variable, manual step, limitation, or security assumption.
-- Stop after the requested phase; do not continue into the next phase without explicit approval.
+Ordinary lint, import, compilation, test-fixture, or directly related test failures do not require a new approval round. Stop when they reveal or require:
+
+- new product scope or major architecture;
+- destructive or difficult-to-reverse action;
+- a normal-development database migration that was not explicitly authorized;
+- persistent credential or environment changes;
+- deletion of non-test data or material data-loss risk;
+- weakened authorization, validation, isolation, security, or required testing;
+- a dependency installation or upgrade with meaningful impact;
+- production or non-loopback exposure;
+- an unrelated subsystem change;
+- a merge into `development/fullstack` or `main`, force push, history rewrite, protected-branch change, or branch deletion; or
+- deployment.
+
+## Decision placement
+
+- Record accepted subsystem behavior in the owning architecture document.
+- Record cross-system design and trust-boundary decisions in `SYSTEM_ARCHITECTURE.md`.
+- Record accepted phase milestones and remaining gates in `PHASE_CHECKLIST.md`.
+- Use Git commits for the implemented change history and rationale.
+- Do not create a second volatile state record when Git, migrations, scripts, or tests already own the fact.
+
+## Completion reporting
+
+Routine successful work uses:
+
+```text
+STATUS
+OUTCOME
+CHANGES
+VERIFICATION
+RISKS / FOLLOW-UP
+NEXT APPROVAL GATE
+```
+
+Report concise results rather than complete successful command output or unchanged project history. Expand the evidence automatically for migrations, credentials, security-sensitive work, Git or Java execution, hosted operations, unresolved failures, phase completion, or formal capstone evidence.
+
+Web ChatGPT is optional for routine implementation and testing. Independent external review remains recommended for phase planning/completion, cross-system architecture, authentication/authorization/cryptography/isolation, normal migrations, Git and Java execution boundaries, meaningful dependency decisions, integration/deployment/hosted exposure, and capstone or academic-scope decisions.
 
 ## Merge readiness
 
@@ -197,27 +240,3 @@ A phase is ready to merge into `development/fullstack` only when:
 - The UI remains visually equivalent except for explicitly approved functional states.
 - Changed files and known limitations are reported.
 - No secret or untracked runtime data is included.
-
-## Phase 8A verification order
-
-1. Generate Prisma and run lint, type checks, isolated tests, and build.
-2. Apply committed migrations only to `projex_test` and run serial PostgreSQL integration tests.
-3. Run real Git tests only under an explicit non-overlapping `projex_git_test` root; delete only the sentinel-owned run child.
-4. Review results before applying the migration to `projex`.
-5. Review again before enabling the normal provisioning worker. A migration never starts the worker or creates storage.
-
-## Phase 8B verification order
-
-1. Review and generate the explicit credential/activity migration; it must not run Git or touch storage.
-2. Apply it only to exactly `projex_test`, then run isolated and PostgreSQL integration tests.
-3. Run Smart HTTP end-to-end tests only on an ephemeral loopback port and inside a sentinel-owned run child under the guarded `projex_git_test` root.
-4. Stop temporary servers, clean test fixtures, remove only the verified run child, and preserve migration history.
-5. Review authorization, hooks, logs, paths, and normal-environment non-contact before separately approving a normal migration. Persistent normal Smart HTTP enablement is a later, distinct gate.
-
-## Phase 8C verification order
-
-1. Validate strict branch, full commit-ID, portable repository-path, pagination, file-size, diff-size, and changed-file limits.
-2. Run isolated authorization/input tests and integration type-checking.
-3. Run the guarded real-Git/API suite against exactly `projex_test` and a sentinel-owned `projex_git_test` child; verify complete read projections, empty repositories, binary/limit rejection, and current role/membership enforcement.
-4. Re-run Phase 8A provisioning, Phase 8B Smart HTTP, PostgreSQL integration, Java, backend, and unchanged-client regressions as affected.
-5. Confirm the normal database and normal managed repositories were never selected by a Phase 8C test, then verify test application cleanup and preserved migration history.

@@ -2,11 +2,11 @@
 
 ## Status and scope
 
-This document records the architecture for turning the existing Projex UI prototype into a controlled full-stack system and the durable decisions accepted through Phase 7.
+This document records the architecture for turning the existing Projex UI prototype into a controlled full-stack system and the durable cross-system decisions accepted through Phase 8.
 
 - Current frontend: React 19, Vite, JavaScript/JSX, React Router, and the existing CSS.
 - Current backend: Node.js, Express, TypeScript, Zod, Prisma ORM, and PostgreSQL.
-- Implementation status: Phases 0 through 8B are complete. Phase 8C adds an approved backend-only, read-only repository-inspection API in the current phase branch; normal repository contents, frontend integration, server-side Git mutations, commit, and push remain approval gates.
+- Accepted baseline: Phase 0 established architecture and planning, and implementation Phases 1 through 8 are complete. Phase 8A provides local Git provisioning, Phase 8B provides controlled authenticated Smart HTTP, and Phase 8C provides authenticated read-only repository inspection. `PHASE_CHECKLIST.md` owns roadmap milestone status; Git owns the live branch and worktree.
 - Development approach: local-first, feature-by-feature, and cloud-provider-neutral.
 - Roles: `STUDENT`, `INSTRUCTOR`, and `ADMIN` are part of the authorization model from the beginning.
 - Implementation priority: Student and Instructor workflows first, followed by dedicated Admin functionalization.
@@ -15,11 +15,20 @@ This document records the architecture for turning the existing Projex UI protot
 
 ## Document authority and historical snapshots
 
+Use this source-of-authority order for mutable and accepted facts:
+
+1. Git branch, HEAD, status, and logical diff own live repository state.
+2. The Prisma schema, committed migrations, and actual migration status own schema and migration state.
+3. Current package scripts and checks that were actually run own executable verification evidence.
+4. Current source code and tests own implemented behavior.
+5. The relevant subsystem document under `docs/architecture/` owns the accepted subsystem contract; this document owns cross-system design and trust boundaries.
+6. Conversation summaries and historical snapshots are advisory and cannot override repository evidence.
+
 `docs/FUNCTIONALIZATION_AUDIT.md`, the root-level UI direction, feature inventory, route map, mock-data plan, UI implementation checklist, and instructor UI brief are historical snapshots of the hardcoded frontend and the product rules in effect when it was built. They remain valuable evidence and must not be rewritten to imply that the backend or current rules existed at that time.
 
 When a historical snapshot conflicts with the current repository or `docs/architecture/`, the current repository and current architecture documents govern. In particular, the historical one-submission-only rule has been superseded: each programming activity configures one to three immutable, server-numbered attempts whose history is permanently preserved.
 
-Mutable facts such as the checked-out Git branch are intentionally not recorded here; Git is authoritative for the active branch.
+Mutable facts such as the checked-out branch, worktree, database contents, runtime configuration, and latest test run are intentionally not recorded here. Verify them from their live owners instead of duplicating volatile state in architecture prose.
 
 ## Architectural goals
 

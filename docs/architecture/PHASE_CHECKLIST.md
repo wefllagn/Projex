@@ -6,13 +6,15 @@ This checklist gates the transition from the hardcoded UI to a functional full-s
 
 The earlier UI implementation checklist under `docs/PROJEX_IMPLEMENTATION_CHECKLIST.md` uses a separate historical phase numbering scheme. It remains an accurate record of the UI build, but this file is authoritative for the current full-stack roadmap.
 
+This file tracks accepted milestones and remaining roadmap gates. It does not own the live branch, HEAD, worktree, migration status, database contents, runtime configuration, or current test result; verify those facts from Git, Prisma, the environment, and checks that were actually run.
+
 Status markers:
 
 - `[x]` completed and accepted.
 - `[ ]` pending.
 - `[~]` approved or partially complete but not yet implemented and accepted.
 
-## Current status
+## Accepted milestone status
 
 | Phase | Scope | Status | Baseline commit |
 | --- | --- | --- | --- |
@@ -23,8 +25,11 @@ Status markers:
 | 4 | User and Class Management | Complete | `985f101` |
 | 5 | Programming Activities and Test Cases | Complete | `1aa1525` |
 | 6 | Submissions and Automated Assessment | Complete | `2ff3e4e` |
-| 7 | Project and Repository Collaboration | Implemented; test-database verification complete, remaining verification gated | Working tree |
-| 8-11 | Later functionalization, integration, and hardening | Pending | Pending |
+| 7 | Project and Repository Collaboration | Complete | `741ba60` |
+| 8 | Local Git Operations (8A provisioning, 8B Smart HTTP, 8C inspection) | Complete | `893443a` |
+| 9 | Admin backend capabilities | Next; not started | Pending |
+| 10 | Frontend integration | Pending | Pending |
+| 11 | Hardening, deployment, and evaluation | Pending | Pending |
 
 ## Phase 0: architecture and planning — complete
 
@@ -198,7 +203,7 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - The real Java suite passes with one file and four tests covering Java 17 target compilation, deterministic visible/hidden inputs, compiler rejection, timeout, output overflow, unavailable toolchain classification, process termination, and temporary-directory cleanup.
 - Backend lint, main and integration type-checks, Prisma validation, and production build pass. The unchanged frontend lint and build pass, and `git diff -- client` is empty.
 
-## Phase 7: project and repository collaboration — implementation complete, verification in progress
+## Phase 7: project and repository collaboration — complete
 
 - [x] Keep Phase 7 backend-only and preserve every file under `client/`.
 - [x] Implement instructor-owned class project tasks with DRAFT, PUBLISHED, CLOSED, and ARCHIVED lifecycle, optimistic concurrency, role-scoped listing, team summaries, and monitoring.
@@ -231,6 +236,8 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 
 ## Phase 8B: authenticated Git Smart HTTP — complete
 
+The remaining persistent normal-loopback enablement item is a deferred operational approval gate and is not required for the accepted Phase 8B implementation milestone.
+
 - [x] Add short-lived, repository/operation-scoped credentials with one-time secret display, verifier-only persistence, expiry, and revocation.
 - [x] Add loopback-only authenticated clone/fetch/push through the configured absolute `git-http-backend`, with dynamic authorization on every request.
 - [x] Enforce heads-only, fast-forward, protected-main, atomic multi-ref, case-collision, branch/ref/commit/blob/repository limits through server-owned hooks.
@@ -241,7 +248,7 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - [ ] Enable and validate persistent normal loopback Smart HTTP only after a second separate approval.
 - [x] Complete controlled normal-development read-only clone/fetch validation with one revoked short-lived READ credential and unchanged repository fingerprints.
 
-## Phase 8C: repository inspection — implementation complete; pre-commit verification pending
+## Phase 8C: repository inspection — complete
 
 - [x] Add authenticated safe summary, branch, paginated history, reachable commit, tree, bounded UTF-8 file, and bounded diff endpoints.
 - [x] Reuse dynamic Phase 8 source authorization and READY marker-owned storage resolution; retain instructor-read/admin-metadata-only and removed/inactive fail-closed rules.
@@ -251,7 +258,7 @@ The original Phase 0 condition that no backend code existed was true when Phase 
 - [x] Keep all Git mutations on the existing Phase 8B path; defer server-created branch/commit/merge/delete and contributor attribution pending separate lock/worktree/audit/identity design.
 - [x] Add guarded real-Git/PostgreSQL/API coverage under `projex_test` and sentinel-owned `projex_git_test` storage.
 - [x] Complete the full Phase 8A/8B, PostgreSQL, Java, backend, unchanged-client, cleanup, and security regression sequence.
-- [ ] Review, commit, and push Phase 8C only after explicit approval.
+- [x] Review, commit, push, and fast-forward-integrate Phase 8C after explicit approval.
 
 ## Phase 9: Admin backend capabilities — pending
 
