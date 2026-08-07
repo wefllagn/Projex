@@ -4,9 +4,12 @@ import {
   createBrowserRouter,
 } from 'react-router-dom'
 import './App.css'
+import { AuthProvider } from './auth/AuthContext.jsx'
+import ProtectedRoute from './auth/ProtectedRoute.jsx'
 import DashboardLayout from './layouts/DashboardLayout.jsx'
 import AdminRoutePage from './pages/AdminPages.jsx'
-import LoginPage, { InstructorLoginPage, PrototypeRoleSwitcher, RoleLandingPage } from './pages/LoginPage.jsx'
+import AccountSetupPage from './pages/AccountSetupPage.jsx'
+import LoginPage, { InstructorLoginPage, RoleLandingPage } from './pages/LoginPage.jsx'
 import PlaceholderPage from './pages/PlaceholderPage.jsx'
 import InstructorRoutePage from './pages/InstructorPages.jsx'
 import RoleDashboard from './pages/RoleDashboard.jsx'
@@ -32,7 +35,11 @@ function getRouteElement(role, route) {
 const roleRoutes = routeCatalog.flatMap((role) => [
   {
     path: role.path,
-    element: <DashboardLayout role={role} />,
+    element: (
+      <ProtectedRoute role={role.id.toUpperCase()}>
+        <DashboardLayout role={role} />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,
@@ -70,7 +77,11 @@ const router = createBrowserRouter([
   },
   {
     path: '/prototype-switcher',
-    element: <PrototypeRoleSwitcher />,
+    element: <Navigate to="/" replace />,
+  },
+  {
+    path: '/account-setup',
+    element: <AccountSetupPage />,
   },
   ...roleRoutes,
   {
@@ -80,7 +91,11 @@ const router = createBrowserRouter([
 ])
 
 function App() {
-  return <RouterProvider router={router} />
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  )
 }
 
 export default App

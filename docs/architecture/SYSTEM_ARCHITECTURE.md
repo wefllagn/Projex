@@ -186,6 +186,8 @@ Student and Instructor workflows are the first implementation priority because t
 
 The current admin frontend is only a temporary mock and feature inventory; it is not an approved final design or visual source of truth. Phase 9 remains backend-focused and defines approved account, class, repository, storage, archive, health, authorization, safe-projection, and operational-summary capabilities. Phase 10D will redesign and integrate the admin interface using the polished student/instructor interface as the visual source of truth. Admin access is explicit and audited; it does not automatically bypass data minimization, ownership, or privacy rules.
 
+Phase 10 integrates the existing JavaScript/JSX frontend one bounded workflow at a time. Phase 10A.1 establishes the native-fetch API boundary, cookie-session bootstrap, single-flight refresh, CSRF mutation handling, safe current-user state, account setup, protected role routing, and frontend tests. Backend records remain authoritative and an API failure never activates a production mock fallback. `FRONTEND_INTEGRATION.md` owns the route baseline, state boundaries, mock retirement, and later 10A–10D integration plan.
+
 Phase 9A establishes the dedicated admin backend boundary, safe account/setup/session-count/membership summaries, idempotent target-session revocation, concurrency-safe account status administration, and a narrow transactional audit ledger. It also removes administrator access to activity/test-case authoring, hidden test definitions, starter/submitted source, practice results, and feedback bodies. Administrators retain legitimate account, class, join-code, membership, and metadata-only academic oversight.
 
 ## Initial class-membership scope

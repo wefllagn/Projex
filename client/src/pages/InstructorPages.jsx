@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../auth/auth-context.js'
 
 const instructorClass = {
   course: 'IT 112 - Computer Programming 1',
@@ -435,13 +436,14 @@ const roster = [
 function InstructorProfileMenu() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const auth = useAuth()
 
   return (
     <div className="student-profile-menu">
       <button type="button" className="student-profile-trigger" onClick={() => setOpen(!open)}>
         <span className="student-user-avatar" aria-hidden="true" />
         <span className="student-user-name">
-          <strong>Engr. Marco Rivera</strong>
+          <strong>{auth.user.fullName}</strong>
           <span>Instructor</span>
         </span>
         <span className="student-dropdown" aria-hidden="true" />
@@ -450,17 +452,26 @@ function InstructorProfileMenu() {
       {open && (
         <section className="student-profile-dropdown">
           <button type="button" className="student-profile-close" onClick={() => setOpen(false)} aria-label="Close profile menu" />
-          <strong>marco.rivera@slu.edu.ph</strong>
+          <strong>{auth.user.email}</strong>
           <span>Managed by slu.edu.ph</span>
           <div className="student-profile-photo">
             <span className="student-user-avatar" aria-hidden="true" />
           </div>
-          <h2>Hi, ENGR. RIVERA!</h2>
+          <h2>Hi, {auth.user.fullName.toUpperCase()}!</h2>
           <button type="button" className="student-manage-account">Manage your projex account</button>
           <div className="student-profile-menu-list">
             <button type="button">Profile</button>
             <button type="button">Settings</button>
-            <button type="button" onClick={() => navigate('/')}>Sign out</button>
+            <button
+              type="button"
+              onClick={async () => {
+                setOpen(false)
+                await auth.logout()
+                navigate('/', { replace: true })
+              }}
+            >
+              Sign out
+            </button>
           </div>
           <p>Privacy Policy - Terms of Service</p>
         </section>

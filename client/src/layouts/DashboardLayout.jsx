@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { courseOptions, roles, sectionOptions } from '../data/projexData.js'
+import { useAuth } from '../auth/auth-context.js'
+import { courseOptions, sectionOptions } from '../data/projexData.js'
 
 const studentClasses = [
   { label: 'IT 112 - Computer Programming 1', code: 'IT 112', classCode: '9346', name: 'Computer Programming', initial: 'I', active: true },
@@ -254,6 +255,7 @@ function StudentDashboardLayout() {
 function DashboardLayout({ role }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const auth = useAuth()
 
   if (role.id === 'student') {
     return <StudentDashboardLayout />
@@ -285,16 +287,7 @@ function DashboardLayout({ role }) {
         </NavLink>
 
         <div className="role-switcher" aria-label="Role switcher">
-          {roles.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={item.id === role.id ? 'is-active' : ''}
-              onClick={() => navigate(item.path)}
-            >
-              {item.id}
-            </button>
-          ))}
+          <span className="is-active">{role.id}</span>
         </div>
 
         <nav className="sidebar__nav" aria-label={`${role.label} navigation`}>
@@ -342,9 +335,19 @@ function DashboardLayout({ role }) {
               <span>5</span>
             </button>
             <div className="identity-pill">
-              <span>{role.person}</span>
-              <strong>{role.id}</strong>
+              <span>{auth.user.fullName}</span>
+              <strong>{auth.user.role.toLowerCase()}</strong>
             </div>
+            <button
+              type="button"
+              className="action-button"
+              onClick={async () => {
+                await auth.logout()
+                navigate('/', { replace: true })
+              }}
+            >
+              Sign out
+            </button>
           </div>
         </header>
 

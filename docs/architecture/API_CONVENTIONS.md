@@ -311,6 +311,8 @@ Rules:
 - Login rotates the session identifier; logout revokes the server-side session and expires the cookie.
 - APIs must not place session IDs or secrets in URLs, response bodies, browser storage, or logs.
 
+Phase 10 frontend requests use one native-fetch client with `credentials: include`. The client parses the standard envelope, preserves `meta.requestId`, maps allowlisted validation issues, supplies `X-CSRF-Token` only from the readable CSRF cookie for protected mutations, and shares one refresh operation across concurrent eligible 401 responses. Login, refresh, and account setup never recursively trigger refresh, and production routes never substitute mock data for an API failure.
+
 ## Idempotency and concurrency
 
 - An activity permits a configurable maximum of 1 to 3 immutable submission attempts per student.

@@ -4,6 +4,8 @@
 
 Phase 3 implements backend authentication and authorization only. There is no public registration endpoint, frontend authentication integration, password-reset flow, Google OAuth, class-management API, or feature-specific academic endpoint in this phase.
 
+Phase 10A.1 later integrates the existing React client with these contracts. The browser keeps server-issued access and refresh material only in HTTP-only cookies, reads the CSRF cookie only when constructing protected mutations, performs one shared refresh after eligible 401 responses, and persists no session/setup credential in browser storage. Setup tokens are consumed from a URL fragment, removed from the visible URL immediately, and retained only in component memory.
+
 Projex accounts are provisioned:
 
 - Instructors may provision students only into a class they own and must supply that `classId`.

@@ -1,8 +1,62 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import Card from "../components/Card.jsx";
-import StatusBadge from "../components/StatusBadge.jsx";
-import { roles } from "../data/projexData.js";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ApiError, describeApiError } from "../api/api-client.js";
+import { useAuth } from "../auth/auth-context.js";
+import { roleHome, roleMatchesPath } from "../auth/auth-routes.js";
+
+function useLoginController() {
+  const auth = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  useEffect(() => {
+    if (auth.status === "authenticated") {
+      navigate(roleHome(auth.user.role), { replace: true });
+    }
+  }, [auth.status, auth.user, navigate]);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setMessage("");
+    setFieldErrors({});
+
+    try {
+      const user = await auth.login(email, password);
+      const intended = typeof location.state?.from === "string" ? location.state.from : "";
+      navigate(
+        intended && roleMatchesPath(user.role, intended) ? intended : roleHome(user.role),
+        { replace: true },
+      );
+    } catch (error) {
+      setFieldErrors(error instanceof ApiError ? error.fieldErrors : {});
+      setMessage(error instanceof ApiError && error.status === 401 ? error.message : describeApiError(error));
+    } finally {
+      setPassword("");
+      setShowPassword(false);
+      setSubmitting(false);
+    }
+  };
+
+  return {
+    email,
+    fieldErrors,
+    message,
+    password,
+    setEmail,
+    setPassword,
+    setShowPassword,
+    showPassword,
+    submit,
+    submitting,
+  };
+}
 
 export function RoleLandingPage() {
   const [activeBenefit, setActiveBenefit] = useState(0);
@@ -322,43 +376,8 @@ export function RoleLandingPage() {
   );
 }
 
-export function PrototypeRoleSwitcher() {
-  return (
-    <main className="login-page login-page--switcher">
-      <section className="login-panel login-panel--switcher">
-        <div className="login-copy">
-          <p className="eyebrow">
-            Saint Louis University programming education
-          </p>
-          <h1>Projex</h1>
-          <p>
-            Academic repository-learning workspace for activities, project
-            collaboration, code review signals, feedback, analytics, and
-            preserved programming work.
-          </p>
-          <div className="mode-strip">
-            <StatusBadge label="Activity Mode" />
-            <StatusBadge label="Project Collaboration Mode" />
-          </div>
-        </div>
-
-        <Card title="Choose a prototype role" eyebrow="Prototype roles">
-          <div className="role-card-list">
-            {roles.map((role) => (
-              <Link className="role-card" to={role.path} key={role.id}>
-                <strong>{role.label}</strong>
-                <span>{role.description}</span>
-              </Link>
-            ))}
-          </div>
-        </Card>
-      </section>
-    </main>
-  );
-}
-
 export function InstructorLoginPage() {
-  const navigate = useNavigate();
+  const login = useLoginController();
 
   return (
     <main className="student-login-page">
@@ -371,10 +390,7 @@ export function InstructorLoginPage() {
 
         <form
           className="student-login-card"
-          onSubmit={(event) => {
-            event.preventDefault();
-            navigate("/instructor");
-          }}
+          onSubmit={login.submit}
         >
           <div>
             <h1>Welcome, instructor!</h1>
@@ -383,23 +399,40 @@ export function InstructorLoginPage() {
 
           <label className="student-login-field">
             <span>Email</span>
-            <input type="email" defaultValue="marco.rivera@slu.edu.ph" />
+            <input
+              type="email"
+              autoComplete="email"
+              value={login.email}
+              onChange={(event) => login.setEmail(event.target.value)}
+              disabled={login.submitting}
+              required
+            />
+            {login.fieldErrors.email && <small className="auth-field-error">{login.fieldErrors.email}</small>}
           </label>
 
           <label className="student-login-field">
             <span>Password</span>
             <div className="student-password-control">
-              <input type="password" defaultValue="projexinstructor" />
+              <input
+                type={login.showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={login.password}
+                onChange={(event) => login.setPassword(event.target.value)}
+                disabled={login.submitting}
+                required
+              />
               <button
                 type="button"
                 className="student-eye-button"
-                aria-label="Show password"
+                aria-label={login.showPassword ? "Hide password" : "Show password"}
+                onClick={() => login.setShowPassword(!login.showPassword)}
               />
             </div>
           </label>
 
-          <button type="submit" className="student-login-button">
-            Login
+          {login.message && <p className="auth-form-message is-error" role="alert">{login.message}</p>}
+          <button type="submit" className="student-login-button" disabled={login.submitting}>
+            {login.submitting ? "Signing in…" : "Login"}
           </button>
         </form>
 
@@ -472,7 +505,7 @@ export function InstructorLoginPage() {
 }
 
 function LoginPage() {
-  const navigate = useNavigate();
+  const login = useLoginController();
 
   return (
     <main className="student-login-page">
@@ -485,10 +518,7 @@ function LoginPage() {
 
         <form
           className="student-login-card"
-          onSubmit={(event) => {
-            event.preventDefault();
-            navigate("/student");
-          }}
+          onSubmit={login.submit}
         >
           <div>
             <h1>Welcome, student!</h1>
@@ -497,23 +527,40 @@ function LoginPage() {
 
           <label className="student-login-field">
             <span>Email</span>
-            <input type="email" defaultValue="julius.teodoro@slu.edu.ph" />
+            <input
+              type="email"
+              autoComplete="email"
+              value={login.email}
+              onChange={(event) => login.setEmail(event.target.value)}
+              disabled={login.submitting}
+              required
+            />
+            {login.fieldErrors.email && <small className="auth-field-error">{login.fieldErrors.email}</small>}
           </label>
 
           <label className="student-login-field">
             <span>Password</span>
             <div className="student-password-control">
-              <input type="password" defaultValue="projexstudent" />
+              <input
+                type={login.showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={login.password}
+                onChange={(event) => login.setPassword(event.target.value)}
+                disabled={login.submitting}
+                required
+              />
               <button
                 type="button"
                 className="student-eye-button"
-                aria-label="Show password"
+                aria-label={login.showPassword ? "Hide password" : "Show password"}
+                onClick={() => login.setShowPassword(!login.showPassword)}
               />
             </div>
           </label>
 
-          <button type="submit" className="student-login-button">
-            Login
+          {login.message && <p className="auth-form-message is-error" role="alert">{login.message}</p>}
+          <button type="submit" className="student-login-button" disabled={login.submitting}>
+            {login.submitting ? "Signing in…" : "Login"}
           </button>
         </form>
 

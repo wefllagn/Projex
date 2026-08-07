@@ -260,7 +260,7 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Complete the full Phase 8A/8B, PostgreSQL, Java, backend, unchanged-client, cleanup, and security regression sequence.
 - [x] Review, commit, push, and fast-forward-integrate Phase 8C after explicit approval.
 
-## Phase 9: Admin backend capabilities — in progress
+## Phase 9: Admin backend capabilities — complete and integrated
 
 ### Phase 9A: authorization and accountability foundation
 
@@ -286,11 +286,21 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Add optimistic, bounded requeue of the existing eligible failed repository-provisioning job without Git/filesystem work in the API.
 - [x] Persist both successful state changes with allowlisted audit metadata in the same transaction and prove rollback on audit failure.
 - [x] Add focused, PostgreSQL, guarded real-Git, and loopback Smart HTTP coverage, including concurrency and real cookie/CSRF authentication.
-- [ ] Apply the additive Phase 9C enum migration to normal development only after separate approval.
-- [ ] Complete final Phase 9C review, staging, commit, push, normal live acceptance, and Phase 9 integration after their separate approval gates.
+- [x] Apply the additive Phase 9C enum migration to normal development through its separately approved boundary.
+- [x] Complete final Phase 9C review, staging, commit, push, normal live acceptance, and Phase 9 integration.
 - [x] Keep Phase 9 backend-focused and treat the current admin frontend only as a temporary feature inventory.
 
-## Phase 10: frontend integration — pending
+## Phase 10: frontend integration — in progress
+
+### Phase 10A.1: shared frontend foundation and authentication
+
+- [x] Inventory every public, student, instructor, and admin route plus its mocks, local-only actions, backend contract/gap, milestone, and visual disposition.
+- [x] Add the native-fetch API client, standard envelope/error handling, credentials, abort support, CSRF mutation handling, and single-flight refresh.
+- [x] Integrate login, logout, current-user bootstrap, account setup, safe role routing, and protected loading/account/error states without browser credential persistence.
+- [x] Establish development-only frontend tests compatible with React 19 and Vite 8.
+- [ ] Complete Phase 10A.1 final verification, review, commit, and push through their separate boundaries.
+
+### Remaining Phase 10 milestones
 
 - [ ] Integrate the existing React/JavaScript UI with completed backend features without redesign.
 - [ ] Replace mocks one approved workflow at a time through adapters and view models.

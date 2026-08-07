@@ -7,6 +7,7 @@
 - The backend is implemented incrementally through explicitly approved task or phase branches. Completed phases remain the baseline for each subsequent phase.
 - Work remains cloud-provider-neutral and deployable later to a temporary VPS, GitHub Student Developer Pack credits, Azure for Students, another student cloud credit, or an SLU host.
 - Student and Instructor core workflows are implemented first. Phase 9 defines backend Admin capabilities; the current admin mock is not the final visual design, and Phase 10D will redesign it from the student/instructor visual language.
+- Phase 10 frontend work follows the route/mocking inventory and test boundaries in `FRONTEND_INTEGRATION.md`. Each integrated production route removes its own mock fallback, preserves the approved student/instructor visual language, and proves cookie/CSRF, role, loading, error, empty, and sensitive-data behavior before the next workflow is added.
 - Each phase stops when its requested scope is complete; it does not begin the next phase implicitly.
 
 ## Branch model
