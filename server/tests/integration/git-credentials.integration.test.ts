@@ -15,8 +15,9 @@ const prisma: PrismaClient = createIntegrationPrisma()
 const logger = pino({ level: 'silent' })
 let now = new Date('2031-01-01T00:00:00.000Z')
 
-function service() {
+function service(issuanceEnabled = true) {
   return createGitCredentialService({
+    issuanceEnabled,
     repository: createPrismaGitTransportRepository(prisma),
     logger,
     credentialTtlMinutes: 15,
@@ -58,6 +59,24 @@ afterAll(async () => {
 })
 
 describe('repository-scoped Git credentials', () => {
+  it('fails closed before persistence when Smart HTTP is disabled while preserving list and revoke', async () => {
+    const owner = await createActiveUser(prisma, 'STUDENT')
+    const repository = await readyPersonal(owner.id, '00000000-0000-4000-8000-000000000000')
+    const disabled = service(false)
+
+    await expect(disabled.issue(owner, repository.id, ['READ'])).rejects.toMatchObject({
+      code: 'GIT_SMART_HTTP_UNAVAILABLE',
+    })
+    await expect(prisma.gitCredential.count({ where: { repositoryId: repository.id } })).resolves.toBe(0)
+
+    const issued = await service().issue(owner, repository.id, ['READ'])
+    await expect(disabled.list(owner, repository.id)).resolves.toHaveLength(1)
+    await expect(disabled.revoke(owner, issued.credentialId)).resolves.toMatchObject({
+      credentialId: issued.credentialId,
+      revokedAt: expect.any(Date),
+    })
+  })
+
   it('returns a secret once while storing only its hash and safe follow-up projection', async () => {
     const owner = await createActiveUser(prisma, 'STUDENT')
     const repository = await readyPersonal(owner.id, '11111111-1111-4111-8111-111111111111')

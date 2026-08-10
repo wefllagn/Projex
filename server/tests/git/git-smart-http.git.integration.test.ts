@@ -37,7 +37,12 @@ const prisma: PrismaClient = createIntegrationPrisma()
 const storage = createRepositoryStorage({ root: storageRoot, repositorySizeLimitBytes: 104_857_600 })
 const git = createGitCommandRunner({ executable: gitExecutable, timeoutMs: 30_000, outputLimitBytes: 4_194_304 })
 const transportRepository = createPrismaGitTransportRepository(prisma)
-const credentialService = createGitCredentialService({ repository: transportRepository, logger, credentialTtlMinutes: 15 })
+const credentialService = createGitCredentialService({
+  issuanceEnabled: true,
+  repository: transportRepository,
+  logger,
+  credentialTtlMinutes: 15,
+})
 const backend = createGitSmartHttpBackend({
   executable: backendExecutable,
   gitExecutable,

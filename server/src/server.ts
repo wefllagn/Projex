@@ -178,6 +178,7 @@ async function bootstrap(): Promise<void> {
   })
   const gitTransportRepository = createPrismaGitTransportRepository(prisma)
   const gitCredentialService = createGitCredentialService({
+    issuanceEnabled: env.gitSmartHttpEnabled,
     repository: gitTransportRepository,
     logger,
     credentialTtlMinutes: env.gitCredentialTtlMinutes,

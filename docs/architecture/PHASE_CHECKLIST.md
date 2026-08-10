@@ -319,11 +319,11 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Integrate student visible-test practice, immutable submissions, history, and released results in Phase 10B.2.
 - [x] Integrate instructor assessment, correction, review, feedback, failure resolution, and release in Phase 10B.3.
 
-### Phase 10C: projects, repositories, and Git — in progress
+### Phase 10C: projects, repositories, and Git — complete
 
 - [x] Complete and commit Phase 10C.1 project-task authoring/lifecycle, student catalogs, repository creation/catalog/detail/metadata, provisioning state, and archived-record presentation.
 - [x] Complete Phase 10C.2 collaboration invitations, synchronized membership, review transitions, feedback, and repository archive/restore.
-- [ ] In Phase 10C.3, integrate safe Git inspection, short-lived credentials, and local-client guidance.
+- [x] In Phase 10C.3, integrate safe Git inspection, short-lived credentials, and local-client guidance.
 
 ### Remaining Phase 10 milestones
 

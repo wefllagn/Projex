@@ -75,6 +75,7 @@ describe('Git credential HTTP API', () => {
     const requireAuthentication = createAuthenticationMiddleware({ repository: authRepository, tokenService })
     const requireCsrf = createCsrfMiddleware(authService)
     const credentialService = createGitCredentialService({
+      issuanceEnabled: true,
       repository: createPrismaGitTransportRepository(prisma),
       logger,
       credentialTtlMinutes: 15,

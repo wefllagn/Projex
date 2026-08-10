@@ -21,6 +21,24 @@ function normalizePath(path) {
   return path.startsWith('/') ? path : `/${path}`
 }
 
+export function buildPublicApiUrl(
+  path,
+  {
+    baseUrl = import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL,
+    origin = globalThis.location?.origin,
+  } = {},
+) {
+  const target = `${normalizeBaseUrl(baseUrl)}${normalizePath(path)}`
+  try {
+    return new URL(target, origin).toString()
+  } catch {
+    throw new ApiError({
+      code: 'PUBLIC_API_URL_INVALID',
+      message: 'The public API address is not configured correctly.',
+    })
+  }
+}
+
 async function readResponseBody(response) {
   if (response.status === 204) return null
 

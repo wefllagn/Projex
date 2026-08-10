@@ -9,6 +9,7 @@ import { projectApi } from '../projects/project-api.js'
 import { formatProjectDate, formatProjectStatus, projectMatchesClass, projectTaskProjection } from '../projects/project-projections.js'
 import useBoundedPolling from '../submissions/use-bounded-polling.js'
 import { repositoryApi } from './repository-api.js'
+import { RepositoryGitPanel } from './RepositoryGitViews.jsx'
 import {
   RepositoryCollaborationPanel,
   RepositoryLifecyclePanel,
@@ -41,7 +42,7 @@ function StorageState({ status }) {
   const messages = {
     PENDING: 'Repository storage is queued for provisioning.',
     PROVISIONING: 'Projex is preparing the managed repository.',
-    READY: 'Repository storage is ready. Git inspection and credentials arrive in Phase 10C.3.',
+    READY: 'Repository storage is ready for authorized Git inspection and local-client access.',
     FAILED: 'Repository provisioning failed. The repository is not usable; an administrator may inspect recovery options.',
     QUARANTINED: 'Unsafe or mismatched storage was quarantined. The repository is not usable.',
   }
@@ -252,7 +253,7 @@ export function RepositoryFoundationDetail({ role = 'student', api = repositoryA
             {current.project && <section className="student-repo-card"><h2>Linked Project Requirement</h2><h3>{current.project.title}</h3><p>{current.project.instructions}</p><p>Due {formatProjectDate(current.project.dueDate)} · {formatProjectStatus(current.project.status)}</p></section>}
             {current.projectUnavailable && <RequestState kind="unavailable" compact title="Archived project detail unavailable" message="The archived repository record remains authorized, but the related archived project-task detail is not exposed to students by the current backend." />}
             <RepositoryCollaborationPanel role={role} owner={owner} repository={repository} project={current.project} api={api} classApi={classApi} onRepositoryChange={applyRepository} onReloadRepository={load} />
-            <RequestState kind="unavailable" compact title="Repository content arrives in Phase 10C.3" message="Branches, commits, files, diffs, clone guidance, and Git credentials are intentionally not loaded in this milestone." />
+            <RepositoryGitPanel key={repository.id} repository={repository} role={role} project={current.project} />
           </section>
           <aside className="student-repo-side-column">
             <StorageState status={repository.storageStatus} />

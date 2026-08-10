@@ -4,6 +4,8 @@
 
 Phase 8C adds backend-only, authenticated, read-only inspection of READY Projex repositories. It builds on the Phase 8A managed bare-repository storage and Phase 8B authorization model without requiring Smart HTTP to be enabled. It does not modify the React frontend.
 
+Phase 10C.3 later integrates this unchanged backend surface into the real student/instructor repository detail. The client lazy-loads only the selected files/history/branches view, uses allowlisted projections, aborts stale repository/revision/path requests, treats Git author names as self-asserted metadata, and never falls back to prototype Git data. Browser Git mutation remains excluded.
+
 The implemented scope is deliberately limited to repository summary, branch listing, paginated commit history, reachable commit details, tree browsing, bounded UTF-8 text-file viewing, and bounded commit-to-commit diff. Empty repositories return valid empty projections rather than synthetic branches, commits, files, or activity.
 
 No Phase 8C database migration is required. Inspection reads current repository metadata and authorization state, resolves the existing server-owned storage path, and invokes only allowlisted read-only Git commands.

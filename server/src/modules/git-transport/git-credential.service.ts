@@ -39,6 +39,14 @@ function operationDenied(): AppError {
   })
 }
 
+function smartHttpUnavailable(): AppError {
+  return new AppError({
+    statusCode: 404,
+    code: 'GIT_SMART_HTTP_UNAVAILABLE',
+    message: 'Git Smart HTTP is unavailable.',
+  })
+}
+
 function parseBasicAuthorization(value: string | undefined): { username: string; secret: string } {
   if (!value?.startsWith('Basic ')) throw authenticationFailed()
   const encoded = value.slice(6)
@@ -69,6 +77,7 @@ export interface GitCredentialService {
 }
 
 export function createGitCredentialService(dependencies: {
+  issuanceEnabled: boolean
   repository: GitTransportRepository
   logger: Logger
   credentialTtlMinutes: number
@@ -86,6 +95,7 @@ export function createGitCredentialService(dependencies: {
 
   return {
     async issue(caller, repositoryId, operations) {
+      if (!dependencies.issuanceEnabled) throw smartHttpUnavailable()
       const current = now()
       const { permission } = await currentAccess(caller, repositoryId)
       for (const operation of operations) {

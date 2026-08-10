@@ -12,6 +12,388 @@
   background-size: 32px 32px;
 }
 
+/* Phase 10C.3: real repository Git inspection and local-client access */
+.repository-git-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.repository-git-heading,
+.repository-git-toolbar,
+.repository-issued-credential > div,
+.repository-git-credentials article > div,
+.repository-git-branch-list article > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.repository-git-heading {
+  padding: 22px 24px 16px;
+}
+
+.repository-git-heading p,
+.repository-local-git p {
+  margin: 5px 0 0;
+  color: var(--text-soft, #64748b);
+}
+
+.repository-git-heading dl {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+}
+
+.repository-git-heading dl div {
+  min-width: 70px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.repository-git-heading dt {
+  color: #64748b;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.repository-git-heading dd {
+  margin: 2px 0 0;
+  font-weight: 800;
+}
+
+.repository-git-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 24px;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+}
+
+.repository-git-tabs button {
+  padding: 12px 15px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.repository-git-tabs button[aria-selected="true"] {
+  border-bottom-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.repository-git-files,
+.repository-git-history,
+.repository-git-branch-list,
+.repository-local-git {
+  padding: 20px 24px 24px;
+}
+
+.repository-git-toolbar {
+  margin-bottom: 16px;
+  align-items: end;
+}
+
+.repository-git-branch-select,
+.repository-git-commit-detail label {
+  display: grid;
+  gap: 6px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.repository-git-branch-select select,
+.repository-git-commit-detail select {
+  min-width: 180px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+}
+
+.repository-git-path {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  color: #64748b;
+}
+
+.repository-git-path button {
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  font: inherit;
+  cursor: pointer;
+}
+
+.repository-git-path strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repository-git-browser,
+.repository-git-history-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.4fr);
+  gap: 16px;
+}
+
+.repository-git-tree,
+.repository-git-commit-list {
+  display: grid;
+  align-content: start;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.repository-git-entry,
+.repository-git-commit-list button {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 11px 13px;
+  border: 0;
+  border-bottom: 1px solid #edf2f7;
+  background: #fff;
+  color: #0f172a;
+  text-align: left;
+  cursor: pointer;
+}
+
+.repository-git-entry:last-child,
+.repository-git-commit-list button:last-child {
+  border-bottom: 0;
+}
+
+.repository-git-entry:hover,
+.repository-git-commit-list button:hover {
+  background: #f8fafc;
+}
+
+.repository-git-entry span,
+.repository-git-entry small,
+.repository-git-commit-list span,
+.repository-git-commit-list small {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.repository-git-entry strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repository-git-preview,
+.repository-git-commit-detail,
+.repository-git-clone,
+.repository-git-issue,
+.repository-issued-credential,
+.repository-git-credentials,
+.repository-git-guidance {
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.repository-git-preview {
+  min-width: 0;
+}
+
+.repository-git-preview header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.repository-git-preview pre,
+.repository-git-diff,
+.repository-git-clone pre,
+.repository-git-guidance pre {
+  margin: 0;
+  padding: 14px;
+  border-radius: 9px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font: 0.78rem/1.55 Consolas, "Courier New", monospace;
+  overflow: auto;
+  white-space: pre;
+}
+
+.repository-git-commit-list button {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.repository-git-commit-list button span,
+.repository-git-commit-list button small {
+  grid-column: 2;
+}
+
+.repository-git-commit-detail h3,
+.repository-git-commit-detail h4 {
+  margin: 0 0 10px;
+}
+
+.repository-git-commit-detail > p code {
+  overflow-wrap: anywhere;
+}
+
+.repository-git-commit-detail ul {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  color: #475569;
+}
+
+.repository-git-commit-detail label {
+  margin: 12px 0;
+}
+
+.repository-git-branch-list {
+  display: grid;
+  gap: 12px;
+}
+
+.repository-git-branch-list article,
+.repository-git-credentials article {
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.repository-git-branch-list article span,
+.repository-git-credentials article span {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.repository-git-branch-list article code,
+.repository-git-credentials article code {
+  display: block;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+  color: #475569;
+}
+
+.repository-local-git {
+  display: grid;
+  gap: 14px;
+}
+
+.repository-local-git h3 {
+  margin: 0 0 8px;
+}
+
+.repository-copy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.repository-copy-row code {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  overflow-wrap: anywhere;
+}
+
+.repository-git-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.repository-issued-credential {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.repository-issued-credential label {
+  display: block;
+  margin-top: 12px;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.repository-git-credentials {
+  display: grid;
+  gap: 10px;
+}
+
+.repository-git-credentials article button {
+  margin-top: 10px;
+}
+
+@media (max-width: 760px) {
+  .repository-git-heading,
+  .repository-git-toolbar,
+  .repository-git-browser,
+  .repository-git-history-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .repository-git-heading,
+  .repository-git-toolbar {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .repository-git-heading dl {
+    width: 100%;
+  }
+
+  .repository-git-heading dl div {
+    flex: 1;
+  }
+
+  .repository-git-files,
+  .repository-git-history,
+  .repository-git-branch-list,
+  .repository-local-git {
+    padding: 16px;
+  }
+
+  .repository-git-tabs {
+    padding: 0 12px;
+  }
+
+  .repository-copy-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .repository-git-preview {
+    min-height: 180px;
+  }
+}
+
 /* Phase 10 shared authentication and request states. */
 .auth-form-message {
   margin: 0;

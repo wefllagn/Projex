@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ApiError, createApiClient, describeApiError } from './api-client.js'
+import { ApiError, buildPublicApiUrl, createApiClient, describeApiError } from './api-client.js'
 
 function jsonResponse(status, body) {
   return new Response(JSON.stringify(body), {
@@ -20,6 +20,17 @@ function failure(status, code = 'FAILED', message = 'Safe failure', details) {
 }
 
 describe('API client', () => {
+  it('builds public transport URLs from the configured API base instead of the browser origin', () => {
+    expect(buildPublicApiUrl('/git/repositories/repo-1', {
+      baseUrl: 'http://localhost:3000/api/v1/',
+      origin: 'http://localhost:5173',
+    })).toBe('http://localhost:3000/api/v1/git/repositories/repo-1')
+    expect(buildPublicApiUrl('/git/repositories/repo-1', {
+      baseUrl: '/gateway/api/v1',
+      origin: 'https://projex.example.edu',
+    })).toBe('https://projex.example.edu/gateway/api/v1/git/repositories/repo-1')
+  })
+
   it('includes browser credentials and parses the standard envelope', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(success({ id: 'user-1' }))
     const client = createApiClient({ baseUrl: '/api/v1', fetchImpl })

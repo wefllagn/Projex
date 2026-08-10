@@ -12,6 +12,8 @@ Phase 8B adds backend-only authenticated Git Smart HTTP for controlled loopback 
 
 `GET /api/v1/repositories/:repositoryId/git-credentials` returns safe metadata without a secret or verifier. `POST /api/v1/git-credentials/:credentialId/revoke` explicitly revokes the caller's credential. Issuance and revocation use cookie authentication and CSRF protection. Git transport carries the credential with HTTP Basic; credentials are never included in remote URLs, repository configuration, logs, command arguments, or Git subprocess environments.
 
+Phase 10C.3 integrates these contracts into the student/instructor repository detail. New issuance fails closed with `GIT_SMART_HTTP_UNAVAILABLE` while Smart HTTP is disabled, before secret generation or persistence. Listing and revoking previously issued credentials remain available so disabled transport does not strand credential metadata. The client derives the credential-free transport URL from its configured public API base, retains a newly issued secret only in the open result component, and presents username, secret, and clone URL as separate copy actions.
+
 Every request rechecks the credential, expiry/revocation, user status, repository scope, operation, storage state, repository membership, class membership, team membership, lifecycle, and current time. An old credential cannot bypass a later suspension or removal.
 
 ## Authorization
