@@ -10,6 +10,11 @@ import { formatProjectDate, formatProjectStatus, projectMatchesClass, projectTas
 import useBoundedPolling from '../submissions/use-bounded-polling.js'
 import { repositoryApi } from './repository-api.js'
 import {
+  RepositoryCollaborationPanel,
+  RepositoryLifecyclePanel,
+  StudentInvitationInbox,
+} from './RepositoryCollaborationViews.jsx'
+import {
   formatRepositoryLabel,
   isProvisioning,
   repositoryCatalogProjection,
@@ -111,8 +116,9 @@ export function StudentRepositoryCatalog({ archived = false, api = repositoryApi
   return (
     <>
       <section className="student-repository-stats" aria-label="Repository overview"><article className="student-dashboard-stat"><div><span>Repositories</span><strong>{state.pagination?.totalItems ?? state.items.length}</strong><small>{archived ? 'archived records' : 'authorized records'}</small></div></article><article className="student-dashboard-stat"><div><span>Ready</span><strong>{state.items.filter((item) => item.storageStatus === 'READY').length}</strong><small>on this page</small></div></article><article className="student-dashboard-stat"><div><span>Provisioning</span><strong>{state.items.filter((item) => isProvisioning(item.storageStatus)).length}</strong><small>on this page</small></div></article></section>
+      {!archived && <StudentInvitationInbox api={api} />}
       <section className="student-global-panel student-repository-board">
-        <div className="student-assignment-toolbar student-assignment-toolbar--board"><div><strong>{archived ? 'Archived Repositories' : 'My Repository Catalog'}</strong><p>Server-authorized metadata only. Git content is not loaded in Phase 10C.1.</p></div><div className="repository-catalog-actions"><label className="student-sort-control">Type<select value={query.repositoryType} onChange={(event) => setQuery((current) => ({ ...current, page: 1, repositoryType: event.target.value }))}><option value="">All types</option><option value="CLASS_PROJECT">Class project</option><option value="PERSONAL">Personal</option></select></label>{!archived && <button type="button" className="student-primary-action" onClick={() => setCreateOpen(true)}>New Personal Repository</button>}</div></div>
+        <div className="student-assignment-toolbar student-assignment-toolbar--board"><div><strong>{archived ? 'Archived Repositories' : 'My Repository Catalog'}</strong><p>Server-authorized repository and collaboration records. Git content remains deferred to Phase 10C.3.</p></div><div className="repository-catalog-actions"><label className="student-sort-control">Type<select value={query.repositoryType} onChange={(event) => setQuery((current) => ({ ...current, page: 1, repositoryType: event.target.value }))}><option value="">All types</option><option value="CLASS_PROJECT">Class project</option><option value="PERSONAL">Personal</option></select></label>{!archived && <button type="button" className="student-primary-action" onClick={() => setCreateOpen(true)}>New Personal Repository</button>}</div></div>
         {state.status === 'loading' && <RequestState kind="loading" compact message="Loading repositories." />}
         {state.status === 'error' && <RequestState kind="unavailable" compact error={state.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />}
         {state.status === 'ready' && state.items.length === 0 && <RequestState kind="empty" compact message={archived ? 'No archived repositories are available.' : 'No repositories match this view.'} />}
@@ -146,7 +152,7 @@ function RepositoryMetadataForm({ repository, project, busy, notice, error, onSa
 export function RepositoryFoundationDetail({ role = 'student', api = repositoryApi, projects = projectApi }) {
   const { repositoryId, projectTaskId } = useParams()
   const auth = useAuth()
-  const { selectedClass } = useClasses()
+  const { selectedClass, api: classApi } = useClasses()
   const [state, setState] = useState({ identity: null, status: 'loading', repository: null, project: null, projectUnavailable: false, error: null })
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState(null)
@@ -245,6 +251,7 @@ export function RepositoryFoundationDetail({ role = 'student', api = repositoryA
             <section className="student-repo-card"><h2>Repository Record</h2><dl className="repository-metadata-list"><div><dt>Type</dt><dd>{formatRepositoryLabel(repository.repositoryType)}</dd></div><div><dt>Visibility</dt><dd>{formatRepositoryLabel(repository.visibility)}</dd></div><div><dt>Owner</dt><dd>{repository.owner.fullName}</dd></div><div><dt>Default branch</dt><dd>{repository.defaultBranch}</dd></div><div><dt>Review state</dt><dd>{formatRepositoryLabel(repository.reviewStatus)}</dd></div><div><dt>Created</dt><dd>{formatProjectDate(repository.createdAt)}</dd></div></dl></section>
             {current.project && <section className="student-repo-card"><h2>Linked Project Requirement</h2><h3>{current.project.title}</h3><p>{current.project.instructions}</p><p>Due {formatProjectDate(current.project.dueDate)} · {formatProjectStatus(current.project.status)}</p></section>}
             {current.projectUnavailable && <RequestState kind="unavailable" compact title="Archived project detail unavailable" message="The archived repository record remains authorized, but the related archived project-task detail is not exposed to students by the current backend." />}
+            <RepositoryCollaborationPanel role={role} owner={owner} repository={repository} project={current.project} api={api} classApi={classApi} onRepositoryChange={applyRepository} onReloadRepository={load} />
             <RequestState kind="unavailable" compact title="Repository content arrives in Phase 10C.3" message="Branches, commits, files, diffs, clone guidance, and Git credentials are intentionally not loaded in this milestone." />
           </section>
           <aside className="student-repo-side-column">
@@ -252,7 +259,7 @@ export function RepositoryFoundationDetail({ role = 'student', api = repositoryA
             {polling && <p className="repository-polling-note">Checking provisioning status without overlapping requests…</p>}
             {pollingStopped && isProvisioning(repository.storageStatus) && <button type="button" className="student-outline-action" onClick={() => load()}>Refresh Status</button>}
             {owner ? <RepositoryMetadataForm key={repository.id} repository={repository} project={current.project} busy={busy} notice={notice} error={actionError} onSave={saveMetadata} /> : <section className="student-repo-card"><h2>Metadata</h2><p>Only the active repository owner may edit supported metadata. Backend authorization remains authoritative.</p></section>}
-            <section className="student-repo-card"><h2>Collaboration and Review</h2><p>Members, invitations, ready-for-review, feedback, and instructor review actions remain Phase 10C.2.</p></section>
+            <RepositoryLifecyclePanel role={role} owner={owner} repository={repository} api={api} onRepositoryChange={applyRepository} onReloadRepository={load} />
           </aside>
         </div>
       </main>

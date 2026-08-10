@@ -118,7 +118,7 @@ function ClassRepositoryForm({ busy, onSubmit }) {
   return (
     <form className="project-repository-create" onSubmit={(event) => { event.preventDefault(); if (valid) onSubmit({ teamName: form.teamName.trim(), repositoryName: form.repositoryName.trim(), description: form.description.trim() || null }) }}>
       <h3>Create your team repository</h3>
-      <p>Creation atomically establishes your team and owner membership. Joining another team requires an invitation in Phase 10C.2.</p>
+      <p>Creation atomically establishes your team and owner membership. Joining another team requires accepting an authorized repository invitation.</p>
       <label>Team name<input value={form.teamName} maxLength={120} onChange={(event) => setField('teamName', event.target.value)} disabled={busy} /></label>
       <label>Repository name<input value={form.repositoryName} maxLength={120} onChange={(event) => setField('repositoryName', event.target.value)} disabled={busy} /></label>
       <label>Description<textarea value={form.description} maxLength={5000} onChange={(event) => setField('description', event.target.value)} disabled={busy} /></label>
@@ -206,7 +206,7 @@ export function StudentProjectDetail({ api = projectApi, repositories = reposito
           {mayCreate ? <ClassRepositoryForm busy={creating} onSubmit={createRepository} /> : <RequestState kind="unavailable" compact title="Repository creation is closed" message="A team repository can be created only while the project is published, before its deadline, in an active class." />}
           {actionError && <p className="activity-action-error">{describeApiError(actionError)}</p>}
         </section>
-        <section className="student-work-card student-private-card"><h2>Collaboration</h2><p>Invitations, joining a team, and member actions remain pending Phase 10C.2. No direct repository join is available.</p></section>
+        <section className="student-work-card student-private-card"><h2>Collaboration</h2><p>Repository invitations are available from My Repositories. Direct arbitrary repository joining is not supported.</p></section>
       </aside>
     </div>
   )
@@ -394,7 +394,7 @@ export function InstructorProjectDetail({ api = projectApi }) {
       <div className="instructor-stat-grid instructor-monitor-grid"><article className="instructor-stat-card"><span>Teams</span><strong>{current.monitoring.teamCount}</strong><p>authoritative records</p></article><article className="instructor-stat-card"><span>Repositories</span><strong>{current.monitoring.repositoryCount}</strong><p>created for this task</p></article><article className="instructor-stat-card"><span>Active members</span><strong>{current.monitoring.activeMemberCount}</strong><p>across project teams</p></article></div>
       {current.teams.length === 0 && <RequestState kind="empty" compact message="No teams or repositories have been created for this project task." />}
       {current.teams.length > 0 && <div className="instructor-data-table" role="table" aria-label="Project teams"><div className="instructor-table-row instructor-table-row--head instructor-team-row project-team-foundation-row" role="row"><span>Team</span><span>Lead</span><span>Members</span><span>Repository</span><span>Status</span><span>Action</span></div>{current.teams.map((team) => <div className="instructor-table-row instructor-team-row project-team-foundation-row" role="row" key={team.teamId}><strong>{team.name}</strong><span>{team.lead.fullName}</span><span>{team.activeMemberCount}</span><span>{team.repository?.repositoryName ?? 'No repository'}</span><ProjectStatus value={team.repository?.reviewStatus ?? team.status} /><div>{team.repository ? <NavLink to={classHref(`/instructor/projects/${projectTaskId}/repositories/${team.repository.repositoryId}`, selectedClass.id)}>View metadata</NavLink> : <span>Unavailable</span>}</div></div>)}</div>}
-      <RequestState kind="unavailable" compact title="Review and contribution details are not active yet" message="Collaboration, repository review, feedback, Git history, contribution analytics, and similarity remain later Phase 10C boundaries." />
+      <RequestState kind="unavailable" compact title="Git contribution evidence is not active yet" message="Open an authorized repository above for collaboration, feedback, and academic review. Git history, contribution analytics, and similarity remain later boundaries." />
     </div>
   )
 }

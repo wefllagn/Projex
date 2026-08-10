@@ -13774,3 +13774,147 @@ textarea:focus-visible {
     flex-wrap: wrap;
   }
 }
+
+/* Phase 10C.2 repository collaboration and academic review */
+.repository-collaboration-stack,
+.repository-invitation-inbox,
+.repository-invitation-list,
+.repository-member-list,
+.repository-feedback-card,
+.repository-released-feedback,
+.repository-invite-controls,
+.repository-review-actions,
+.repository-member-action {
+  display: grid;
+  gap: 12px;
+}
+
+.repository-invitation-inbox {
+  margin-bottom: 20px;
+  padding: 22px;
+}
+
+.repository-invitation-list > article,
+.repository-member-list > article,
+.repository-released-feedback > article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #dce7f5;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.repository-invitation-list article > div:first-child,
+.repository-member-list article > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.repository-invitation-list span,
+.repository-invitation-list small,
+.repository-member-list span,
+.repository-member-list small,
+.repository-released-feedback small {
+  color: #6b7890;
+}
+
+.repository-invitation-list em {
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #315170;
+  background: #eaf2fb;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.repository-inline-actions,
+.repository-catalog-actions,
+.repository-review-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.repository-inline-actions .student-outline-action,
+.repository-inline-actions .student-primary-action {
+  width: auto;
+}
+
+.repository-member-action {
+  justify-items: end;
+}
+
+.repository-member-action label,
+.repository-corrective-reason,
+.repository-invite-controls label,
+.repository-feedback-card > label {
+  display: grid;
+  gap: 6px;
+  color: #53657f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.repository-member-action input,
+.repository-corrective-reason input,
+.repository-invite-controls select,
+.repository-feedback-card textarea,
+.repository-feedback-card select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #cad8ec;
+  border-radius: 7px;
+  color: #1b2a45;
+  background: #ffffff;
+  font: inherit;
+}
+
+.repository-feedback-card textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
+.repository-review-submit,
+.repository-lifecycle-card {
+  border-color: #cfdcf0;
+  background: #f8fbff;
+}
+
+.repository-review-actions label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #53657f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.repository-released-feedback p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 760px) {
+  .repository-invitation-list > article,
+  .repository-member-list > article,
+  .repository-released-feedback > article,
+  .repository-review-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .repository-member-action {
+    width: 100%;
+    justify-items: stretch;
+  }
+
+  .repository-inline-actions {
+    width: 100%;
+  }
+}

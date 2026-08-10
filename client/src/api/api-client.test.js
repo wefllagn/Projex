@@ -141,12 +141,10 @@ describe('API client', () => {
     expect(describeApiError(new ApiError({ status, message: 'Lifecycle correction' }))).toBe(expected)
   })
 
-  it('preserves allowlisted class lifecycle guidance without broadening generic errors', () => {
-    const error = new ApiError({
-      status: 409,
-      code: 'CLASS_HAS_UNFINISHED_PROJECT_WORK',
-      message: 'The class cannot be archived while project collaboration work remains unfinished.',
-    })
-    expect(describeApiError(error)).toBe(error.message)
+  it.each([
+    ['CLASS_HAS_UNFINISHED_PROJECT_WORK', 'The class cannot be archived while project collaboration work remains unfinished.'],
+    ['REPOSITORY_ARCHIVE_BLOCKED', 'The repository cannot be archived until review and invitation blockers are resolved.'],
+  ])('preserves allowlisted %s lifecycle guidance without broadening generic errors', (code, message) => {
+    expect(describeApiError(new ApiError({ status: 409, code, message }))).toBe(message)
   })
 })

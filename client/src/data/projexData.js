@@ -214,7 +214,7 @@ export const routeCatalog = [
         label: 'Project Repository',
         group: 'Project Collaboration Mode',
         status: 'Backend connected',
-        summary: 'Authorized repository metadata and provisioning state with later collaboration and Git panels deferred.',
+        summary: 'Authorized repository metadata, collaboration, review, released feedback, and lifecycle state; Git inspection remains deferred.',
       },
       {
         path: 'projects/:projectTaskId/repositories/:repositoryId/contributions',
@@ -229,14 +229,14 @@ export const routeCatalog = [
         group: 'Project Collaboration Mode',
         status: 'Backend connected',
         summary:
-          'Authorized class-project and personal repository catalog with real creation and provisioning states.',
+          'Authorized class-project and personal repository catalog with real received invitations, creation, and provisioning states.',
       },
       {
         path: 'repositories/:repositoryId',
         label: 'Repository Metadata',
         group: 'Project Collaboration Mode',
         status: 'Backend connected',
-        summary: 'Canonical personal or class repository metadata and server-owned provisioning state.',
+        summary: 'Canonical personal or class repository metadata, collaboration/review state, lifecycle controls, and server-owned provisioning state.',
       },
       {
         path: 'analytics',
@@ -407,7 +407,7 @@ export const routeCatalog = [
         label: 'Repository Metadata',
         group: 'Project Collaboration Mode',
         status: 'Backend connected',
-        summary: 'Instructor-authorized repository metadata and provisioning state for a selected project team.',
+        summary: 'Instructor-authorized repository membership, invitation correction, feedback, review, lifecycle, metadata, and provisioning state.',
       },
       {
         path: 'projects/:projectTaskId/settings',

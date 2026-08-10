@@ -280,7 +280,7 @@ export function createRepositoryService(dependencies: {
       if (cutoff) {
         if (!instructorOwns(access, caller)) throw notFound()
         if (!input.reason?.trim()) mapFailure({ kind: 'reason_required' })
-      } else if (!(isOwner(access, caller) || instructorOwns(access, caller))) {
+      } else if (!isOwner(access, caller)) {
         throw notFound()
       }
       const member = unwrapMember(await repository.transitionMember({ repositoryId, memberId, mutation: input, now: currentTime }))
@@ -292,7 +292,16 @@ export function createRepositoryService(dependencies: {
         corrective: cutoff,
         hasReason: cutoff ? Boolean(input.reason) : undefined,
       }, 'repository and team membership changed')
-      return member
+      if (!isOwner(access, caller)) return member
+      return {
+        memberId: member.memberId,
+        userId: member.userId,
+        fullName: member.fullName,
+        memberRole: member.memberRole,
+        teamRole: member.teamRole,
+        membershipStatus: member.membershipStatus,
+        updatedAt: member.updatedAt,
+      }
     },
     async createInvitation(caller, repositoryId, input) {
       const access = await loadAccess(caller, repositoryId)
@@ -332,7 +341,9 @@ export function createRepositoryService(dependencies: {
       const access = await loadAccess(caller, invitationRecord.repositoryId)
       const instructorOverride = instructorOwns(access, caller)
       if (!(isOwner(access, caller) || instructorOverride)) throw invitationNotFound()
-      const invitation = unwrapInvitation(await repository.revokeInvitation({ invitationId, actorId: caller.id, reason: input.reason, instructorOverride, now: now() }))
+      const currentTime = now()
+      if (instructorOverride && !isCutoff(access, currentTime)) throw invitationNotFound()
+      const invitation = unwrapInvitation(await repository.revokeInvitation({ invitationId, actorId: caller.id, reason: input.reason, instructorOverride, now: currentTime }))
       logger.info({ event: 'repository.invitation_revoked', actorId: caller.id, repositoryId: invitation.repositoryId, invitationId, corrective: instructorOverride, hasReason: instructorOverride ? Boolean(input.reason) : undefined }, 'repository invitation revoked')
       return invitation
     },

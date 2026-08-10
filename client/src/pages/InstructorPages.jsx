@@ -145,13 +145,6 @@ const repositoryFiles = [
   { name: 'pom.xml', type: 'file', commit: 'Configure Java project', updated: 'Aug 25, 2026' },
 ]
 
-const repositoryCollaborators = [
-  { name: 'Julius Teodoro', role: 'Team Lead' },
-  { name: 'Alyssa Mendoza', role: 'Collaborator' },
-  { name: 'Marco Rivera', role: 'Collaborator' },
-  { name: 'Daniel Reyes', role: 'Collaborator' },
-]
-
 const contributionRows = [
   { name: 'Julius Teodoro', commits: '12', lines: '+420 / -88', tasks: '5 completed', activity: 'Active', balance: '45%' },
   { name: 'Alyssa Mendoza', commits: '8', lines: '+260 / -41', tasks: '3 completed', activity: 'Active', balance: '30%' },
@@ -876,22 +869,10 @@ function AddReviewModal({ onClose }) {
       <section className="instructor-action-modal instructor-add-review-modal">
         <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close add review" />
         <p>Repository Review</p>
-        <h2 id="add-review-title">Add Review</h2>
-        <label className="instructor-wide-field">
-          Notes
-          <textarea defaultValue="Repository structure is clear. Review the README setup steps and confirm the final presentation branch before marking the team ready." />
-        </label>
-        <section className="instructor-upload-placeholder">
-          <span className="student-pdf-icon">PDF</span>
-          <div>
-            <strong>Import PDF for notes</strong>
-            <p>Attach an annotated review note or rubric export for this team.</p>
-          </div>
-          <button type="button">Import PDF</button>
-        </section>
+        <h2 id="add-review-title">Use the authorized repository detail</h2>
+        <p>Real feedback drafts, request-changes, approval, and feedback release require an identifier-bearing repository route. This Git-layout reference cannot perform academic review.</p>
         <div className="student-submit-modal-actions">
-          <button type="button" className="student-outline-action" onClick={onClose}>Return for Revision</button>
-          <button type="button" className="student-primary-action" onClick={onClose}>Approve for Presentation</button>
+          <button type="button" className="student-outline-action" onClick={onClose}>Close</button>
         </div>
       </section>
     </div>
@@ -899,33 +880,15 @@ function AddReviewModal({ onClose }) {
 }
 
 function InviteCollaboratorModal({ onClose }) {
-  const [email, setEmail] = useState('')
-  const [status, setStatus] = useState('')
-
   return (
     <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="invite-collaborator-title">
       <section className="instructor-action-modal instructor-invite-collaborator-modal">
         <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close invite collaborator" />
         <p>Collaborator Invite</p>
-        <h2 id="invite-collaborator-title">Invite collaborator by email</h2>
-        <label className="instructor-wide-field">
-          Email address
-          <input
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="student@slu.edu.ph"
-          />
-        </label>
-        {status && <span className="instructor-modal-status">{status}</span>}
+        <h2 id="invite-collaborator-title">Corrective actions require repository context</h2>
+        <p>Instructors do not issue ordinary invitations. The real repository detail exposes only supported after-cutoff corrective actions with a mandatory reason.</p>
         <div className="student-submit-modal-actions">
           <button type="button" className="student-outline-action" onClick={onClose}>Close</button>
-          <button
-            type="button"
-            className="student-primary-action"
-            onClick={() => setStatus(email ? `Invitation queued for ${email}` : 'Enter an email address first.')}
-          >
-            Send Invite
-          </button>
         </div>
       </section>
     </div>
@@ -1084,9 +1047,7 @@ export function InstructorRepositoryReviewPage() {
             <section className="student-repo-card">
               <h2>Project Information</h2>
               <ul className="student-repo-info-list">
-                <li>Ready for review</li>
                 <li>12 commits</li>
-                <li>4 collaborators</li>
                 <li>Official specs linked</li>
                 <li>Created on Aug 25, 2026</li>
               </ul>
@@ -1094,26 +1055,16 @@ export function InstructorRepositoryReviewPage() {
 
             <section className="student-repo-card instructor-collaborators-card">
               <div className="instructor-side-card-heading">
-                <h2>Collaborators</h2>
-                <button type="button" onClick={() => setInviteOpen(true)}>Invite</button>
+                <h2>Academic Collaboration</h2>
+                <button type="button" onClick={() => setInviteOpen(true)}>About Controls</button>
               </div>
-              <ul className="student-collaborator-list">
-                {repositoryCollaborators.map((member) => (
-                  <li key={member.name}>
-                    <span className="student-person-avatar">{member.name.charAt(0)}</span>
-                    <div>
-                      <strong>{member.name}</strong>
-                      <span>{member.role}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <p>Real member history and corrective invitation/member actions are loaded only from the authorized repository record.</p>
             </section>
 
             <section className="student-repo-card instructor-review-actions">
               <h2>Instructor Review Panel</h2>
-              <p>Review repository completeness, contribution balance, and readiness for presentation.</p>
-              <button type="button" className="student-primary-action" onClick={() => setReviewOpen(true)}>Add Review</button>
+              <p>Real feedback and review transitions are available only from the authorized repository record.</p>
+              <button type="button" className="student-primary-action" onClick={() => setReviewOpen(true)}>About Review</button>
             </section>
           </aside>
 

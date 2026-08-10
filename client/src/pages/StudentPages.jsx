@@ -48,29 +48,11 @@ const groupProjects = [
   },
 ]
 
-const repositoryInviteCandidates = [
-  { name: 'Alyssa Mendoza', email: 'alyssa.mendoza@slu.edu.ph', avatar: 'A' },
-  { name: 'Rafael Santos', email: 'rafael.santos@slu.edu.ph', avatar: 'R' },
-  { name: 'Mica Dela Cruz', email: 'mica.delacruz@slu.edu.ph', avatar: 'M' },
-  { name: 'Julius Teodoro', email: 'julius.teodoro@slu.edu.ph', avatar: 'JT' },
-  { name: 'Carlo Reyes', email: 'carlo.reyes@slu.edu.ph', avatar: 'C' },
-  { name: 'Daniel Mendoza', email: 'daniel.mendoza@slu.edu.ph', avatar: 'D' },
-  { name: 'Nina Salvador', email: 'nina.salvador@slu.edu.ph', avatar: 'N' },
-]
-
-
 const repositoryFiles = [
   { name: 'src', type: 'folder', commit: 'Initial commit', updated: 'a few minutes ago' },
   { name: 'docs', type: 'folder', commit: 'Initial commit', updated: 'a few minutes ago' },
   { name: 'README.md', type: 'file', commit: 'Initial commit', updated: 'a few minutes ago' },
   { name: '.gitignore', type: 'file', commit: 'Initial commit', updated: 'a few minutes ago' },
-]
-
-const repositoryCollaborators = [
-  { name: 'Julius Teodoro', role: 'Team Lead', marker: 'You' },
-  { name: 'Alyssa Mendoza', role: 'Collaborator' },
-  { name: 'Marco Rivera', role: 'Collaborator' },
-  { name: 'Daniel Reyes', role: 'Collaborator' },
 ]
 
 const repositoryCommits = [
@@ -192,24 +174,6 @@ const personalRepositories = [
     status: 'Active',
     updated: 'Updated yesterday',
     path: '/student/projects/prelim-group-project-1/repository',
-  },
-]
-
-const availableProjectRepositories = [
-  {
-    name: 'prelim-group-project-1-team-01',
-    members: 'Julius Teodoro, Rafael Santos, Mica Dela Cruz',
-    slots: 1,
-  },
-  {
-    name: 'prelim-group-project-1-team-03',
-    members: 'Alyssa Mendoza, Marco Rivera, Daniel Reyes',
-    slots: 1,
-  },
-  {
-    name: 'prelim-group-project-1-team-05',
-    members: 'Nina Salvador, Carlo Reyes',
-    slots: 2,
   },
 ]
 
@@ -652,27 +616,15 @@ export function GroupProjectsPage() {
   )
 }
 
-function JoinRepositoryModal({ onClose, onJoin }) {
+function JoinRepositoryModal({ onClose }) {
   return (
     <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="join-repository-title">
       <section className="student-action-modal student-join-repo-modal">
         <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close join repository" />
         <p>Join Repository</p>
-        <h2 id="join-repository-title">Available repositories</h2>
-        <div className="student-available-repo-list">
-          {availableProjectRepositories.map((repo) => (
-            <article key={repo.name}>
-              <div>
-                <strong>{repo.name}</strong>
-                <span>{repo.members}</span>
-              </div>
-              <em>{repo.slots} {repo.slots === 1 ? 'slot' : 'slots'} available</em>
-              <button type="button" className="student-primary-action" onClick={() => onJoin(repo.name)}>
-                Join
-              </button>
-            </article>
-          ))}
-        </div>
+        <h2 id="join-repository-title">Direct joining is unavailable</h2>
+        <p>Class-project membership is created only by accepting an authorized repository invitation from My Repositories.</p>
+        <button type="button" className="student-outline-action" onClick={onClose}>Close</button>
       </section>
     </div>
   )
@@ -803,55 +755,16 @@ export function GroupProjectDetailPage() {
   )
 }
 
-function AddCollaboratorModal({ pendingCollaborators, onInvite, onClose }) {
-  const [search, setSearch] = useState('')
-  const [selectedClassmate, setSelectedClassmate] = useState(repositoryInviteCandidates[0].email)
-  const visibleClassmates = repositoryInviteCandidates.filter((classmate) => (
-    classmate.name.toLowerCase().includes(search.toLowerCase())
-      || classmate.email.toLowerCase().includes(search.toLowerCase())
-  ))
-
+function AddCollaboratorModal({ onClose }) {
   return (
     <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="add-collaborator-title">
       <section className="student-action-modal student-collaborator-modal">
         <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close add collaborator" />
         <p>Add Collaborator</p>
-        <h2 id="add-collaborator-title">Invite classmate to repository</h2>
-        <label className="student-single-field">
-          Search classmates
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by name or email"
-          />
-        </label>
-        <label className="student-single-field">
-          Select classmate
-          <select value={selectedClassmate} onChange={(event) => setSelectedClassmate(event.target.value)}>
-            {visibleClassmates.map((classmate) => (
-              <option value={classmate.email} key={classmate.email}>{classmate.name} - {classmate.email}</option>
-            ))}
-          </select>
-        </label>
-        <section className="student-pending-collaborators">
-          <strong>Pending collaborators</strong>
-          {pendingCollaborators.length ? (
-            pendingCollaborators.map((collaborator) => (
-              <span key={collaborator}>{collaborator}</span>
-            ))
-          ) : (
-            <span>No pending collaborator invites yet.</span>
-          )}
-        </section>
+        <h2 id="add-collaborator-title">Use the authorized repository detail</h2>
+        <p>The production repository route loads the student-safe class roster and creates real invitations by user ID. This Git-layout preview cannot create local invitations.</p>
         <div className="student-submit-modal-actions">
           <button type="button" className="student-outline-action" onClick={onClose}>Close</button>
-          <button
-            type="button"
-            className="student-primary-action"
-            onClick={() => onInvite(selectedClassmate)}
-          >
-            Send Invite
-          </button>
         </div>
       </section>
     </div>
@@ -864,8 +777,6 @@ export function RepositoryWorkspacePage() {
   const [repoMenuOpen, setRepoMenuOpen] = useState(false)
   const [codeMenuOpen, setCodeMenuOpen] = useState(false)
   const [collaboratorOpen, setCollaboratorOpen] = useState(false)
-  const [pendingCollaborators, setPendingCollaborators] = useState([])
-  const [readyForReview, setReadyForReview] = useState(false)
   const branches = ['main', 'project-setup', 'readme-updates']
 
   return (
@@ -887,7 +798,7 @@ export function RepositoryWorkspacePage() {
           <span className="student-repo-mark" aria-hidden="true" />
           <div>
             <h1>prelim-group-project-1-team-03</h1>
-            <span className="student-repo-state">{readyForReview ? 'Ready for Review' : 'In Progress'}</span>
+            <span className="student-repo-state">Git layout reference</span>
           </div>
         </section>
 
@@ -1016,65 +927,16 @@ export function RepositoryWorkspacePage() {
             <section className="student-repo-card">
               <h2>Project Information</h2>
               <ul className="student-repo-info-list">
-                <li>{readyForReview ? 'Ready for review' : 'In progress'}</li>
                 <li>1 commit</li>
                 <li>1 branch</li>
                 <li>0 tags</li>
                 <li>1.2 MB project storage</li>
-                <li>{4 + pendingCollaborators.length} collaborators</li>
+                <li>Prototype Git evidence only</li>
                 <li>Created on Aug 25, 2026</li>
               </ul>
             </section>
 
-            <section className="student-repo-card">
-              <div className="student-side-card-heading">
-                <h2>Collaborators</h2>
-                <button type="button" onClick={() => setCollaboratorOpen(true)}>Add Collaborator</button>
-              </div>
-              <ul className="student-collaborator-list">
-                {repositoryCollaborators.map((member) => (
-                  <li key={member.name}>
-                    <span className="student-person-avatar">{member.name.charAt(0)}</span>
-                    <div>
-                      <strong>{member.name}</strong>
-                      <span>{member.role}</span>
-                    </div>
-                    {member.marker && <em>{member.marker}</em>}
-                  </li>
-                ))}
-                {pendingCollaborators.map((email) => (
-                  <li key={email}>
-                    <span className="student-person-avatar">?</span>
-                    <div>
-                      <strong>{email}</strong>
-                      <span>Invitation pending</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="student-repo-card">
-              <h2>Submission Status</h2>
-              <p className="student-repo-muted">
-                {readyForReview
-                  ? 'Repository has been marked ready for instructor review.'
-                  : 'Not yet marked ready'}
-              </p>
-              <button
-                type="button"
-                className="student-primary-action"
-                disabled={readyForReview}
-                onClick={() => setReadyForReview(true)}
-              >
-                {readyForReview ? 'Ready for Review' : 'Mark Ready for Review'}
-              </button>
-              <p className="student-repo-muted">
-                {readyForReview
-                  ? 'Your instructor can now review this repository in the prototype.'
-                  : 'Mark your repository as ready once your team has completed the requirements.'}
-              </p>
-            </section>
+            <section className="student-repo-card"><h2>Collaboration</h2><p>Real members, invitations, review submission, and released feedback are available only on the identifier-bearing repository detail route.</p><button type="button" className="student-outline-action" onClick={() => setCollaboratorOpen(true)}>Why this preview is read-only</button></section>
           </aside>
 
           <section className="student-repo-card student-spec-card">
@@ -1108,13 +970,7 @@ export function RepositoryWorkspacePage() {
       </main>
       {collaboratorOpen && (
         <AddCollaboratorModal
-          pendingCollaborators={pendingCollaborators}
           onClose={() => setCollaboratorOpen(false)}
-          onInvite={(email) => {
-            setPendingCollaborators((current) => (
-              current.includes(email) ? current : [...current, email]
-            ))
-          }}
         />
       )}
     </div>
@@ -1257,34 +1113,7 @@ function CreateRepositoryModal({ onClose }) {
               <option>Personal repository</option>
             </select>
           </label>
-          <fieldset className="student-visibility-options">
-            <legend>Visibility level</legend>
-            <label>
-              <input type="radio" name="student-repo-visibility" defaultChecked />
-              <span>
-                <strong>Private</strong>
-                <small>Project access must be granted explicitly to each collaborator.</small>
-              </span>
-            </label>
-            <label>
-              <input type="radio" name="student-repo-visibility" />
-              <span>
-                <strong>Class-visible</strong>
-                <small>Visible to enrolled classmates and instructors in the linked class.</small>
-              </span>
-            </label>
-            <label>
-              <input type="radio" name="student-repo-visibility" />
-              <span>
-                <strong>Public prototype</strong>
-                <small>Visible in the local prototype repository list only.</small>
-              </span>
-            </label>
-          </fieldset>
-          <label>
-            Invite collaborator by email
-            <input placeholder="student@slu.edu.ph" />
-          </label>
+          <p className="activity-lifecycle-note">Visibility and collaboration are server-controlled. The real repository workflow creates invitations from the student-safe class roster after repository creation.</p>
         </div>
         <div className="student-submit-modal-actions">
           <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>

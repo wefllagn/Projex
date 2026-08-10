@@ -173,7 +173,7 @@ describe('PostgreSQL repository collaboration', () => {
     })
     const invitation = await repositories.createInvitation(owner, created.id, { inviteeUserId: member.id })
     await repositories.acceptInvitation(member, invitation.invitationId)
-    const memberRow = await prisma.repositoryMember.findUniqueOrThrow({ where: { repositoryId_studentId: { repositoryId: created.id, studentId: member.id } } })
+    let memberRow = await prisma.repositoryMember.findUniqueOrThrow({ where: { repositoryId_studentId: { repositoryId: created.id, studentId: member.id } } })
     const teamMember = await prisma.teamMember.findUniqueOrThrow({ where: { teamId_studentId: { teamId: created.teamId!, studentId: member.id } } })
 
     await expect(
@@ -182,6 +182,27 @@ describe('PostgreSQL repository collaboration', () => {
       }),
     ).rejects.toThrow(/membership must remain synchronized/i)
     expect((await prisma.teamMember.findUniqueOrThrow({ where: { id: teamMember.id } })).status).toBe('ACTIVE')
+
+    await expect(repositories.transitionMember(instructor, created.id, memberRow.id, {
+      action: 'REMOVE',
+      expectedUpdatedAt: memberRow.updatedAt,
+      reason: 'Instructor correction is not available before cutoff.',
+    })).rejects.toMatchObject({ code: 'REPOSITORY_NOT_FOUND' })
+    const ownerRemoved = await repositories.transitionMember(owner, created.id, memberRow.id, {
+      action: 'REMOVE',
+      expectedUpdatedAt: memberRow.updatedAt,
+    })
+    expect(ownerRemoved).toMatchObject({ membershipStatus: 'REMOVED' })
+    expect(ownerRemoved).not.toHaveProperty('userStatus')
+    expect(ownerRemoved).not.toHaveProperty('joinedAt')
+    expect(ownerRemoved).not.toHaveProperty('removedAt')
+    expect(ownerRemoved).not.toHaveProperty('lastActivatedAt')
+    const ownerReactivated = await repositories.transitionMember(owner, created.id, memberRow.id, {
+      action: 'REACTIVATE',
+      expectedUpdatedAt: ownerRemoved.updatedAt!,
+    })
+    expect(ownerReactivated).toMatchObject({ membershipStatus: 'ACTIVE' })
+    memberRow = await prisma.repositoryMember.findUniqueOrThrow({ where: { id: memberRow.id } })
 
     const closed = await projectTasks.close(instructor, projectTask.id, { expectedUpdatedAt: projectTask.updatedAt })
     expect(closed.status).toBe('CLOSED')
@@ -297,14 +318,20 @@ describe('PostgreSQL repository collaboration', () => {
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const owner = await createActiveUser(prisma, 'STUDENT')
     const invitee = await createActiveUser(prisma, 'STUDENT')
+    const secondInvitee = await createActiveUser(prisma, 'STUDENT')
     const { classRecord, projectTask } = await publishedTask(instructor.id, 'Invitation Cutoff')
     await createActiveMembership(prisma, classRecord.id, owner.id)
     await createActiveMembership(prisma, classRecord.id, invitee.id)
+    await createActiveMembership(prisma, classRecord.id, secondInvitee.id)
     const { projectTasks, repositories } = services()
     let created = await repositories.createClassProject(owner, projectTask.id, {
       teamName: 'Cutoff Team', repositoryName: 'Cutoff Repository',
     })
     const invitation = await repositories.createInvitation(owner, created.id, { inviteeUserId: invitee.id })
+    await expect(repositories.revokeInvitation(instructor, invitation.invitationId, {
+      reason: 'Instructor correction is not available before cutoff.',
+    })).rejects.toMatchObject({ code: 'REPOSITORY_INVITATION_NOT_FOUND' })
+    const expiringInvitation = await repositories.createInvitation(owner, created.id, { inviteeUserId: secondInvitee.id })
     created = await repositories.readyForReview(owner, created.id, { expectedUpdatedAt: created.updatedAt })
     await expect(
       repositories.approve(instructor, created.id, { expectedUpdatedAt: created.updatedAt }),
@@ -315,8 +342,10 @@ describe('PostgreSQL repository collaboration', () => {
     await expect(repositories.declineInvitation(invitee, invitation.invitationId)).rejects.toMatchObject({ code: 'PROJECT_TASK_NOT_OPEN' })
     await expect(repositories.revokeInvitation(owner, invitation.invitationId, {})).rejects.toMatchObject({ code: 'PROJECT_TASK_NOT_OPEN' })
     await expect(repositories.revokeInvitation(instructor, invitation.invitationId, {})).rejects.toMatchObject({ code: 'CORRECTIVE_REASON_REQUIRED' })
+    await expect(repositories.revokeInvitation(instructor, invitation.invitationId, { reason: 'Resolve the blocking invitation after cutoff.' })).resolves.toMatchObject({ status: 'REVOKED' })
 
     currentTime = new Date('2030-09-09T00:00:00.000Z')
+    await expect(repositories.acceptInvitation(secondInvitee, expiringInvitation.invitationId)).rejects.toMatchObject({ code: 'REPOSITORY_INVITATION_EXPIRED' })
     const archived = await projectTasks.archive(instructor, projectTask.id, { expectedUpdatedAt: closed.updatedAt })
     expect(archived.status).toBe('ARCHIVED')
     expect(await prisma.repositoryActivity.count()).toBe(0)
