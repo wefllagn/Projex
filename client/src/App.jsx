@@ -8,7 +8,7 @@ import { AuthProvider } from './auth/AuthContext.jsx'
 import ProtectedRoute from './auth/ProtectedRoute.jsx'
 import ClassProvider from './classes/ClassProvider.jsx'
 import DashboardLayout from './layouts/DashboardLayout.jsx'
-import AdminRoutePage from './pages/AdminPages.jsx'
+import AdminRoutePage from './admin/AdminViews.jsx'
 import AccountSetupPage from './pages/AccountSetupPage.jsx'
 import LoginPage, { InstructorLoginPage, RoleLandingPage } from './pages/LoginPage.jsx'
 import PlaceholderPage from './pages/PlaceholderPage.jsx'
@@ -40,6 +40,17 @@ function RoleLayout({ role }) {
     : layout
 }
 
+const adminChildren = [
+  { index: true, element: <AdminRoutePage pagePath="dashboard" /> },
+  { path: 'users', element: <AdminRoutePage pagePath="users" /> },
+  { path: 'users/:userId', element: <AdminRoutePage pagePath="user-detail" /> },
+  { path: 'academic', element: <AdminRoutePage pagePath="academic" /> },
+  { path: 'operations', element: <AdminRoutePage pagePath="operations" /> },
+  { path: 'audit-events', element: <AdminRoutePage pagePath="audit-events" /> },
+  ...['courses', 'sections', 'enrollments', 'instructor-assignments', 'repositories', 'storage', 'system', 'archive']
+    .map((path) => ({ path, element: <AdminRoutePage pagePath={path} /> })),
+]
+
 const roleRoutes = routeCatalog.flatMap((role) => [
   {
     path: role.path,
@@ -48,7 +59,7 @@ const roleRoutes = routeCatalog.flatMap((role) => [
         <RoleLayout role={role} />
       </ProtectedRoute>
     ),
-    children: [
+    children: role.id === 'admin' ? adminChildren : [
       {
         index: true,
         element:

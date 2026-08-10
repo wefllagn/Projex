@@ -6,7 +6,7 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Boundary
 
-Phase 0 (architecture and planning) and implementation Phases 1 through 9 are complete, accepted, and integrated. Phase 10A, Phase 10B, and Phase 10C are complete on `phase/10-frontend-integration`. Admin-data integration/redesign, Phase 11, and Phase 10 branch integration remain separate approval boundaries.
+Phase 0 (architecture and planning) and implementation Phases 1 through 9 are complete, accepted, and integrated. Phase 10A, Phase 10B, and Phase 10C are complete on `phase/10-frontend-integration`. Phase 10D.1 admin foundation/accounts are implemented pending final review; Phase 10D.2, Phase 10D.3, Phase 11, and Phase 10 branch integration remain separate approval boundaries.
 
 ## Live-State Authority
 
@@ -70,10 +70,10 @@ Codex may stage, commit, and push only to the current task or phase branch when 
 
 ## Admin Frontend Direction
 
-- The current admin frontend is a temporary mock and feature inventory, not an approved visual source of truth.
+- The original admin frontend is a temporary mock and feature inventory, not an approved visual source of truth; Phase 10D.1 replaces its foundation/account routes.
 - Phase 9 defines backend admin capabilities, authorization, safe projections, and operational summaries and remains backend-focused unless separately approved.
 - Phase 10D redesigns and integrates the admin frontend using the student and instructor interface as the visual source of truth.
-- Do not functionalize or redesign admin frontend files before an explicitly approved frontend phase.
+- Continue admin functionalization only through an explicitly approved Phase 10D milestone.
 
 ## Documentation Routing
 

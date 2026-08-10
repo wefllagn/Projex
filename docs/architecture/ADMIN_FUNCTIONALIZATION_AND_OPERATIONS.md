@@ -2,7 +2,7 @@
 
 ## Phase 9 boundary
 
-Phase 9 is backend-focused. The existing admin React pages remain a temporary mock and feature inventory; Phase 10D owns their redesign and integration using the student/instructor visual language.
+Phase 9 is backend-focused. Phase 10D owns frontend integration using the student/instructor visual language. Phase 10D.1 replaces the temporary shell, overview, and account-management routes; academic and operational administration remain assigned to Phase 10D.2 and 10D.3.
 
 Phase 9A implements authorization and accountability. Phase 9B implements bounded read-only academic and operational oversight. Phase 9C adds only controlled Git-credential revocation and eligible repository-provisioning recovery.
 
@@ -97,4 +97,10 @@ Phase 9C does not add credential issuance, generic job mutation, Java retry, qua
 
 ## Verification boundary
 
-The additive Phase 9A migration is applied to both approved databases. Phase 9B needs no migration. Phase 9C adds only four enum values for its two audit actions/targets; migration 11 is applied to `projex_test` only until normal migration is separately approved. Verification covers real cookie/CSRF authentication, route/service denial, compare-and-set concurrency, idempotency, audit rollback, safe projections, guarded worker-only Git provisioning, and immediate loopback Smart HTTP denial after revocation. Authenticated normal-environment validation, normal migration, frontend work, commit/push, and integration remain separate boundaries.
+The additive Phase 9A and Phase 9C migrations are applied to both approved local databases; Phase 9B required no migration. Verification covers real cookie/CSRF authentication, route/service denial, compare-and-set concurrency, idempotency, audit rollback, safe projections, guarded worker-only Git provisioning, and immediate loopback Smart HTTP denial after revocation. Phase 10D frontend work and each commit/push boundary remain separate from database migration work.
+
+## Phase 10D.1 frontend boundary
+
+The redesigned admin foundation uses the real overview, user directory, account summary, student/instructor provisioning, setup resend, status transition, and session-revocation contracts. Directory filters and pagination are server-owned and reflected in the URL. Account details fail closed when the route identity and safe directory/account projections disagree. Status changes chain the authoritative `updatedAt`, preserve unsent reasons across stale conflicts, refetch current state, and require deliberate retry.
+
+The frontend exposes aggregate session counts only and never setup tokens, session identifiers, cookies, IP addresses, user-agent strings, passwords, academic source/evidence, Git secrets, or infrastructure paths. It offers no ADMIN provisioning or role mutation. Phase 10D.2 owns class and academic integration; Phase 10D.3 owns health, storage, jobs, credential recovery, provisioning retry, and audit events.

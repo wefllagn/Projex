@@ -325,11 +325,25 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Complete Phase 10C.2 collaboration invitations, synchronized membership, review transitions, feedback, and repository archive/restore.
 - [x] In Phase 10C.3, integrate safe Git inspection, short-lived credentials, and local-client guidance.
 
+### Phase 10D.1: admin foundation and accounts — implemented pending final review
+
+- [x] Replace the generic mock admin shell with the student/instructor navigation, hierarchy, controls, and responsive language.
+- [x] Integrate the authoritative admin overview without unsupported capacity, integrity, notification, or worker-health claims.
+- [x] Integrate server-filtered/paginated user directory and identity-checked safe account details.
+- [x] Integrate student/instructor provisioning, setup resend, version-aware status changes, and aggregate session revocation.
+- [x] Retire authoritative admin overview/account mocks and show honest pending states for 10D.2/10D.3.
+- [ ] Complete Phase 10D.1 final review, staging, commit, and push through their separate approval boundary.
+
+### Remaining Phase 10D milestones
+
+- [ ] Phase 10D.2: class governance and bounded academic oversight.
+- [ ] Phase 10D.3: operational oversight, controlled recovery, audit events, and final admin mock retirement.
+
 ### Remaining Phase 10 milestones
 
 - [ ] Preserve current routes, CSS, responsive behavior, and unrelated mocks until their owning workflow replaces them.
 - [ ] Add persisted notifications, canonical analytics, and role-appropriate similarity projections when their backend support exists.
-- [ ] In Phase 10D, redesign and integrate the admin frontend using the student/instructor visual language, spacing, typography, navigation, components, tables, chips, drawers, dialogs, and interaction patterns.
+- [ ] Complete Phase 10D.2 and 10D.3 on the redesigned 10D.1 admin foundation.
 
 ## Phase 11: hardening, deployment, and evaluation — pending
 

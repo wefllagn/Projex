@@ -20,6 +20,22 @@ function renderGuard(auth, initialPath = '/student/activity') {
   )
 }
 
+function renderAdminGuard(auth) {
+  return render(
+    <AuthContext.Provider value={{ bootstrap: vi.fn(), ...auth }}>
+      <MemoryRouter initialEntries={['/admin']}>
+        <Routes>
+          <Route path="/student" element={<span>student home</span>} />
+          <Route path="/instructor" element={<span>instructor home</span>} />
+          <Route path="/admin" element={(
+            <ProtectedRoute role="ADMIN"><span>protected admin content</span></ProtectedRoute>
+          )} />
+        </Routes>
+      </MemoryRouter>
+    </AuthContext.Provider>,
+  )
+}
+
 describe('ProtectedRoute', () => {
   it('prevents protected content from flashing during bootstrap', () => {
     renderGuard({ status: 'loading', user: null })
@@ -45,5 +61,16 @@ describe('ProtectedRoute', () => {
   it('renders protected content only for the matching active role', () => {
     renderGuard({ status: 'authenticated', user: { role: 'STUDENT', status: 'ACTIVE' } })
     expect(screen.getByText('protected student content')).toBeInTheDocument()
+  })
+
+  it.each(['STUDENT', 'INSTRUCTOR'])('denies the admin route to an active %s account', (role) => {
+    renderAdminGuard({ status: 'authenticated', user: { role, status: 'ACTIVE' } })
+    expect(screen.queryByText('protected admin content')).not.toBeInTheDocument()
+    expect(screen.getByText(role === 'STUDENT' ? 'student home' : 'instructor home')).toBeInTheDocument()
+  })
+
+  it('renders the admin route only for an active administrator', () => {
+    renderAdminGuard({ status: 'authenticated', user: { role: 'ADMIN', status: 'ACTIVE' } })
+    expect(screen.getByText('protected admin content')).toBeInTheDocument()
   })
 })

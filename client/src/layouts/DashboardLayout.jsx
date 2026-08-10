@@ -249,6 +249,59 @@ function StudentDashboardLayout() {
   )
 }
 
+function AdminDashboardLayout() {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const navigate = useNavigate()
+  const auth = useAuth()
+
+  const signOut = async () => {
+    setSigningOut(true)
+    try {
+      await auth.logout()
+      navigate('/', { replace: true })
+    } finally {
+      setSigningOut(false)
+    }
+  }
+
+  return (
+    <div className={sidebarCollapsed ? 'student-app-shell admin-app-shell is-sidebar-collapsed' : 'student-app-shell admin-app-shell'}>
+      <aside className="student-sidebar admin-sidebar">
+        <SidebarBrand
+          to="/admin"
+          label="Projex administrator home"
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((current) => !current)}
+        />
+        <nav className="student-sidebar__nav" aria-label="Administrator navigation">
+          <StudentSidebarLink to="/admin" end icon="home">Overview</StudentSidebarLink>
+          <StudentSidebarLink to="/admin/users" icon="people">Users</StudentSidebarLink>
+          <div className="student-sidebar__group">
+            <p>NEXT MILESTONES</p>
+            <StudentSidebarLink to="/admin/academic" icon="activity">Academic oversight</StudentSidebarLink>
+            <StudentSidebarLink to="/admin/operations" icon="folder">Operations</StudentSidebarLink>
+            <StudentSidebarLink to="/admin/audit-events" icon="todo">Audit events</StudentSidebarLink>
+          </div>
+          <div className="student-sidebar__lower admin-sidebar__account">
+            <div className="admin-sidebar-identity">
+              <span>{auth.user.fullName}</span>
+              <small>Administrator</small>
+            </div>
+            <button type="button" className="student-sidebar__link admin-signout-button" onClick={signOut} disabled={signingOut}>
+              <span className="student-sidebar__icon student-sidebar__icon--logout" aria-hidden="true" />
+              <span>{signingOut ? 'Signing out…' : 'Sign out'}</span>
+            </button>
+          </div>
+        </nav>
+      </aside>
+      <main className="student-main admin-main">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
+
 function DashboardLayout({ role }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -260,6 +313,10 @@ function DashboardLayout({ role }) {
 
   if (role.id === 'instructor') {
     return <InstructorDashboardLayout />
+  }
+
+  if (role.id === 'admin') {
+    return <AdminDashboardLayout />
   }
 
   const groupedRoutes = role.routes.reduce((groups, route) => {
