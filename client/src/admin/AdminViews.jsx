@@ -12,23 +12,14 @@ import {
   projectAdminOverview,
   projectAdminUser,
 } from './admin-projections.js'
+import { formatDate, humanize, pageNumber } from './admin-view-utils.js'
 
 const PAGE_SIZE = 20
 const USER_ROLES = ['STUDENT', 'INSTRUCTOR', 'ADMIN']
 const USER_STATUSES = ['SETUP_PENDING', 'ACTIVE', 'INACTIVE', 'SUSPENDED']
 
-function formatDate(value, fallback = 'Not recorded') {
-  if (!value) return fallback
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? fallback : date.toLocaleString()
-}
-
 function sumCounts(value) {
   return Object.values(value ?? {}).reduce((total, count) => total + count, 0)
-}
-
-function humanize(value) {
-  return String(value || '').toLowerCase().replaceAll('_', ' ').replace(/^./, (character) => character.toUpperCase())
 }
 
 function allowedNextStatuses(currentStatus) {
@@ -37,12 +28,7 @@ function allowedNextStatuses(currentStatus) {
   return []
 }
 
-function pageNumber(searchParams) {
-  const value = Number(searchParams.get('page') || 1)
-  return Number.isSafeInteger(value) && value > 0 ? value : 1
-}
-
-function AdminPageHeader({ eyebrow, title, summary, actions }) {
+export function AdminPageHeader({ eyebrow, title, summary, actions }) {
   return (
     <header className="admin-page-header">
       <div>
@@ -55,7 +41,7 @@ function AdminPageHeader({ eyebrow, title, summary, actions }) {
   )
 }
 
-function AdminPanel({ title, eyebrow, children, actions, className = '' }) {
+export function AdminPanel({ title, eyebrow, children, actions, className = '' }) {
   return (
     <section className={`admin-panel ${className}`}>
       <header className="admin-panel__header">
@@ -70,7 +56,7 @@ function AdminPanel({ title, eyebrow, children, actions, className = '' }) {
   )
 }
 
-function AdminMetric({ label, value, detail, tone = 'default' }) {
+export function AdminMetric({ label, value, detail, tone = 'default' }) {
   return (
     <article className={`admin-metric admin-metric--${tone}`}>
       <p>{label}</p>
@@ -80,7 +66,7 @@ function AdminMetric({ label, value, detail, tone = 'default' }) {
   )
 }
 
-function AdminDialog({ title, summary, children, onClose, onSubmit, submitLabel, busy, danger = false }) {
+export function AdminDialog({ title, summary, children, onClose, onSubmit, submitLabel, busy, danger = false }) {
   return (
     <div className="student-submit-backdrop" role="presentation">
       <form className="admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title" onSubmit={onSubmit}>
@@ -158,7 +144,7 @@ export function AdminOverviewPage({ api = adminApi }) {
             <div><span>Project tasks</span><strong>{sumCounts(overview.academics.projectTasksByStatus)}</strong></div>
             <div><span>Teams</span><strong>{sumCounts(overview.academics.teamsByStatus)}</strong></div>
           </div>
-          <p className="admin-panel-note">Detailed academic oversight is scheduled for Phase 10D.2.</p>
+          <p className="admin-panel-note"><Link to="/admin/academic">Open detailed academic administration.</Link></p>
         </AdminPanel>
       </div>
       <p className="admin-generated-at">Summary generated {formatDate(overview.generatedAt)}.</p>

@@ -93,7 +93,7 @@ describe('Phase 10D.1 admin views', () => {
     const api = { getOverview: vi.fn().mockResolvedValue({ data: overview() }) }
     render(<MemoryRouter><AdminOverviewPage api={api} /></MemoryRouter>)
     expect(await screen.findByText('4')).toBeInTheDocument()
-    expect(screen.getByText('Detailed academic oversight is scheduled for Phase 10D.2.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open detailed academic administration.' })).toHaveAttribute('href', '/admin/academic')
     expect(screen.queryByText(/74%|worker healthy|integrity verified/i)).not.toBeInTheDocument()
   })
 

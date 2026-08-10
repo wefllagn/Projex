@@ -40,6 +40,51 @@ export function createAdminApi(client = apiClient) {
     revokeUserSessions(userId, input, options) {
       return client.post(`/admin/users/${userId}/sessions/revoke`, input, options)
     },
+    listAcademicClasses(query, options) {
+      return client.get(`/admin/academic/classes${queryString(query)}`, options)
+    },
+    listAcademicActivities(query, options) {
+      return client.get(`/admin/academic/activities${queryString(query)}`, options)
+    },
+    listAcademicSubmissions(query, options) {
+      return client.get(`/admin/academic/submissions${queryString(query)}`, options)
+    },
+    listAcademicProjectTasks(query, options) {
+      return client.get(`/admin/academic/project-tasks${queryString(query)}`, options)
+    },
+    listAcademicRepositories(query, options) {
+      return client.get(`/admin/academic/repositories${queryString(query)}`, options)
+    },
+    getClass(classId, options) {
+      return client.get(`/classes/${classId}`, options)
+    },
+    createClass(input, options) {
+      return client.post('/classes', input, options)
+    },
+    updateClass(classId, input, options) {
+      return client.patch(`/classes/${classId}`, input, options)
+    },
+    archiveClass(classId, reason, options) {
+      return client.post(`/classes/${classId}/archive`, { reason }, options)
+    },
+    restoreClass(classId, reason, options) {
+      return client.post(`/classes/${classId}/restore`, { reason }, options)
+    },
+    getJoinCode(classId, options) {
+      return client.get(`/classes/${classId}/join-code`, options)
+    },
+    rotateJoinCode(classId, reason, options) {
+      return client.post(`/classes/${classId}/join-code/rotate`, { reason }, options)
+    },
+    revokeJoinCode(classId, reason, options) {
+      return client.post(`/classes/${classId}/join-code/revoke`, { reason }, options)
+    },
+    listClassMembers(classId, query, options) {
+      return client.get(`/classes/${classId}/members${queryString(query)}`, options)
+    },
+    updateClassMember(classId, memberId, input, options) {
+      return client.patch(`/classes/${classId}/members/${memberId}`, input, options)
+    },
   }
 }
 

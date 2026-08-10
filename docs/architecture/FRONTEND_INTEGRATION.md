@@ -4,9 +4,9 @@
 
 This is the single current owner for Projex frontend integration: API-client behavior, browser authentication and CSRF, role routing, frontend state ownership, mock retirement, visual preservation, frontend testing, backend-gap handling, and Phase 10 milestone tracking.
 
-The client remains React 19, Vite 8, JavaScript/JSX, React Router, and the existing CSS. Phase 10 does not authorize a TypeScript migration, a general state/query/form library, or a student/instructor redesign. Phase 10D.1 replaces the admin shell, overview, and account-management routes using the student/instructor visual language; the remaining old admin pages are non-authoritative references for Phase 10D.2 and 10D.3 only.
+The client remains React 19, Vite 8, JavaScript/JSX, React Router, and the existing CSS. Phase 10 does not authorize a TypeScript migration, a general state/query/form library, or a student/instructor redesign. Phase 10D.1 replaces the admin shell, overview, and account-management routes; Phase 10D.2 adds class governance and bounded academic oversight using the same visual language. Remaining old operational admin pages are non-authoritative references for Phase 10D.3 only.
 
-Phase 10A completed shared infrastructure, authentication, classes, and memberships. Phase 10B completed activity/test-case authoring, student practice/submissions, and instructor assessment/release. Phase 10C completed project tasks, repository foundation, collaboration/review, read-only Git inspection, and controlled local Git access. Phase 10D.1 implements the backend-connected admin foundation and accounts; class/academic oversight and operations/recovery/audit remain Phase 10D.2 and 10D.3. Backend records are authoritative; production routes never fall back to mocks after an API failure.
+Phase 10A completed shared infrastructure, authentication, classes, and memberships. Phase 10B completed activity/test-case authoring, student practice/submissions, and instructor assessment/release. Phase 10C completed project tasks, repository foundation, collaboration/review, read-only Git inspection, and controlled local Git access. Phase 10D.1 completed the backend-connected admin foundation and accounts. Phase 10D.2 implements class governance and bounded academic oversight; operations, recovery, and audit remain Phase 10D.3. Backend records are authoritative; production routes never fall back to mocks after an API failure.
 
 ## Shared client contract
 
@@ -98,7 +98,7 @@ This inventory is maintained in both directions throughout Phase 10: prototype c
 | Student/instructor analytics | Yes | No | Deferred | DEFERRED | Future research/product decision | No canonical role projection exists; keep an explicit unavailable state with no fabricated rates or risk claims |
 | Similarity indicators and verified contribution analytics | Yes | No | Deferred | DEFERRED | Future research/product decision | No approved computation/projection exists; preserve as recognized research concepts and show no fake percentages |
 | Admin overview, user directory, account detail, provisioning, setup resend, status, and session revocation | Yes | Yes | Core | INTEGRATED | 10D.1 | Real admin shell, URL-owned directory filters, safe account projections, version-aware status changes, and confirmed recovery actions |
-| Admin class governance and read-only academic oversight | Yes | Yes | Core | UI GAP | 10D.2 | Add class/member governance and Phase 9 safe academic lists without instructor-only academic content |
+| Admin class governance and read-only academic oversight | Yes | Yes | Core | INTEGRATED | 10D.2 | Real class/member governance plus Phase 9 safe academic lists without instructor-only academic content |
 | Admin operational oversight, recovery, and audit events | Yes | Yes | Core | UI GAP | 10D.3 | Add bounded health/storage/jobs/credential/audit projections and only the approved recovery mutations |
 | Admin creation and arbitrary role changes | Yes | No | Deferred | UNSUPPORTED PROTOTYPE | 10D.1 retirement | No controls; the accepted backend provisions STUDENT and INSTRUCTOR accounts only and has no role-mutation contract |
 | Separate Course/Section management and instructor reassignment | Yes | No | Deferred | UNSUPPORTED PROTOTYPE | 10D reconciliation | Represent section as Class metadata; retain ownership transfer/reassignment only as a documented backend gap |
@@ -183,14 +183,21 @@ Statuses below describe the baseline found at Phase 10 start plus the Phase 10A.
 
 ### Admin routes
 
-Phase 10D.1 replaces the admin foundation and account routes. Remaining academic and operational destinations render honest pending states until their owning milestones and never fall back to prototype records.
+Phase 10D.1 replaces the admin foundation and account routes. Phase 10D.2 replaces class governance and academic oversight routes. Remaining operational destinations render honest pending states until Phase 10D.3 and never fall back to prototype records.
 
 | Route | Component | Baseline status | Unsupported or misleading concepts | Matching Phase 9 capability | Milestone/disposition | Mock source |
 | --- | --- | --- | --- | --- | --- | --- |
 | `/admin` | `AdminOverviewPage` | Connected in 10D.1 | Unsupported integrity, capacity, and health claims omitted | `GET /admin/overview` | 10D.1 complete | Overview mocks retired from the authoritative route |
 | `/admin/users` | `AdminUsersPage` | Connected in 10D.1 | Admin creation and role mutation omitted | Directory, student/instructor provisioning | 10D.1 complete | `adminUsers` and local actions retired from the authoritative route |
 | `/admin/users/:userId` | `AdminUserDetailPage` | Connected in 10D.1 | No academic content or individual session secrets | Safe directory/detail summary, setup resend, status, session revoke | 10D.1 complete | Real route/response identity and explicit projections |
-| `/admin/academic` | `AdminPendingPage` | Honest pending state | No fake classes, activities, submissions, tasks, or repositories | Phase 9 academic lists and class APIs | 10D.2 | No mock fallback |
+| `/admin/academic` | `AdminAcademicHomePage` | Connected in 10D.2 | Navigation only; no academic actions or fabricated metrics | Phase 9 academic lists and class APIs | 10D.2 complete | Academic mock dashboard retired |
+| `/admin/academic/classes` | `AdminClassListPage` | Connected in 10D.2 | Server-owned search/status/sort/pagination | Class list API | 10D.2 complete | Prototype course/section/enrollment tables retired |
+| `/admin/academic/classes/new` | `AdminClassCreatePage` | Connected in 10D.2 | Existing ACTIVE instructor selection; no reassignment or arbitrary enrollment | User directory and class create APIs | 10D.2 complete | No mock instructor assignment |
+| `/admin/academic/classes/:classId` | `AdminClassDetailPage` | Connected in 10D.2 | Metadata/lifecycle, deliberate join-code controls, detailed roster/version-aware membership transitions | Class, join-code, and roster APIs | 10D.2 complete | Route identity verified; secrets remain memory-only |
+| `/admin/academic/activities` | `AdminAcademicListPage` | Connected in 10D.2 | Metadata/counts only; no source, instructions, tests, or authoring | Phase 9 activity projection | 10D.2 complete | Prototype activity records retired |
+| `/admin/academic/submissions` | `AdminAcademicListPage` | Connected in 10D.2 | Operational status and released score only | Phase 9 submission projection | 10D.2 complete | Assessment/source/feedback fixtures omitted |
+| `/admin/academic/project-tasks` | `AdminAcademicListPage` | Connected in 10D.2 | Metadata/counts only; no authoring, instructions, grading, or review | Phase 9 project-task projection | 10D.2 complete | Prototype project records retired |
+| `/admin/academic/repositories` | `AdminAcademicListPage` | Connected in 10D.2 | Lifecycle/ownership/storage summaries only; no source, history, credentials, or feedback | Phase 9 repository projection | 10D.2 complete | Prototype repository records retired |
 | `/admin/operations` | `AdminPendingPage` | Honest pending state | No fake health, storage, jobs, credentials, or recovery | Phase 9 operations/recovery | 10D.3 | No mock fallback |
 | `/admin/audit-events` | `AdminPendingPage` | Honest pending state | No fabricated audit records | Phase 9 allowlisted audit list | 10D.3 | No mock fallback |
 | Legacy `/admin/courses`, `/sections`, `/enrollments`, `/instructor-assignments`, `/repositories`, `/storage`, `/system`, `/archive` | Redirects | Compatibility-only | Unsupported separate entities/actions are not functionalized | Canonical academic/operations destinations above | 10D.1–10D.3 | Prototype records are unreachable |
@@ -199,7 +206,7 @@ Phase 10D.1 replaces the admin foundation and account routes. Remaining academic
 
 ### Central mock module
 
-`client/src/data/projexData.js` retains roles, course/section options, the historical route catalog, analytics/archive records, deferred contribution/similarity/student-profile references, and old admin tables/summaries. Phase 10B retired activity, workspace, submission, score, feedback, and instructor assessment fixtures from authoritative routes. Phase 10C retired fixed project/repository identities, local collaboration/review behavior, and the obsolete student/instructor Git workspace components. Phase 10D.1 removes admin overview/account fixtures from production routing; academic/operations fixtures remain unreachable visual references until 10D.2/10D.3 retire them.
+`client/src/data/projexData.js` retains roles, course/section options, the historical route catalog, analytics/archive records, deferred contribution/similarity/student-profile references, and old admin tables/summaries. Phase 10B retired activity, workspace, submission, score, feedback, and instructor assessment fixtures from authoritative routes. Phase 10C retired fixed project/repository identities, local collaboration/review behavior, and the obsolete student/instructor Git workspace components. Phase 10D.1 removes admin overview/account fixtures from production routing; Phase 10D.2 removes academic fixtures from authoritative routes. Operations fixtures remain unreachable visual references until Phase 10D.3 retires them.
 
 ### Student page inline records
 
@@ -219,7 +226,7 @@ The activity example identifier `act-loops-01` was retired from production routi
 
 - Login and prototype role switching previously bypassed authentication; retired in 10A.1.
 - Header sign-out previously navigated without revoking the session; retired in 10A.1.
-- Class announcements/comments, class invitation decisions, browser class-code generation, and local roster removal were retired in 10A.2. Activity authoring, test configuration, lifecycle, practice, submissions, and instructor assessment became real in 10B. Project-task authoring/lifecycle, repository foundation, collaboration/review, read-only Git inspection, and local Git credentials became real in 10C. The admin shell, overview, and account workflows become real in 10D.1; academic and operations routes remain honest pending states.
+- Class announcements/comments, class invitation decisions, browser class-code generation, and local roster removal were retired in 10A.2. Activity authoring, test configuration, lifecycle, practice, submissions, and instructor assessment became real in 10B. Project-task authoring/lifecycle, repository foundation, collaboration/review, read-only Git inspection, and local Git credentials became real in 10C. The admin shell, overview, and account workflows became real in 10D.1; class governance and academic oversight become real in 10D.2; operations remain an honest pending state for 10D.3.
 - The following student-practice statement records the Phase 10 baseline behavior and is superseded by the 10B.2 retirement directly below it.
 - The Phase 10 baseline alternated fake student practice pass/fail and made instructor “Run Tests” force a fake failed state; both behaviors are retired.
 - The student practice, submission, score, feedback, fake local compiler output, custom-input, and fake-autosave prototypes are retired in 10B.2. Phase 10B.3 retires fake instructor compiler output, test execution, per-test point edits, similarity, local grading/release, and released-record reopening.
@@ -240,7 +247,7 @@ The activity example identifier `act-loops-01` was retired from production routi
 
 Preserve the student/instructor landing and login presentation; shells, sidebars, headers, tabs, cards, forms, tables, workspace panes, modals, repository grids, responsive breakpoints, and reduced-motion behavior. Add only scoped loading/error/empty states, accessibility corrections, dynamic route/data bindings, and the smallest adjustment required for truthful backend behavior. Avoid broad `App.css` cleanup or unrelated markup refactoring.
 
-The original admin interface is not protected. Phase 10D.1 replaces its generic dense shell with student/instructor typography, spacing, hierarchy, cards, chips, tables, dialogs, responsive behavior, confirmations, reason collection, and stale-version recovery. Phase 10D.2/10D.3 extend this foundation and may show only Phase 9-supported metrics and actions.
+The original admin interface is not protected. Phase 10D.1 replaces its generic dense shell with student/instructor typography, spacing, hierarchy, cards, chips, tables, dialogs, responsive behavior, confirmations, reason collection, and stale-version recovery. Phase 10D.2 extends this foundation for class governance and bounded academic lists. Phase 10D.3 may extend it only with Phase 9-supported operational metrics and actions.
 
 ## Frontend testing
 

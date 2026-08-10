@@ -8,7 +8,7 @@ Out of scope are public registration, password reset, MFA, Google Sign-In, owner
 
 ## Frontend integration status
 
-The original Phase 4 delivery was backend-only. Phase 10A.2 now connects the protected student and instructor class catalogs, explicit URL-based class selection, class metadata/lifecycle actions, student class-code join, role-specific rosters, membership transitions, and server-owned join-code controls. Unsupported invitation, stream/comment, schedule/room, and class-rule concepts remain documented in `FRONTEND_INTEGRATION.md` and are not simulated as successful local behavior.
+The original Phase 4 delivery was backend-only. Phase 10A.2 connects the protected student and instructor class catalogs, explicit URL-based class selection, class metadata/lifecycle actions, student class-code join, role-specific rosters, membership transitions, and server-owned join-code controls. Phase 10D.2 connects administrator class governance and the bounded Phase 9 academic oversight projections. Unsupported invitation, stream/comment, schedule/room, instructor-reassignment, and class-rule concepts remain documented in `FRONTEND_INTEGRATION.md` and are not simulated as successful local behavior.
 
 ## User directory
 
@@ -67,7 +67,7 @@ stateDiagram-v2
 - Archived classes reject removal/reactivation.
 - `joinedAt` preserves original enrollment, `removedAt` records removal, and `lastActivatedAt` records the latest activation.
 
-Student roster entries expose only `userId` and `fullName`. Owner/admin roster entries additionally expose `memberId`, email, user status, membership status, `joinedAt`, `removedAt`, and `lastActivatedAt`.
+Student roster entries expose only `userId` and `fullName`. Owner/admin roster entries additionally expose `memberId`, email, user status, membership status, `joinedAt`, `updatedAt`, `removedAt`, and `lastActivatedAt`. Administrative membership changes send the latest detailed-roster `updatedAt` as `expectedUpdatedAt`; a stale value returns `409 STALE_CLASS_MEMBER_VERSION`, after which the frontend refetches and requires a deliberate retry.
 
 ## Authorization matrix
 

@@ -14745,6 +14745,135 @@ textarea:focus-visible {
   font-size: 12px;
 }
 
+.admin-academic-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.admin-academic-card {
+  display: grid;
+  gap: 9px;
+  padding: 24px;
+  border: 1px solid #dce5f0;
+  border-radius: 16px;
+  color: inherit;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(28, 46, 78, 0.06);
+  text-decoration: none;
+}
+
+.admin-academic-card:hover {
+  border-color: #8fb6a3;
+  transform: translateY(-1px);
+}
+
+.admin-academic-card h2,
+.admin-academic-card p {
+  margin: 0;
+}
+
+.admin-academic-card p {
+  color: #637289;
+  line-height: 1.55;
+}
+
+.admin-academic-card span {
+  color: #22633f;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.admin-filter-bar--wide {
+  grid-template-columns: minmax(190px, 1fr) repeat(4, minmax(120px, 170px)) auto;
+}
+
+.admin-table td > span,
+.admin-table td > strong + span {
+  display: block;
+  margin-top: 4px;
+  color: #6a7890;
+  font-size: 12px;
+}
+
+.admin-instructor-picker {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dce5f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.admin-instructor-picker > button {
+  justify-self: start;
+}
+
+.admin-choice-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-choice-list label {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  padding: 11px 12px;
+  border: 1px solid #d7e0ec;
+  border-radius: 9px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.admin-choice-list input {
+  width: auto;
+}
+
+.admin-choice-list span {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-choice-list small {
+  color: #69778c;
+  font-weight: 600;
+}
+
+.admin-join-code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-join-code > strong {
+  padding: 10px 13px;
+  border-radius: 9px;
+  color: #173b2a;
+  background: #edf8f1;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.12em;
+}
+
+.admin-join-code p {
+  margin: 0;
+  color: #66758b;
+}
+
+.admin-record-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-filter-context {
+  margin: 0 0 14px;
+  color: #53647b;
+  font-size: 12px;
+}
+
 .sr-only {
   width: 1px;
   height: 1px;
@@ -14765,6 +14894,10 @@ textarea:focus-visible {
 
   .admin-filter-bar {
     grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(140px, 180px));
+  }
+
+  .admin-filter-bar--wide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -14824,6 +14957,7 @@ textarea:focus-visible {
   }
 
   .admin-overview-grid,
+  .admin-academic-cards,
   .admin-detail-grid,
   .admin-metric-grid,
   .admin-session-grid,

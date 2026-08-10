@@ -278,8 +278,12 @@ function AdminDashboardLayout() {
           <StudentSidebarLink to="/admin" end icon="home">Overview</StudentSidebarLink>
           <StudentSidebarLink to="/admin/users" icon="people">Users</StudentSidebarLink>
           <div className="student-sidebar__group">
-            <p>NEXT MILESTONES</p>
-            <StudentSidebarLink to="/admin/academic" icon="activity">Academic oversight</StudentSidebarLink>
+            <p>ACADEMIC ADMINISTRATION</p>
+            <StudentSidebarLink to="/admin/academic/classes" icon="people">Classes</StudentSidebarLink>
+            <StudentSidebarLink to="/admin/academic" icon="activity">Academic records</StudentSidebarLink>
+          </div>
+          <div className="student-sidebar__group">
+            <p>NEXT MILESTONE</p>
             <StudentSidebarLink to="/admin/operations" icon="folder">Operations</StudentSidebarLink>
             <StudentSidebarLink to="/admin/audit-events" icon="todo">Audit events</StudentSidebarLink>
           </div>

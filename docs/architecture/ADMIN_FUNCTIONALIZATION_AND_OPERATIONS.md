@@ -2,7 +2,7 @@
 
 ## Phase 9 boundary
 
-Phase 9 is backend-focused. Phase 10D owns frontend integration using the student/instructor visual language. Phase 10D.1 replaces the temporary shell, overview, and account-management routes; academic and operational administration remain assigned to Phase 10D.2 and 10D.3.
+Phase 9 is backend-focused. Phase 10D owns frontend integration using the student/instructor visual language. Phase 10D.1 replaces the temporary shell, overview, and account-management routes. Phase 10D.2 integrates class governance and bounded academic oversight; operational administration remains assigned to Phase 10D.3.
 
 Phase 9A implements authorization and accountability. Phase 9B implements bounded read-only academic and operational oversight. Phase 9C adds only controlled Git-credential revocation and eligible repository-provisioning recovery.
 
@@ -103,4 +103,12 @@ The additive Phase 9A and Phase 9C migrations are applied to both approved local
 
 The redesigned admin foundation uses the real overview, user directory, account summary, student/instructor provisioning, setup resend, status transition, and session-revocation contracts. Directory filters and pagination are server-owned and reflected in the URL. Account details fail closed when the route identity and safe directory/account projections disagree. Status changes chain the authoritative `updatedAt`, preserve unsent reasons across stale conflicts, refetch current state, and require deliberate retry.
 
-The frontend exposes aggregate session counts only and never setup tokens, session identifiers, cookies, IP addresses, user-agent strings, passwords, academic source/evidence, Git secrets, or infrastructure paths. It offers no ADMIN provisioning or role mutation. Phase 10D.2 owns class and academic integration; Phase 10D.3 owns health, storage, jobs, credential recovery, provisioning retry, and audit events.
+The frontend exposes aggregate session counts only and never setup tokens, session identifiers, cookies, IP addresses, user-agent strings, passwords, academic source/evidence, Git secrets, or infrastructure paths. It offers no ADMIN provisioning or role mutation. Phase 10D.3 owns health, storage, jobs, credential recovery, provisioning retry, and audit events.
+
+## Phase 10D.2 frontend boundary
+
+The administrator class catalog, creation flow, class detail, metadata lifecycle, join-code controls, and detailed roster use the existing Phase 4 and Phase 9 contracts. Class creation requires selection of an existing ACTIVE instructor; ownership reassignment, arbitrary enrollment, and invitation bypass remain unavailable. Class mutations refresh authoritative state because the class contract has no optimistic version. Membership removal/reactivation uses the detailed-roster `updatedAt` as `expectedUpdatedAt`; a stale conflict refetches the roster, preserves the reason, and requires deliberate retry.
+
+Join codes are fetched only after deliberate reveal and remain in component memory. They are cleared by navigation, resource refresh, and unmount; an inactive or revoked code is never redisplayed as usable. Codes are absent from catalogs, URLs, browser storage, logs, and documents.
+
+Read-only academic routes use the Phase 9 administrator projections for classes, activities, submissions, project tasks, and repositories. Filters, sorting, and pagination remain server-owned. Submission scores render only when the backend marks the submission `RELEASED`. These routes omit instructions, source, test definitions or evidence, compiler output, score corrections, feedback bodies, repository source/history, credentials, storage paths, and operational internals. Phase 10D.2 adds no authoring, grading, review, or recovery mutation.

@@ -25,6 +25,7 @@ export interface DetailedRosterMember extends StudentRosterMember {
   userStatus: ClassMemberRecord['student']['status']
   membershipStatus: ClassMemberRecord['status']
   joinedAt: Date
+  updatedAt: Date
   removedAt: Date | null
   lastActivatedAt: Date
 }
@@ -100,6 +101,7 @@ function detailedProjection(member: ClassMemberRecord): DetailedRosterMember {
     userStatus: member.student.status,
     membershipStatus: member.status,
     joinedAt: member.joinedAt,
+    updatedAt: member.updatedAt,
     removedAt: member.removedAt,
     lastActivatedAt: member.lastActivatedAt,
   }

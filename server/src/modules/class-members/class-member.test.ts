@@ -25,6 +25,13 @@ const student: SafeUserProfile = {
   role: 'STUDENT',
   status: 'ACTIVE',
 }
+const admin: SafeUserProfile = {
+  id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+  fullName: 'Administrator User',
+  email: 'admin@slu.edu.ph',
+  role: 'ADMIN',
+  status: 'ACTIVE',
+}
 const classRecord: ClassRecord = {
   id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
   instructorId: instructor.id,
@@ -154,6 +161,7 @@ describe('class membership lifecycle', () => {
     ])
     expect(result.members[0]).not.toHaveProperty('email')
     expect(result.members[0]).not.toHaveProperty('membershipStatus')
+    expect(result.members[0]).not.toHaveProperty('updatedAt')
   })
 
   it('returns detailed roster data to the class owner', async () => {
@@ -172,6 +180,21 @@ describe('class membership lifecycle', () => {
       memberId: member.id,
       email: student.email,
       membershipStatus: 'ACTIVE',
+      updatedAt: member.updatedAt,
+    })
+  })
+
+  it('maps a stale administrative membership version to the public conflict', async () => {
+    const repository = new FakeMemberRepository()
+    repository.transitionResult = { kind: 'stale' }
+    const { service } = createHarness(repository)
+    await expect(service.update(admin, classRecord.id, member.id, {
+      status: 'REMOVED',
+      reason: 'Approved administrative roster correction.',
+      expectedUpdatedAt: member.updatedAt,
+    }, 'ffffffff-ffff-4fff-8fff-ffffffffffff')).rejects.toMatchObject({
+      code: 'STALE_CLASS_MEMBER_VERSION',
+      statusCode: 409,
     })
   })
 

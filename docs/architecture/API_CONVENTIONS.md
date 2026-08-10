@@ -114,7 +114,7 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - Class lists are scoped by the authenticated role: all classes for admins, owned classes for instructors, and ACTIVE memberships for students.
 - Class responses never include join codes for students.
 - Student roster entries contain only `userId` and `fullName`.
-- Instructor/admin roster entries may additionally contain `memberId`, email, user status, membership status, `joinedAt`, `removedAt`, and `lastActivatedAt`.
+- Instructor/admin roster entries may additionally contain `memberId`, email, user status, membership status, `joinedAt`, `updatedAt`, `removedAt`, and `lastActivatedAt`. The `updatedAt` value is the authoritative membership version used by version-aware administrative transitions.
 - A successful new class-code join returns `201`; an idempotent existing ACTIVE membership returns `200` with the same membership ID.
 - Class-code errors never echo the submitted code or reveal the target class.
 

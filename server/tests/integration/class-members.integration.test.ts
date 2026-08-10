@@ -264,6 +264,7 @@ describe('PostgreSQL class membership lifecycle', () => {
           'memberId',
           'membershipStatus',
           'removedAt',
+          'updatedAt',
           'userId',
           'userStatus',
         ].sort(),
@@ -276,6 +277,7 @@ describe('PostgreSQL class membership lifecycle', () => {
           email: activeStudent.email,
           userStatus: 'ACTIVE',
           membershipStatus: 'ACTIVE',
+          updatedAt: expect.any(Date),
           removedAt: null,
         }),
         expect.objectContaining({
@@ -283,9 +285,33 @@ describe('PostgreSQL class membership lifecycle', () => {
           email: removedStudent.email,
           userStatus: 'ACTIVE',
           membershipStatus: 'REMOVED',
+          updatedAt: expect.any(Date),
           removedAt: expect.any(Date),
         }),
       ]),
     )
+  })
+
+  it('uses the roster-projected version for current admin updates and rejects a stale retry', async () => {
+    const admin = await createActiveUser(prisma, 'ADMIN')
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const classRepository = createPrismaClassRepository(prisma)
+    const classService = createClassService({ repository: classRepository, logger, generateCode: () => 'FGHJK23456' })
+    const memberService = createClassMemberService({ repository: createPrismaClassMemberRepository(prisma), classRepository, logger })
+    const createdClass = await classService.create(instructor, { className: 'IT 125', section: 'BSIT 3E', semester: 'First Semester', schoolYear: '2026-2027' })
+    const joined = await memberService.join(student, 'FGHJK23456')
+    const roster = await memberService.list(admin, createdClass.id, { page: 1, pageSize: 50 })
+    const projected = roster.members.find((item) => 'memberId' in item && item.memberId === joined.membershipId)
+    expect(projected).toMatchObject({ memberId: joined.membershipId, updatedAt: expect.any(Date) })
+    if (!projected || !('updatedAt' in projected)) throw new Error('Detailed membership projection missing.')
+
+    const removed = await memberService.update(admin, createdClass.id, joined.membershipId, {
+      status: 'REMOVED', reason: 'Approved administrative roster correction.', expectedUpdatedAt: projected.updatedAt,
+    }, '40000000-0000-4000-8000-000000000001')
+    expect(removed).toMatchObject({ membershipStatus: 'REMOVED', updatedAt: expect.any(Date) })
+    await expect(memberService.update(admin, createdClass.id, joined.membershipId, {
+      status: 'ACTIVE', reason: 'Approved administrative roster reactivation.', expectedUpdatedAt: projected.updatedAt,
+    }, '40000000-0000-4000-8000-000000000002')).rejects.toMatchObject({ code: 'STALE_CLASS_MEMBER_VERSION', statusCode: 409 })
   })
 })
