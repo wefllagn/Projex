@@ -209,7 +209,7 @@ export function InstructorActivityList({ api = activityApi }) {
               <div className="instructor-assignment-name"><span className="instructor-assignment-file instructor-assignment-file--blue" aria-hidden="true" /><div><strong>{activity.title}</strong><span>{activity.instructions}</span><em>{activity.totalPoints} points</em></div></div>
               <span>Java</span><span>{formatActivityDate(activity.dueDate)}</span><span>{activity.maxAttempts}</span>
               <em className={`instructor-assignment-status instructor-assignment-status--${activity.status.toLowerCase()}`}>{formatActivityStatus(activity.status)}</em>
-              <div><NavLink to={classHref(`/instructor/activity/${activity.id}/settings`, selectedClass.id)}>Configure</NavLink></div>
+              <div className="instructor-activity-actions"><NavLink to={classHref(`/instructor/activity/${activity.id}/submissions`, selectedClass.id)}>Submissions</NavLink><NavLink to={classHref(`/instructor/activity/${activity.id}/settings`, selectedClass.id)}>Configure</NavLink></div>
             </div>
           ))}
         </div>

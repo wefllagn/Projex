@@ -339,24 +339,32 @@ export const routeCatalog = [
         path: 'activity/:activityId/monitor',
         label: 'Student Monitoring',
         group: 'Activity Mode',
-        status: 'Placeholder',
-        summary: 'Progress, compiler state, submission state, idle flags, and intervention signals.',
+        status: 'Canonical redirect',
+        summary: 'Redirects to the real per-activity submission queue; unsupported presence and missing-student monitoring are not fabricated.',
       },
       {
         path: 'activity/:activityId/submissions',
         label: 'Submission Queue',
         group: 'Activity Mode',
-        status: 'Placeholder',
+        status: 'Backend connected',
         summary:
-          'Review queue with final submissions, grade, compiler, feedback, and instructor-only similarity filters.',
+          'Authorized per-activity attempts with bounded pagination, lifecycle filtering, and canonical review links.',
+      },
+      {
+        path: 'activity/:activityId/submissions/:submissionId',
+        label: 'Submission Review',
+        group: 'Activity Mode',
+        status: 'Backend connected',
+        summary:
+          'Immutable source and assessment evidence, append-only correction, review, release, retry, and failure resolution.',
       },
       {
         path: 'submission-review',
-        label: 'Submission Review',
+        label: 'Legacy Submission Review',
         group: 'Activity Mode',
-        status: 'Shell ready',
+        status: 'Navigation required',
         summary:
-          'Full mock checking results, hidden test summaries, detailed similarity review, feedback, and grade control.',
+          'Identifier-less legacy route directs instructors to choose an activity submission safely.',
       },
       {
         path: 'projects',
@@ -812,95 +820,6 @@ export const instructorActivitySettings = {
     { item: 'Input validation', mode: '20 pts', status: 'Configured', signal: 'Negative values and sentinel handling' },
     { item: 'Readability', mode: '20 pts', status: 'Configured', signal: 'Naming and method structure' },
     { item: 'Output formatting', mode: '20 pts', status: 'Configured', signal: 'Two decimal places required' },
-  ],
-}
-
-export const instructorMonitoringRows = [
-  {
-    item: 'Alyssa Mendoza',
-    mode: 'Editing',
-    status: 'Due Soon',
-    signal: '2/3 visible tests passing | last active 5 min ago',
-  },
-  {
-    item: 'Nico Santos',
-    mode: 'Not started',
-    status: 'Risk',
-    signal: 'No compiler run | deadline in 3 days',
-  },
-  {
-    item: 'Mira Bautista',
-    mode: 'Submitted',
-    status: 'Checked',
-    signal: '3/3 visible tests | feedback ready',
-  },
-  {
-    item: 'Luis Carino',
-    mode: 'Compiling',
-    status: 'Watch',
-    signal: 'Syntax error repeated 4 times',
-  },
-]
-
-export const instructorSubmissions = [
-  {
-    item: 'Alyssa Mendoza',
-    activity: 'Student Grade Analyzer',
-    status: 'Checked',
-    submittedAt: '2026-06-21 20:14',
-    compiler: 'Compiled',
-    tests: '3/3 visible, 2/2 hidden',
-    grade: '94/100',
-    feedback: 'Released',
-    similarity: '12%',
-    decision: 'No action',
-  },
-  {
-    item: 'Nico Santos',
-    activity: 'Student Grade Analyzer',
-    status: 'Pending',
-    submittedAt: '2026-06-21 22:41',
-    compiler: 'Compiled',
-    tests: '2/3 visible, 1/2 hidden',
-    grade: 'Draft',
-    feedback: 'Not released',
-    similarity: '48%',
-    decision: 'Needs review',
-  },
-  {
-    item: 'Mira Bautista',
-    activity: 'Loop Patterns and Input Validation',
-    status: 'Needs Revision',
-    submittedAt: '2026-06-25 18:05',
-    compiler: 'Warnings',
-    tests: '2/3 visible, hidden pending',
-    grade: 'Draft',
-    feedback: 'Drafted',
-    similarity: '18%',
-    decision: 'Review comments',
-  },
-]
-
-export const instructorReview = {
-  student: 'Nico Santos',
-  activity: 'Student Grade Analyzer',
-  submittedAt: '2026-06-21 22:41',
-  status: 'Pending',
-  compilerOutput:
-    'Mock compile succeeded.\nVisible tests: 2/3 passed.\nHidden tests: 1/2 passed.\nFormatting check failed for empty grade list.',
-  code:
-    'public class GradeAnalyzer {\n  public Summary summarize(int[] grades) {\n    int total = 0;\n    for (int grade : grades) total += grade;\n    return new Summary(total / grades.length);\n  }\n}',
-  tests: [
-    { item: 'Computes high score', mode: 'Visible', status: 'Passed', signal: 'Student-visible' },
-    { item: 'Handles empty grade list', mode: 'Hidden', status: 'Failed', signal: 'Instructor-only check' },
-    { item: 'Formats summary text', mode: 'Visible', status: 'Failed', signal: 'Output mismatch' },
-    { item: 'Rejects invalid grade values', mode: 'Hidden', status: 'Passed', signal: 'Instructor-only check' },
-  ],
-  rubric: [
-    { item: 'Correctness', mode: '40 pts', status: 'Draft', signal: '30/40' },
-    { item: 'Input validation', mode: '20 pts', status: 'Draft', signal: '14/20' },
-    { item: 'Readability', mode: '20 pts', status: 'Draft', signal: '17/20' },
-    { item: 'Output formatting', mode: '20 pts', status: 'Draft', signal: '12/20' },
   ],
 }
 

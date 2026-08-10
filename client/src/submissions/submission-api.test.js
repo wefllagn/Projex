@@ -5,6 +5,7 @@ function transport() {
   return {
     get: vi.fn().mockResolvedValue({ data: [] }),
     post: vi.fn().mockResolvedValue({ data: {} }),
+    put: vi.fn().mockResolvedValue({ data: {} }),
   }
 }
 
@@ -38,5 +39,36 @@ describe('submission API adapter', () => {
     expect(JSON.stringify(body)).not.toContain(idempotencyKey)
     expect(path).not.toContain(idempotencyKey)
     expect(options.headers.get('Idempotency-Key')).toBe(idempotencyKey)
+  })
+
+  it('maps instructor correction, review, release, retry, and resolution routes', async () => {
+    const client = transport()
+    const api = createSubmissionApi(client)
+    const version = '2026-08-10T00:00:00.000Z'
+
+    await api.correctAutomatedScore('submission-1', {
+      newEffectiveScore: 80,
+      reason: 'Corrected after reviewing the preserved assessment evidence.',
+      expectedUpdatedAt: version,
+    })
+    await api.saveReview('submission-1', {
+      instructorPoints: 12,
+      feedbackText: 'Good explanation.',
+      expectedUpdatedAt: version,
+    })
+    await api.releaseSubmission('submission-1', { expectedUpdatedAt: version })
+    await api.retryAssessment('submission-1', { expectedUpdatedAt: version })
+    await api.resolveAssessmentFailure('submission-1', {
+      resolutionType: 'REPLACEMENT_GRANTED',
+      reason: 'The assessment infrastructure failed after its retry allowance.',
+      replacementExpiresAt: '2026-08-11T00:00:00.000Z',
+      expectedUpdatedAt: version,
+    })
+
+    expect(client.post).toHaveBeenNthCalledWith(1, '/submissions/submission-1/score-corrections', expect.objectContaining({ newEffectiveScore: 80 }), undefined)
+    expect(client.put).toHaveBeenCalledWith('/submissions/submission-1/review', expect.objectContaining({ instructorPoints: 12 }), undefined)
+    expect(client.post).toHaveBeenNthCalledWith(2, '/submissions/submission-1/release', { expectedUpdatedAt: version }, undefined)
+    expect(client.post).toHaveBeenNthCalledWith(3, '/submissions/submission-1/assessment/retry', { expectedUpdatedAt: version }, undefined)
+    expect(client.post).toHaveBeenNthCalledWith(4, '/submissions/submission-1/assessment/resolve-failure', expect.objectContaining({ resolutionType: 'REPLACEMENT_GRANTED' }), undefined)
   })
 })

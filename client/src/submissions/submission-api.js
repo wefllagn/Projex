@@ -31,6 +31,33 @@ export function createSubmissionApi(client = apiClient) {
     getSubmission(submissionId, options) {
       return client.get(`/submissions/${submissionId}`, options)
     },
+    correctAutomatedScore(submissionId, input, options) {
+      return client.post(
+        `/submissions/${submissionId}/score-corrections`,
+        input,
+        options,
+      )
+    },
+    saveReview(submissionId, input, options) {
+      return client.put(`/submissions/${submissionId}/review`, input, options)
+    },
+    releaseSubmission(submissionId, input, options) {
+      return client.post(`/submissions/${submissionId}/release`, input, options)
+    },
+    retryAssessment(submissionId, input, options) {
+      return client.post(
+        `/submissions/${submissionId}/assessment/retry`,
+        input,
+        options,
+      )
+    },
+    resolveAssessmentFailure(submissionId, input, options) {
+      return client.post(
+        `/submissions/${submissionId}/assessment/resolve-failure`,
+        input,
+        options,
+      )
+    },
     createVisibleTestRun(activityId, sourceCode, options) {
       return client.post(
         `/activities/${activityId}/visible-test-runs`,

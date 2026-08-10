@@ -12918,6 +12918,239 @@ textarea:focus-visible {
   padding-block: 10px;
 }
 
+.instructor-activity-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.instructor-submission-queue-row {
+  min-width: 900px;
+  grid-template-columns: minmax(210px, 1.15fr) minmax(170px, 0.8fr) minmax(150px, 0.7fr) minmax(210px, 1fr) minmax(90px, 0.4fr);
+}
+
+.instructor-submission-queue-row > div,
+.instructor-submission-facts dd {
+  display: grid;
+  gap: 3px;
+}
+
+.instructor-submission-queue-row small,
+.instructor-submission-facts small {
+  color: #71809a;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.instructor-live-review {
+  display: grid;
+  gap: 20px;
+}
+
+.instructor-live-review .instructor-review-side .instructor-testcase-panel {
+  margin: 0;
+}
+
+.instructor-live-review .instructor-output-card pre {
+  min-height: 180px;
+}
+
+.instructor-evidence-note,
+.instructor-correction-form > p,
+.instructor-failure-panel > p,
+.instructor-release-panel p {
+  margin: 0;
+  color: #53647d;
+  line-height: 1.5;
+}
+
+.instructor-assessment-case {
+  border: 1px solid #d8e4f6;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.instructor-assessment-case summary {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 90px 100px 150px;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 15px;
+  cursor: pointer;
+}
+
+.instructor-assessment-case summary em {
+  font-style: normal;
+  font-weight: 900;
+}
+
+.instructor-assessment-case summary em.is-passed {
+  color: #167146;
+}
+
+.instructor-assessment-case summary em.is-failed {
+  color: #a13f36;
+}
+
+.instructor-assessment-case dl,
+.instructor-resolution-record dl {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0 15px 15px;
+}
+
+.instructor-assessment-case dl div,
+.instructor-resolution-record dl div {
+  display: grid;
+  gap: 5px;
+}
+
+.instructor-assessment-case dt,
+.instructor-resolution-record dt {
+  color: #53647d;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.instructor-assessment-case dd,
+.instructor-resolution-record dd {
+  margin: 0;
+}
+
+.instructor-assessment-case pre {
+  max-height: 190px;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  border-radius: 7px;
+  color: #24364c;
+  background: #f5f8fd;
+  white-space: pre-wrap;
+}
+
+.instructor-score-panel,
+.instructor-correction-history,
+.instructor-correction-form,
+.instructor-release-panel,
+.instructor-failure-panel,
+.instructor-resolution-record {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #d8e4f6;
+  border-radius: 9px;
+  background: #ffffff;
+}
+
+.instructor-correction-history article {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border-left: 3px solid #245cff;
+  background: #f8fbff;
+}
+
+.instructor-correction-history article div,
+.instructor-release-panel {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.instructor-correction-history p,
+.instructor-correction-history h3,
+.instructor-correction-form h3,
+.instructor-failure-panel h3,
+.instructor-release-panel h3 {
+  margin: 0;
+}
+
+.instructor-correction-form,
+.instructor-failure-panel form {
+  background: #f8fbff;
+}
+
+.instructor-correction-form label,
+.instructor-failure-panel label,
+.instructor-live-feedback label {
+  display: grid;
+  gap: 7px;
+  color: #263b5d;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.instructor-correction-form input,
+.instructor-correction-form textarea,
+.instructor-failure-panel input,
+.instructor-failure-panel select,
+.instructor-failure-panel textarea,
+.instructor-live-feedback input,
+.instructor-live-feedback textarea {
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #cad8ec;
+  border-radius: 7px;
+  color: #1b2a45;
+  background: #ffffff;
+  font: inherit;
+}
+
+.instructor-correction-form textarea,
+.instructor-failure-panel textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.instructor-live-feedback {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 220px);
+}
+
+.instructor-live-feedback small,
+.instructor-failure-panel small {
+  color: #71809a;
+  font-weight: 700;
+}
+
+.instructor-release-panel {
+  border-color: #bce7cf;
+  background: #f1fbf5;
+}
+
+.instructor-failure-panel {
+  border-color: #f0c7c2;
+  background: #fffafa;
+}
+
+.instructor-failure-panel form {
+  display: grid;
+  gap: 12px;
+}
+
+@media (max-width: 760px) {
+  .instructor-assessment-case summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .instructor-live-feedback {
+    grid-template-columns: 1fr;
+  }
+
+  .instructor-live-feedback label:first-child,
+  .instructor-live-feedback .instructor-form-actions {
+    grid-column: 1;
+  }
+
+  .instructor-release-panel,
+  .instructor-correction-history article div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 /* Phase 10B activity integration */
 .activity-pagination,
 .activity-testcase-actions,
