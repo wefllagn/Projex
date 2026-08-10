@@ -1,32 +1,10 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
+import { useClasses } from '../classes/class-context.js'
+import { classHref, classInitial } from '../classes/class-links.js'
 import { courseOptions, sectionOptions } from '../data/projexData.js'
-
-const studentClasses = [
-  { label: 'IT 112 - Computer Programming 1', code: 'IT 112', classCode: '9346', name: 'Computer Programming', initial: 'I', active: true },
-  { label: 'CS 111', code: 'CS 111', name: 'Introduction to Computing', initial: 'C' },
-  { label: 'IT 123', code: 'IT 123', name: 'Platform Technologies', initial: 'I' },
-  { label: 'MATH 101', code: 'MATH 101', name: 'College Algebra', initial: 'M' },
-]
-
-const instructorClasses = [
-  { label: 'IT 112 - Computer Programming 1', code: 'IT 112', classCode: '9446', name: 'Computer Programming 1', initial: 'I', active: true },
-  { label: 'CS 111', code: 'CS 111', name: 'Introduction to Computing', initial: 'C' },
-  { label: 'IT 123', code: 'IT 123', name: 'Platform Technologies', initial: 'I' },
-]
-
-function generateClassCode() {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  const part = () => Array.from({ length: 4 }, () => characters[Math.floor(Math.random() * characters.length)]).join('')
-  return `${part()}-${part()}`
-}
-
-function copyClassCode(code) {
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(code)
-  }
-}
 
 function StudentSidebarLink({ to, children, end = false, count, icon }) {
   return (
@@ -57,87 +35,85 @@ function SidebarBrand({ to, label, collapsed, onToggle }) {
 }
 
 function SidebarClassLink({ item, to, active }) {
+  const initial = classInitial(item)
   return (
     <NavLink
       to={to}
       className={active ? 'student-class-link is-active' : 'student-class-link'}
     >
-      <span className={`student-class-dot student-class-dot--${item.initial.toLowerCase()}`}>
-        {item.initial}
+      <span className={`student-class-dot student-class-dot--${initial.toLowerCase()}`}>
+        {initial}
       </span>
       <span className="student-class-link__text">
-        <strong>
-          {item.code}
-          {item.classCode ? ` - ${item.classCode}` : ''}
-        </strong>
-        <small>{item.name}</small>
+        <strong>{item.className}</strong>
+        <small>{item.section} · {item.status === 'ARCHIVED' ? 'Archived' : item.semester}</small>
       </span>
     </NavLink>
   )
 }
 
-function CreateClassModal({ onClose }) {
-  const [code, setCode] = useState('')
-  const [copyStatus, setCopyStatus] = useState('')
+export function CreateClassModal({ onClose, onCreated }) {
+  const { api, upsertClass } = useClasses()
+  const [form, setForm] = useState({
+    className: '',
+    section: '',
+    semester: '',
+    schoolYear: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  const updateField = (field) => (event) => {
+    setForm((current) => ({ ...current, [field]: event.target.value }))
+  }
+
+  const submit = async (event) => {
+    event.preventDefault()
+    setSaving(true)
+    setError(null)
+    try {
+      const response = await api.createClass(form)
+      upsertClass(response.data)
+      onCreated(response.data)
+    } catch (requestError) {
+      setError(requestError)
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="create-class-title">
-      <section className="instructor-action-modal">
+      <form className="instructor-action-modal" onSubmit={submit}>
         <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close create class" />
         <p>Create Class</p>
         <h2 id="create-class-title">New instructor class</h2>
         <div className="instructor-form-grid">
           <label>
             Course name
-            <input defaultValue="IT 112 - Computer Programming 1" />
+            <input value={form.className} onChange={updateField('className')} maxLength={200} required />
           </label>
           <label>
             Section
-            <input defaultValue="BSIT 2A" />
+            <input value={form.section} onChange={updateField('section')} maxLength={100} required />
           </label>
           <label>
-            Instructor
-            <input defaultValue="Engr. Marco Rivera" />
+            Semester
+            <input value={form.semester} onChange={updateField('semester')} maxLength={100} placeholder="First Semester" required />
           </label>
           <label>
-            Invite student
-            <input placeholder="student@slu.edu.ph" />
+            School year
+            <input value={form.schoolYear} onChange={updateField('schoolYear')} maxLength={20} placeholder="2026-2027" required />
           </label>
         </div>
-        <section className="instructor-modal-code-panel">
-          <span>Class code</span>
-          {code ? (
-            <div className="instructor-code-copy-row">
-              <strong>{code}</strong>
-              <button
-                type="button"
-                onClick={() => {
-                  copyClassCode(code)
-                  setCopyStatus('Copied')
-                }}
-              >
-                Copy
-              </button>
-            </div>
-          ) : (
-            <p>No generated class code yet.</p>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setCode(generateClassCode())
-              setCopyStatus('')
-            }}
-          >
-            Generate class code
-          </button>
-          {copyStatus && <em>{copyStatus}</em>}
-        </section>
+        <p className="class-form-note">Projex creates the join code securely on the server. Manage it after the class is created.</p>
+        {error && <p className="class-form-error" role="alert">{describeApiError(error)}</p>}
         <div className="student-submit-modal-actions">
           <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
-          <button type="button" className="student-primary-action" onClick={onClose}>Create Class</button>
+          <button type="submit" className="student-primary-action" disabled={saving}>
+            {saving ? 'Creating…' : 'Create Class'}
+          </button>
         </div>
-      </section>
+      </form>
     </div>
   )
 }
@@ -145,7 +121,8 @@ function CreateClassModal({ onClose }) {
 function InstructorDashboardLayout() {
   const [createClassOpen, setCreateClassOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const location = useLocation()
+  const navigate = useNavigate()
+  const { classes, requestedClassId, status, error, pagination, loadMore } = useClasses()
 
   return (
     <div className={sidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'}>
@@ -161,21 +138,26 @@ function InstructorDashboardLayout() {
           <StudentSidebarLink to="/instructor" end icon="home">
             Home
           </StudentSidebarLink>
-          <StudentSidebarLink to="/instructor/review-queues" count="18" icon="todo">
+          <StudentSidebarLink to="/instructor/review-queues" icon="todo">
             Review Queues
           </StudentSidebarLink>
 
           <div className="student-sidebar__group">
             <p>MY CLASSES</p>
             <div className="student-class-list">
-              {instructorClasses.map((item) => (
+              {classes.map((item) => (
                 <SidebarClassLink
-                  key={item.label}
-                  to="/instructor/classes"
+                  key={item.id}
+                  to={classHref('/instructor/classes', item.id)}
                   item={item}
-                  active={item.active && location.pathname.startsWith('/instructor/classes')}
+                  active={requestedClassId === item.id}
                 />
               ))}
+              {status === 'loading' && <span className="class-sidebar-note">Loading classes…</span>}
+              {status === 'error' && <span className="class-sidebar-note">{describeApiError(error)}</span>}
+              {pagination?.hasNextPage && (
+                <button type="button" className="class-sidebar-more" onClick={loadMore}>Load more</button>
+              )}
             </div>
           </div>
 
@@ -192,7 +174,15 @@ function InstructorDashboardLayout() {
         <Outlet />
       </main>
 
-      {createClassOpen && <CreateClassModal onClose={() => setCreateClassOpen(false)} />}
+      {createClassOpen && (
+        <CreateClassModal
+          onClose={() => setCreateClassOpen(false)}
+          onCreated={(classRecord) => {
+            setCreateClassOpen(false)
+            navigate(classHref('/instructor/class-info', classRecord.id))
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -205,6 +195,8 @@ function StudentDashboardLayout() {
   const isInsideStudentClass = location.pathname.startsWith('/student/classes')
     || location.pathname.startsWith('/student/activity')
     || location.pathname.startsWith('/student/projects')
+    || location.pathname.startsWith('/student/people')
+  const { classes, requestedClassId, status, error, pagination, loadMore } = useClasses()
 
   return (
     <div className={`${effectiveSidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'}${isCodingWorkspace ? ' is-coding-workspace' : ''}`}>
@@ -220,21 +212,26 @@ function StudentDashboardLayout() {
           <StudentSidebarLink to="/student" end icon="home">
             Home
           </StudentSidebarLink>
-          <StudentSidebarLink to="/student/todo" count="3" icon="todo">
+          <StudentSidebarLink to="/student/todo" icon="todo">
             To-do
           </StudentSidebarLink>
 
           <div className="student-sidebar__group">
             <p>MY CLASSES</p>
             <div className="student-class-list">
-              {studentClasses.map((item) => (
+              {classes.map((item) => (
                 <SidebarClassLink
-                  key={item.label}
-                  to="/student/classes"
+                  key={item.id}
+                  to={classHref('/student/classes', item.id)}
                   item={item}
-                  active={item.active && isInsideStudentClass}
+                  active={requestedClassId === item.id && isInsideStudentClass}
                 />
               ))}
+              {status === 'loading' && <span className="class-sidebar-note">Loading classes…</span>}
+              {status === 'error' && <span className="class-sidebar-note">{describeApiError(error)}</span>}
+              {pagination?.hasNextPage && (
+                <button type="button" className="class-sidebar-more" onClick={loadMore}>Load more</button>
+              )}
             </div>
           </div>
 

@@ -3789,6 +3789,108 @@ textarea:focus-visible {
   background: #ffffff;
 }
 
+/* Phase 10A.2 class integration states */
+.class-sidebar-note,
+.class-sidebar-more {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  color: #64748b;
+  font-size: 0.78rem;
+  text-align: left;
+}
+
+.class-sidebar-more {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.class-form-note,
+.class-form-error {
+  margin: 12px 0 0;
+  font-size: 0.88rem;
+}
+
+.class-form-note {
+  color: #64748b;
+}
+
+.class-form-error {
+  color: #b42318;
+}
+
+.class-deferred-banner {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 13px 16px;
+  border: 1px solid #f2cf73;
+  border-radius: 12px;
+  background: #fff9e8;
+  color: #6d5314;
+}
+
+.class-deferred-banner span {
+  font-size: 0.86rem;
+}
+
+.class-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 18px;
+}
+
+.class-overview-card {
+  position: relative;
+}
+
+.class-status-chip {
+  display: inline-flex;
+  margin-bottom: 12px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #e8f5ee;
+  color: #166534;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.class-overview-actions,
+.class-info-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.class-catalog-grid {
+  margin-top: 18px;
+}
+
+.class-load-more {
+  margin-top: 18px;
+}
+
+.class-info-form {
+  margin-top: 18px;
+}
+
+.class-info-form .class-info-actions {
+  grid-column: 1 / -1;
+}
+
+.student-bell:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 860px) {
+  .class-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .student-state-switch {
   display: flex;
   gap: 8px;

@@ -1,25 +1,10 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
-
-const instructorClass = {
-  course: 'IT 112 - Computer Programming 1',
-  section: 'BSIT 2A',
-  instructor: 'Engr. Marco Rivera',
-  classCode: '9446',
-}
-
-function generateClassCode() {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  const part = () => Array.from({ length: 4 }, () => characters[Math.floor(Math.random() * characters.length)]).join('')
-  return `${part()}-${part()}`
-}
-
-function copyClassCode(code) {
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(code)
-  }
-}
+import { useClasses } from '../classes/class-context.js'
+import { classHref, classInitial, firstName } from '../classes/class-links.js'
+import RequestState from '../components/RequestState.jsx'
 
 function getStatusClass(status) {
   if (status === 'For Review') return 'is-for-review'
@@ -43,90 +28,6 @@ function getContributionClass(contribution) {
   if (contribution === 'Missing') return 'is-contribution-missing'
   return undefined
 }
-
-const dashboardStats = [
-  { label: 'Total students', value: '38' },
-  { label: 'Published activities', value: '5' },
-  { label: 'Pending submissions', value: '18' },
-  { label: 'Repositories created', value: '9' },
-  { label: 'Projects ready for review', value: '4' },
-  { label: 'Similarity review alerts', value: '3' },
-]
-
-const instructorHomeClasses = [
-  {
-    title: 'IT 112 - Computer Programming 1',
-    section: 'BSIT 2A',
-    schedule: 'Mon & Wed',
-    time: '8:00 - 9:30 AM',
-    students: '38 students',
-    classCode: '9446',
-    initial: 'I',
-    path: '/instructor/classes',
-  },
-  {
-    title: 'CS 111 - Introduction to Computing',
-    section: 'BSIT 2A',
-    schedule: 'Tue & Thu',
-    time: '10:00 - 11:30 AM',
-    students: '42 students',
-    classCode: '7731',
-    initial: 'C',
-    path: '/instructor/classes',
-  },
-  {
-    title: 'IT 123 - Platform Technologies',
-    section: 'BSIT 2A',
-    schedule: 'Fri',
-    time: '1:00 - 2:30 PM',
-    students: '34 students',
-    classCode: '6812',
-    initial: 'I',
-    path: '/instructor/classes',
-  },
-]
-
-const instructorHomeStats = [
-  {
-    label: 'Review Queues',
-    value: '18',
-    detail: 'pending submissions',
-    tone: 'blue',
-    icon: 'queue',
-  },
-  {
-    label: 'Active Classes',
-    value: '3',
-    detail: 'classes',
-    tone: 'green',
-    icon: 'book',
-  },
-  {
-    label: 'Total Students',
-    value: '114',
-    detail: 'students',
-    tone: 'purple',
-    icon: 'students',
-  },
-]
-
-const instructorReviewPreview = [
-  {
-    title: 'Prelim Programming Exercise 1 LAB',
-    course: 'IT 112',
-    count: '12',
-  },
-  {
-    title: 'Group Project 1 Repository Check',
-    course: 'IT 112',
-    count: '4',
-  },
-  {
-    title: 'Intro to Computing Quiz Output Check',
-    course: 'CS 111',
-    count: '2',
-  },
-]
 
 const reviewQueueClasses = [
   {
@@ -155,30 +56,6 @@ const reviewQueueClasses = [
     pending: '2 pending',
     secondary: '1 flagged',
     tone: 'purple',
-  },
-]
-
-const streamItems = [
-  {
-    id: 'activity-1',
-    type: 'assignment',
-    title: 'Published Prelim Programming Exercise 1 LAB',
-    detail: 'Due Aug 27, 2026, 10:30 AM',
-    date: 'Aug 25, 2026',
-  },
-  {
-    id: 'activity-2',
-    type: 'assignment',
-    title: 'Updated Loop Patterns and Input Validation',
-    detail: 'Visible test cases refreshed',
-    date: 'Aug 26, 2026',
-  },
-  {
-    id: 'project-1',
-    type: 'announcement',
-    title: 'Project update: Prelim Group Project 1 Specifications',
-    detail: '4 teams are ready for review',
-    date: 'Aug 26, 2026',
   },
 ]
 
@@ -395,44 +272,6 @@ const contributionRows = [
   { name: 'Daniel Reyes', commits: '2', lines: '+54 / -8', tasks: '1 completed', activity: 'Low activity', balance: '10%' },
 ]
 
-const roster = [
-  {
-    name: 'Julius Teodoro',
-    email: '2216146@slu.edu.ph',
-    section: 'BSIT 2A',
-    status: 'Enrolled',
-    invite: 'Accepted',
-  },
-  {
-    name: 'Alyssa Mendoza',
-    email: 'alyssa.mendoza@slu.edu.ph',
-    section: 'BSIT 2A',
-    status: 'Enrolled',
-    invite: 'Accepted',
-  },
-  {
-    name: 'Marco Rivera',
-    email: 'marco.rivera.student@slu.edu.ph',
-    section: 'BSIT 2A',
-    status: 'Enrolled',
-    invite: 'Accepted',
-  },
-  {
-    name: 'Daniel Reyes',
-    email: 'daniel.reyes@slu.edu.ph',
-    section: 'BSIT 2A',
-    status: 'Enrolled',
-    invite: 'Accepted',
-  },
-  {
-    name: 'Mica Dela Cruz',
-    email: 'mica.delacruz@slu.edu.ph',
-    section: 'BSIT 2A',
-    status: 'Pending',
-    invite: 'Invited',
-  },
-]
-
 function InstructorProfileMenu() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
@@ -480,61 +319,44 @@ function InstructorProfileMenu() {
   )
 }
 
-function InstructorUserArea({ count = 5 }) {
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const announcements = [
-    ['System update', 'Compiler queue simulation refreshed for IT 112.'],
-    ['Review reminder', '18 submissions are waiting in Review Queues.'],
-    ['Repository archive', '4 project repositories are ready for instructor review.'],
-  ]
-
+function InstructorUserArea() {
   return (
     <div className="student-user-area instructor-user-area">
       <button
         type="button"
-        className={notificationsOpen ? 'student-bell is-active' : 'student-bell'}
-        aria-label="Notifications"
-        aria-expanded={notificationsOpen}
-        onClick={() => setNotificationsOpen((current) => !current)}
+        className="student-bell"
+        aria-label="Notifications are deferred"
+        title="Notifications are not available in this iteration."
+        disabled
       >
         <span className="student-bell__shape" aria-hidden="true" />
-        <span className="student-bell__count">{count}</span>
       </button>
-      {notificationsOpen && (
-        <section className="instructor-notification-dropdown" aria-label="Instructor notifications">
-          <h2>Notifications</h2>
-          {announcements.map(([title, detail]) => (
-            <article key={title}>
-              <strong>{title}</strong>
-              <span>{detail}</span>
-            </article>
-          ))}
-        </section>
-      )}
       <InstructorProfileMenu />
     </div>
   )
 }
 
 function InstructorClassHeader({ activeTab }) {
+  const { selectedClass } = useClasses()
   const tabs = [
-    { label: 'Stream', path: '/instructor/classes', key: 'stream' },
+    { label: 'Overview', path: '/instructor/classes', key: 'stream' },
     { label: 'Assignments', path: '/instructor/activity', key: 'assignments' },
     { label: 'People', path: '/instructor/people', key: 'people' },
     { label: 'Class Info', path: '/instructor/class-info', key: 'info' },
   ]
+  const initial = classInitial(selectedClass)
 
   return (
     <header className="student-class-header">
       <div className="student-class-header__top">
         <div className="student-course-title">
-          <span className="student-course-avatar">I</span>
+          <span className="student-course-avatar">{initial}</span>
           <div>
-            <h1>{instructorClass.course}</h1>
+            <h1>{selectedClass?.className || 'Select a class'}</h1>
             <div className="student-course-meta">
-              <span>{instructorClass.section}</span>
-              <span>{instructorClass.instructor}</span>
-              <span className="student-class-code">{instructorClass.classCode}</span>
+              {selectedClass && <span>{selectedClass.section}</span>}
+              {selectedClass && <span>{selectedClass.semester} · {selectedClass.schoolYear}</span>}
+              {selectedClass && <span>{selectedClass.status === 'ARCHIVED' ? 'Archived' : 'Active'}</span>}
             </div>
           </div>
         </div>
@@ -546,7 +368,7 @@ function InstructorClassHeader({ activeTab }) {
           {tabs.map((tab) => (
             <NavLink
               key={tab.key}
-              to={tab.path}
+              to={classHref(tab.path, selectedClass?.id)}
               className={activeTab === tab.key ? 'is-active' : undefined}
             >
               <span className={`student-tab-icon student-tab-icon--${tab.key}`} aria-hidden="true" />
@@ -559,30 +381,55 @@ function InstructorClassHeader({ activeTab }) {
   )
 }
 
-function InstructorClassPage({ activeTab, children }) {
+function InstructorClassPage({ activeTab, children, deferredLabel }) {
+  const { requestedClassId, selectionError, selectionStatus } = useClasses()
+  const previewLabel = deferredLabel || (activeTab === 'assignments' ? 'Activity and project integration' : '')
+  let content = children
+  if (!requestedClassId) {
+    content = <RequestState kind="empty" title="Choose a class" message="Select one of your owned classes before opening this workspace." />
+  } else if (selectionStatus === 'loading') {
+    content = <RequestState kind="loading" message="Loading the selected class." />
+  } else if (selectionStatus === 'error') {
+    content = <RequestState kind={selectionError?.status === 404 ? 'notFound' : 'unavailable'} error={selectionError} />
+  }
   return (
     <div className="student-class-page">
       <InstructorClassHeader activeTab={activeTab} />
-      <section className="student-class-content instructor-class-content">{children}</section>
+      <section className="student-class-content instructor-class-content">
+        {selectionStatus === 'ready' && previewLabel && (
+          <div className="class-deferred-banner" role="note">
+            <strong>{previewLabel} remains a prototype preview.</strong>
+            <span>The records below are not attached to the selected class and will be integrated in its approved later milestone.</span>
+          </div>
+        )}
+        {content}
+      </section>
     </div>
   )
 }
 
 function InstructorDashboard() {
+  const auth = useAuth()
+  const { classes, error, pagination, status } = useClasses()
+  const stats = [
+    { label: 'Owned Classes', value: pagination?.totalItems ?? classes.length, detail: 'authorized classes', tone: 'blue', icon: 'book' },
+    { label: 'Active Classes', value: classes.filter((item) => item.status === 'ACTIVE').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'classes', tone: 'green', icon: 'book' },
+    { label: 'Archived Classes', value: classes.filter((item) => item.status === 'ARCHIVED').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'read-only classes', tone: 'purple', icon: 'students' },
+  ]
   return (
     <div className="instructor-home-page">
       <header className="student-home-topbar instructor-dashboard-topbar">
-        <InstructorUserArea count={6} />
+        <InstructorUserArea />
       </header>
 
       <main className="student-home-content instructor-home-content">
         <section className="instructor-dashboard-hero">
-          <h1>Welcome back, Sir Rivera!</h1>
-          <p>Here's an overview of your classes, pending reviews, and recent teaching activity.</p>
+          <h1>Welcome back, {firstName(auth.user.fullName)}!</h1>
+          <p>Here's an overview of the classes currently owned by your account.</p>
         </section>
 
         <section className="instructor-home-stat-grid" aria-label="Instructor dashboard summary">
-          {instructorHomeStats.map((stat) => (
+          {stats.map((stat) => (
             <article className={`instructor-home-stat-card instructor-home-stat-card--${stat.tone}`} key={stat.label}>
               <span className={`instructor-home-stat-icon instructor-home-stat-icon--${stat.icon}`} aria-hidden="true" />
               <div>
@@ -604,18 +451,20 @@ function InstructorDashboard() {
               <NavLink to="/instructor/classes">View all classes</NavLink>
             </div>
 
+            {status === 'loading' && <RequestState kind="loading" compact message="Loading your classes." />}
+            {status === 'error' && <RequestState kind="unavailable" compact error={error} />}
+            {status === 'ready' && classes.length === 0 && <RequestState kind="empty" compact message="Create a class to see it here." />}
             <div className="instructor-home-class-list">
-              {instructorHomeClasses.map((item) => (
-                <NavLink to={item.path} className="instructor-home-class-card" key={item.title}>
-                  <span className={`instructor-class-avatar instructor-class-avatar--${item.initial.toLowerCase()}`}>
-                    {item.title.split(' - ')[0].replace(' ', '\n')}
+              {classes.map((item) => (
+                <NavLink to={classHref('/instructor/classes', item.id)} className="instructor-home-class-card" key={item.id}>
+                  <span className={`instructor-class-avatar instructor-class-avatar--${classInitial(item).toLowerCase()}`}>
+                    {classInitial(item)}
                   </span>
                   <div>
-                    <strong>{item.title}</strong>
+                    <strong>{item.className}</strong>
                     <span>{item.section}</span>
-                    <span>{item.students}</span>
-                    <span>Class code {item.classCode}</span>
-                    <small>{item.schedule} · {item.time}</small>
+                    <span>{item.semester} · {item.schoolYear}</span>
+                    <small>{item.status === 'ARCHIVED' ? 'Archived · read-only' : 'Active'}</small>
                   </div>
                   <span className="student-home-card-action" aria-hidden="true" />
                 </NavLink>
@@ -632,20 +481,7 @@ function InstructorDashboard() {
               <NavLink to="/instructor/review-queues">View all</NavLink>
             </div>
 
-            <div className="instructor-home-review-list">
-              {instructorReviewPreview.map((item) => (
-                <NavLink to="/instructor/review-queues" className="instructor-home-review-row" key={item.title}>
-                  <span className="instructor-review-icon" aria-hidden="true" />
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span>{item.course}</span>
-                  </div>
-                  <em>{item.count}</em>
-                  <span>awaiting review</span>
-                  <span className="student-home-card-action" aria-hidden="true" />
-                </NavLink>
-              ))}
-            </div>
+            <RequestState kind="unavailable" compact title="Review queue integration pending" message="Cross-class activity and repository review queues will be connected in Phase 10B and 10C." />
           </section>
         </section>
       </main>
@@ -653,188 +489,64 @@ function InstructorDashboard() {
   )
 }
 
-function InstructorStreamComments({ postId, comments, onAddComment }) {
-  const [commentText, setCommentText] = useState('')
+function InstructorClassesPage() {
+  const { classes, error, loadMore, pagination, requestedClassId, selectedClass, status } = useClasses()
+
+  if (requestedClassId) {
+    return (
+      <InstructorClassPage activeTab="stream">
+        {selectedClass && (
+          <div className="class-overview-grid">
+            <section className="student-global-panel class-overview-card">
+              <span className="class-status-chip">{selectedClass.status}</span>
+              <h2>{selectedClass.className}</h2>
+              <p>{selectedClass.section} · {selectedClass.semester} · {selectedClass.schoolYear}</p>
+              <p>Owner: {selectedClass.instructor.fullName}</p>
+              <div className="class-overview-actions">
+                <NavLink className="student-primary-action" to={classHref('/instructor/class-info', selectedClass.id)}>Manage class</NavLink>
+                <NavLink className="student-outline-action" to={classHref('/instructor/people', selectedClass.id)}>View roster</NavLink>
+                <NavLink className="student-outline-action" to={classHref('/instructor/class-code', selectedClass.id)}>Join code</NavLink>
+              </div>
+            </section>
+            <RequestState kind="unavailable" compact title="Class stream deferred" message="Announcements and comments remain recognized, but no approved backend contract exists yet." />
+          </div>
+        )}
+      </InstructorClassPage>
+    )
+  }
 
   return (
-    <div className="student-stream-comments">
-      {comments.map((comment) => (
-        <p key={`${postId}-${comment}`}>
-          <strong>Engr. Marco Rivera</strong>
-          <span>{comment}</span>
-        </p>
-      ))}
-      <div className="student-stream-comment-form">
-        <input
-          value={commentText}
-          onChange={(event) => setCommentText(event.target.value)}
-          placeholder="Add class comment"
-        />
-        <button
-          type="button"
-          onClick={() => {
-            if (!commentText.trim()) return
-            onAddComment(postId, commentText.trim())
-            setCommentText('')
-          }}
-        >
-          Comment
-        </button>
-      </div>
+    <div className="student-global-page">
+      <header className="student-home-topbar"><InstructorUserArea /></header>
+      <main className="student-global-content">
+        <div className="student-global-heading"><div><p>Class Management</p><h1>Your Classes</h1></div></div>
+        {status === 'loading' && <RequestState kind="loading" message="Loading your owned classes." />}
+        {status === 'error' && <RequestState kind="unavailable" error={error} />}
+        {status === 'ready' && classes.length === 0 && <RequestState kind="empty" message="Create a class from the sidebar to begin." />}
+        <section className="instructor-home-class-list class-catalog-grid">
+          {classes.map((item) => (
+            <NavLink to={classHref('/instructor/classes', item.id)} className="instructor-home-class-card" key={item.id}>
+              <span className={`instructor-class-avatar instructor-class-avatar--${classInitial(item).toLowerCase()}`}>{classInitial(item)}</span>
+              <div><strong>{item.className}</strong><span>{item.section}</span><span>{item.semester} · {item.schoolYear}</span><small>{item.status}</small></div>
+              <span className="student-home-card-action" aria-hidden="true" />
+            </NavLink>
+          ))}
+        </section>
+        {pagination?.hasNextPage && <button type="button" className="student-outline-action class-load-more" onClick={loadMore}>Load more classes</button>}
+      </main>
     </div>
   )
 }
 
-function InstructorStreamPage() {
-  const [announcement, setAnnouncement] = useState('')
-  const [postedAnnouncements, setPostedAnnouncements] = useState([])
-  const [commentsByPost, setCommentsByPost] = useState({})
-
-  const addComment = (postId, comment) => {
-    setCommentsByPost((current) => ({
-      ...current,
-      [postId]: [...(current[postId] || []), comment],
-    }))
-  }
-
-  return (
-    <InstructorClassPage activeTab="stream">
-      <div className="instructor-stream-shell">
-        <section className="instructor-dashboard-section">
-          <div className="student-home-section-heading">
-            <span>IT 112 - BSIT 2A</span>
-          </div>
-
-          <div className="instructor-stat-grid">
-            {dashboardStats.map((stat) => (
-              <article className="instructor-stat-card instructor-stream-stat-card" key={stat.label}>
-                <div>
-                  <span>{stat.label}</span>
-                  <strong>{stat.value}</strong>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <div className="student-stream-card instructor-stream-card" aria-label="Instructor class stream">
-        <section className="instructor-composer-card">
-          <span className="student-user-avatar" aria-hidden="true" />
-          <label>
-            <span>Announcement</span>
-            <textarea
-              value={announcement}
-              onChange={(event) => setAnnouncement(event.target.value)}
-              placeholder="Announce something to BSIT 2A"
-            />
-          </label>
-          <button
-            type="button"
-            aria-label="Post announcement"
-            onClick={() => {
-              if (!announcement.trim()) return
-              setPostedAnnouncements((current) => [
-                {
-                  id: `instructor-announcement-${Date.now()}`,
-                  title: announcement.trim(),
-                  detail: 'Posted to BSIT 2A',
-                  date: 'Just now',
-                },
-                ...current,
-              ])
-              setAnnouncement('')
-            }}
-          >
-            Post
-          </button>
-        </section>
-
-        {postedAnnouncements.length > 0 && (
-          <section className="instructor-stream-section">
-            <h2>Recent Announcements</h2>
-            {postedAnnouncements.map((item) => (
-              <article className="student-stream-post" key={item.id}>
-                <div className="student-post-icon student-post-icon--announcement" aria-hidden="true" />
-                <div>
-                  <p>
-                    <strong>{instructorClass.instructor}</strong> {item.title}
-                  </p>
-                  <span>{item.detail}</span>
-                  <span>{item.date}</span>
-                  <InstructorStreamComments
-                    postId={item.id}
-                    comments={commentsByPost[item.id] || []}
-                    onAddComment={addComment}
-                  />
-                </div>
-                <button type="button" className="student-more" aria-label="More options" />
-              </article>
-            ))}
-          </section>
-        )}
-
-        <section className="instructor-stream-section">
-          <h2>Recent Published Activities</h2>
-          {streamItems
-            .filter((item) => item.type === 'assignment')
-            .map((item) => (
-              <article className="student-stream-post" key={item.id}>
-                <div className="student-post-icon student-post-icon--assignment" aria-hidden="true" />
-                <div>
-                  <p>
-                    <strong>{instructorClass.instructor}</strong> {item.title}
-                  </p>
-                  <span>{item.detail}</span>
-                  <span>{item.date}</span>
-                  <InstructorStreamComments
-                    postId={item.id}
-                    comments={commentsByPost[item.id] || []}
-                    onAddComment={addComment}
-                  />
-                </div>
-                <button type="button" className="student-more" aria-label="More options" />
-              </article>
-            ))}
-        </section>
-
-        <section className="instructor-stream-section">
-          <h2>Recent Project Updates</h2>
-          {streamItems
-            .filter((item) => item.type === 'announcement')
-            .map((item) => (
-              <article className="student-stream-post" key={item.id}>
-                <div className="student-post-icon student-post-icon--announcement" aria-hidden="true" />
-                <div>
-                  <p>
-                    <strong>{instructorClass.instructor}</strong> {item.title}
-                  </p>
-                  <span>{item.detail}</span>
-                  <span>{item.date}</span>
-                  <InstructorStreamComments
-                    postId={item.id}
-                    comments={commentsByPost[item.id] || []}
-                    onAddComment={addComment}
-                  />
-                </div>
-                <button type="button" className="student-more" aria-label="More options" />
-              </article>
-            ))}
-        </section>
-
-        </div>
-      </div>
-    </InstructorClassPage>
-  )
-}
-
 function AssignmentSubTabs({ active }) {
+  const { selectedClass } = useClasses()
   return (
     <div className="student-segmented-tabs" aria-label="Instructor assignment type">
-      <NavLink to="/instructor/activity" className={active === 'activities' ? 'is-active' : undefined}>
+      <NavLink to={classHref('/instructor/activity', selectedClass?.id)} className={active === 'activities' ? 'is-active' : undefined}>
         <span aria-hidden="true" />
         Activities
       </NavLink>
-      <NavLink to="/instructor/projects" className={active === 'projects' ? 'is-active' : undefined}>
+      <NavLink to={classHref('/instructor/projects', selectedClass?.id)} className={active === 'projects' ? 'is-active' : undefined}>
         <span aria-hidden="true" />
         Group Projects
       </NavLink>
@@ -2093,52 +1805,75 @@ function InstructorRepositoryReviewPage() {
   )
 }
 
-function InviteStudentsModal({ classCode, onClose }) {
-  const pendingInvites = [
-    { name: 'Luis Carino', email: 'luis.carino@slu.edu.ph', status: 'Pending' },
-    { name: 'Rina Salvador', email: 'rina.salvador@slu.edu.ph', status: 'Pending' },
-    { name: 'Paolo Garcia', email: 'paolo.garcia@slu.edu.ph', status: 'Draft invite' },
-  ]
-
-  return (
-    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="invite-students-title">
-      <section className="instructor-action-modal">
-        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close invite students" />
-        <p>Invite Students</p>
-        <h2 id="invite-students-title">Invite students to IT 112 - BSIT 2A</h2>
-        <section className="instructor-modal-code-panel">
-          <span>Class code</span>
-          <strong>{classCode}</strong>
-        </section>
-        <label className="instructor-wide-field">
-          Invite by email
-          <input placeholder="student@slu.edu.ph" />
-        </label>
-        <section className="instructor-pending-list">
-          <h3>Pending invitations</h3>
-          {pendingInvites.map((invite) => (
-            <article key={invite.email}>
-              <strong>{invite.name}</strong>
-              <span>{invite.email}</span>
-              <em>{invite.status}</em>
-            </article>
-          ))}
-        </section>
-        <div className="student-submit-modal-actions">
-          <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
-          <button type="button" className="student-primary-action" onClick={onClose}>Close</button>
-        </div>
-      </section>
-    </div>
-  )
-}
-
 function InstructorPeoplePage() {
-  const [inviteOpen, setInviteOpen] = useState(false)
-  const [classCode, setClassCode] = useState('')
-  const [copyStatus, setCopyStatus] = useState('')
-  const [rosterRows, setRosterRows] = useState(roster)
-  const [actionStatus, setActionStatus] = useState('')
+  const { api, selectedClass, selectionStatus } = useClasses()
+  const [rosterState, setRosterState] = useState({ classId: null, status: 'loading', members: [], pagination: null, error: null })
+  const [mutatingMemberId, setMutatingMemberId] = useState(null)
+  const [actionError, setActionError] = useState(null)
+
+  const loadRoster = useCallback(async (classId, page = 1, signal) => {
+    const response = await api.listMembers(classId, { page, pageSize: 50 }, { signal })
+    setRosterState((current) => ({
+      classId,
+      status: 'ready',
+      members: page === 1 ? response.data : [...current.members, ...response.data],
+      pagination: response.pagination,
+      error: null,
+    }))
+  }, [api])
+
+  useEffect(() => {
+    if (selectionStatus !== 'ready' || !selectedClass) return undefined
+    const controller = new AbortController()
+    api.listMembers(selectedClass.id, { page: 1, pageSize: 50 }, { signal: controller.signal })
+      .then((response) => setRosterState({
+        classId: selectedClass.id,
+        status: 'ready',
+        members: response.data,
+        pagination: response.pagination,
+        error: null,
+      }))
+      .catch((error) => {
+        if (error?.name !== 'AbortError') {
+          setRosterState({ classId: selectedClass.id, status: 'error', members: [], pagination: null, error })
+        }
+      })
+    return () => controller.abort()
+  }, [api, selectedClass, selectionStatus])
+
+  const roster = rosterState.classId === selectedClass?.id
+    ? rosterState
+    : { ...rosterState, status: 'loading', members: [] }
+
+  const transitionMember = async (member) => {
+    if (!selectedClass || selectedClass.status === 'ARCHIVED') return
+    const nextStatus = member.membershipStatus === 'ACTIVE' ? 'REMOVED' : 'ACTIVE'
+    const verb = nextStatus === 'REMOVED' ? 'remove' : 'reactivate'
+    if (!window.confirm(`Are you sure you want to ${verb} ${member.fullName}?`)) return
+    setMutatingMemberId(member.memberId)
+    setActionError(null)
+    try {
+      const response = await api.updateMember(selectedClass.id, member.memberId, { status: nextStatus })
+      setRosterState((current) => ({
+        ...current,
+        members: current.members.map((item) => item.memberId === response.data.memberId ? response.data : item),
+      }))
+    } catch (error) {
+      setActionError(error)
+      if (error?.status === 409) await loadRoster(selectedClass.id)
+    } finally {
+      setMutatingMemberId(null)
+    }
+  }
+
+  const loadNextPage = async () => {
+    if (!selectedClass || !roster.pagination?.hasNextPage) return
+    try {
+      await loadRoster(selectedClass.id, roster.pagination.page + 1)
+    } catch (error) {
+      setRosterState((current) => ({ ...current, status: 'error', error }))
+    }
+  }
 
   return (
     <InstructorClassPage activeTab="people">
@@ -2147,139 +1882,242 @@ function InstructorPeoplePage() {
           <div className="instructor-people-hero-copy">
             <span className="instructor-people-icon" aria-hidden="true" />
             <h2>Class Roster</h2>
-            <p>Manage enrolled students, invitations, and your class access code.</p>
+            <p>Review enrollment details and manage active or removed memberships.</p>
             <div className="instructor-people-summary-grid">
               <article>
-                <strong>{rosterRows.length}</strong>
-                <span>students</span>
+                <strong>{roster.pagination?.totalItems ?? roster.members.length}</strong>
+                <span>membership records</span>
               </article>
               <article>
-                <strong>{rosterRows.filter((student) => student.invite === 'Invited').length}</strong>
-                <span>pending invites</span>
+                <strong>{roster.members.filter((member) => member.membershipStatus === 'ACTIVE').length}</strong>
+                <span>active on this page</span>
               </article>
               <article>
-                <strong>{classCode || 'None'}</strong>
-                <span>active class code</span>
+                <strong>{roster.members.filter((member) => member.membershipStatus === 'REMOVED').length}</strong>
+                <span>removed on this page</span>
               </article>
             </div>
           </div>
           <img src="/assets/brand/projex-login-mascot.png" alt="" aria-hidden="true" />
           <div className="instructor-people-actions">
-            <button type="button" className="student-primary-action" onClick={() => setInviteOpen(true)}>
-              Invite Students
-            </button>
-            <button
-              type="button"
-              className="student-outline-action"
-              onClick={() => {
-                setClassCode(generateClassCode())
-                setCopyStatus('')
-              }}
-            >
-              Generate Class Code
-            </button>
+            {selectedClass && <NavLink className="student-primary-action" to={classHref('/instructor/class-code', selectedClass.id)}>Manage join code</NavLink>}
           </div>
         </section>
 
-        {classCode && (
-          <section className="instructor-generated-code">
-            <span>Active class code</span>
-            <div className="instructor-code-copy-row">
-              <strong>{classCode}</strong>
-              <button
-                type="button"
-                onClick={() => {
-                  copyClassCode(classCode)
-                  setCopyStatus('Copied')
-                }}
-              >
-                Copy
-              </button>
-            </div>
-            {copyStatus && <em>{copyStatus}</em>}
-          </section>
-        )}
-
-        {actionStatus && <p className="instructor-people-action-status">{actionStatus}</p>}
+        {selectedClass?.status === 'ARCHIVED' && <p className="instructor-people-action-status">Archived classes are read-only.</p>}
+        {actionError && <p className="class-form-error" role="alert">{describeApiError(actionError)}</p>}
+        {selectionStatus === 'ready' && roster.status === 'loading' && <RequestState kind="loading" compact message="Loading the detailed roster." />}
+        {roster.status === 'error' && <RequestState kind="unavailable" compact error={roster.error} />}
 
         <div className="instructor-data-table instructor-people-table" role="table" aria-label="Class roster">
           <div className="instructor-table-row instructor-table-row--head" role="row">
             <span>Student</span>
-            <span>Email / Student No.</span>
-            <span>Section</span>
-            <span>Status</span>
-            <span>Invite</span>
+            <span>University email</span>
+            <span>Account</span>
+            <span>Membership</span>
+            <span>Joined</span>
             <span>Actions</span>
           </div>
-          {rosterRows.map((student) => (
-            <div className="instructor-table-row" role="row" key={student.email}>
+          {roster.members.map((student) => (
+            <div className="instructor-table-row" role="row" key={student.memberId}>
               <div className="instructor-roster-student">
-                <span>{student.name.split(' ').map((part) => part.charAt(0)).join('').slice(0, 2)}</span>
-                <strong>{student.name}</strong>
+                <span>{student.fullName.split(' ').map((part) => part.charAt(0)).join('').slice(0, 2)}</span>
+                <strong>{student.fullName}</strong>
               </div>
               <span>{student.email}</span>
-              <span>{student.section}</span>
-              <em>{student.status}</em>
-              <em className={student.invite === 'Accepted' ? 'is-approved' : 'is-revision'}>{student.invite}</em>
+              <em>{student.userStatus}</em>
+              <em className={student.membershipStatus === 'ACTIVE' ? 'is-approved' : 'is-revision'}>{student.membershipStatus}</em>
+              <span>{new Date(student.joinedAt).toLocaleDateString()}</span>
               <div>
-                <button type="button" onClick={() => setActionStatus(`Manage action opened for ${student.name}.`)}>
-                  Manage
-                </button>
                 <button
                   type="button"
-                  className="instructor-remove-student"
-                  onClick={() => {
-                    setRosterRows((current) => current.filter((row) => row.email !== student.email))
-                    setActionStatus(`${student.name} removed from the visible roster preview.`)
-                  }}
+                  className={student.membershipStatus === 'ACTIVE' ? 'instructor-remove-student' : undefined}
+                  disabled={selectedClass?.status === 'ARCHIVED' || mutatingMemberId === student.memberId}
+                  onClick={() => transitionMember(student)}
                 >
-                  Remove
+                  {mutatingMemberId === student.memberId ? 'Saving…' : student.membershipStatus === 'ACTIVE' ? 'Remove' : 'Reactivate'}
                 </button>
               </div>
             </div>
           ))}
         </div>
+        {roster.pagination?.hasNextPage && (
+          <button type="button" className="student-outline-action class-load-more" onClick={loadNextPage}>Load more members</button>
+        )}
       </div>
-
-      {inviteOpen && <InviteStudentsModal classCode={classCode} onClose={() => setInviteOpen(false)} />}
     </InstructorClassPage>
+  )
+}
+
+function ClassInfoForm({ classRecord }) {
+  const { api, upsertClass } = useClasses()
+  const [form, setForm] = useState({
+    className: classRecord.className,
+    section: classRecord.section,
+    semester: classRecord.semester,
+    schoolYear: classRecord.schoolYear,
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const [message, setMessage] = useState('')
+
+  const updateField = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }))
+  const save = async (event) => {
+    event.preventDefault()
+    setSaving(true)
+    setError(null)
+    setMessage('')
+    try {
+      const response = await api.updateClass(classRecord.id, form)
+      upsertClass(response.data)
+      setMessage('Class information updated.')
+    } catch (requestError) {
+      setError(requestError)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const changeLifecycle = async () => {
+    const archive = classRecord.status === 'ACTIVE'
+    if (!window.confirm(`${archive ? 'Archive' : 'Restore'} ${classRecord.className}?`)) return
+    setSaving(true)
+    setError(null)
+    setMessage('')
+    try {
+      const response = archive
+        ? await api.archiveClass(classRecord.id)
+        : await api.restoreClass(classRecord.id)
+      upsertClass(response.data)
+      setMessage(archive
+        ? 'Class archived. Its join code is now inactive.'
+        : 'Class restored. Rotate the join code before accepting new joins.')
+    } catch (requestError) {
+      setError(requestError)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="student-people-panel instructor-info-panel">
+      <section>
+        <h2>Class Info</h2>
+        <p>Manage the supported academic term metadata and lifecycle.</p>
+      </section>
+      <form className="instructor-form-grid class-info-form" onSubmit={save}>
+        <label>Course name<input value={form.className} onChange={updateField('className')} maxLength={200} required disabled={classRecord.status === 'ARCHIVED'} /></label>
+        <label>Section<input value={form.section} onChange={updateField('section')} maxLength={100} required disabled={classRecord.status === 'ARCHIVED'} /></label>
+        <label>Semester<input value={form.semester} onChange={updateField('semester')} maxLength={100} required disabled={classRecord.status === 'ARCHIVED'} /></label>
+        <label>School year<input value={form.schoolYear} onChange={updateField('schoolYear')} maxLength={20} required disabled={classRecord.status === 'ARCHIVED'} /></label>
+        <div className="class-info-actions">
+          <button type="submit" className="student-primary-action" disabled={saving || classRecord.status === 'ARCHIVED'}>{saving ? 'Saving…' : 'Save changes'}</button>
+          <button type="button" className="student-outline-action" onClick={changeLifecycle} disabled={saving}>{classRecord.status === 'ACTIVE' ? 'Archive class' : 'Restore class'}</button>
+        </div>
+      </form>
+      <div className="instructor-info-list">
+        <article><span>Instructor</span><strong>{classRecord.instructor.fullName}</strong></article>
+        <article><span>Status</span><strong>{classRecord.status}</strong></article>
+        <article><span>Created</span><strong>{new Date(classRecord.createdAt).toLocaleString()}</strong></article>
+      </div>
+      {message && <p className="instructor-people-action-status" role="status">{message}</p>}
+      {error && <p className="class-form-error" role="alert">{describeApiError(error)}</p>}
+    </div>
   )
 }
 
 function InstructorClassInfoPage() {
-  const rules = [
-    ['Course name', instructorClass.course],
-    ['Section', instructorClass.section],
-    ['Instructor', instructorClass.instructor],
-    ['Class code', instructorClass.classCode],
-    ['Class Created', 'August 12, 2026'],
-  ]
+  const { selectedClass } = useClasses()
+  return (
+    <InstructorClassPage activeTab="info">
+      {selectedClass && <ClassInfoForm key={selectedClass.id} classRecord={selectedClass} />}
+    </InstructorClassPage>
+  )
+}
+
+function InstructorClassCodePage() {
+  const { api, selectedClass, selectionStatus } = useClasses()
+  const [codeState, setCodeState] = useState({ classId: null, status: 'loading', data: null, error: null })
+  const [action, setAction] = useState('')
+
+  useEffect(() => {
+    if (selectionStatus !== 'ready' || !selectedClass) return undefined
+    const controller = new AbortController()
+    api.getJoinCode(selectedClass.id, { signal: controller.signal })
+      .then((response) => setCodeState({ classId: selectedClass.id, status: 'ready', data: response.data, error: null }))
+      .catch((error) => {
+        if (error?.name !== 'AbortError') setCodeState({ classId: selectedClass.id, status: 'error', data: null, error })
+      })
+    return () => controller.abort()
+  }, [api, selectedClass, selectionStatus])
+
+  const current = codeState.classId === selectedClass?.id ? codeState : { ...codeState, status: 'loading', data: null }
+  const mutate = async (operation) => {
+    if (!selectedClass || selectedClass.status === 'ARCHIVED') return
+    const verb = operation === 'rotate' ? 'rotate' : 'revoke'
+    if (!window.confirm(`Are you sure you want to ${verb} this join code?`)) return
+    setAction(operation)
+    try {
+      const response = operation === 'rotate'
+        ? await api.rotateJoinCode(selectedClass.id)
+        : await api.revokeJoinCode(selectedClass.id)
+      setCodeState({ classId: selectedClass.id, status: 'ready', data: response.data, error: null })
+    } catch (error) {
+      setCodeState({ classId: selectedClass.id, status: 'error', data: current.data, error })
+    } finally {
+      setAction('')
+    }
+  }
+
+  const copy = async () => {
+    if (!current.data?.active || !current.data.classCode || !navigator.clipboard?.writeText) return
+    try {
+      await navigator.clipboard.writeText(current.data.classCode)
+      setAction('copied')
+    } catch {
+      setAction('copy-failed')
+    }
+  }
 
   return (
     <InstructorClassPage activeTab="info">
       <div className="student-people-panel instructor-info-panel">
-        <section>
-          <h2>Class Info</h2>
-          <p>Academic programming workspace settings for IT 112 - BSIT 2A.</p>
-        </section>
-
-        <div className="instructor-info-list">
-          {rules.map(([label, value]) => (
-            <article key={label}>
-              <span>{label}</span>
-              <strong>{value}</strong>
-            </article>
-          ))}
-        </div>
+        <section><h2>Class Join Code</h2><p>Join codes are generated and validated only by the Projex server.</p></section>
+        {selectionStatus === 'ready' && current.status === 'loading' && <RequestState kind="loading" compact message="Loading the join-code status." />}
+        {current.status === 'error' && <RequestState kind="unavailable" compact error={current.error} />}
+        {current.status === 'ready' && (
+          <section className="instructor-generated-code">
+            <span>{current.data.active ? 'Active join code' : 'Join code inactive'}</span>
+            {current.data.active ? (
+              <div className="instructor-code-copy-row"><strong>{current.data.classCode}</strong><button type="button" onClick={copy}>Copy</button></div>
+            ) : <p>No usable join code is available. Rotate the code to allow new joins.</p>}
+            <small>Changed {new Date(current.data.changedAt).toLocaleString()}</small>
+            <div className="class-info-actions">
+              <button type="button" className="student-primary-action" onClick={() => mutate('rotate')} disabled={action === 'rotate' || action === 'revoke' || selectedClass?.status === 'ARCHIVED'}>{action === 'rotate' ? 'Rotating…' : 'Rotate code'}</button>
+              <button type="button" className="student-outline-action" onClick={() => mutate('revoke')} disabled={action === 'rotate' || action === 'revoke' || !current.data.active || selectedClass?.status === 'ARCHIVED'}>{action === 'revoke' ? 'Revoking…' : 'Revoke code'}</button>
+            </div>
+            {action === 'copied' && <em>Copied</em>}
+            {action === 'copy-failed' && <em>Copy unavailable. Select and copy the code manually.</em>}
+          </section>
+        )}
       </div>
     </InstructorClassPage>
   )
 }
 
-function InstructorRoutePage({ pagePath }) {
+function DeferredInstructorPage({ title, message }) {
+  return (
+    <div className="student-global-page">
+      <header className="student-home-topbar"><InstructorUserArea /></header>
+      <main className="student-global-content"><div className="student-global-heading"><div><p>Deferred Feature</p><h1>{title}</h1></div></div><RequestState kind="unavailable" title={`${title} is deferred`} message={message} /></main>
+    </div>
+  )
+}
+
+export function InstructorRoutePage({ pagePath }) {
   const pages = {
     dashboard: <InstructorDashboard />,
-    classes: <InstructorStreamPage />,
+    classes: <InstructorClassesPage />,
     'review-queues': <ReviewQueuesPage />,
     activity: <InstructorActivitiesPage />,
     'activity/new': <CreateActivityPage />,
@@ -2297,10 +2135,13 @@ function InstructorRoutePage({ pagePath }) {
     people: <InstructorPeoplePage />,
     roster: <InstructorPeoplePage />,
     'class-info': <InstructorClassInfoPage />,
-    'class-code': <InstructorClassInfoPage />,
+    'class-code': <InstructorClassCodePage />,
+    'invite-students': <DeferredInstructorPage title="Invite Students" message="Invite-by-email is not part of the current backend. Share the active server-owned join code through an appropriate external channel." />,
+    analytics: <DeferredInstructorPage title="Analytics" message="Canonical instructor analytics remain recognized but are not available in the core iteration." />,
+    'students/stu-alyssa': <DeferredInstructorPage title="Student Profile" message="A consolidated cross-class student profile is not available in the current backend." />,
   }
 
-  return pages[pagePath] || <InstructorStreamPage />
+  return pages[pagePath] || <RequestState kind="notFound" />
 }
 
 export default InstructorRoutePage

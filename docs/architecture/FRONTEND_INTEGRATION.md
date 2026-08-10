@@ -6,7 +6,7 @@ This is the single current owner for Projex frontend integration: API-client beh
 
 The client remains React 19, Vite 8, JavaScript/JSX, React Router, and the existing CSS. Phase 10 does not authorize a TypeScript migration, a general state/query/form library, or a student/instructor redesign. The current admin pages are only a historical feature inventory and must be replaced in Phase 10D using the student/instructor visual language.
 
-Phase 10A.1 integrates only shared infrastructure and authentication. Classes, activities, submissions, projects, repositories, Git workflows, and admin data remain later boundaries. Backend records are authoritative; production routes never fall back to mocks after an API failure.
+Phase 10A.1 completed shared infrastructure and authentication. Phase 10A.2 connects classes and memberships through the existing backend and is implemented pending final review. Activities, submissions, projects, repositories, Git workflows, and admin data remain later boundaries. Backend records are authoritative; production routes never fall back to mocks after an API failure.
 
 ## Shared client contract
 
@@ -59,6 +59,41 @@ Phase 10A.1 integrates only shared infrastructure and authentication. Classes, a
 
 No normalized global cache or general global store is approved. Confirmed backend responses replace local optimistic views unless an endpoint explicitly supports an optimistic concurrency workflow.
 
+## Bidirectional feature-parity inventory
+
+This inventory is maintained in both directions throughout Phase 10: prototype concepts cannot silently disappear when mocks are retired, and approved end-user backend capabilities cannot remain invisible without an explicit disposition. `INTEGRATED` means real UI and backend are connected. `UI GAP` means the backend exists but the adequate frontend is assigned to a remaining milestone. `BACKEND GAP` means a prototype concept has no backend. `DEFERRED` preserves a recognized non-core concept without simulating it. `UNSUPPORTED PROTOTYPE` identifies old behavior incompatible with the approved system. `REMOVED FROM SCOPE` is reserved for an explicit product decision and is not assigned autonomously.
+
+| Meaningful feature | Frontend | Backend | Iteration 1 | Status | Owning milestone | Final UI treatment |
+| --- | --- | --- | --- | --- | --- | --- |
+| Session authentication, role routing, logout, CSRF, and account setup | Yes | Yes | Core | INTEGRATED | 10A.1 | Real protected entry and account setup flows |
+| Authenticated password change and logout-all-sessions controls | No | Yes | Core | UI GAP | Phase 10A follow-up gate | Add a shared account-security entry point without exposing session or credential details |
+| Authorized class catalog and explicit URL selection | Yes | Yes | Core | INTEGRATED | 10A.2 | Real student/instructor cards, sidebars, loading, empty, and safe inaccessible states |
+| Class metadata create/edit and archive/restore | Yes | Yes | Core | INTEGRATED | 10A.2 | Instructor forms and lifecycle confirmation; archived classes remain read-only |
+| Student class-code join | Yes | Yes | Core | INTEGRATED | 10A.2 | One-time input sent only in the protected request body; code is not persisted or redisplayed |
+| Student-safe and instructor-detailed rosters | Yes | Yes | Core | INTEGRATED | 10A.2 | Role-specific allowlisted fields with bounded pagination |
+| Membership removal/reactivation | Yes | Yes | Core | INTEGRATED | 10A.2 | Confirmed instructor action followed by authoritative backend response/refetch |
+| Join-code view, rotation, revocation, and inactive state | Yes | Yes | Core | INTEGRATED | 10A.2 | Dedicated instructor screen; copy only when usable; no browser generation |
+| Class invitations and invite-by-email | Yes | No | Deferred | DEFERRED | Future product decision | Honest unavailable state; retain concept without local acceptance or fake email delivery |
+| Class announcements and comments | Yes | No | Deferred | DEFERRED | Future product decision | Class overview retains a clear deferred stream state; fake posts and local mutations removed |
+| Notifications | Yes | No | Deferred | DEFERRED | Future product decision | Bell visual remains disabled without fake counts or messages |
+| Schedules, rooms, class rules, and fabricated enrollment metrics | Yes | No | Deferred | BACKEND GAP | Future product decision | Omit from authoritative class views; preserve concept here for future evaluation |
+| Activity and test-case authoring/lifecycle | Yes | Yes | Core | UI GAP | 10B | Connect the existing instructor activity surfaces to approved APIs |
+| Student activity catalog/details and visible-test practice | Yes | Yes | Core | UI GAP | 10B | Replace activity previews with authorized class-scoped records and worker states |
+| Submission attempts and operational results | Yes | Yes | Core | UI GAP | 10B | Connect immutable attempts without exposing hidden-test detail |
+| Instructor assessment, correction, feedback, and release | Yes | Yes | Core | UI GAP | 10B | Connect approved review actions and released student projections |
+| Cross-class submission/review queue | Yes | No | Core | BACKEND GAP | 10B follow-up gate | Require a bounded backend contract before global queue integration |
+| Project tasks, teams, invitations, and repository academic lifecycle | Yes | Yes | Core | UI GAP | 10C | Connect approved student/instructor collaboration workflows |
+| Repository provisioning state and safe inspection | Yes | Yes | Core | UI GAP | 10C | Replace fabricated files/history with real safe inspection projections |
+| Repository-scoped Git credentials and local-client guidance | No | Yes | Core | UI GAP | 10C | Add short-lived issuance flow and local Git instructions; never persist the secret |
+| Browser Git file editing, upload, ZIP, branch/tag creation, merge, or fake history | Yes | No | Deferred | UNSUPPORTED PROTOTYPE | 10C retirement | Remove or disable controls because they conflict with the approved boundary; direct users to the approved local Git client workflow |
+| Repository activity feed | Yes | No | Core | BACKEND GAP | 10C follow-up gate | Require a bounded read contract before displaying real activity |
+| Student/instructor analytics | Yes | No | Deferred | DEFERRED | Future research/product decision | No canonical role projection exists; keep an explicit unavailable state with no fabricated rates or risk claims |
+| Similarity indicators and verified contribution analytics | Yes | No | Deferred | DEFERRED | Future research/product decision | No approved computation/projection exists; preserve as recognized research concepts and show no fake percentages |
+| Admin account, academic, operational, recovery, and audit capabilities | Yes | Yes | Core | UI GAP | 10D | Replace the inadequate temporary mock using the student/instructor visual language and Phase 9 safe projections |
+| Attachments, project rubric/grading, and post-release grade versioning | Yes | No | Deferred | DEFERRED | Future product decision | Retain inventory only until separately approved |
+
+No feature is classified `REMOVED FROM SCOPE` at this boundary.
+
 ## Exhaustive route baseline
 
 Statuses below describe the baseline found at Phase 10 start plus the Phase 10A.1 authentication disposition. “Mock-driven” means hardcoded records render the page; “local-only” means controls change component state without a request; “visual prototype” means the route exists mainly as a design; “incorrectly routed” means it renders an unrelated component; and “unsupported” means no approved backend contract exists.
@@ -79,12 +114,12 @@ Statuses below describe the baseline found at Phase 10 start plus the Phase 10A.
 
 | Route | Current component | Status | Hardcoded/local behavior | Backend contract or gap | Milestone | Disposition | Mock source |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `/student` | `HomeDashboardPage` | Mock-driven | Classes, counts, recent work | Classes/activities/projects can be derived; notifications gap | 10A.2–10C | Preserve with data/state adjustments | Inline student home arrays |
-| `/student/classes` | `StreamPage` | Mock-driven, local-only | Announcement and comments appended in memory | Class detail exists; announcement/comment gap | 10A.2; stream deferred | Preserve shell, replace unsupported feed honestly | `streamPosts`, local handlers |
+| `/student` | `HomeDashboardPage` | Class-connected | Real identity, class totals, active/archived cards | Activity/project summaries remain later work; notifications deferred | 10A.2–10C | Existing dashboard with truthful class data | Class-owned home arrays retired |
+| `/student/classes` | `StudentClassesPage` | Connected | Authorized catalog, explicit selection, safe detail | Announcement/comment backend gap | 10A.2 complete; stream deferred | Existing class shell plus honest deferred stream state | Class/stream mocks retired |
 | `/student/todo` | `StudentTodoPage` | Mock-driven | Due groups, fake counts/filter | No authoritative global to-do contract | 10B/10C | Preserve layout; derive only supported records | `todoSections` |
-| `/student/join-class` | `StudentJoinClassPage` | Local-only | Accepts any code into local message | `POST /classes/join` | 10A.2 | Preserve and connect | `pendingClassInvitations`, local join state |
-| `/student/invitations` | `StudentJoinClassPage` | Unsupported, local-only | Fake invitation accept/decline | Class invitation API absent | Deferred/new scope | Replace with honest unavailable state | `pendingClassInvitations` |
-| `/student/people` | `PeoplePage` | Mock-driven | Static instructors/classmates | `GET /classes/:classId/members` | 10A.2 | Preserve | Inline people arrays |
+| `/student/join-class` | `StudentJoinClassPage` | Connected | Server-validated one-time code input and safe joined-class result | `POST /classes/join` | 10A.2 complete | Existing modal connected | Join fallback and invitation mocks retired |
+| `/student/invitations` | `DeferredStudentPage` | Deferred | No fake accept/decline behavior | Class invitation API absent | Deferred/new scope | Honest unavailable state | Invitation mock retired; concept retained in inventory |
+| `/student/people` | `PeoplePage` | Connected | Selected-class instructor plus student-safe paginated classmates | `GET /classes/:classId/members` | 10A.2 complete | Existing people visual with privacy projection | Inline class roster retired; project invite fixture separated |
 | `/student/activity` | `ActivitiesPage` | Mock-driven | Static filters, scores, due states | Class activity list | 10B | Preserve | Inline/project data and `projexData.js` activity data |
 | `/student/activity/act-loops-01` | `ActivityDetailPage` | Visual prototype | Fixed activity/instructions/work status | Activity detail | 10B | Preserve with dynamic ID and attempt model | Inline activity record |
 | `/student/activity/act-loops-01/workspace` | `CodingWorkspacePage` | Local-only, visual prototype | Read-only source, fake autosave, alternating fake tests | Visible-test run and submission APIs | 10B | Preserve with necessary editable/status adjustments | `workspaceCode`, objectives/results |
@@ -97,21 +132,21 @@ Statuses below describe the baseline found at Phase 10 start plus the Phase 10A.
 | `/student/projects/repo-campus-nav` | `GroupProjectsPage` | Incorrectly routed | Project list aliases repository overview | Repository detail/summary exists | 10C | Replace with real overview | `groupProjects` |
 | `/student/projects/repo-campus-nav/contributions` | `GroupProjectsPage` | Incorrectly routed, unsupported | No contribution page | Verified contribution contract absent | Deferred/new scope | Replace with unavailable state | `studentProject`, analytics mocks |
 | `/student/repositories` | `StudentRepositoriesPage` | Mock-driven, local-only | Static groups/create navigation | Repository list/create | 10C | Preserve | Repository group arrays |
-| `/student/analytics` | `StreamPage` | Incorrectly routed, unsupported | Renders class stream | Canonical analytics absent | Deferred/new scope | Replace with unavailable state | `studentAnalytics`, topic rows |
-| `/student/archive` | `GroupProjectsPage` | Incorrectly routed | Renders active project list | Archived class/repository filters exist | 10C | Replace with real read-only view | `studentArchives`, projects |
-| `/student/settings` | `StreamPage` | Incorrectly routed, unsupported | Renders class stream | User profile/settings update absent | Deferred/new scope | Replace with unavailable state | Stream mocks |
+| `/student/analytics` | `DeferredStudentPage` | Deferred | Explicit unavailable state | Canonical analytics absent | Deferred/new scope | Honest unavailable state | Incorrect stream fallback retired |
+| `/student/archive` | `DeferredStudentPage` | Deferred pending 10C | Explicit unavailable state | Archived class access exists in class catalog; archived project/repository view remains 10C | 10C | Preserve route for real read-only project view | Incorrect active-project fallback retired |
+| `/student/settings` | `DeferredStudentPage` | Deferred | Explicit unavailable state | User profile/settings update absent | Deferred/new scope | Honest unavailable state | Incorrect stream fallback retired |
 
 ### Instructor routes
 
 | Route | Current component | Status | Hardcoded/local behavior | Backend contract or gap | Milestone | Disposition | Mock source |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `/instructor` | `InstructorDashboard` | Mock-driven | Classes, review totals, notifications | Class data exists; global queues/notifications gaps | 10A.2–10C | Preserve | Instructor home arrays |
-| `/instructor/classes` | `InstructorStreamPage` | Mock-driven, local-only | Announcement/comments | Class exists; stream API absent | 10A.2; stream deferred | Preserve shell; replace feed honestly | `streamItems`, local handlers |
-| `/instructor/people` | `InstructorPeoplePage` | Mock-driven, local-only | Browser code generation, copy, roster filtering | Roster/membership/join-code APIs | 10A.2 | Preserve; remove client code generation | `roster`, `instructorClass` |
-| `/instructor/class-info` | `InstructorClassInfoPage` | Mock-driven | Class metadata and unmodeled rules | Class detail/update; rule model absent | 10A.2 | Preserve supported metadata | `instructorClass`, inline rules |
-| `/instructor/roster` | `InstructorPeoplePage` | Mock-driven, local-only | Alias of people | Roster/membership APIs | 10A.2 | Preserve | `roster` |
-| `/instructor/invite-students` | Fallback `InstructorStreamPage` | Incorrectly routed, unsupported | No dispatcher entry | Class invitation API absent | Deferred/new scope | Replace with unavailable state | Route catalog summary |
-| `/instructor/class-code` | `InstructorClassInfoPage` | Mock-driven | No dedicated code UI behavior | Join-code get/rotate/revoke | 10A.2 | Preserve with necessary controls | `instructorClass` |
+| `/instructor` | `InstructorDashboard` | Class-connected | Real identity, owned class totals/cards | Global review/notifications remain later gaps | 10A.2–10C | Existing dashboard with truthful class data and deferred queue state | Class-owned home arrays retired |
+| `/instructor/classes` | `InstructorClassesPage` | Connected | Owned catalog, explicit selection, real metadata/action links | Stream API absent | 10A.2 complete; stream deferred | Existing class shell plus honest deferred state | Stream mocks/local handlers retired |
+| `/instructor/people` | `InstructorPeoplePage` | Connected | Detailed bounded roster and membership transitions | Roster/membership APIs | 10A.2 complete | Existing roster table with authoritative actions | Old roster/code/invite controls retired |
+| `/instructor/class-info` | `InstructorClassInfoPage` | Connected | Supported metadata update and archive/restore | Class detail/update/lifecycle | 10A.2 complete | Existing info panel and forms | Unmodeled rules removed from authoritative view |
+| `/instructor/roster` | `InstructorPeoplePage` | Connected | Alias of detailed roster | Roster/membership APIs | 10A.2 complete | Preserve alias | Old roster retired |
+| `/instructor/invite-students` | `DeferredInstructorPage` | Deferred | No fake email or invitation success | Class invitation API absent | Deferred/new scope | Honest unavailable state with join-code alternative | Incorrect fallback retired |
+| `/instructor/class-code` | `InstructorClassCodePage` | Connected | Server-owned active state, copy, rotate, revoke | Join-code get/rotate/revoke | 10A.2 complete | Dedicated code controls | Browser generation/default codes retired |
 | `/instructor/review-queues` | `ReviewQueuesPage` | Mock-driven | Cross-class counts/selection | Efficient global review queue absent | 10B/10C + backend follow-up | Preserve | `reviewQueueClasses` |
 | `/instructor/activity` | `InstructorActivitiesPage` | Mock-driven | Static filters/actions | Activity list/lifecycle | 10B | Preserve | `activities` |
 | `/instructor/activity-settings` | `CreateActivityPage` | Incorrect alias/local-only | Same unsaved create form | Activity update/test-case replace | 10B | Preserve with correct mode | Form defaults |
@@ -126,8 +161,8 @@ Statuses below describe the baseline found at Phase 10 start plus the Phase 10A.
 | `/instructor/projects/repo-campus-nav/contributions` | `InstructorRepositoryReviewPage` | Incorrectly routed, unsupported | Reuses review page | Verified contribution API absent | Deferred/new scope | Replace with unavailable state | `contributionRows` |
 | `/instructor/projects/repo-campus-nav/similarity` | `InstructorRepositoryReviewPage` | Incorrectly routed, unsupported | Reuses review page/fabricated percentage | Similarity projection/computation absent | Deferred/new scope | Replace with unavailable state | Static similarity copy |
 | `/instructor/projects/repo-campus-nav/archive` | `InstructorRepositoryReviewPage` | Incorrectly routed | Reuses review page | Repository archive/restore exists; integrity/snapshots absent | 10C | Replace with lifecycle-only view | Static archive copy |
-| `/instructor/analytics` | Fallback `InstructorStreamPage` | Incorrectly routed, unsupported | No dispatcher entry | Canonical analytics absent | Deferred/new scope | Replace with unavailable state | `instructorAnalytics` |
-| `/instructor/students/stu-alyssa` | Fallback `InstructorStreamPage` | Incorrectly routed, unsupported | No dispatcher entry | Consolidated student profile absent | Deferred/new scope | Replace with unavailable state | `instructorStudentProfile` |
+| `/instructor/analytics` | `DeferredInstructorPage` | Deferred | Explicit unavailable state | Canonical analytics absent | Deferred/new scope | Honest unavailable state | Incorrect stream fallback retired |
+| `/instructor/students/stu-alyssa` | `DeferredInstructorPage` | Deferred | Explicit unavailable state | Consolidated student profile absent | Deferred/new scope | Honest unavailable state | Incorrect stream fallback retired |
 
 ### Admin routes
 
@@ -150,19 +185,19 @@ Every admin route is a mock feature inventory and Phase 10D replacement boundary
 
 ### Central mock module
 
-`client/src/data/projexData.js` exports roles, course/section options, activity summaries, class membership, route catalog, dashboard statistics/rows, student activity/submission/feedback/project/analytics/archive records, instructor roster/class-code/activity/monitoring/submission/review/project/similarity/analytics/student-profile records, and all admin tables/summaries.
+`client/src/data/projexData.js` retains roles, course/section options, activity summaries, route catalog, later-milestone dashboard rows, student activity/submission/feedback/project/analytics/archive records, instructor activity/monitoring/submission/review/project/similarity/analytics/student-profile records, and all admin tables/summaries. Phase 10A.2 removed the central class-membership, instructor-roster, and instructor-class-code fixtures.
 
 ### Student page inline records
 
-`streamPosts`, `groupProjects`, `homeClasses`, `studentDashboardStats`, `instructors`, `classmates`, `feedbackResults`, `workspaceCode`, `workspaceObjectives`, `workspaceActivities`, `repositoryFiles`, `repositoryCollaborators`, `repositoryCommits`, `studentNotifications`, `todoSections`, `studentRepositoryGroups`, `personalRepositories`, `pendingClassInvitations`, and `availableProjectRepositories` duplicate or conflict with the central module.
+Phase 10A.2 retires student class/home/stream/invitation/roster fixtures. `repositoryInviteCandidates` is deliberately separated from the retired class roster and remains only for the Phase 10C project-repository prototype. Activity, submission, project, repository, notification-design, to-do, and workspace fixtures remain later-milestone evidence and are not treated as records for a selected real class.
 
 ### Instructor page inline records
 
-`instructorClass`, dashboard/home statistics and classes, review previews/queues, stream items, activities, monitoring/submission/queue rows, review tests/source, group projects, project teams, repository files/collaborators, contribution rows, and roster records duplicate the central module and student representations.
+Phase 10A.2 retires `instructorClass`, class dashboard/home cards and statistics, stream items, browser join-code generation, and the old roster. Activity, monitoring, submission, review, project, repository, and contribution fixtures remain assigned to 10B/10C or documented deferred scope.
 
 ### Layout records
 
-`studentClasses` and `instructorClasses` duplicate class records yet again. Client-side class-code generators in the layout and instructor page violate server ownership and must be retired during 10A.2.
+The layout class arrays and both client-side class-code generators were retired in 10A.2. The role shell now consumes authorized class projections from the bounded class context.
 
 Repeated example identifiers include `act-loops-01`, `prelim-group-project-1`, `repo-campus-nav`, and `stu-alyssa`. Phase-specific integration must parameterize them using authorized backend IDs without breaking the established route hierarchy.
 
@@ -170,7 +205,7 @@ Repeated example identifiers include `act-loops-01`, `prelim-group-project-1`, `
 
 - Login and prototype role switching previously bypassed authentication; retired in 10A.1.
 - Header sign-out previously navigated without revoking the session; retired in 10A.1.
-- Announcements/comments, class invitation decisions, repository joining/inviting, repository review readiness, roster removal, activity/project save/publish, score/test edits, feedback release, repository review, and every admin action previously mutate only local state.
+- Class announcements/comments, class invitation decisions, browser class-code generation, and local roster removal were retired in 10A.2. Repository joining/inviting, repository review readiness, activity/project save/publish, score/test edits, feedback release, repository review, and every admin action remain assigned to later milestones and must not be mistaken for integrated behavior.
 - Student practice alternates fake pass/fail synchronously. Instructor “Run Tests” forces a fake failed state.
 - Student workspace shows fake autosave although no draft API exists.
 - Repository controls imply browser file upload/edit, branch/tag creation, ZIP download, IDE launch, and Git mutation although those contracts are absent or explicitly deferred.
@@ -212,6 +247,8 @@ Later milestones add feature integration tests plus controlled loopback acceptan
 Any required schema, migration, new architecture, dependency, or security relaxation remains a separate approval boundary.
 
 ## Phase 10 milestones
+
+Phase 10A.1 is complete. Phase 10A.2 is implemented and awaiting its separate final review/commit boundary; the remaining bullets describe milestone ownership rather than incomplete status.
 
 - **10A.1 — Shared foundation and authentication:** API client, CSRF, session bootstrap/refresh, login/logout, account setup, role guards, safe states, tests, and this baseline.
 - **10A.2 — Classes and memberships:** class list/selection/create/update/lifecycle, join codes, student join, rosters, and membership transitions.

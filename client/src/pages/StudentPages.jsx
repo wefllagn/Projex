@@ -1,33 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
-
-const streamPosts = [
-  {
-    id: 'stream-announcement',
-    author: 'Mr. Rickon Morty',
-    text: 'Please review the updated Java naming guide before submitting this week.',
-    date: 'Jun 28, 2026',
-    label: 'Announcement',
-    type: 'announcement',
-  },
-  {
-    id: 'stream-activity',
-    author: 'Mr. Rickon Morty',
-    text: 'published Loop Patterns and Input Validation.',
-    date: 'Due Jul 10, 2026, 10:30 AM',
-    label: 'Activity update',
-    type: 'assignment',
-  },
-  {
-    id: 'stream-feedback',
-    author: 'Projex',
-    text: 'released feedback for Prelim Programming Exercise 1 LAB.',
-    date: 'Jun 30, 2026',
-    label: 'Feedback released',
-    type: 'feedback',
-  },
-]
+import { useClasses } from '../classes/class-context.js'
+import { classHref, classInitial, firstName } from '../classes/class-links.js'
+import RequestState from '../components/RequestState.jsx'
 
 const groupProjects = [
   {
@@ -58,58 +35,7 @@ const groupProjects = [
   },
 ]
 
-const homeClasses = [
-  {
-    title: 'IT 112 - Computer Programming 1',
-    section: 'BSIT 2A',
-    schedule: 'Mon & Wed',
-    time: '8:00 - 9:30 AM',
-    instructor: 'Mr. Rickon Morty',
-    initial: 'I',
-    path: '/student/classes',
-  },
-  {
-    title: 'CS 111 - Introduction to Computing',
-    section: 'BSIT 2A',
-    schedule: 'Tue & Thu',
-    time: '10:00 - 11:30 AM',
-    instructor: 'Ms. Alyssa Mendoza',
-    initial: 'C',
-    path: '/student/classes',
-  },
-  {
-    title: 'IT 123 - Platform Technologies',
-    section: 'BSIT 2A',
-    schedule: 'Mon & Wed',
-    time: '1:00 - 2:30 PM',
-    instructor: 'Ms. Olivia Dean',
-    initial: 'I',
-    path: '/student/classes',
-  },
-  {
-    title: 'MATH 101 - College Algebra',
-    section: 'BSIT 2A',
-    schedule: 'Fri',
-    time: '9:00 - 10:30 AM',
-    instructor: 'Mr. Marco Rivera',
-    initial: 'M',
-    path: '/student/classes',
-  },
-]
-
-const studentDashboardStats = [
-  { label: 'Pending To-dos', value: '3', detail: 'activities waiting', tone: 'blue' },
-  { label: 'Joined Classes', value: '4', detail: 'classes', tone: 'green' },
-  { label: 'Active Repositories', value: '2', detail: 'in progress', tone: 'purple' },
-  { label: 'Due This Week', value: '2', detail: 'tasks', tone: 'orange' },
-]
-
-const instructors = [
-  { name: 'Mr. Rickon Morty', email: 'rickon.morty@slu.edu.ph', avatar: 'RM' },
-  { name: 'Mac Miller', email: 'mac.miller@slu.edu.ph', avatar: 'MM' },
-]
-
-const classmates = [
+const repositoryInviteCandidates = [
   { name: 'Alyssa Mendoza', email: 'alyssa.mendoza@slu.edu.ph', avatar: 'A' },
   { name: 'Rafael Santos', email: 'rafael.santos@slu.edu.ph', avatar: 'R' },
   { name: 'Mica Dela Cruz', email: 'mica.delacruz@slu.edu.ph', avatar: 'M' },
@@ -183,34 +109,6 @@ const repositoryCommits = [
   { id: '3a7f9c1', message: 'Initial commit', author: 'Julius Teodoro', time: 'a few minutes ago' },
   { id: '9b2e104', message: 'Add README project outline', author: 'Alyssa Mendoza', time: '12 minutes ago' },
   { id: '51dc83a', message: 'Create docs folder for requirements', author: 'Daniel Reyes', time: '18 minutes ago' },
-]
-
-const studentNotifications = [
-  {
-    title: 'New announcement from Mr. Rickon Morty',
-    detail: 'IT 112 class stream was updated this morning.',
-    time: '10 min ago',
-  },
-  {
-    title: 'Activity due soon',
-    detail: 'Prelim Programming Exercise 1 LAB is due Jul 3, 2026, 5:00 PM.',
-    time: '1 hr ago',
-  },
-  {
-    title: 'Feedback released',
-    detail: 'Your Hello World submission feedback is ready to view.',
-    time: 'Yesterday',
-  },
-  {
-    title: 'Repository invitation',
-    detail: 'Alyssa invited you to prelim-group-project-1-team-03.',
-    time: 'Jun 27',
-  },
-  {
-    title: 'Class invitation',
-    detail: 'Dr. Helena Cruz invited you to CS 122 - Data Structures.',
-    time: 'Jun 24',
-  },
 ]
 
 const todoSections = [
@@ -329,23 +227,6 @@ const personalRepositories = [
   },
 ]
 
-const pendingClassInvitations = [
-  {
-    id: 'cs122',
-    course: 'CS 122 - Data Structures',
-    section: 'BSCS 2B',
-    instructor: 'Dr. Helena Cruz',
-    sent: 'Sent Jun 24, 2026',
-  },
-  {
-    id: 'it123',
-    course: 'IT 123 - Platform Technologies',
-    section: 'BSIT 2A',
-    instructor: 'Ms. Olivia Dean',
-    sent: 'Sent Jun 26, 2026',
-  },
-]
-
 const availableProjectRepositories = [
   {
     name: 'prelim-group-project-1-team-01',
@@ -378,36 +259,18 @@ function sortByOption(items, option) {
   })
 }
 
-function StudentNotificationMenu({ count = 5 }) {
-  const [open, setOpen] = useState(false)
-
+function StudentNotificationMenu() {
   return (
     <div className="student-notification-menu">
       <button
         type="button"
-        className={open ? 'student-bell is-active' : 'student-bell'}
-        aria-label="Notifications"
-        onClick={() => setOpen((current) => !current)}
+        className="student-bell"
+        aria-label="Notifications are deferred"
+        title="Notifications are not available in this iteration."
+        disabled
       >
         <span className="student-bell__shape" aria-hidden="true" />
-        <span className="student-bell__count">{count}</span>
       </button>
-
-      {open && (
-        <section className="student-notification-dropdown">
-          <div className="student-notification-heading">
-            <h2>Notifications</h2>
-            <span>{count} unread</span>
-          </div>
-          {studentNotifications.slice(0, count).map((item) => (
-            <article key={item.title}>
-              <strong>{item.title}</strong>
-              <span>{item.detail}</span>
-              <em>{item.time}</em>
-            </article>
-          ))}
-        </section>
-      )}
     </div>
   )
 }
@@ -460,29 +323,31 @@ function StudentProfileMenu() {
 }
 
 function ClassHeader({ activeTab }) {
+  const { selectedClass } = useClasses()
   const tabs = [
-    { label: 'Stream', path: '/student', key: 'stream' },
+    { label: 'Overview', path: '/student/classes', key: 'stream' },
     { label: 'Assignments', path: '/student/activity', key: 'assignments' },
     { label: 'People', path: '/student/people', key: 'people' },
   ]
+  const initial = classInitial(selectedClass)
 
   return (
     <header className="student-class-header">
       <div className="student-class-header__top">
         <div className="student-course-title">
-          <span className="student-course-avatar">I</span>
+          <span className="student-course-avatar">{initial}</span>
           <div>
-            <h1>IT 112 - Computer Programming 1</h1>
+            <h1>{selectedClass?.className || 'Select a class'}</h1>
             <div className="student-course-meta">
-              <span>BSIT 2A</span>
-              <span>Mr. Rickon Morty</span>
-              <span className="student-class-code">9446</span>
+              {selectedClass && <span>{selectedClass.section}</span>}
+              {selectedClass && <span>{selectedClass.instructor.fullName}</span>}
+              {selectedClass && <span>{selectedClass.status === 'ARCHIVED' ? 'Archived' : `${selectedClass.semester} · ${selectedClass.schoolYear}`}</span>}
             </div>
           </div>
         </div>
 
         <div className="student-user-area">
-          <StudentNotificationMenu count={5} />
+          <StudentNotificationMenu />
           <StudentProfileMenu />
         </div>
       </div>
@@ -492,7 +357,7 @@ function ClassHeader({ activeTab }) {
           {tabs.map((tab) => (
             <NavLink
               key={tab.key}
-              to={tab.path}
+              to={classHref(tab.path, selectedClass?.id)}
               end={tab.key === 'stream'}
               className={activeTab === tab.key ? 'is-active' : undefined}
             >
@@ -506,24 +371,66 @@ function ClassHeader({ activeTab }) {
   )
 }
 
-function StudentClassPage({ activeTab, children, wide = false }) {
+function StudentClassPage({ activeTab, children, wide = false, deferredLabel }) {
+  const { requestedClassId, selectionError, selectionStatus } = useClasses()
+  const previewLabel = deferredLabel || (activeTab === 'assignments' ? 'Activity and project integration' : '')
+  let content = children
+
+  if (!requestedClassId) {
+    content = (
+      <RequestState
+        kind="empty"
+        title="Choose a class"
+        message="Select one of your authorized classes before opening this class workspace."
+      />
+    )
+  } else if (selectionStatus === 'loading') {
+    content = <RequestState kind="loading" message="Loading the selected class." />
+  } else if (selectionStatus === 'error') {
+    content = (
+      <RequestState
+        kind={selectionError?.status === 404 ? 'notFound' : selectionError?.status === 403 ? 'forbidden' : 'unavailable'}
+        error={selectionError}
+      />
+    )
+  }
+
   return (
     <div className="student-class-page">
       <ClassHeader activeTab={activeTab} />
       <section className={wide ? 'student-class-content student-class-content--wide' : 'student-class-content'}>
-        {children}
+        {selectionStatus === 'ready' && previewLabel && (
+          <div className="class-deferred-banner" role="note">
+            <strong>{previewLabel} remains a prototype preview.</strong>
+            <span>The records below are not attached to the selected class and will be integrated in its approved later milestone.</span>
+          </div>
+        )}
+        {content}
       </section>
     </div>
   )
 }
 
+function ClassAwareLink({ to, ...props }) {
+  const { selectedClass } = useClasses()
+  return <NavLink to={classHref(to, selectedClass?.id)} {...props} />
+}
+
 function HomeDashboardPage() {
+  const auth = useAuth()
+  const { classes, error, pagination, status } = useClasses()
+  const stats = [
+    { label: 'Joined Classes', value: pagination?.totalItems ?? classes.length, detail: 'authorized classes', tone: 'green' },
+    { label: 'Active Classes', value: classes.filter((item) => item.status === 'ACTIVE').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'classes', tone: 'blue' },
+    { label: 'Archived Classes', value: classes.filter((item) => item.status === 'ARCHIVED').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'read-only classes', tone: 'purple' },
+  ]
+
   return (
     <div className="student-home-page">
       <header className="student-home-topbar">
         <div />
         <div className="student-user-area">
-          <StudentNotificationMenu count={3} />
+          <StudentNotificationMenu />
           <StudentProfileMenu />
         </div>
       </header>
@@ -534,13 +441,13 @@ function HomeDashboardPage() {
             <img src="/assets/brand/projex-login-mascot.png" alt="" />
           </div>
           <div>
-            <h1>Welcome back, Julius</h1>
-            <p>Here are your classes, upcoming tasks, and recent repository updates.</p>
+            <h1>Welcome back, {firstName(auth.user.fullName)}</h1>
+            <p>Here are the classes currently available to your account.</p>
           </div>
         </section>
 
         <section className="student-home-stats" aria-label="Student overview">
-          {studentDashboardStats.map((stat) => (
+          {stats.map((stat) => (
             <article className="student-dashboard-stat" key={stat.label}>
               <span className={`student-dashboard-stat-icon student-dashboard-stat-icon--${stat.tone}`} aria-hidden="true" />
               <div>
@@ -558,20 +465,23 @@ function HomeDashboardPage() {
             <NavLink to="/student/classes">View all classes</NavLink>
           </div>
 
+          {status === 'loading' && <RequestState kind="loading" compact message="Loading your classes." />}
+          {status === 'error' && <RequestState kind="unavailable" compact error={error} />}
+          {status === 'ready' && classes.length === 0 && <RequestState kind="empty" compact message="Join a class to see it here." />}
           <div className="student-home-class-grid">
-            {homeClasses.map((item) => (
-              <NavLink to={item.path} className="student-home-class-card" key={item.title}>
-                <span className={`student-class-dot student-class-dot--${item.initial.toLowerCase()}`}>
-                  {item.initial}
+            {classes.map((item) => (
+              <NavLink to={classHref('/student/classes', item.id)} className="student-home-class-card" key={item.id}>
+                <span className={`student-class-dot student-class-dot--${classInitial(item).toLowerCase()}`}>
+                  {classInitial(item)}
                 </span>
                 <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.section} · Sec. 01</span>
-                  <span>{item.instructor}</span>
+                  <strong>{item.className}</strong>
+                  <span>{item.section}</span>
+                  <span>{item.instructor.fullName}</span>
                 </div>
                 <div className="student-home-class-schedule">
-                  <span>{item.schedule}</span>
-                  <span>{item.time}</span>
+                  <span>{item.semester}</span>
+                  <span>{item.schoolYear} · {item.status === 'ARCHIVED' ? 'Archived' : 'Active'}</span>
                 </div>
                 <span className="student-home-card-action" aria-hidden="true" />
               </NavLink>
@@ -583,119 +493,84 @@ function HomeDashboardPage() {
   )
 }
 
-function StudentStreamComments({ postId, comments, onAddComment }) {
-  const [commentText, setCommentText] = useState('')
+function StudentClassesPage() {
+  const {
+    classes,
+    error,
+    loadMore,
+    pagination,
+    requestedClassId,
+    selectedClass,
+    status,
+  } = useClasses()
+
+  if (requestedClassId) {
+    return (
+      <StudentClassPage activeTab="stream">
+        {selectedClass && (
+          <div className="class-overview-grid">
+            <section className="student-global-panel class-overview-card">
+              <span className="class-status-chip">{selectedClass.status}</span>
+              <h2>{selectedClass.className}</h2>
+              <p>{selectedClass.section} · {selectedClass.semester} · {selectedClass.schoolYear}</p>
+              <p>Instructor: {selectedClass.instructor.fullName}</p>
+              <small>{selectedClass.status === 'ARCHIVED' ? 'This class is read-only.' : 'Your membership grants access to this class.'}</small>
+            </section>
+            <RequestState
+              kind="unavailable"
+              compact
+              title="Class stream deferred"
+              message="Announcements and comments are recognized Projex features, but no approved backend contract exists yet."
+            />
+          </div>
+        )}
+      </StudentClassPage>
+    )
+  }
 
   return (
-    <div className="student-stream-comments">
-      {comments.map((comment) => (
-        <p key={`${postId}-${comment}`}>
-          <strong>Julius Teodoro</strong>
-          <span>{comment}</span>
-        </p>
-      ))}
-      <div className="student-stream-comment-form">
-        <input
-          value={commentText}
-          onChange={(event) => setCommentText(event.target.value)}
-          placeholder="Add class comment"
-        />
-        <button
-          type="button"
-          onClick={() => {
-            if (!commentText.trim()) return
-            onAddComment(postId, commentText.trim())
-            setCommentText('')
-          }}
-        >
-          Comment
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function StreamPage() {
-  const [announcement, setAnnouncement] = useState('')
-  const [postedAnnouncements, setPostedAnnouncements] = useState([])
-  const [commentsByPost, setCommentsByPost] = useState({})
-  const visiblePosts = [...postedAnnouncements, ...streamPosts]
-
-  return (
-    <StudentClassPage activeTab="stream">
-      <div className="instructor-stream-shell student-class-stream-shell">
-        <div className="student-stream-card instructor-stream-card" aria-label="Class stream">
-          <section className="instructor-composer-card student-composer-card">
-            <span className="student-user-avatar" aria-hidden="true" />
-            <label>
-              <span>Announcement</span>
-              <textarea
-                value={announcement}
-                onChange={(event) => setAnnouncement(event.target.value)}
-                placeholder="Announce something to BSIT 2A"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => {
-                if (!announcement.trim()) return
-                setPostedAnnouncements((current) => [
-                  {
-                    id: `student-announcement-${Date.now()}`,
-                    author: 'Julius Teodoro',
-                    text: announcement.trim(),
-                    date: 'Just now',
-                    label: 'Student announcement',
-                    type: 'announcement',
-                  },
-                  ...current,
-                ])
-                setAnnouncement('')
-              }}
-            >
-              Enter
-            </button>
-          </section>
-
-          <section className="instructor-stream-section">
-            <h2>Class Stream</h2>
-            {visiblePosts.map((post) => (
-              <article className="student-stream-post" key={post.id}>
-                <div className={`student-post-icon student-post-icon--${post.type}`} aria-hidden="true" />
+    <StudentGlobalPage title="My Classes" eyebrow="Class Membership">
+      {status === 'loading' && <RequestState kind="loading" message="Loading your authorized classes." />}
+      {status === 'error' && <RequestState kind="unavailable" error={error} />}
+      {status === 'ready' && classes.length === 0 && <RequestState kind="empty" message="Join a class using an instructor-provided code." />}
+      {status === 'ready' && classes.length > 0 && (
+        <section className="student-home-class-grid class-catalog-grid">
+          {classes.map((item) => {
+            const initial = classInitial(item)
+            return (
+              <NavLink to={classHref('/student/classes', item.id)} className="student-home-class-card" key={item.id}>
+                <span className={`student-class-dot student-class-dot--${initial.toLowerCase()}`}>{initial}</span>
                 <div>
-                  <p>
-                    <strong>{post.author}</strong> {post.text}
-                  </p>
-                  <span>{post.date}</span>
-                  <StudentStreamComments
-                    postId={post.id}
-                    comments={commentsByPost[post.id] || []}
-                    onAddComment={(postKey, comment) => {
-                      setCommentsByPost((current) => ({
-                        ...current,
-                        [postKey]: [...(current[postKey] || []), comment],
-                      }))
-                    }}
-                  />
+                  <strong>{item.className}</strong>
+                  <span>{item.section}</span>
+                  <span>{item.instructor.fullName}</span>
                 </div>
-                <button type="button" className="student-more" aria-label="More options" />
-              </article>
-            ))}
-          </section>
-        </div>
-      </div>
-    </StudentClassPage>
+                <div className="student-home-class-schedule">
+                  <span>{item.semester} · {item.schoolYear}</span>
+                  <span>{item.status === 'ARCHIVED' ? 'Archived · read-only' : 'Active'}</span>
+                </div>
+                <span className="student-home-card-action" aria-hidden="true" />
+              </NavLink>
+            )
+          })}
+        </section>
+      )}
+      {pagination?.hasNextPage && (
+        <button type="button" className="student-outline-action class-load-more" onClick={loadMore}>Load more classes</button>
+      )}
+    </StudentGlobalPage>
   )
 }
 
 function AssignmentSubTabs({ active }) {
+  const { selectedClass } = useClasses()
   return (
     <div className="student-segmented-tabs" aria-label="Assignment type">
-      <NavLink to="/student/activity" className={active === 'activities' ? 'is-active' : undefined}>
+      <NavLink to={classHref('/student/activity', selectedClass?.id)} className={active === 'activities' ? 'is-active' : undefined}>
         <span aria-hidden="true" />
         Activities
       </NavLink>
-      <NavLink to="/student/projects" className={active === 'projects' ? 'is-active' : undefined}>
+      <NavLink to={classHref('/student/projects', selectedClass?.id)} className={active === 'projects' ? 'is-active' : undefined}>
         <span aria-hidden="true" />
         Group Projects
       </NavLink>
@@ -865,9 +740,9 @@ function ActivitiesPage() {
                       {assignment.status}
                     </em>
                   </div>
-                  <NavLink to={assignment.path} className={assignment.type === 'Group Project' ? 'student-assignment-action student-assignment-action--project' : 'student-assignment-action'}>
+                  <ClassAwareLink to={assignment.path} className={assignment.type === 'Group Project' ? 'student-assignment-action student-assignment-action--project' : 'student-assignment-action'}>
                     {assignment.action}
-                  </NavLink>
+                  </ClassAwareLink>
                 </article>
               )
             })}
@@ -886,9 +761,9 @@ function ActivityDetailPage({ initialSubmitted = false, openFeedback = false }) 
     <StudentClassPage activeTab="assignments" wide>
       <div className="student-detail-layout student-project-detail-layout">
         <main className="student-activity-detail-card">
-          <NavLink to="/student/activity" className="student-back-link">
+          <ClassAwareLink to="/student/activity" className="student-back-link">
             Back to Activities
-          </NavLink>
+          </ClassAwareLink>
 
           <article className="student-detail-card">
             <div className="student-detail-heading">
@@ -986,9 +861,9 @@ function ActivityDetailPage({ initialSubmitted = false, openFeedback = false }) 
                     <span>You can do this activity in the platform.</span>
                   </div>
                 </div>
-                <NavLink to="/student/activity/act-loops-01/workspace" className="student-primary-action">
+                <ClassAwareLink to="/student/activity/act-loops-01/workspace" className="student-primary-action">
                   Do Activity in Platform
-                </NavLink>
+                </ClassAwareLink>
                 <button type="button" className="student-outline-action">
                   View Submission Guide
                 </button>
@@ -1383,9 +1258,9 @@ function GroupProjectsPage() {
               <div className="student-row-summary">
                 <span className="student-group-icon" aria-hidden="true" />
                 {project.expanded ? (
-                  <NavLink to="/student/projects/prelim-group-project-1" className="student-row-title-link">
+                  <ClassAwareLink to="/student/projects/prelim-group-project-1" className="student-row-title-link">
                     {project.title}
-                  </NavLink>
+                  </ClassAwareLink>
                 ) : (
                   <strong>{project.title}</strong>
                 )}
@@ -1408,9 +1283,9 @@ function GroupProjectsPage() {
                       </div>
                       <span className="student-document-preview" aria-hidden="true" />
                     </div>
-                    <NavLink to="/student/projects/prelim-group-project-1" className="student-text-link student-project-instructions-link">
+                    <ClassAwareLink to="/student/projects/prelim-group-project-1" className="student-text-link student-project-instructions-link">
                       View instructions
-                    </NavLink>
+                    </ClassAwareLink>
                   </div>
                 </div>
               )}
@@ -1457,9 +1332,9 @@ function GroupProjectDetailPage() {
     <StudentClassPage activeTab="assignments" wide>
       <div className="student-detail-layout">
         <main className="student-activity-detail-card">
-          <NavLink to="/student/projects" className="student-back-link">
+          <ClassAwareLink to="/student/projects" className="student-back-link">
             Back to Group Projects
-          </NavLink>
+          </ClassAwareLink>
 
           <article className="student-detail-card student-project-detail-card">
             <div className="student-detail-heading">
@@ -1526,9 +1401,9 @@ function GroupProjectDetailPage() {
                 <p className="student-repo-help">
                   You joined {joinedRepository}. Continue work in the linked team repository.
                 </p>
-                <NavLink to="/student/projects/prelim-group-project-1/repository" className="student-primary-action">
+                <ClassAwareLink to="/student/projects/prelim-group-project-1/repository" className="student-primary-action">
                   Open Repository
-                </NavLink>
+                </ClassAwareLink>
               </>
             ) : (
               <>
@@ -1575,8 +1450,8 @@ function GroupProjectDetailPage() {
 
 function AddCollaboratorModal({ pendingCollaborators, onInvite, onClose }) {
   const [search, setSearch] = useState('')
-  const [selectedClassmate, setSelectedClassmate] = useState(classmates[0].email)
-  const visibleClassmates = classmates.filter((classmate) => (
+  const [selectedClassmate, setSelectedClassmate] = useState(repositoryInviteCandidates[0].email)
+  const visibleClassmates = repositoryInviteCandidates.filter((classmate) => (
     classmate.name.toLowerCase().includes(search.toLowerCase())
       || classmate.email.toLowerCase().includes(search.toLowerCase())
   ))
@@ -2180,10 +2055,24 @@ function StudentRepositoriesPage() {
 
 function JoinClassModal({ onClose, onJoin }) {
   const [classCode, setClassCode] = useState('')
+  const [error, setError] = useState(null)
+  const [joining, setJoining] = useState(false)
+
+  const submit = async (event) => {
+    event.preventDefault()
+    setJoining(true)
+    setError(null)
+    try {
+      await onJoin(classCode)
+    } catch (requestError) {
+      setError(requestError)
+      setJoining(false)
+    }
+  }
 
   return (
     <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="student-join-class-title">
-      <section className="student-action-modal">
+      <form className="student-action-modal" onSubmit={submit}>
         <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close join class" />
         <p>Join Class</p>
         <h2 id="student-join-class-title">Enter class code</h2>
@@ -2193,27 +2082,30 @@ function JoinClassModal({ onClose, onJoin }) {
             value={classCode}
             onChange={(event) => setClassCode(event.target.value)}
             placeholder="XXXX-XXXX"
+            autoComplete="off"
+            required
           />
         </label>
+        {error && <p className="class-form-error" role="alert">{describeApiError(error)}</p>}
         <div className="student-submit-modal-actions">
           <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
           <button
-            type="button"
+            type="submit"
             className="student-primary-action"
-            onClick={() => onJoin(classCode || '9446')}
+            disabled={joining || !classCode.trim()}
           >
-            Join Class
+            {joining ? 'Joining…' : 'Join Class'}
           </button>
         </div>
-      </section>
+      </form>
     </div>
   )
 }
 
 function StudentJoinClassPage() {
-  const [invitationState, setInvitationState] = useState({})
   const [modalOpen, setModalOpen] = useState(false)
-  const [joinedCode, setJoinedCode] = useState('')
+  const [joinedClass, setJoinedClass] = useState(null)
+  const { api, upsertClass } = useClasses()
 
   return (
     <StudentGlobalPage
@@ -2228,50 +2120,15 @@ function StudentJoinClassPage() {
     >
       <section className="student-global-panel">
         <div className="student-panel-heading">
-          <h2>Pending invitations</h2>
-          <span>{pendingClassInvitations.length} invitations</span>
+          <h2>Join with a class code</h2>
+          <span>Server verified</span>
         </div>
-
-        <div className="student-invitation-list">
-          {pendingClassInvitations.map((invite) => {
-            const status = invitationState[invite.id] || 'Pending'
-
-            return (
-              <article className="student-invitation-card" key={invite.id}>
-                <span className="student-class-dot">{invite.course.charAt(0)}</span>
-                <div>
-                  <strong>{invite.course}</strong>
-                  <span>{invite.section} - {invite.instructor}</span>
-                  <small>{invite.sent}</small>
-                </div>
-                <em>{status}</em>
-                {status === 'Pending' && (
-                  <div className="student-invitation-actions">
-                    <button
-                      type="button"
-                      className="student-outline-action"
-                      onClick={() => setInvitationState((current) => ({ ...current, [invite.id]: 'Declined' }))}
-                    >
-                      Decline
-                    </button>
-                    <button
-                      type="button"
-                      className="student-primary-action"
-                      onClick={() => setInvitationState((current) => ({ ...current, [invite.id]: 'Accepted' }))}
-                    >
-                      Accept
-                    </button>
-                  </div>
-                )}
-              </article>
-            )
-          })}
-        </div>
-
-        {joinedCode && (
+        <p>Enter the code supplied by your instructor. Projex does not save the code in this browser.</p>
+        {joinedClass && (
           <div className="student-joined-state">
             <strong>Joined class</strong>
-            <span>Class code {joinedCode.toUpperCase()} accepted in the local prototype.</span>
+            <span>{joinedClass.className} · {joinedClass.section}</span>
+            <NavLink to={classHref('/student/classes', joinedClass.id)}>Open class</NavLink>
           </div>
         )}
       </section>
@@ -2279,8 +2136,10 @@ function StudentJoinClassPage() {
       {modalOpen && (
         <JoinClassModal
           onClose={() => setModalOpen(false)}
-          onJoin={(code) => {
-            setJoinedCode(code)
+          onJoin={async (code) => {
+            const response = await api.joinClass(code)
+            upsertClass(response.data.class)
+            setJoinedClass(response.data.class)
             setModalOpen(false)
           }}
         />
@@ -2290,52 +2149,104 @@ function StudentJoinClassPage() {
 }
 
 function PersonRow({ person }) {
+  const initials = person.fullName.split(/\s+/).map((part) => part.charAt(0)).join('').slice(0, 2).toUpperCase()
   return (
     <li className="student-person-row">
-      <span className="student-person-avatar">{person.avatar}</span>
+      <span className="student-person-avatar">{initials}</span>
       <div>
-        <strong>{person.name}</strong>
-        <span>{person.email}</span>
+        <strong>{person.fullName}</strong>
       </div>
     </li>
   )
 }
 
 function PeoplePage() {
+  const { api, selectedClass, selectionStatus } = useClasses()
+  const [roster, setRoster] = useState({ classId: null, status: 'loading', members: [], pagination: null, error: null })
+
+  useEffect(() => {
+    if (selectionStatus !== 'ready' || !selectedClass) return undefined
+    const controller = new AbortController()
+    api.listMembers(selectedClass.id, { page: 1, pageSize: 50 }, { signal: controller.signal })
+      .then((response) => setRoster({
+        classId: selectedClass.id,
+        status: 'ready',
+        members: response.data,
+        pagination: response.pagination,
+        error: null,
+      }))
+      .catch((error) => {
+        if (error?.name !== 'AbortError') {
+          setRoster({ classId: selectedClass.id, status: 'error', members: [], pagination: null, error })
+        }
+      })
+    return () => controller.abort()
+  }, [api, selectedClass, selectionStatus])
+
+  const currentRoster = roster.classId === selectedClass?.id ? roster : { ...roster, status: 'loading', members: [] }
+  const loadMore = async () => {
+    if (!selectedClass || !currentRoster.pagination?.hasNextPage) return
+    try {
+      const response = await api.listMembers(selectedClass.id, {
+        page: currentRoster.pagination.page + 1,
+        pageSize: currentRoster.pagination.pageSize,
+      })
+      setRoster((current) => ({
+        ...current,
+        members: [...current.members, ...response.data],
+        pagination: response.pagination,
+      }))
+    } catch (error) {
+      setRoster((current) => ({ ...current, status: 'error', error }))
+    }
+  }
+
   return (
     <StudentClassPage activeTab="people">
       <div className="student-people-panel">
         <section>
-          <h2>Instructors</h2>
+          <h2>Instructor</h2>
           <ul className="student-people-list">
-            {instructors.map((person) => (
-              <PersonRow key={person.email} person={person} />
-            ))}
+            {selectedClass && <PersonRow person={{ fullName: selectedClass.instructor.fullName }} />}
           </ul>
         </section>
         <section>
           <div className="student-people-heading">
             <h2>Classmates</h2>
-            <span>38 students</span>
+            {currentRoster.pagination && <span>{currentRoster.pagination.totalItems} students</span>}
           </div>
+          {selectionStatus === 'ready' && currentRoster.status === 'loading' && <RequestState kind="loading" compact message="Loading the class roster." />}
+          {currentRoster.status === 'error' && <RequestState kind="unavailable" compact error={currentRoster.error} />}
+          {currentRoster.status === 'ready' && currentRoster.members.length === 0 && <RequestState kind="empty" compact message="No active classmates are listed." />}
           <ul className="student-people-list">
-            {classmates.map((person) => (
-              <PersonRow key={person.email} person={person} />
+            {currentRoster.members.map((person) => (
+              <PersonRow key={person.userId} person={person} />
             ))}
           </ul>
+          {currentRoster.pagination?.hasNextPage && (
+            <button type="button" className="student-outline-action class-load-more" onClick={loadMore}>Load more classmates</button>
+          )}
         </section>
       </div>
     </StudentClassPage>
   )
 }
 
-function StudentRoutePage({ pagePath }) {
+function DeferredStudentPage({ title, message }) {
+  return (
+    <StudentGlobalPage title={title} eyebrow="Deferred Feature">
+      <RequestState kind="unavailable" title={`${title} is deferred`} message={message} />
+    </StudentGlobalPage>
+  )
+}
+
+export function StudentRoutePage({ pagePath }) {
   const pages = {
     dashboard: <HomeDashboardPage />,
-    classes: <StreamPage />,
+    classes: <StudentClassesPage />,
     todo: <StudentTodoPage />,
     'join-class': <StudentJoinClassPage />,
-    invitations: <StudentJoinClassPage />,
+    invitations: <DeferredStudentPage title="Class Invitations" message="Class invitation acceptance is not part of the current backend. Join an active class with an instructor-provided code instead." />,
     activity: <ActivitiesPage />,
     submissions: <ActivitiesPage />,
     'activity/act-loops-01': <ActivityDetailPage />,
@@ -2348,13 +2259,13 @@ function StudentRoutePage({ pagePath }) {
     'projects/repo-campus-nav': <GroupProjectsPage />,
     'projects/repo-campus-nav/contributions': <GroupProjectsPage />,
     repositories: <StudentRepositoriesPage />,
-    analytics: <StreamPage />,
-    archive: <GroupProjectsPage />,
+    analytics: <DeferredStudentPage title="Analytics" message="Canonical student analytics remain recognized but are not available in the core iteration." />,
+    archive: <DeferredStudentPage title="Archived Projects" message="Archived project and repository preservation views will be integrated in Phase 10C." />,
     people: <PeoplePage />,
-    settings: <StreamPage />,
+    settings: <DeferredStudentPage title="Settings" message="Additional account settings are not available in this iteration." />,
   }
 
-  return pages[pagePath] || <StreamPage />
+  return pages[pagePath] || <RequestState kind="notFound" />
 }
 
 export default StudentRoutePage

@@ -140,4 +140,13 @@ describe('API client', () => {
   ])('provides a safe status message for HTTP %s', (status, expected) => {
     expect(describeApiError(new ApiError({ status, message: 'Lifecycle correction' }))).toBe(expected)
   })
+
+  it('preserves allowlisted class lifecycle guidance without broadening generic errors', () => {
+    const error = new ApiError({
+      status: 409,
+      code: 'CLASS_HAS_UNFINISHED_PROJECT_WORK',
+      message: 'The class cannot be archived while project collaboration work remains unfinished.',
+    })
+    expect(describeApiError(error)).toBe(error.message)
+  })
 })

@@ -6,6 +6,7 @@ import {
 import './App.css'
 import { AuthProvider } from './auth/AuthContext.jsx'
 import ProtectedRoute from './auth/ProtectedRoute.jsx'
+import ClassProvider from './classes/ClassProvider.jsx'
 import DashboardLayout from './layouts/DashboardLayout.jsx'
 import AdminRoutePage from './pages/AdminPages.jsx'
 import AccountSetupPage from './pages/AccountSetupPage.jsx'
@@ -32,12 +33,19 @@ function getRouteElement(role, route) {
   return <PlaceholderPage role={role} page={route} />
 }
 
+function RoleLayout({ role }) {
+  const layout = <DashboardLayout role={role} />
+  return role.id === 'student' || role.id === 'instructor'
+    ? <ClassProvider>{layout}</ClassProvider>
+    : layout
+}
+
 const roleRoutes = routeCatalog.flatMap((role) => [
   {
     path: role.path,
     element: (
       <ProtectedRoute role={role.id.toUpperCase()}>
-        <DashboardLayout role={role} />
+        <RoleLayout role={role} />
       </ProtectedRoute>
     ),
     children: [

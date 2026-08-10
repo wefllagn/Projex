@@ -298,7 +298,20 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Add the native-fetch API client, standard envelope/error handling, credentials, abort support, CSRF mutation handling, and single-flight refresh.
 - [x] Integrate login, logout, current-user bootstrap, account setup, safe role routing, and protected loading/account/error states without browser credential persistence.
 - [x] Establish development-only frontend tests compatible with React 19 and Vite 8.
-- [ ] Complete Phase 10A.1 final verification, review, commit, and push through their separate boundaries.
+- [x] Complete Phase 10A.1 final verification, review, commit, and push through their separate boundaries.
+
+### Phase 10A.2: classes and memberships — implemented pending final review
+
+- [x] Load role-scoped active and archived classes from the backend and use explicit `classId` URL selection without choosing an arbitrary first class.
+- [x] Connect instructor class creation, supported metadata updates, archive, and restore.
+- [x] Connect student class-code join without persisting, logging, or redisplaying the submitted code.
+- [x] Connect student-safe and instructor-detailed roster projections with bounded pagination.
+- [x] Connect instructor membership removal/reactivation and authoritative conflict recovery.
+- [x] Connect server-owned join-code view, rotation, revocation, inactive state, and usable-code-only copy.
+- [x] Retire browser class-code generation, fallback codes, fake class invitations, local class stream/comments, local roster deletion, fabricated class schedules/counts, and hardcoded dashboard identities.
+- [x] Preserve Phase 10B/10C prototypes as clearly labeled previews without representing them as records for a selected real class.
+- [x] Establish and update the bidirectional feature-parity inventory in `FRONTEND_INTEGRATION.md`.
+- [ ] Complete Phase 10A.2 final verification, review, commit, and push through their separate boundaries.
 
 ### Remaining Phase 10 milestones
 

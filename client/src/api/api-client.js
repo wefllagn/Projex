@@ -2,6 +2,14 @@ import { CSRF_HEADER_NAME, readCsrfToken } from './csrf.js'
 
 const DEFAULT_API_BASE_URL = '/api/v1'
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+const SAFE_BUSINESS_MESSAGE_CODES = new Set([
+  'CLASS_ARCHIVED',
+  'CLASS_CODE_INVALID',
+  'CLASS_HAS_UNFINISHED_PROJECT_WORK',
+  'CLASS_HAS_UNFINISHED_SUBMISSION_WORK',
+  'CLASS_MEMBERSHIP_PENDING',
+  'CLASS_MEMBERSHIP_REMOVED',
+])
 
 function normalizeBaseUrl(value) {
   const baseUrl = String(value || DEFAULT_API_BASE_URL).trim()
@@ -54,6 +62,7 @@ export function describeApiError(error) {
   if (error.code === 'NETWORK_ERROR') {
     return 'Projex could not reach the server. Check the connection and try again.'
   }
+  if (SAFE_BUSINESS_MESSAGE_CODES.has(error.code)) return error.message
   if (error.status === 401) return 'Your session has expired. Please sign in again.'
   if (error.status === 403) return 'You do not have permission to perform this action.'
   if (error.status === 404) return 'The requested Projex record was not found.'

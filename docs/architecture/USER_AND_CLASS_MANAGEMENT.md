@@ -6,6 +6,10 @@ Phase 4 implements backend-only user directory, class lifecycle, class join-code
 
 Out of scope are public registration, password reset, MFA, Google Sign-In, ownership transfer, CSV enrollment, invitation email, student self-leave, activities, submissions, Java execution, Git, repository collaboration, Admin UI integration, and persistent audit-event storage.
 
+## Frontend integration status
+
+The original Phase 4 delivery was backend-only. Phase 10A.2 now connects the protected student and instructor class catalogs, explicit URL-based class selection, class metadata/lifecycle actions, student class-code join, role-specific rosters, membership transitions, and server-owned join-code controls. Unsupported invitation, stream/comment, schedule/room, and class-rule concepts remain documented in `FRONTEND_INTEGRATION.md` and are not simulated as successful local behavior.
+
 ## User directory
 
 `GET /api/v1/users` and `GET /api/v1/users/:userId` are global administrative endpoints. They require an authenticated ACTIVE administrator in both route middleware and the service.

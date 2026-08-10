@@ -79,56 +79,6 @@ export const activitySummaries = [
   },
 ]
 
-export const classMembership = {
-  enrolledClasses: [
-    {
-      section: 'BSCS 1A',
-      course: 'CS 111 - Introduction to Programming',
-      instructor: 'Engr. Marco Rivera',
-      enrollmentStatus: 'Enrolled',
-      classCode: 'SLU-CS111-1A',
-    },
-    {
-      section: 'BSIT 2A',
-      course: 'IT 212 - Web Systems and Technologies',
-      instructor: 'Prof. Dana Reyes',
-      enrollmentStatus: 'Enrolled',
-      classCode: 'SLU-IT212-2A',
-    },
-  ],
-  pendingInvitations: [
-    {
-      id: 'invite-cs122-01',
-      course: 'CS 122 - Data Structures',
-      section: 'BSCS 2B',
-      invitedBy: 'Dr. Helena Cruz',
-      status: 'Pending',
-      sentAt: '2026-06-24 09:30',
-    },
-  ],
-  roster: [
-    { name: 'Alyssa Mendoza', email: 'alyssa.mendoza@slu.example', status: 'Enrolled' },
-    { name: 'Nico Santos', email: 'nico.santos@slu.example', status: 'Invited' },
-    { name: 'Mira Bautista', email: 'mira.bautista@slu.example', status: 'Enrolled' },
-  ],
-  instructorAssignments: [
-    {
-      instructor: 'Engr. Marco Rivera',
-      course: 'CS 111 - Introduction to Programming',
-      section: 'BSCS 1A',
-      assignmentRole: 'Lead Instructor',
-      status: 'Active',
-    },
-    {
-      instructor: 'Prof. Dana Reyes',
-      course: 'IT 212 - Web Systems and Technologies',
-      section: 'BSIT 2A',
-      assignmentRole: 'Lab Instructor',
-      status: 'Active',
-    },
-  ],
-}
-
 export const routeCatalog = [
   {
     ...roles[0],
@@ -137,9 +87,9 @@ export const routeCatalog = [
         path: 'classes',
         label: 'My Classes',
         group: 'Class Membership',
-        status: 'Shell ready',
+        status: 'Backend connected',
         summary:
-          'Enrolled classes, section membership, instructor names, and class codes are visible here.',
+          'Authorized active and archived classes use server-owned IDs and student-safe projections; join codes are never exposed.',
       },
       {
         path: 'todo',
@@ -153,22 +103,22 @@ export const routeCatalog = [
         path: 'join-class',
         label: 'Join Class',
         group: 'Class Membership',
-        status: 'Placeholder',
-        summary: 'Student joins a class using a class code. This remains hardcoded for now.',
+        status: 'Backend connected',
+        summary: 'Student joins an active class through the server-owned class-code workflow.',
       },
       {
         path: 'invitations',
         label: 'Class Invitations',
         group: 'Class Membership',
-        status: 'Placeholder',
+        status: 'Deferred',
         summary:
-          'Pending class invitations can later be accepted or declined in local UI state.',
+          'Class invitations remain a recognized feature without an approved backend workflow.',
       },
       {
         path: 'people',
         label: 'People',
         group: 'Class Membership',
-        status: 'Shell ready',
+        status: 'Backend connected',
         summary:
           'Student-facing class people tab with instructors and classmates for the selected section.',
       },
@@ -294,49 +244,49 @@ export const routeCatalog = [
     routes: [
       {
         path: 'classes',
-        label: 'Class Stream',
+        label: 'My Classes',
         group: 'Class Management',
-        status: 'Shell ready',
+        status: 'Backend connected',
         summary:
-          'Instructor stream for IT 112 - BSIT 2A with announcements, activity updates, project updates, and repository activity.',
+          'Owned active and archived classes use server-owned IDs; unsupported stream behavior is explicitly deferred.',
       },
       {
         path: 'people',
         label: 'People',
         group: 'Class Management',
-        status: 'Shell ready',
+        status: 'Backend connected',
         summary:
-          'Instructor-facing people tab with roster, invite status, class code, and local management controls.',
+          'Detailed owned-class roster with server-authorized membership removal and reactivation.',
       },
       {
         path: 'class-info',
         label: 'Class Info',
         group: 'Class Management',
-        status: 'Shell ready',
+        status: 'Backend connected',
         summary:
-          'Course, section, instructor, class code, activity rules, repository rules, and feedback release settings.',
+          'Supported class metadata editing plus archive and restore lifecycle controls.',
       },
       {
         path: 'roster',
         label: 'Class Roster',
         group: 'Class Management',
-        status: 'Shell ready',
+        status: 'Backend connected',
         summary:
-          'Instructor view of enrolled, invited, and pending students in the selected section.',
+          'Detailed active and removed membership records for the selected owned class.',
       },
       {
         path: 'invite-students',
         label: 'Invite Students',
         group: 'Class Management',
-        status: 'Placeholder',
-        summary: 'Invite students to a class using hardcoded invitation records.',
+        status: 'Deferred',
+        summary: 'Invite-by-email is not implemented; instructors may share an active server-owned join code externally.',
       },
       {
         path: 'class-code',
         label: 'Class Code',
         group: 'Class Management',
-        status: 'Placeholder',
-        summary: 'Generate and view the selected section class code.',
+        status: 'Backend connected',
+        summary: 'View active state, copy only a usable code, rotate, and revoke the server-owned class join code.',
       },
       {
         path: 'review-queues',
@@ -804,42 +754,6 @@ export const studentArchives = [
     signal: 'Repository snapshot and final evaluation preserved',
   },
 ]
-
-export const instructorRoster = [
-  {
-    item: 'Alyssa Mendoza',
-    mode: 'BSCS 1A',
-    status: 'Enrolled',
-    signal: 'Last active today | 6 submitted activities',
-  },
-  {
-    item: 'Nico Santos',
-    mode: 'BSCS 1A',
-    status: 'Enrolled',
-    signal: 'Needs intervention | 2 missing activities',
-  },
-  {
-    item: 'Mira Bautista',
-    mode: 'BSCS 1A',
-    status: 'Enrolled',
-    signal: 'Project contributor | feedback current',
-  },
-  {
-    item: 'Luis Carino',
-    mode: 'BSCS 1A',
-    status: 'Invited',
-    signal: 'Invitation sent 2026-06-24',
-  },
-]
-
-export const instructorClassCode = {
-  course: 'CS 111 - Introduction to Programming',
-  section: 'BSCS 1A',
-  code: 'SLU-CS111-1A',
-  generatedAt: '2026-06-24 09:00',
-  expiresAt: '2026-07-10 23:59',
-  status: 'Active',
-}
 
 export const instructorActivities = [
   {
