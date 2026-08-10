@@ -5,6 +5,7 @@ import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref, classInitial, firstName } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { StudentActivityDetail, StudentActivityList } from '../activities/StudentActivityViews.jsx'
 
 const groupProjects = [
   {
@@ -137,7 +138,7 @@ const todoSections = [
         type: 'Activity',
         status: 'Not submitted',
         className: 'IT 112 - BSIT 2A',
-        path: '/student/activity/act-loops-01',
+        path: '/student/activity',
       },
       {
         title: 'Prelim Group Project 1 Specifications',
@@ -159,7 +160,7 @@ const todoSections = [
         meta: 'Due Jul 10, 2026, 10:30 AM',
         type: 'Activity',
         className: 'IT 112 - BSIT 2A',
-        path: '/student/activity/act-loops-01',
+        path: '/student/activity',
       },
     ],
   },
@@ -373,7 +374,9 @@ function ClassHeader({ activeTab }) {
 
 function StudentClassPage({ activeTab, children, wide = false, deferredLabel }) {
   const { requestedClassId, selectionError, selectionStatus } = useClasses()
-  const previewLabel = deferredLabel || (activeTab === 'assignments' ? 'Activity and project integration' : '')
+  const previewLabel = deferredLabel === undefined
+    ? (activeTab === 'assignments' ? 'Activity and project integration' : '')
+    : deferredLabel
   let content = children
 
   if (!requestedClassId) {
@@ -579,313 +582,24 @@ function AssignmentSubTabs({ active }) {
 }
 
 function ActivitiesPage() {
-  const [sortBy, setSortBy] = useState('due')
-  const [assignmentFilter, setAssignmentFilter] = useState('all')
-  const assignmentRows = [
-    {
-      title: 'Prelim Programming Exercise 1 LAB',
-      description: 'Write a Java program that performs basic input, output, and arithmetic operations.',
-      posted: 'Posted Aug 25, 2022',
-      due: 'Due Aug 27, 2022, 10:30 AM',
-      dueValue: '2022-08-27T10:30:00',
-      status: 'Not Submitted',
-      type: 'Activity',
-      action: 'View Details',
-      path: '/student/activity/act-loops-01',
-    },
-    {
-      title: 'Prelim Programming Exercise 2 LAB',
-      description: 'Conditional statements and loops implementation in Java.',
-      posted: 'Posted Aug 27, 2022',
-      due: 'Due Aug 27, 2022, 11:59 PM',
-      dueValue: '2022-08-27T23:59:00',
-      status: 'Not Submitted',
-      type: 'Activity',
-      action: 'View Details',
-      path: '/student/activity/act-loops-01',
-    },
-    {
-      title: 'Prelim Programming Exercise 3 LAB',
-      description: 'Arrays, methods, and string manipulation.',
-      posted: 'Posted Aug 30, 2022',
-      due: 'Due Sep 3, 2022, 10:30 AM',
-      dueValue: '2022-09-03T10:30:00',
-      status: 'Submitted',
-      type: 'Activity',
-      action: 'View Submission',
-      path: '/student/activity/act-loops-01/submitted',
-    },
-    {
-      title: 'Prelim Programming Exercise 4 LAB',
-      description: 'File handling and exception handling.',
-      posted: 'Posted Sep 2, 2022',
-      due: 'Due Sep 3, 2022',
-      dueValue: '2022-09-03T23:59:00',
-      status: 'Submitted',
-      type: 'Activity',
-      action: 'View Submission',
-      path: '/student/activity/act-loops-01/submitted',
-    },
-    {
-      title: 'Prelim Programming Exercise 6 LAB',
-      description: 'Basic object-oriented programming concepts.',
-      posted: 'Posted Sep 7, 2022',
-      due: 'Due Sep 10, 2022, 10:30 AM',
-      dueValue: '2022-09-10T10:30:00',
-      status: 'Submitted',
-      type: 'Activity',
-      action: 'View Submission',
-      path: '/student/activity/act-loops-01/submitted',
-    },
-    {
-      title: 'Prelim Group Project 1',
-      description: 'Team project: Build a student information system.',
-      posted: 'Posted Aug 24, 2022',
-      due: 'Due Aug 27, 2022',
-      dueValue: '2022-08-27T23:59:00',
-      status: 'Submitted',
-      type: 'Group Project',
-      action: 'View Project',
-      path: '/student/projects/prelim-group-project-1',
-    },
-  ]
-  const assignmentStats = [
-    { label: 'Total Assignments', value: '6', detail: 'All activities & projects', tone: 'blue' },
-    { label: 'Pending', value: '2', detail: 'Awaiting your submission', tone: 'orange' },
-    { label: 'Submitted', value: '3', detail: 'Completed & submitted', tone: 'green' },
-    { label: 'Graded', value: '1', detail: 'Feedback available', tone: 'purple' },
-  ]
-  const filteredAssignments = assignmentRows.filter((item) => (
-    assignmentFilter === 'all'
-      || (assignmentFilter === 'activities' && item.type === 'Activity')
-      || (assignmentFilter === 'projects' && item.type === 'Group Project')
-  ))
-  const sortedAssignments = sortByOption(filteredAssignments, sortBy)
-  const tabCounts = {
-    all: assignmentRows.length,
-    activities: assignmentRows.filter((item) => item.type === 'Activity').length,
-    projects: assignmentRows.filter((item) => item.type === 'Group Project').length,
-  }
-
   return (
-    <StudentClassPage activeTab="assignments">
-      <div className="student-assignment-board">
-        <section className="student-assignment-stats" aria-label="Assignment overview">
-          {assignmentStats.map((stat) => (
-            <article className="student-dashboard-stat student-assignment-stat" key={stat.label}>
-              <span className={`student-dashboard-stat-icon student-dashboard-stat-icon--${stat.tone}`} aria-hidden="true" />
-              <div>
-                <span>{stat.label}</span>
-                <strong>{stat.value}</strong>
-                <small>{stat.detail}</small>
-              </div>
-            </article>
-          ))}
-        </section>
-
-        <section className="student-assignment-panel student-assignment-panel--board">
-          <div className="student-assignment-toolbar student-assignment-toolbar--board">
-            <div className="student-assignment-filter-tabs" aria-label="Assignment type">
-              <button
-                type="button"
-                className={assignmentFilter === 'all' ? 'is-active' : undefined}
-                onClick={() => setAssignmentFilter('all')}
-              >
-                All ({tabCounts.all})
-              </button>
-              <button
-                type="button"
-                className={assignmentFilter === 'activities' ? 'is-active' : undefined}
-                onClick={() => setAssignmentFilter('activities')}
-              >
-                Activities ({tabCounts.activities})
-              </button>
-              <button
-                type="button"
-                className={assignmentFilter === 'projects' ? 'is-active' : undefined}
-                onClick={() => setAssignmentFilter('projects')}
-              >
-                Group Projects ({tabCounts.projects})
-              </button>
-            </div>
-            <label className="student-sort-control">
-              Sort by
-              <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-                <option value="due">Due date (soonest)</option>
-                <option value="status">Status</option>
-                <option value="title">Title</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="student-assignment-list">
-            {sortedAssignments.map((assignment) => {
-              const itemType = assignment.type.toLowerCase().replace(/\s+/g, '-')
-              const itemStatus = assignment.status.toLowerCase().replace(/\s+/g, '-')
-
-              return (
-                <article className={`student-assignment-row student-assignment-row--${itemType}`} key={assignment.title}>
-                  <div className="student-assignment-type">
-                    <span className={`student-todo-icon student-todo-icon--${itemType}`} aria-hidden="true" />
-                    <strong>{assignment.type}</strong>
-                  </div>
-                  <div>
-                    <h2>{assignment.title}</h2>
-                    <p>{assignment.description}</p>
-                    <small>{assignment.posted}</small>
-                  </div>
-                  <div className="student-assignment-due">
-                    <span>{assignment.due}</span>
-                    <em className={`student-assignment-status student-assignment-status--${itemStatus}`}>
-                      {assignment.status}
-                    </em>
-                  </div>
-                  <ClassAwareLink to={assignment.path} className={assignment.type === 'Group Project' ? 'student-assignment-action student-assignment-action--project' : 'student-assignment-action'}>
-                    {assignment.action}
-                  </ClassAwareLink>
-                </article>
-              )
-            })}
-          </div>
-        </section>
-      </div>
+    <StudentClassPage activeTab="assignments" deferredLabel="">
+      <div className="student-assignment-toolbar"><AssignmentSubTabs active="activities" /></div>
+      <StudentActivityList />
     </StudentClassPage>
   )
 }
 
-function ActivityDetailPage({ initialSubmitted = false, openFeedback = false }) {
-  const submitted = initialSubmitted
-  const [feedbackOpen, setFeedbackOpen] = useState(openFeedback)
-
+function ActivityDetailPage() {
   return (
-    <StudentClassPage activeTab="assignments" wide>
-      <div className="student-detail-layout student-project-detail-layout">
-        <main className="student-activity-detail-card">
-          <ClassAwareLink to="/student/activity" className="student-back-link">
-            Back to Activities
-          </ClassAwareLink>
-
-          <article className="student-detail-card">
-            <div className="student-detail-heading">
-              <span className="student-detail-icon" aria-hidden="true" />
-              <div>
-                <h2>Prelim Programming Exercise 1 LAB</h2>
-                <p>
-                  <span>Mr. Rickon Morty</span>
-                  <span>Jun 30, 2026</span>
-                </p>
-                <p className="student-detail-due">Due Jul 3, 2026, 5:00 PM</p>
-              </div>
-            </div>
-
-            <div className="student-detail-divider" />
-
-            <div className="student-detail-attachment-row">
-              <div className="student-attachment student-attachment--wide">
-                <span className="student-pdf-icon">PDF</span>
-                <div>
-                  <strong>Programming Exercise Instructions.pdf</strong>
-                  <span>PDF</span>
-                </div>
-                <span className="student-document-preview" aria-hidden="true" />
-              </div>
-            </div>
-
-            {submitted && (
-              <>
-                <div className="student-detail-divider" />
-                <div className="student-submitted-inline">
-                  <span className="student-success-check" aria-hidden="true" />
-                  <strong>Submitted</strong>
-                  <span>Final work recorded</span>
-                  <span>Jun 30, 2026, 4:32 PM</span>
-                </div>
-              </>
-            )}
-
-            <div className="student-detail-divider" />
-
-            <section className="student-comments-block">
-              <h3>Class comments</h3>
-              <button type="button" className="student-comment-button">
-                Add comment
-              </button>
-            </section>
-          </article>
-        </main>
-
-        <aside className="student-work-rail">
-          <section className="student-work-card">
-            <div className="student-work-card__header">
-              <h2>Your work</h2>
-              <span className={submitted ? 'student-work-status is-done' : 'student-work-status'}>
-                {submitted ? 'Done' : 'To Do'}
-              </span>
-            </div>
-
-            {submitted ? (
-              <>
-                <div className="student-score-row">
-                  <span>Score</span>
-                  <strong>5 / 5</strong>
-                </div>
-                <div className="student-work-submitted">
-                  <span>Work submitted</span>
-                  <strong>Jun 30, 2026, 4:32 PM</strong>
-                  <div className="student-submitted-file">
-                    <span className="student-file-icon" aria-hidden="true" />
-                    <div>
-                      <strong>Prelim Programming Exercise 1 LAB</strong>
-                      <span>Submitted in-platform</span>
-                    </div>
-                    <span className="student-success-dot" aria-hidden="true" />
-                  </div>
-                </div>
-                <button type="button" className="student-outline-action" disabled>
-                  Submission locked
-                </button>
-                <button
-                  type="button"
-                  className="student-primary-action"
-                  onClick={() => setFeedbackOpen(true)}
-                >
-                  View Feedback
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="student-empty-work">
-                  <span className="student-file-icon" aria-hidden="true" />
-                  <div>
-                    <strong>No work submitted yet</strong>
-                    <span>You can do this activity in the platform.</span>
-                  </div>
-                </div>
-                <ClassAwareLink to="/student/activity/act-loops-01/workspace" className="student-primary-action">
-                  Do Activity in Platform
-                </ClassAwareLink>
-                <button type="button" className="student-outline-action">
-                  View Submission Guide
-                </button>
-              </>
-            )}
-          </section>
-
-          <section className="student-work-card student-private-card">
-            <h2>Private comments</h2>
-            <button type="button" className="student-comment-button">
-              Add private comment
-            </button>
-          </section>
-        </aside>
-      </div>
-
-      {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
+    <StudentClassPage activeTab="assignments" wide deferredLabel="">
+      <StudentActivityDetail />
     </StudentClassPage>
   )
 }
 
-function CodingWorkspacePage() {
+// Retained as Phase 10B.2 visual reference; no production route renders this local-only prototype.
+export function CodingWorkspacePage() {
   const [resultState, setResultState] = useState('idle')
   const [activeEditorTab, setActiveEditorTab] = useState('Exercise1.java')
   const [paneSizes, setPaneSizes] = useState({
@@ -1173,7 +887,8 @@ function SubmitConfirmationModal({ onCancel, onConfirm }) {
   )
 }
 
-function FeedbackModal({ onClose }) {
+// Retained as Phase 10B.2/10B.3 visual reference; authoritative activity routes never render mock feedback.
+export function FeedbackModal({ onClose }) {
   return (
     <div className="student-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="student-feedback-title">
       <section className="student-feedback-modal">
@@ -2248,11 +1963,11 @@ export function StudentRoutePage({ pagePath }) {
     'join-class': <StudentJoinClassPage />,
     invitations: <DeferredStudentPage title="Class Invitations" message="Class invitation acceptance is not part of the current backend. Join an active class with an instructor-provided code instead." />,
     activity: <ActivitiesPage />,
-    submissions: <ActivitiesPage />,
-    'activity/act-loops-01': <ActivityDetailPage />,
-    'activity/act-loops-01/workspace': <CodingWorkspacePage />,
-    'activity/act-loops-01/submission-record': <ActivityDetailPage initialSubmitted />,
-    'activity/act-loops-01/feedback': <ActivityDetailPage initialSubmitted openFeedback />,
+    submissions: <DeferredStudentPage title="My Submissions" message="A global submission list needs a bounded backend read contract. Open a real activity to continue; submission integration begins in Phase 10B.2." />,
+    'activity/:activityId': <ActivityDetailPage />,
+    'activity/:activityId/workspace': <DeferredStudentPage title="Programming Workspace" message="The selected activity is real, but Java practice and official submissions are integrated in Phase 10B.2." />,
+    'activity/:activityId/submission-record': <DeferredStudentPage title="Submission Record" message="Submission attempt records are integrated in Phase 10B.2." />,
+    'activity/:activityId/feedback': <DeferredStudentPage title="Feedback and Grade" message="Released assessment results and feedback are integrated in Phase 10B.2 and Phase 10B.3." />,
     projects: <GroupProjectsPage />,
     'projects/prelim-group-project-1': <GroupProjectDetailPage />,
     'projects/prelim-group-project-1/repository': <RepositoryWorkspacePage />,

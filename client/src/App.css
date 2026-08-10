@@ -12917,3 +12917,149 @@ textarea:focus-visible {
   min-height: 66px;
   padding-block: 10px;
 }
+
+/* Phase 10B activity integration */
+.activity-pagination,
+.activity-testcase-actions,
+.activity-lifecycle-panel,
+.activity-facts div {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.activity-pagination {
+  justify-content: center;
+  padding: 1rem;
+}
+
+.activity-instructions p,
+.activity-visible-tests > p {
+  white-space: pre-wrap;
+  line-height: 1.65;
+}
+
+.activity-visible-tests {
+  display: grid;
+  gap: 1rem;
+}
+
+.activity-visible-tests article {
+  border: 1px solid #dce4ef;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.activity-visible-tests article span,
+.activity-visible-tests article small {
+  display: block;
+  margin-top: 0.65rem;
+  color: #67748a;
+}
+
+.activity-visible-tests pre,
+.activity-source-input,
+.activity-testcase-editor textarea {
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.activity-visible-tests pre {
+  max-width: 100%;
+  overflow: auto;
+  margin: 0.35rem 0 0;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #f6f8fb;
+  white-space: pre-wrap;
+}
+
+.activity-facts {
+  margin: 0;
+}
+
+.activity-facts div {
+  justify-content: space-between;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.activity-facts dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.activity-field-error,
+.activity-validation-summary {
+  color: #a62d36;
+}
+
+.activity-source-input {
+  min-height: 220px;
+  white-space: pre;
+}
+
+.activity-lifecycle-note {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: #f5f2ff;
+  color: #554775;
+}
+
+.activity-testcase-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.activity-testcase-list fieldset {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid #dce4ef;
+  border-radius: 12px;
+}
+
+.activity-testcase-list legend {
+  padding: 0 0.4rem;
+  font-weight: 700;
+}
+
+.activity-testcase-wide {
+  grid-column: 1 / -1;
+}
+
+.activity-testcase-actions {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.activity-testcase-actions > div {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.activity-lifecycle-panel {
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid #dce4ef;
+  border-radius: 14px;
+}
+
+.activity-lifecycle-panel .instructor-form-actions {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .activity-testcase-actions,
+  .activity-lifecycle-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .activity-testcase-actions > div {
+    flex-wrap: wrap;
+  }
+}

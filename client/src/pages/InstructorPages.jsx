@@ -5,6 +5,7 @@ import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref, classInitial, firstName } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { InstructorActivityEditor, InstructorActivityList } from '../activities/InstructorActivityViews.jsx'
 
 function getStatusClass(status) {
   if (status === 'For Review') return 'is-for-review'
@@ -56,39 +57,6 @@ const reviewQueueClasses = [
     pending: '2 pending',
     secondary: '1 flagged',
     tone: 'purple',
-  },
-]
-
-const activities = [
-  {
-    title: 'Prelim Programming Exercise 1 LAB',
-    due: 'Aug 27, 2026, 10:30 AM',
-    status: 'Graded 96/100',
-    submissions: '31 / 38',
-  },
-  {
-    title: 'Prelim Programming Exercise 2 LAB',
-    due: 'Aug 30, 2026, 11:59 PM',
-    status: 'For Review',
-    submissions: '24 / 38',
-  },
-  {
-    title: 'Loop Patterns and Input Validation',
-    due: 'Sep 3, 2026, 5:00 PM',
-    status: 'Late',
-    submissions: '12 / 38',
-  },
-  {
-    title: 'Student Grade Analyzer',
-    due: 'Sep 10, 2026, 10:30 AM',
-    status: 'Missing',
-    submissions: '0 / 38',
-  },
-  {
-    title: 'CSV Enrollment Parser',
-    due: 'Sep 17, 2026, 5:00 PM',
-    status: 'For Review',
-    submissions: '8 / 38',
   },
 ]
 
@@ -383,7 +351,9 @@ function InstructorClassHeader({ activeTab }) {
 
 function InstructorClassPage({ activeTab, children, deferredLabel }) {
   const { requestedClassId, selectionError, selectionStatus } = useClasses()
-  const previewLabel = deferredLabel || (activeTab === 'assignments' ? 'Activity and project integration' : '')
+  const previewLabel = deferredLabel === undefined
+    ? (activeTab === 'assignments' ? 'Activity and project integration' : '')
+    : deferredLabel
   let content = children
   if (!requestedClassId) {
     content = <RequestState kind="empty" title="Choose a class" message="Select one of your owned classes before opening this workspace." />
@@ -554,284 +524,19 @@ function AssignmentSubTabs({ active }) {
   )
 }
 
-function InstructorControls({ primaryLabel }) {
-  return (
-    <div className="instructor-controls-row">
-      <NavLink to="/instructor/activity/new" className="student-primary-action instructor-create-action">{primaryLabel}</NavLink>
-    </div>
-  )
-}
-
 function InstructorActivitiesPage() {
-  const [typeFilter, setTypeFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const assignmentItems = [
-    ...activities.map((activity, index) => ({
-      id: `activity-${activity.title}`,
-      title: activity.title,
-      description: index === 0
-        ? 'Write a Java program that displays a header and formatted output.'
-        : index === 1
-          ? 'Create a program that uses loops and conditional statements.'
-          : index === 2
-            ? 'Implement loop patterns and validate user input.'
-            : 'Develop a program to compute and analyze student grades.',
-      type: 'Activity',
-      due: activity.due,
-      submissions: activity.submissions,
-      status: activity.status === 'Missing' ? 'Draft' : 'Published',
-      path: '/instructor/activity/act-loops-01/monitor',
-      accent: ['blue', 'orange', 'purple', 'green'][index % 4],
-    })),
-    {
-      id: 'project-prelim-1',
-      title: 'Prelim Group Project 1',
-      description: 'Create a team repository and upload project specifications.',
-      type: 'Group Project',
-      due: 'Sep 15, 2026, 11:59 PM',
-      submissions: '8 / 10 teams',
-      status: 'Open',
-      path: '/instructor/projects/prelim-group-project-1',
-      accent: 'pink',
-    },
-  ]
-  const filteredAssignments = assignmentItems.filter((item) => {
-    const typeMatch = typeFilter === 'all'
-      || (typeFilter === 'activities' && item.type === 'Activity')
-      || (typeFilter === 'projects' && item.type === 'Group Project')
-    const statusMatch = statusFilter === 'all' || item.status === statusFilter
-
-    return typeMatch && statusMatch
-  })
-
   return (
-    <InstructorClassPage activeTab="assignments">
-      <div className="student-assignment-panel instructor-assignment-panel">
-        <div className="instructor-assignment-toolbar instructor-assignment-toolbar--board">
-          <div className="student-segmented-tabs instructor-assignment-filter-tabs" aria-label="Assignment filters">
-            {[
-              ['all', 'All Assignments'],
-              ['activities', 'Activities'],
-              ['projects', 'Group Projects'],
-            ].map(([value, label]) => (
-              <button
-                type="button"
-                className={typeFilter === value ? 'is-active' : undefined}
-                onClick={() => setTypeFilter(value)}
-                key={value}
-              >
-                <span aria-hidden="true" />
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="instructor-assignment-toolbar-actions">
-            <label className="instructor-status-filter">
-              <span>Status</span>
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                <option value="all">All Status</option>
-                <option value="Published">Published</option>
-                <option value="Draft">Draft</option>
-                <option value="Open">Open</option>
-              </select>
-            </label>
-            <InstructorControls primaryLabel="Create Assignment" />
-          </div>
-        </div>
-
-        <div className="instructor-data-table instructor-assignment-board-table" role="table" aria-label="Programming activities">
-          <div className="instructor-table-row instructor-table-row--head instructor-activity-row" role="row">
-            <span>Assignment</span>
-            <span>Type</span>
-            <span>Due Date</span>
-            <span>Submissions</span>
-            <span>Status</span>
-            <span>Actions</span>
-          </div>
-          {filteredAssignments.map((item) => (
-            <div className="instructor-table-row instructor-activity-row" role="row" key={item.id}>
-              <div className="instructor-assignment-name">
-                <span className={`instructor-assignment-file instructor-assignment-file--${item.accent}`} aria-hidden="true" />
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.description}</span>
-                  <em>{item.type}</em>
-                </div>
-              </div>
-              <span>{item.type}</span>
-              <span>{item.due}</span>
-              <span className="instructor-submission-progress">
-                {item.submissions}
-                <i aria-hidden="true" />
-              </span>
-              <em className={`instructor-assignment-status instructor-assignment-status--${item.status.toLowerCase()}`}>{item.status}</em>
-              <div>
-                <NavLink to={item.path}>View</NavLink>
-                <NavLink to="/instructor/activity/new">Configure</NavLink>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+    <InstructorClassPage activeTab="assignments" deferredLabel="">
+      <div className="instructor-assignment-toolbar"><AssignmentSubTabs active="activities" /></div>
+      <InstructorActivityList />
     </InstructorClassPage>
   )
 }
 
-function CreateActivityPage() {
-  const [status, setStatus] = useState('Draft not saved in this prototype session.')
-  const [attemptLimit, setAttemptLimit] = useState('1')
-
+function CreateActivityPage({ mode = 'create' }) {
   return (
-    <InstructorClassPage activeTab="assignments">
-      <div className="student-assignment-panel instructor-assignment-panel instructor-form-panel">
-        <div className="instructor-assignment-toolbar">
-          <AssignmentSubTabs active="activities" />
-          <NavLink to="/instructor/activity" className="student-outline-action">Back to activities</NavLink>
-        </div>
-
-        <section className="instructor-page-heading">
-          <p>Create Activity</p>
-          <h2>Programming activity setup</h2>
-          <span>Hardcoded prototype form - no backend request is sent.</span>
-        </section>
-
-        <div className="instructor-form-grid">
-          <label>
-            Activity title
-            <input defaultValue="Loop Patterns and Input Validation" />
-          </label>
-          <label>
-            Programming language
-            <span className="instructor-fixed-value">Java</span>
-          </label>
-          <label>
-            Due date
-            <input defaultValue="2026-09-03 17:00" />
-          </label>
-          <label>
-            Submission Attempts
-            <div className="instructor-attempt-control" role="group" aria-label="Submission attempts">
-              {['1', '2', '3'].map((attempt) => (
-                <button
-                  type="button"
-                  className={attemptLimit === attempt ? 'is-active' : undefined}
-                  onClick={() => setAttemptLimit(attempt)}
-                  key={attempt}
-                >
-                  {attempt}
-                </button>
-              ))}
-            </div>
-          </label>
-        </div>
-        <p className="instructor-field-note">
-          Students may use up to {attemptLimit} submission {attemptLimit === '1' ? 'attempt' : 'attempts'} until the due date. Attempts lock after the deadline.
-        </p>
-
-        <label className="instructor-wide-field">
-          Instructions
-          <textarea defaultValue="Write a program that reads integer input, validates the values, and prints a formatted loop summary. Submit only when your final code is ready." />
-        </label>
-
-        <section className="instructor-upload-placeholder">
-          <span className="student-pdf-icon">PDF</span>
-          <div>
-            <strong>Resource / PDF attachment placeholder</strong>
-            <p>Programming Exercise Instructions.pdf can be attached in the final product.</p>
-          </div>
-          <button type="button">Choose file</button>
-        </section>
-
-        <section className="instructor-upload-placeholder">
-          <span className="instructor-code-file-icon">JAVA</span>
-          <div>
-            <strong>Add source code for test cases</strong>
-            <p>Upload a Java source file used only for instructor-side prototype test-case setup.</p>
-          </div>
-          <button type="button">Choose source file</button>
-        </section>
-
-        <div className="instructor-settings-grid">
-          <label className="instructor-toggle-row">
-            <input type="checkbox" defaultChecked />
-            <span>Compiler enabled</span>
-          </label>
-          <label className="instructor-toggle-row">
-            <input type="checkbox" defaultChecked />
-            <span>Show visible test summaries to students</span>
-          </label>
-          <label className="instructor-toggle-row">
-            <input type="checkbox" defaultChecked />
-            <span>Hide hidden test logic from students</span>
-          </label>
-          <label className="instructor-toggle-row">
-            <input type="checkbox" defaultChecked />
-            <span>Release feedback after instructor approval</span>
-          </label>
-        </div>
-
-        <section className="instructor-testcase-panel">
-          <div className="instructor-section-title">
-            <h3>Test Case Setup</h3>
-            <button type="button">Add test case</button>
-          </div>
-          <div className="instructor-data-table">
-            <div className="instructor-table-row instructor-table-row--head instructor-test-row">
-              <span>Sample Input</span>
-              <span>Expected Output</span>
-              <span>Points</span>
-              <span>Visibility</span>
-            </div>
-            {[
-              ['10 20 30 -1', 'Count: 3 | Average: 20.00', '20', 'Visible'],
-              ['5 -3 8 -1', 'Invalid input ignored | Count: 2', '20', 'Visible'],
-              ['0 -1', 'Count: 1 | Average: 0.00', '30', 'Hidden'],
-            ].map(([input, output, points, visibility]) => (
-              <div className="instructor-table-row instructor-test-row" key={`${input}-${visibility}`}>
-                <span>{input}</span>
-                <span>{output}</span>
-                <span>{points}</span>
-                <em>{visibility}</em>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="instructor-testcase-panel">
-          <div className="instructor-section-title">
-            <h3>Rubric / Scoring</h3>
-            <span>100 points</span>
-          </div>
-          <div className="instructor-rubric-grid">
-            <label>
-              Correctness
-              <input defaultValue="40" />
-            </label>
-            <label>
-              Input validation
-              <input defaultValue="20" />
-            </label>
-            <label>
-              Code readability
-              <input defaultValue="20" />
-            </label>
-            <label>
-              Output formatting
-              <input defaultValue="20" />
-            </label>
-          </div>
-        </section>
-
-        <div className="instructor-form-actions">
-          <button type="button" className="student-outline-action" onClick={() => setStatus('Draft saved locally for preview.')}>
-            Save Draft
-          </button>
-          <button type="button" className="student-primary-action" onClick={() => setStatus('Activity marked as published in local prototype state.')}>
-            Publish Activity
-          </button>
-          <p>{status}</p>
-        </div>
-      </div>
+    <InstructorClassPage activeTab="assignments" deferredLabel="">
+      <InstructorActivityEditor mode={mode} />
     </InstructorClassPage>
   )
 }
@@ -855,7 +560,8 @@ function ReviewAgainModal({ student, onClose }) {
   )
 }
 
-function ActivityMonitoringPage() {
+// Retained as a Phase 10B.3 visual reference; production routes render an honest pending state.
+export function ActivityMonitoringPage() {
   const [reviewAgainStudent, setReviewAgainStudent] = useState('')
 
   return (
@@ -921,7 +627,8 @@ function ActivityMonitoringPage() {
   )
 }
 
-function SubmissionQueuePage() {
+// Retained as a Phase 10B.3 visual reference; production routes render an honest pending state.
+export function SubmissionQueuePage() {
   return (
     <InstructorClassPage activeTab="assignments">
       <div className="student-assignment-panel instructor-assignment-panel">
@@ -986,7 +693,8 @@ function ReleaseFeedbackModal({ grade, feedback, onCancel, onRelease }) {
   )
 }
 
-function SubmissionReviewPage() {
+// Retained as a Phase 10B.3 visual reference; no authoritative route uses its local-only assessment state.
+export function SubmissionReviewPage() {
   const [feedback, setFeedback] = useState('Good structure overall. Fix the blank-line formatting so the boxed output matches the required sample exactly.')
   const [grade, setGrade] = useState('82')
   const [testRunState, setTestRunState] = useState('idle')
@@ -1126,7 +834,8 @@ function SubmissionReviewPage() {
   )
 }
 
-function ReviewQueuesPage() {
+// Retained as a Phase 10B.3/10C visual reference; no global backend queue contract exists.
+export function ReviewQueuesPage() {
   const [selectedClass, setSelectedClass] = useState(null)
   const [queueFilter, setQueueFilter] = useState('activities')
   const activityQueueRows = [
@@ -2118,13 +1827,13 @@ export function InstructorRoutePage({ pagePath }) {
   const pages = {
     dashboard: <InstructorDashboard />,
     classes: <InstructorClassesPage />,
-    'review-queues': <ReviewQueuesPage />,
+    'review-queues': <DeferredInstructorPage title="Review Queues" message="A bounded cross-class activity and repository review-queue contract is not available. Open a selected class workflow instead." />,
     activity: <InstructorActivitiesPage />,
-    'activity/new': <CreateActivityPage />,
-    'activity-settings': <CreateActivityPage />,
-    'activity/act-loops-01/monitor': <ActivityMonitoringPage />,
-    'activity/act-loops-01/submissions': <SubmissionQueuePage />,
-    'submission-review': <SubmissionReviewPage />,
+    'activity/new': <CreateActivityPage mode="create" />,
+    'activity/:activityId/settings': <CreateActivityPage mode="edit" />,
+    'activity/:activityId/monitor': <DeferredInstructorPage title="Activity Monitoring" message="This activity identity is real. Submission monitoring and assessment integration begin in Phase 10B.3." />,
+    'activity/:activityId/submissions': <DeferredInstructorPage title="Submission Queue" message="Per-activity submission queues are integrated in Phase 10B.3." />,
+    'submission-review': <DeferredInstructorPage title="Submission Review" message="Assessment evidence, score correction, feedback, and release are integrated in Phase 10B.3." />,
     projects: <InstructorProjectsPage />,
     'projects/new': <CreateProjectRequirementPage />,
     'projects/prelim-group-project-1': <ProjectMonitoringPage />,
