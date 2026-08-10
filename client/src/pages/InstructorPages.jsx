@@ -11,6 +11,15 @@ import {
   InstructorSubmissionQueue,
   InstructorSubmissionReview,
 } from '../submissions/InstructorSubmissionViews.jsx'
+import {
+  InstructorProjectDetail,
+  InstructorProjectEditor,
+  InstructorProjectList,
+} from '../projects/ProjectViews.jsx'
+import {
+  RepositoryFoundationDetail,
+  RepositorySelectionRequired,
+} from '../repositories/RepositoryFoundationViews.jsx'
 
 function getProjectStatusClass(status) {
   if (status === 'Approved for Presentation') return 'is-approved'
@@ -609,7 +618,7 @@ export function ReviewQueuesPage() {
   )
 }
 
-function InstructorProjectsPage() {
+export function InstructorProjectsPage() {
   return (
     <InstructorClassPage activeTab="assignments">
       <div className="student-assignment-panel instructor-assignment-panel">
@@ -656,7 +665,7 @@ function InstructorProjectsPage() {
   )
 }
 
-function CreateProjectRequirementPage() {
+export function CreateProjectRequirementPage() {
   const [status, setStatus] = useState('Project requirement draft not saved.')
   const [maxGroupSize, setMaxGroupSize] = useState('4')
 
@@ -765,7 +774,7 @@ function CreateProjectRequirementPage() {
   )
 }
 
-function ProjectMonitoringPage() {
+export function ProjectMonitoringPage() {
   return (
     <InstructorClassPage activeTab="assignments">
       <div className="student-assignment-panel instructor-assignment-panel">
@@ -923,7 +932,7 @@ function InviteCollaboratorModal({ onClose }) {
   )
 }
 
-function InstructorRepositoryReviewPage() {
+export function InstructorRepositoryReviewPage() {
   const [reviewOpen, setReviewOpen] = useState(false)
   const [branchOpen, setBranchOpen] = useState(false)
   const [selectedBranch, setSelectedBranch] = useState('main')
@@ -1439,6 +1448,18 @@ function DeferredInstructorPage({ title, message }) {
   )
 }
 
+function InstructorProjectListPage() {
+  return <InstructorClassPage activeTab="assignments"><InstructorProjectList /></InstructorClassPage>
+}
+
+function InstructorProjectDetailPage() {
+  return <InstructorClassPage activeTab="assignments"><InstructorProjectDetail /></InstructorClassPage>
+}
+
+function InstructorProjectEditorPage({ mode }) {
+  return <InstructorClassPage activeTab="assignments"><InstructorProjectEditor mode={mode} /></InstructorClassPage>
+}
+
 export function InstructorRoutePage({ pagePath }) {
   const pages = {
     dashboard: <InstructorDashboard />,
@@ -1451,13 +1472,14 @@ export function InstructorRoutePage({ pagePath }) {
     'activity/:activityId/submissions': <InstructorClassPage activeTab="assignments" deferredLabel=""><InstructorSubmissionQueue /></InstructorClassPage>,
     'activity/:activityId/submissions/:submissionId': <InstructorClassPage activeTab="assignments" deferredLabel=""><InstructorSubmissionReview /></InstructorClassPage>,
     'submission-review': <DeferredInstructorPage title="Submission Review" message="Choose an activity and an accepted submission from its real queue. This legacy route has no submission identity and cannot select one safely." />,
-    projects: <InstructorProjectsPage />,
-    'projects/new': <CreateProjectRequirementPage />,
-    'projects/prelim-group-project-1': <ProjectMonitoringPage />,
-    'projects/prelim-group-project-1/repository': <InstructorRepositoryReviewPage />,
-    'projects/repo-campus-nav/contributions': <InstructorRepositoryReviewPage />,
-    'projects/repo-campus-nav/similarity': <InstructorRepositoryReviewPage />,
-    'projects/repo-campus-nav/archive': <InstructorRepositoryReviewPage />,
+    projects: <InstructorProjectListPage />,
+    'projects/new': <InstructorProjectEditorPage mode="create" />,
+    'projects/:projectTaskId': <InstructorProjectDetailPage />,
+    'projects/:projectTaskId/settings': <InstructorProjectEditorPage mode="edit" />,
+    'projects/:projectTaskId/repository': <InstructorClassPage activeTab="assignments"><RepositorySelectionRequired role="instructor" /></InstructorClassPage>,
+    'projects/:projectTaskId/repositories/:repositoryId': <RepositoryFoundationDetail role="instructor" />,
+    'projects/:projectTaskId/repositories/:repositoryId/contributions': <DeferredInstructorPage title="Contribution Review" message="Verified contribution analytics are not available without an approved identity and evidence contract." />,
+    'projects/:projectTaskId/repositories/:repositoryId/similarity': <DeferredInstructorPage title="Project Similarity" message="Similarity analysis remains a deferred research and product decision." />,
     people: <InstructorPeoplePage />,
     roster: <InstructorPeoplePage />,
     'class-info': <InstructorClassInfoPage />,

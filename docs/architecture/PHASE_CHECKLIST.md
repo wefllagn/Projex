@@ -300,7 +300,7 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Establish development-only frontend tests compatible with React 19 and Vite 8.
 - [x] Complete Phase 10A.1 final verification, review, commit, and push through their separate boundaries.
 
-### Phase 10A.2: classes and memberships — implemented pending final review
+### Phase 10A.2: classes and memberships — complete
 
 - [x] Load role-scoped active and archived classes from the backend and use explicit `classId` URL selection without choosing an arbitrary first class.
 - [x] Connect instructor class creation, supported metadata updates, archive, and restore.
@@ -311,14 +311,23 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Retire browser class-code generation, fallback codes, fake class invitations, local class stream/comments, local roster deletion, fabricated class schedules/counts, and hardcoded dashboard identities.
 - [x] Preserve Phase 10B/10C prototypes as clearly labeled previews without representing them as records for a selected real class.
 - [x] Establish and update the bidirectional feature-parity inventory in `FRONTEND_INTEGRATION.md`.
-- [ ] Complete Phase 10A.2 final verification, review, commit, and push through their separate boundaries.
+- [x] Complete Phase 10A.2 final verification, review, commit, and push through their separate boundaries.
+
+### Phase 10B: activities, submissions, and assessment — complete
+
+- [x] Integrate activity and test-case authoring and lifecycle in Phase 10B.1.
+- [x] Integrate student visible-test practice, immutable submissions, history, and released results in Phase 10B.2.
+- [x] Integrate instructor assessment, correction, review, feedback, failure resolution, and release in Phase 10B.3.
+
+### Phase 10C: projects, repositories, and Git — in progress
+
+- [x] Implement Phase 10C.1 project-task authoring/lifecycle, student catalogs, repository creation/catalog/detail/metadata, provisioning state, and archived-record presentation; final review remains a separate boundary.
+- [ ] In Phase 10C.2, integrate collaboration invitations, synchronized membership, review transitions, and project feedback.
+- [ ] In Phase 10C.3, integrate safe Git inspection, short-lived credentials, and local-client guidance.
 
 ### Remaining Phase 10 milestones
 
-- [ ] Integrate the existing React/JavaScript UI with completed backend features without redesign.
-- [ ] Replace mocks one approved workflow at a time through adapters and view models.
-- [ ] Integrate login, session refresh, CSRF, logout, role routing, protected states, and safe errors.
-- [ ] Preserve current routes, CSS, responsive behavior, and unrelated mocks until replaced.
+- [ ] Preserve current routes, CSS, responsive behavior, and unrelated mocks until their owning workflow replaces them.
 - [ ] Add persisted notifications, canonical analytics, and role-appropriate similarity projections when their backend support exists.
 - [ ] In Phase 10D, redesign and integrate the admin frontend using the student/instructor visual language, spacing, typography, navigation, components, tables, chips, drawers, dialogs, and interaction patterns.
 

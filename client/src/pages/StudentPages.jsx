@@ -12,6 +12,12 @@ import {
   StudentSubmissionDetail,
   StudentSubmissionHistory,
 } from '../submissions/StudentSubmissionViews.jsx'
+import { StudentProjectDetail, StudentProjectList } from '../projects/ProjectViews.jsx'
+import {
+  RepositoryFoundationDetail,
+  RepositorySelectionRequired,
+  StudentRepositoryCatalog,
+} from '../repositories/RepositoryFoundationViews.jsx'
 
 const groupProjects = [
   {
@@ -576,7 +582,7 @@ function SubmissionDetailPage() {
 }
 
 
-function GroupProjectsPage() {
+export function GroupProjectsPage() {
   const [sortBy, setSortBy] = useState('due')
   const sortedProjects = sortByOption(groupProjects, sortBy)
 
@@ -672,7 +678,7 @@ function JoinRepositoryModal({ onClose, onJoin }) {
   )
 }
 
-function GroupProjectDetailPage() {
+export function GroupProjectDetailPage() {
   const [createRepoOpen, setCreateRepoOpen] = useState(false)
   const [joinRepoOpen, setJoinRepoOpen] = useState(false)
   const [joinedRepository, setJoinedRepository] = useState('')
@@ -852,7 +858,7 @@ function AddCollaboratorModal({ pendingCollaborators, onInvite, onClose }) {
   )
 }
 
-function RepositoryWorkspacePage() {
+export function RepositoryWorkspacePage() {
   const [branchOpen, setBranchOpen] = useState(false)
   const [selectedBranch, setSelectedBranch] = useState('main')
   const [repoMenuOpen, setRepoMenuOpen] = useState(false)
@@ -1314,7 +1320,7 @@ function RepositoryRow({ repo }) {
   )
 }
 
-function StudentRepositoriesPage() {
+export function StudentRepositoriesPage() {
   const [openGroups, setOpenGroups] = useState(() => ({
     it112: true,
     cs111: true,
@@ -1589,6 +1595,22 @@ function DeferredStudentPage({ title, message }) {
   )
 }
 
+function ProjectListPage() {
+  return <StudentClassPage activeTab="assignments"><StudentProjectList /></StudentClassPage>
+}
+
+function ProjectDetailPage() {
+  return <StudentClassPage activeTab="assignments" wide><StudentProjectDetail /></StudentClassPage>
+}
+
+function RepositoryCatalogPage({ archived = false }) {
+  return (
+    <StudentGlobalPage title={archived ? 'Archived Repositories' : 'My Repositories'} eyebrow="Project Collaboration Mode">
+      <StudentRepositoryCatalog archived={archived} />
+    </StudentGlobalPage>
+  )
+}
+
 export function StudentRoutePage({ pagePath }) {
   const pages = {
     dashboard: <HomeDashboardPage />,
@@ -1604,14 +1626,15 @@ export function StudentRoutePage({ pagePath }) {
     'activity/:activityId/submissions/:submissionId': <SubmissionDetailPage />,
     'activity/:activityId/submission-record': <LegacySubmissionRoute />,
     'activity/:activityId/feedback': <LegacySubmissionRoute />,
-    projects: <GroupProjectsPage />,
-    'projects/prelim-group-project-1': <GroupProjectDetailPage />,
-    'projects/prelim-group-project-1/repository': <RepositoryWorkspacePage />,
-    'projects/repo-campus-nav': <GroupProjectsPage />,
-    'projects/repo-campus-nav/contributions': <GroupProjectsPage />,
-    repositories: <StudentRepositoriesPage />,
+    projects: <ProjectListPage />,
+    'projects/:projectTaskId': <ProjectDetailPage />,
+    'projects/:projectTaskId/repository': <StudentClassPage activeTab="assignments" wide><RepositorySelectionRequired /></StudentClassPage>,
+    'projects/:projectTaskId/repositories/:repositoryId': <RepositoryFoundationDetail />,
+    'projects/:projectTaskId/repositories/:repositoryId/contributions': <DeferredStudentPage title="Contribution Tracking" message="Verified contribution analytics require a separately approved identity and evidence contract." />,
+    repositories: <RepositoryCatalogPage />,
+    'repositories/:repositoryId': <RepositoryFoundationDetail />,
     analytics: <DeferredStudentPage title="Analytics" message="Canonical student analytics remain recognized but are not available in the core iteration." />,
-    archive: <DeferredStudentPage title="Archived Projects" message="Archived project and repository preservation views will be integrated in Phase 10C." />,
+    archive: <RepositoryCatalogPage archived />,
     people: <PeoplePage />,
     settings: <DeferredStudentPage title="Settings" message="Additional account settings are not available in this iteration." />,
   }
