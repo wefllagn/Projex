@@ -6,6 +6,12 @@ import { useClasses } from '../classes/class-context.js'
 import { classHref, classInitial, firstName } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
 import { StudentActivityDetail, StudentActivityList } from '../activities/StudentActivityViews.jsx'
+import {
+  LegacySubmissionRoute,
+  StudentProgrammingWorkspace,
+  StudentSubmissionDetail,
+  StudentSubmissionHistory,
+} from '../submissions/StudentSubmissionViews.jsx'
 
 const groupProjects = [
   {
@@ -46,51 +52,6 @@ const repositoryInviteCandidates = [
   { name: 'Nina Salvador', email: 'nina.salvador@slu.edu.ph', avatar: 'N' },
 ]
 
-const feedbackResults = [
-  { label: 'Top border of asterisks', status: 'Passed' },
-  { label: 'Bottom border of asterisks', status: 'Passed' },
-  { label: '"hello world" appears correctly', status: 'Passed' },
-  { label: 'Required blank lines inside the box', status: 'Passed' },
-  { label: 'Program exits successfully', status: 'Passed' },
-]
-
-const workspaceCode = `/*
- * Author: ( Last Name, First Name, Middle Initial )
- * Programming Date:
- * Activity Name and Number: Prelim Exercise Number 1
- */
-// This source code should be saved in a file called Exercise1.java
-package exercises.prelim;
-
-import java.lang.*;
-
-public class Exercise1 {
-    public static void main(String[] args) {
-        System.out.println("*******************************");
-        System.out.println("*                             *");
-        System.out.println("*         hello world         *");
-        System.out.println("*                             *");
-        System.out.println("*******************************");
-        System.exit(0);
-    }
-}`
-
-const workspaceObjectives = [
-  'Create a Java source code/program using IntelliJ IDEA',
-  'Compile a Java program into bytecode using IntelliJ IDEA',
-  'Run a compiled Java program using IntelliJ IDEA',
-  'Describe the structure of a Java program with a main method',
-  'Apply the output statement System.out.println()',
-  'Explain why Java is case-sensitive',
-]
-
-const workspaceActivities = [
-  'Open/run IntelliJ IDEA and open the workspace folder',
-  'Create a file named Exercise1.java and type the program',
-  'Save, compile, and run the program; fix errors until there are none',
-  'Modify the output from hello world in a box to a calling-card style output',
-  'Back up the file in a personal device or online repository',
-]
 
 const repositoryFiles = [
   { name: 'src', type: 'folder', commit: 'Initial commit', updated: 'a few minutes ago' },
@@ -598,349 +559,22 @@ function ActivityDetailPage() {
   )
 }
 
-// Retained as Phase 10B.2 visual reference; no production route renders this local-only prototype.
-export function CodingWorkspacePage() {
-  const [resultState, setResultState] = useState('idle')
-  const [activeEditorTab, setActiveEditorTab] = useState('Exercise1.java')
-  const [paneSizes, setPaneSizes] = useState({
-    instructions: 360,
-    explorer: 240,
-    output: 470,
-    tests: 190,
-  })
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const navigate = useNavigate()
-  const failed = resultState === 'error'
-  const passed = resultState === 'success'
-  const readmePreview = '# Prelim Programming Exercise 1\n\nWrite and run the Java hello world activity.'
-
-  const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
-  const startPaneResize = (pane, event) => {
-    event.preventDefault()
-    const startX = event.clientX
-    const startY = event.clientY
-    const startSizes = paneSizes
-
-    const handleMove = (moveEvent) => {
-      const deltaX = moveEvent.clientX - startX
-      const deltaY = moveEvent.clientY - startY
-
-      setPaneSizes(() => {
-        if (pane === 'instructions') {
-          return { ...startSizes, instructions: clamp(startSizes.instructions + deltaX, 300, 620) }
-        }
-
-        if (pane === 'explorer') {
-          return { ...startSizes, explorer: clamp(startSizes.explorer + deltaX, 150, 360) }
-        }
-
-        if (pane === 'output') {
-          return { ...startSizes, output: clamp(startSizes.output - deltaX, 320, 760) }
-        }
-
-        return { ...startSizes, tests: clamp(startSizes.tests - deltaY, 170, 420) }
-      })
-    }
-
-    const stopResize = () => {
-      window.removeEventListener('pointermove', handleMove)
-      window.removeEventListener('pointerup', stopResize)
-    }
-
-    window.addEventListener('pointermove', handleMove)
-    window.addEventListener('pointerup', stopResize)
-  }
-
-  const runTests = () => {
-    setResultState((current) => (current === 'success' ? 'error' : 'success'))
-  }
-
+function SubmissionHistoryPage() {
   return (
-    <div className="student-coding-page">
-      <header className="student-coding-topbar">
-        <nav className="student-coding-breadcrumb" aria-label="Coding workspace breadcrumb">
-          <NavLink to="/student/classes">IT 112 - Computer Programming 1</NavLink>
-          <span>Lab Activity 1</span>
-          <strong>Exercise1.java</strong>
-        </nav>
-        <div className="student-coding-user">
-          <StudentNotificationMenu count={2} />
-          <StudentProfileMenu />
-        </div>
-      </header>
-
-      <main
-        className="student-coding-shell"
-        style={{
-          '--instruction-pane-width': `${paneSizes.instructions}px`,
-          '--explorer-pane-width': `${paneSizes.explorer}px`,
-          '--output-pane-width': `${paneSizes.output}px`,
-          '--tests-pane-height': `${paneSizes.tests}px`,
-        }}
-      >
-        <aside className="student-coding-instructions">
-          <div className="student-coding-activity-title">
-            <span>Lab Activity 1</span>
-            <h1>Prelim Programming Exercise 1</h1>
-            <p>Hello World in Java</p>
-            <small>Due Aug 27, 2027, 10:30 AM</small>
-            <strong>5/5 Points</strong>
-          </div>
-
-          <div className="student-coding-tabs">
-            <button type="button" className="is-active">Instructions</button>
-            <button type="button">Resources</button>
-          </div>
-
-          <section className="student-coding-scroll">
-            <h2>Objectives</h2>
-            <ol>
-              {workspaceObjectives.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ol>
-
-            <h2>Activities</h2>
-            <ol>
-              {workspaceActivities.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ol>
-
-            <div className="student-coding-tip">
-              <strong>Tip</strong>
-              <p>Use System.out.println() to print each line and match the required output format.</p>
-            </div>
-          </section>
-
-          <div className="student-autosave">
-            <span className="student-success-dot" aria-hidden="true" />
-            <strong>Auto-save</strong>
-            <span>Saved a few seconds ago</span>
-          </div>
-        </aside>
-        <div
-          className="student-pane-resizer student-pane-resizer--instructions"
-          onPointerDown={(event) => startPaneResize('instructions', event)}
-          role="separator"
-          aria-label="Resize activity instructions pane"
-          tabIndex="0"
-        />
-
-        <section className="student-editor-area">
-          <div className="student-editor-tabs">
-            {['Exercise1.java', 'README.md'].map((tab) => (
-              <button
-                type="button"
-                className={activeEditorTab === tab ? 'is-active' : undefined}
-                onClick={() => setActiveEditorTab(tab)}
-                key={tab}
-              >
-                {tab}
-              </button>
-            ))}
-            <button type="button" className="student-editor-tab-add" aria-label="Add editor tab">+</button>
-          </div>
-          <div className="student-editor-workbench">
-            <aside className="student-editor-explorer" aria-label="Project files">
-              <strong>EXPLORER</strong>
-              <span className="is-open">PRELIM-PROGRAMMING-EXERCISE-1</span>
-              <span className="is-folder">src</span>
-              <em className={activeEditorTab === 'Exercise1.java' ? 'is-file is-active' : 'is-file'}>Exercise1.java</em>
-              <span className="is-folder">docs</span>
-              <em className={activeEditorTab === 'README.md' ? 'is-file is-active' : 'is-file'}>README.md</em>
-              <em className="is-file">.gitignore</em>
-            </aside>
-            <div
-              className="student-pane-resizer student-pane-resizer--explorer"
-              onPointerDown={(event) => startPaneResize('explorer', event)}
-              role="separator"
-              aria-label="Resize file explorer pane"
-              tabIndex="0"
-            />
-            <pre className="student-code-editor">
-              {activeEditorTab === 'Exercise1.java' ? workspaceCode : readmePreview}
-            </pre>
-          </div>
-          <footer className="student-editor-status">
-            <span>Line 13, Col 42</span>
-            <span>Spaces: 4</span>
-            <span>{activeEditorTab.endsWith('.java') ? 'Java' : 'Markdown'}</span>
-          </footer>
-        </section>
-        <div
-          className="student-pane-resizer student-pane-resizer--output"
-          onPointerDown={(event) => startPaneResize('output', event)}
-          role="separator"
-          aria-label="Resize output pane"
-          tabIndex="0"
-        />
-
-        <section className="student-output-area">
-          <div className="student-output-header">
-            <strong>Output</strong>
-            <button type="button">Clear</button>
-          </div>
-          <pre className="student-output-panel">{`*******************************
-*                             *
-*         hello world         *
-*                             *
-*******************************
-
-Process finished with exit code 0`}</pre>
-          {failed && (
-            <div className="student-result-details">
-              <h2>Result Details</h2>
-              <strong>Wrong Answer</strong>
-              <span>Testcase 2</span>
-              <h3>Your Input</h3>
-              <p>(no input)</p>
-              <h3>Expected Output</h3>
-              <p>Hello World box output exactly as shown above</p>
-              <h3>Your Output</h3>
-              <p>hello world</p>
-            </div>
-          )}
-        </section>
-        <div
-          className="student-pane-resizer student-pane-resizer--tests"
-          onPointerDown={(event) => startPaneResize('tests', event)}
-          role="separator"
-          aria-label="Resize test results pane"
-          tabIndex="0"
-        />
-
-        <section className="student-tests-area">
-          <div className="student-tests-tabs">
-            <button type="button" className="is-active">Sample Input Testcases</button>
-            <button type="button">Custom Input Testcase</button>
-            <span className={failed ? 'student-test-summary is-error' : 'student-test-summary'}>
-              {failed ? '1 of 2 sample tests failed' : passed ? 'All sample tests passed' : 'Run tests to see result'}
-            </span>
-          </div>
-
-          <div className="student-tests-table">
-            <div className="student-tests-row student-tests-row--head">
-              <span>#</span>
-              <span>Input</span>
-              <span>Expected Output</span>
-              <span>Status</span>
-            </div>
-            <div className="student-tests-row">
-              <span>1</span>
-              <span>(no input)</span>
-              <pre className="student-expected-output">{`*******************************
-*                             *
-*         hello world         *
-*                             *
-*******************************`}</pre>
-              <strong className={failed ? 'is-failed' : passed ? 'is-passed' : undefined}>
-                {failed ? 'Failed' : passed ? 'Passed' : 'Not run'}
-              </strong>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer className="student-coding-actions">
-        {failed && <span className="student-coding-failure">1 of 2 sample tests failed</span>}
-        {passed && <span className="student-coding-success">All sample tests passed</span>}
-        <button type="button" className="student-run-tests" onClick={runTests}>
-          Run Code
-        </button>
-        <button type="button" className="student-submit-code" onClick={() => setConfirmOpen(true)}>
-          Submit
-        </button>
-      </footer>
-
-      {confirmOpen && (
-        <SubmitConfirmationModal
-          onCancel={() => setConfirmOpen(false)}
-          onConfirm={() => {
-            setConfirmOpen(false)
-            navigate('/student/activity/act-loops-01/submission-record')
-          }}
-        />
-      )}
-    </div>
+    <StudentClassPage activeTab="assignments" wide deferredLabel="">
+      <StudentSubmissionHistory />
+    </StudentClassPage>
   )
 }
 
-function SubmitConfirmationModal({ onCancel, onConfirm }) {
+function SubmissionDetailPage() {
   return (
-    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="submit-activity-title">
-      <section className="student-submit-modal">
-        <span className="student-submit-icon" aria-hidden="true" />
-        <h2 id="submit-activity-title">Submit activity?</h2>
-        <p>This will record your final work.</p>
-        <p>You can submit only once.</p>
-        <div className="student-submit-modal-actions">
-          <button type="button" className="student-outline-action" onClick={onCancel}>
-            Cancel
-          </button>
-          <button type="button" className="student-primary-action" onClick={onConfirm}>
-            Submit final
-          </button>
-        </div>
-      </section>
-    </div>
+    <StudentClassPage activeTab="assignments" wide deferredLabel="">
+      <StudentSubmissionDetail />
+    </StudentClassPage>
   )
 }
 
-// Retained as Phase 10B.2/10B.3 visual reference; authoritative activity routes never render mock feedback.
-export function FeedbackModal({ onClose }) {
-  return (
-    <div className="student-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="student-feedback-title">
-      <section className="student-feedback-modal">
-        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close feedback" />
-        <p className="student-feedback-eyebrow">Automated Feedback</p>
-        <h2 id="student-feedback-title">Prelim Programming Exercise 1 LAB</h2>
-
-        <div className="student-feedback-score">
-          <span className="student-success-check" aria-hidden="true" />
-          <strong>Score: 5 / 5 (100%)</strong>
-          <span>All expected outputs matched</span>
-        </div>
-
-        <p className="student-feedback-note">
-          Scoring is based on predefined test cases. Each expected output matched by your code counts
-          toward the final score.
-        </p>
-
-        <div className="student-feedback-results">
-          <h3>Test Results (5 / 5 passed)</h3>
-          {feedbackResults.map((result, index) => (
-            <div className="student-feedback-result-row" key={result.label}>
-              <span className="student-success-check" aria-hidden="true" />
-              <strong>{index + 1}</strong>
-              <span>{result.label}</span>
-              <em>{result.status}</em>
-            </div>
-          ))}
-        </div>
-
-        <p className="student-hidden-note">
-          Hidden test cases may also be used in other activities to check additional inputs and expected
-          outputs. No hidden tests were used for this Hello World activity.
-        </p>
-
-        <div className="student-instructor-feedback">
-          <strong>Instructor / System Feedback</strong>
-          <p>Great job. Your submitted code matched all required expected outputs.</p>
-        </div>
-
-        <div className="student-modal-actions">
-          <button type="button" className="student-outline-action" onClick={onClose}>
-            Close
-          </button>
-          <button type="button" className="student-primary-action" onClick={onClose}>
-            View Submission
-          </button>
-        </div>
-      </section>
-    </div>
-  )
-}
 
 function GroupProjectsPage() {
   const [sortBy, setSortBy] = useState('due')
@@ -1963,11 +1597,13 @@ export function StudentRoutePage({ pagePath }) {
     'join-class': <StudentJoinClassPage />,
     invitations: <DeferredStudentPage title="Class Invitations" message="Class invitation acceptance is not part of the current backend. Join an active class with an instructor-provided code instead." />,
     activity: <ActivitiesPage />,
-    submissions: <DeferredStudentPage title="My Submissions" message="A global submission list needs a bounded backend read contract. Open a real activity to continue; submission integration begins in Phase 10B.2." />,
+    submissions: <DeferredStudentPage title="My Submissions" message="A global cross-class submission list still needs a bounded backend read contract. Open a real activity to view its official attempts." />,
     'activity/:activityId': <ActivityDetailPage />,
-    'activity/:activityId/workspace': <DeferredStudentPage title="Programming Workspace" message="The selected activity is real, but Java practice and official submissions are integrated in Phase 10B.2." />,
-    'activity/:activityId/submission-record': <DeferredStudentPage title="Submission Record" message="Submission attempt records are integrated in Phase 10B.2." />,
-    'activity/:activityId/feedback': <DeferredStudentPage title="Feedback and Grade" message="Released assessment results and feedback are integrated in Phase 10B.2 and Phase 10B.3." />,
+    'activity/:activityId/workspace': <StudentProgrammingWorkspace />,
+    'activity/:activityId/submissions': <SubmissionHistoryPage />,
+    'activity/:activityId/submissions/:submissionId': <SubmissionDetailPage />,
+    'activity/:activityId/submission-record': <LegacySubmissionRoute />,
+    'activity/:activityId/feedback': <LegacySubmissionRoute />,
     projects: <GroupProjectsPage />,
     'projects/prelim-group-project-1': <GroupProjectDetailPage />,
     'projects/prelim-group-project-1/repository': <RepositoryWorkspacePage />,

@@ -142,17 +142,33 @@ export const routeCatalog = [
         path: 'activity/:activityId/workspace',
         label: 'Coding Workspace',
         group: 'Activity Mode',
-        status: 'Placeholder',
+        status: 'Backend connected',
         summary:
-          'In-platform coding workspace with simulated editor, output, sample tests, submit confirmation, and locked final submission.',
+          'Real activity-backed source editing, visible-test practice, and immutable official submission.',
+      },
+      {
+        path: 'activity/:activityId/submissions',
+        label: 'Activity Submissions',
+        group: 'Activity Mode',
+        status: 'Backend connected',
+        summary:
+          'Bounded per-activity attempt history using backend-provided attempt and replacement labels.',
+      },
+      {
+        path: 'activity/:activityId/submissions/:submissionId',
+        label: 'Submission Detail',
+        group: 'Activity Mode',
+        status: 'Backend connected',
+        summary:
+          'Canonical student-safe submission record with visible outcomes and released result when available.',
       },
       {
         path: 'activity/:activityId/submission-record',
         label: 'Submission Record',
         group: 'Activity Mode',
-        status: 'Placeholder',
+        status: 'Redirect',
         summary:
-          'Final submitted activity record with submitted date/time, review status, mock test result, grade status, and feedback.',
+          'Legacy route redirected to canonical per-activity submission history.',
       },
       {
         path: 'submissions',
@@ -166,8 +182,8 @@ export const routeCatalog = [
         path: 'activity/:activityId/feedback',
         label: 'Feedback and Grade',
         group: 'Activity Mode',
-        status: 'Placeholder',
-        summary: 'Rubric feedback, revision status, and released grade details.',
+        status: 'Redirect',
+        summary: 'Legacy route redirected to released feedback within a canonical submission record.',
       },
       {
         path: 'projects',

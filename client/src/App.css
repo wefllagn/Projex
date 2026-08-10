@@ -12928,6 +12928,301 @@ textarea:focus-visible {
   gap: 0.75rem;
 }
 
+/* Phase 10B.2 student practice and submission integration */
+.student-source-memory-note {
+  display: grid;
+  gap: 4px;
+  padding: 14px 20px;
+  border-top: 1px solid #dce7f5;
+  color: #53657f;
+  background: #f8fbff;
+  font-size: 12px;
+}
+
+.student-source-memory-note strong {
+  color: #b15b05;
+  font-size: 13px;
+}
+
+.workspace-visible-example {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid #dce7f5;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.workspace-visible-example span {
+  color: #6b7890;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.workspace-visible-example pre {
+  max-width: 100%;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.student-editor-workbench--single-file {
+  grid-template-columns: minmax(150px, var(--explorer-pane-width, 210px)) minmax(0, 1fr);
+}
+
+.student-editor-workbench--single-file .student-code-editor {
+  grid-column: 2;
+}
+
+.student-code-editor-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  resize: none;
+  border: 0;
+  outline: 0;
+  padding: 24px;
+  color: #dce8f8;
+  background: #101a2a;
+  font: 14px/1.65 Consolas, "Courier New", monospace;
+  tab-size: 4;
+}
+
+.student-output-panel--live {
+  display: block;
+  overflow: auto;
+  padding: 22px;
+  white-space: normal;
+}
+
+.student-output-panel--live pre {
+  max-width: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.student-tests-table--outcomes {
+  padding: 14px;
+}
+
+.submission-outcome-list {
+  display: grid;
+  gap: 12px;
+}
+
+.submission-outcome {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #dce7f5;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.submission-outcome > div,
+.submission-record-heading,
+.submission-page-heading,
+.submission-history-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.submission-outcome span:not(.submission-status) {
+  color: #6b7890;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.submission-outcome pre,
+.submission-source pre {
+  max-width: 100%;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.submission-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #315170;
+  background: #eaf2fb;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 950;
+  letter-spacing: 0.03em;
+}
+
+.submission-status--passed,
+.submission-status--released,
+.submission-status--succeeded {
+  color: #0d7040;
+  background: #e4f7ec;
+}
+
+.submission-status--failed,
+.submission-status--assessment_failed,
+.submission-status--timeout {
+  color: #a12a2a;
+  background: #fde9e9;
+}
+
+.submission-status--queued,
+.submission-status--running,
+.submission-status--assessing {
+  color: #8a5a00;
+  background: #fff3d7;
+}
+
+.workspace-action-message {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  color: #586a84;
+  font-size: 13px;
+}
+
+.submission-ambiguity-panel {
+  position: fixed;
+  z-index: 120;
+  right: 24px;
+  bottom: 86px;
+  width: min(560px, calc(100vw - 48px));
+  padding: 22px;
+  border: 1px solid #e7ba63;
+  border-radius: 14px;
+  color: #3f3219;
+  background: #fff9e9;
+  box-shadow: 0 20px 50px rgba(50, 39, 15, 0.2);
+}
+
+.submission-ambiguity-panel h2,
+.submission-ambiguity-panel p {
+  margin-top: 0;
+}
+
+.submission-ambiguity-panel > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.submission-page-heading {
+  align-items: end;
+  margin-bottom: 22px;
+}
+
+.submission-page-heading h1,
+.submission-record-heading h1 {
+  margin: 4px 0;
+}
+
+.submission-history-card > div {
+  display: grid;
+  gap: 5px;
+}
+
+.submission-history-card small {
+  display: block;
+  color: #9a5b00;
+}
+
+.submission-detail-page {
+  width: 100%;
+}
+
+.submission-detail-page .student-detail-card {
+  display: grid;
+  gap: 24px;
+}
+
+.submission-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.submission-source,
+.submission-visible-results,
+.submission-released-result,
+.submission-pending-grade,
+.submission-resolution {
+  padding: 20px;
+  border: 1px solid #dce7f5;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.submission-source pre {
+  margin-top: 14px;
+  padding: 18px;
+  border-radius: 9px;
+  color: #dce8f8;
+  background: #101a2a;
+  font: 13px/1.65 Consolas, "Courier New", monospace;
+}
+
+.submission-released-result {
+  border-color: #bfe8d0;
+  background: #effaf4;
+}
+
+.submission-pending-grade,
+.submission-notice {
+  color: #53657f;
+  background: #f3f7fc;
+}
+
+.submission-notice {
+  padding: 12px 14px;
+  border-radius: 9px;
+}
+
+.submission-muted-copy {
+  margin: 0;
+  color: #6b7890;
+}
+
+@media (max-width: 900px) {
+  .student-coding-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    overflow: auto;
+  }
+
+  .student-editor-workbench--single-file {
+    grid-template-columns: 1fr;
+  }
+
+  .student-editor-workbench--single-file .student-editor-explorer {
+    display: none;
+  }
+
+  .student-editor-workbench--single-file .student-code-editor {
+    grid-column: 1;
+    min-height: 420px;
+  }
+
+  .submission-page-heading,
+  .submission-history-card,
+  .submission-record-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .submission-facts {
+    grid-template-columns: 1fr;
+  }
+}
+
 .activity-pagination {
   justify-content: center;
   padding: 1rem;

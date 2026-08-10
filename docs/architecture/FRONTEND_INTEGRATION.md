@@ -79,10 +79,14 @@ This inventory is maintained in both directions throughout Phase 10: prototype c
 | Schedules, rooms, class rules, and fabricated enrollment metrics | Yes | No | Deferred | BACKEND GAP | Future product decision | Omit from authoritative class views; preserve concept here for future evaluation |
 | Activity and test-case authoring/lifecycle | Yes | Yes | Core | INTEGRATED | 10B.1 | Real selected-class drafts, supported edits, atomic test replacement, version-safe lifecycle actions, and read-only published/closed/archive states |
 | Student activity catalog and details | Yes | Yes | Core | INTEGRATED | 10B.1 | Authorized selected-class records, dynamic IDs, truthful due/lifecycle state, and visible-only test examples |
-| Student visible-test practice | Yes | Yes | Core | UI GAP | 10B.2 | Replace the retained workspace visual reference with editable source, guarded worker requests, and polling |
-| Submission attempts and operational results | Yes | Yes | Core | UI GAP | 10B | Connect immutable attempts without exposing hidden-test detail |
-| Instructor assessment, correction, feedback, and release | Yes | Yes | Core | UI GAP | 10B | Connect approved review actions and released student projections |
-| Cross-class submission/review queue | Yes | No | Core | BACKEND GAP | 10B follow-up gate | Require a bounded backend contract before global queue integration |
+| Student programming workspace and visible-test practice | Yes | Yes | Core | INTEGRATED | 10B.2 | Real selected-activity starter source, memory-only editing, guarded practice requests, and bounded polling |
+| Official submission attempts and operational results | Yes | Yes | Core | INTEGRATED | 10B.2 | Immutable per-activity attempts, idempotent ambiguous retry, canonical detail, and backend-provided attempt/replacement labels |
+| Released student score and feedback | Yes | Yes | Core | INTEGRATED | 10B.2 | Render only fields present in a backend-released student projection; unreleased values remain omitted |
+| Persistent activity drafts and autosave | Yes | No | Deferred | DEFERRED | Future product decision | Honest memory-only source message; fake autosave removed and no browser persistence added |
+| Arbitrary custom stdin | Yes | No | Deferred | UNSUPPORTED PROTOTYPE | 10B.2 retirement | Removed from the authoritative workspace because Phase 6 accepts only activity-defined visible tests |
+| Hidden-test student breakdown | Yes | No | Deferred | UNSUPPORTED PROTOTYPE | 10B.2 retirement | Never render hidden-test names, identifiers, definitions, outcomes, points, or count |
+| Instructor assessment, correction, feedback, and release | Yes | Yes | Core | UI GAP | 10B.3 | Connect approved review actions and released student projections |
+| Global student submissions and cross-class instructor review queues | Yes | No | Core | BACKEND GAP | 10B follow-up gate | Require bounded backend contracts before global queue integration |
 | Project tasks, teams, invitations, and repository academic lifecycle | Yes | Yes | Core | UI GAP | 10C | Connect approved student/instructor collaboration workflows |
 | Repository provisioning state and safe inspection | Yes | Yes | Core | UI GAP | 10C | Replace fabricated files/history with real safe inspection projections |
 | Repository-scoped Git credentials and local-client guidance | No | Yes | Core | UI GAP | 10C | Add short-lived issuance flow and local Git instructions; never persist the secret |
@@ -123,10 +127,12 @@ Statuses below describe the baseline found at Phase 10 start plus the Phase 10A.
 | `/student/people` | `PeoplePage` | Connected | Selected-class instructor plus student-safe paginated classmates | `GET /classes/:classId/members` | 10A.2 complete | Existing people visual with privacy projection | Inline class roster retired; project invite fixture separated |
 | `/student/activity` | `ActivitiesPage` | Connected in 10B.1 | Real bounded selected-class records and status filtering | Class activity list | 10B.1 complete | Existing assignment board with authoritative counts and states | Inline activity/project rows retired from this route |
 | `/student/activity/:activityId` | `ActivityDetailPage` | Connected in 10B.1 | Real instructions, lifecycle, deadline, limits, and visible test examples | Activity detail and student test-case projection | 10B.1 complete | Existing detail/work-rail composition | Fixed activity record retired |
-| `/student/activity/:activityId/workspace` | `DeferredStudentPage`; `CodingWorkspacePage` retained off-route as a visual reference | Honest pending state | No fake run, autosave, or submission behavior on the production route | Visible-test run and submission APIs | 10B.2 | Reconnect the preserved workspace composition to real execution | Workspace fixtures retained only for 10B.2 reference |
-| `/student/activity/:activityId/submission-record` | `DeferredStudentPage` | Honest pending state | No fabricated accepted submission or score | Submission detail | 10B.2 | Replace with real attempt record | Submission prototype retained for 10B.2 reference |
+| `/student/activity/:activityId/workspace` | `StudentProgrammingWorkspace` | Connected in 10B.2 | Real activity starter source, memory-only editing, visible-test execution, immutable submission confirmation, and ambiguous-request recovery | Visible-test run and submission APIs | 10B.2 complete pending review | Preserved workspace composition with truthful states | Fake files, autosave, compiler success, custom input, fixed IDs, and one-attempt claim retired |
+| `/student/activity/:activityId/submissions` | `StudentSubmissionHistory` | Connected in 10B.2 | Bounded activity-specific history and status filtering | Activity submission list | 10B.2 complete pending review | Existing assignment-card language with backend labels | No hardcoded attempts or global totals |
+| `/student/activity/:activityId/submissions/:submissionId` | `StudentSubmissionDetail` | Connected in 10B.2 | Student-safe source, visible outcomes, bounded assessment refresh, failure/replacement state, and released result | Submission detail | 10B.2 complete pending review | Canonical submission record | Deliberately allowlisted projection; no hidden or instructor-only evidence |
+| `/student/activity/:activityId/submission-record` | `LegacySubmissionRoute` | Redirect | Redirects to canonical activity attempt history; no fabricated record | Canonical submission routes above | 10B.2 complete pending review | Compatibility redirect | Fixed submission prototype retired |
 | `/student/submissions` | `DeferredStudentPage` | Backend gap state | No fake global aggregate | Global role-scoped submission list missing | 10B backend follow-up | Require a bounded read contract | Incorrect activity-list alias retired |
-| `/student/activity/:activityId/feedback` | `DeferredStudentPage` | Honest pending state | No fixed grade, feedback, or hidden-test claim | Released submission projection | 10B.2/10B.3 | Integrate through a real submission record | Feedback fixture retained only for later visual reference |
+| `/student/activity/:activityId/feedback` | `LegacySubmissionRoute` | Redirect | Feedback is shown only within a backend-released canonical submission | Released submission projection | 10B.2 complete pending review | Compatibility redirect | Fake score, feedback, and hidden-test claims retired |
 | `/student/projects` | `GroupProjectsPage` | Mock-driven | Static project cards | Class project-task list | 10C | Preserve | `groupProjects` |
 | `/student/projects/prelim-group-project-1` | `GroupProjectDetailPage` | Local-only | Create/join toggles and joined name | Project detail and repository create; direct join absent | 10C | Preserve create; remove direct join | Project/repository inline arrays |
 | `/student/projects/prelim-group-project-1/repository` | `RepositoryWorkspacePage` | Mock-driven, local-only, partially supported | Fake files/commits/branches/invites/review/clone | Repository, invitation, source, credential APIs; web mutations/activity feed gaps | 10C | Preserve workspace; remove unsupported controls | Repository inline arrays |
@@ -186,11 +192,11 @@ Every admin route is a mock feature inventory and Phase 10D replacement boundary
 
 ### Central mock module
 
-`client/src/data/projexData.js` retains roles, course/section options, later-milestone activity/submission/feedback references, route catalog, project/analytics/archive records, instructor monitoring/submission/review/project/similarity/student-profile records, and all admin tables/summaries. Phase 10B.1 retired activity list/detail fixtures from authoritative routes while preserving later submission/workspace references off-route.
+`client/src/data/projexData.js` retains roles, course/section options, the route catalog, project/analytics/archive records, instructor monitoring/submission/review/project/similarity/student-profile records, and all admin tables/summaries. Phase 10B.1 retired activity list/detail fixtures from authoritative routes. Phase 10B.2 retires the student workspace, submission, score, and feedback fixtures it replaces while preserving instructor assessment references for 10B.3.
 
 ### Student page inline records
 
-Phase 10A.2 retires student class/home/stream/invitation/roster fixtures. Phase 10B.1 retires inline activity list/detail records from production routes. `repositoryInviteCandidates` remains only for Phase 10C; submission, project, repository, notification-design, to-do, and workspace fixtures remain later-milestone evidence and are never attached to a selected real class.
+Phase 10A.2 retires student class/home/stream/invitation/roster fixtures. Phase 10B.1 retires inline activity list/detail records from production routes. Phase 10B.2 removes the off-route fake coding workspace and feedback modal, including the fake autosave, compiler output, test result, fixed submission route, score, and feedback records. `repositoryInviteCandidates` remains only for Phase 10C; project, repository, notification-design, and to-do fixtures remain later-milestone evidence and are never attached to a selected real class.
 
 ### Instructor page inline records
 
@@ -207,9 +213,10 @@ The activity example identifier `act-loops-01` was retired from production routi
 - Login and prototype role switching previously bypassed authentication; retired in 10A.1.
 - Header sign-out previously navigated without revoking the session; retired in 10A.1.
 - Class announcements/comments, class invitation decisions, browser class-code generation, and local roster removal were retired in 10A.2. Activity authoring, test configuration, and lifecycle became real in 10B.1. Repository/project actions, assessment score edits, feedback release, and admin actions remain later milestones.
+- The following student-practice statement records the Phase 10 baseline behavior and is superseded by the 10B.2 retirement directly below it.
 - Student practice alternates fake pass/fail synchronously. Instructor “Run Tests” forces a fake failed state.
-- Student practice and instructor assessment prototypes remain off-route visual references. Production routes show honest pending states until 10B.2/10B.3, so their fake results cannot be mistaken for real records.
-- The retained student workspace visual contains a fake autosave concept only as 10B.2 design evidence; no production route renders the claim and no draft API exists.
+- The student practice, submission, score, feedback, fake local compiler output, custom-input, and fake-autosave prototypes are retired in 10B.2. Instructor assessment prototypes remain off-route visual references for 10B.3 only.
+- The authoritative workspace states that edited source exists only in the current browser tab. No draft API or browser-storage fallback exists.
 - Repository controls imply browser file upload/edit, branch/tag creation, ZIP download, IDE launch, and Git mutation although those contracts are absent or explicitly deferred.
 - Notification counts, scores, dates, attempts, job states, storage totals, branches, commits, similarity, contribution, integrity, and health signals are hardcoded.
 - No fake asynchronous timers, `localStorage`, `sessionStorage`, WebSocket, EventSource, or production mock fallback existed at baseline.
@@ -250,7 +257,7 @@ Any required schema, migration, new architecture, dependency, or security relaxa
 
 ## Phase 10 milestones
 
-Phase 10A.1 and 10A.2 are complete. Phase 10B.1 activity and test-case integration is implemented and awaits its final review/commit boundary; the remaining bullets describe milestone ownership rather than incomplete status.
+Phase 10A.1, 10A.2, and 10B.1 are complete and committed on `phase/10-frontend-integration`. Phase 10B.2 student practice and submissions are implemented and await the separate final review/commit boundary; the remaining bullets describe milestone ownership rather than incomplete status.
 
 - **10A.1 — Shared foundation and authentication:** API client, CSRF, session bootstrap/refresh, login/logout, account setup, role guards, safe states, tests, and this baseline.
 - **10A.2 — Classes and memberships:** class list/selection/create/update/lifecycle, join codes, student join, rosters, and membership transitions.
@@ -258,6 +265,6 @@ Phase 10A.1 and 10A.2 are complete. Phase 10B.1 activity and test-case integrati
 - **10C — Projects, repositories, and Git:** project tasks, teams, invitations, repository lifecycle/provisioning/inspection, feedback, credentials, and local Git guidance.
 - **10D — Admin redesign and integration:** supported Phase 9 account, academic oversight, operations, recovery, and audit experiences only.
 
-Within the Phase 10B umbrella, **10B.1 activity and test-case integration is implemented**: selected-class lists/details, dynamic routes, draft creation, supported edits, atomic test-case authoring, lifecycle actions, and stale-version recovery. **10B.2 student practice/submissions** and **10B.3 instructor assessment/release** remain separate implementation boundaries.
+Within the Phase 10B umbrella, **10B.1 activity and test-case integration is complete**: selected-class lists/details, dynamic routes, draft creation, supported edits, atomic test-case authoring, lifecycle actions, and stale-version recovery. **10B.2 student practice/submissions is implemented pending final review**: memory-only source, visible-test polling, immutable/idempotent attempts, per-activity history, canonical student-safe detail, and released results. **10B.3 instructor assessment/release** remains a separate implementation boundary and has not started.
 
 Each milestone may use multiple reviewable commits on `phase/10-frontend-integration`. Integration into `development/fullstack` remains a separate approval after complete Phase 10 acceptance.

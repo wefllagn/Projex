@@ -214,7 +214,10 @@ export function StudentActivityDetail({ api = activityApi }) {
           <NavLink to={classHref(`/student/activity/${activity.id}/workspace`, selectedClass.id)} className="student-primary-action">
             Open workspace
           </NavLink>
-          <small>Practice execution and submissions are integrated in Phase 10B.2.</small>
+          <NavLink to={classHref(`/student/activity/${activity.id}/submissions`, selectedClass.id)} className="student-outline-action">
+            Attempt history
+          </NavLink>
+          <small>Run visible tests before creating an immutable official submission.</small>
         </section>
       </aside>
     </div>
