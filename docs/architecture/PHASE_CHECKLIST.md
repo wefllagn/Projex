@@ -290,7 +290,7 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Complete final Phase 9C review, staging, commit, push, normal live acceptance, and Phase 9 integration.
 - [x] Keep Phase 9 backend-focused and treat the current admin frontend only as a temporary feature inventory.
 
-## Phase 10: frontend integration — awaiting final closeout acceptance
+## Phase 10: frontend integration — complete, accepted, and integrated
 
 ### Phase 10A.1: shared frontend foundation and authentication
 
@@ -356,7 +356,7 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 
 - [x] Preserve current routes, CSS, responsive behavior, and unrelated mocks until their owning workflow replaces them.
 - [x] Replace the remaining reachable student to-do prototype records with an honest backend-gap state.
-- [ ] Complete final Phase 10 closeout acceptance and integration through their separate approval boundary.
+- [x] Complete final Phase 10 closeout acceptance and integration through their separate approval boundary.
 
 ### Deferred after Phase 10
 
