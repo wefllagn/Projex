@@ -19,74 +19,6 @@ import {
   StudentRepositoryCatalog,
 } from '../repositories/RepositoryFoundationViews.jsx'
 
-const todoSections = [
-  {
-    id: 'no-due-date',
-    label: 'No Due Date',
-    tone: 'blue',
-    items: [
-      {
-        title: 'Read Java Naming Conventions Guide',
-        meta: 'No strict deadline',
-        type: 'Reference',
-        className: 'IT 112 - BSIT 2A',
-        path: '/student/projects/prelim-group-project-1/repository',
-      },
-    ],
-  },
-  {
-    id: 'this-week',
-    label: 'This Week',
-    tone: 'blue',
-    items: [
-      {
-        title: 'Prelim Programming Exercise 1 LAB',
-        meta: 'Due Jul 3, 2026, 5:00 PM',
-        type: 'Activity',
-        status: 'Not submitted',
-        className: 'IT 112 - BSIT 2A',
-        path: '/student/activity',
-      },
-      {
-        title: 'Prelim Group Project 1 Specifications',
-        meta: 'Repository setup due Aug 27, 2026',
-        type: 'Group Project',
-        status: 'Repository setup required',
-        className: 'IT 112 - BSIT 2A',
-        path: '/student/projects/prelim-group-project-1',
-      },
-    ],
-  },
-  {
-    id: 'next-week',
-    label: 'Next Week',
-    tone: 'green',
-    items: [
-      {
-        title: 'Loop Patterns and Input Validation',
-        meta: 'Due Jul 10, 2026, 10:30 AM',
-        type: 'Activity',
-        className: 'IT 112 - BSIT 2A',
-        path: '/student/activity',
-      },
-    ],
-  },
-  {
-    id: 'later',
-    label: 'Later',
-    tone: 'purple',
-    items: [
-      {
-        title: 'Team Repository Progress Check',
-        meta: 'Upcoming in August',
-        type: 'Upcoming',
-        className: 'IT 112 - BSIT 2A',
-        path: '/student/projects/prelim-group-project-1/repository',
-      },
-    ],
-  },
-]
-
 function StudentNotificationMenu() {
   return (
     <div className="student-notification-menu">
@@ -463,86 +395,18 @@ function StudentGlobalPage({ title, eyebrow, action, children }) {
 }
 
 function StudentTodoPage() {
-  const [openSections, setOpenSections] = useState(() => (
-    todoSections.reduce((current, section) => ({ ...current, [section.id]: true }), {})
-  ))
-  const [selectedClass, setSelectedClass] = useState('All Classes')
-
-  const visibleSections = todoSections.map((section) => ({
-    ...section,
-    items: section.items.filter((item) => selectedClass === 'All Classes' || item.className === selectedClass),
-  }))
-
   return (
-    <StudentGlobalPage
-      eyebrow="Student To-do"
-      title="To-do"
-      action={(
-        <label className="student-filter-select">
-          <span>Class</span>
-          <select value={selectedClass} onChange={(event) => setSelectedClass(event.target.value)}>
-            <option>All Classes</option>
-            <option>IT 112 - BSIT 2A</option>
-            <option>CS 111 - BSIT 2A</option>
-            <option>Personal Repositories</option>
-          </select>
-        </label>
-      )}
-    >
+    <StudentGlobalPage eyebrow="Student To-do" title="To-do">
       <section className="student-global-panel student-todo-board">
-        {visibleSections.map((section) => {
-          const isOpen = openSections[section.id]
-
-          return (
-            <article className={`student-collapsible-section student-task-group student-task-group--${section.tone}`} key={section.id}>
-              <button
-                type="button"
-                className={isOpen ? 'is-open' : undefined}
-                onClick={() => setOpenSections((current) => ({ ...current, [section.id]: !isOpen }))}
-              >
-                <span className="student-task-group-title">
-                  <span className={`student-task-group-icon student-task-group-icon--${section.tone}`} aria-hidden="true" />
-                  {section.label}
-                </span>
-                <em>{section.items.length}</em>
-              </button>
-
-              {isOpen && (
-                <div className="student-todo-list">
-                  {section.items.length ? (
-                    section.items.map((item) => {
-                      const itemType = item.type.toLowerCase().replace(/\s+/g, '-')
-
-                      return (
-                        <NavLink to={item.path} className={`student-todo-item student-todo-item--${itemType}`} key={item.title}>
-                          <span className={`student-todo-icon student-todo-icon--${itemType}`} aria-hidden="true" />
-                        <div>
-                          <strong>{item.title}</strong>
-                          <span>
-                            <span className={`student-todo-type student-todo-type--${itemType}`}>
-                              {item.type}
-                            </span>
-                            {item.meta}
-                          </span>
-                        </div>
-                        {item.status && (
-                          <em className={`student-todo-status student-todo-status--${item.status.toLowerCase().replace(/\s+/g, '-')}`}>
-                            {item.status}
-                          </em>
-                        )}
-                        <small>{item.className}</small>
-                        <span className="student-row-arrow" aria-hidden="true" />
-                      </NavLink>
-                      )
-                    })
-                  ) : (
-                    <p className="student-empty-note">No items in this section for the selected class.</p>
-                  )}
-                </div>
-              )}
-            </article>
-          )
-        })}
+        <RequestState
+          kind="unavailable"
+          title="Consolidated to-do is not available"
+          message="Projex does not currently provide an authoritative cross-class task list. Open a class to review its real activities and project requirements, or open your repository catalog for repository work."
+        />
+        <div className="student-submit-modal-actions">
+          <NavLink className="student-primary-action" to="/student/classes">View my classes</NavLink>
+          <NavLink className="student-outline-action" to="/student/repositories">View my repositories</NavLink>
+        </div>
       </section>
     </StudentGlobalPage>
   )

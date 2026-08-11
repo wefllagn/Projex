@@ -232,7 +232,7 @@ function InstructorDashboard() {
               <NavLink to="/instructor/review-queues">View all</NavLink>
             </div>
 
-            <RequestState kind="unavailable" compact title="Review queue integration pending" message="Cross-class activity and repository review queues will be connected in Phase 10B and 10C." />
+            <RequestState kind="unavailable" compact title="Cross-class review queue unavailable" message="A bounded backend contract for a consolidated activity and repository review queue is not currently available. Open a selected class workflow instead." />
           </section>
         </section>
       </main>

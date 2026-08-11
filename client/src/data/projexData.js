@@ -95,9 +95,9 @@ export const routeCatalog = [
         path: 'todo',
         label: 'To-do',
         group: 'Student Shell',
-        status: 'Shell ready',
+        status: 'Backend gap',
         summary:
-          'Standalone student to-do list grouped by due window with hardcoded activity, project, and repository work.',
+          'A consolidated cross-class task list requires a bounded backend contract; the route shows an honest unavailable state without fabricated records.',
       },
       {
         path: 'join-class',

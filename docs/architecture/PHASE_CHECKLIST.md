@@ -290,7 +290,7 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Complete final Phase 9C review, staging, commit, push, normal live acceptance, and Phase 9 integration.
 - [x] Keep Phase 9 backend-focused and treat the current admin frontend only as a temporary feature inventory.
 
-## Phase 10: frontend integration — in progress
+## Phase 10: frontend integration — awaiting final closeout acceptance
 
 ### Phase 10A.1: shared frontend foundation and authentication
 
@@ -343,20 +343,24 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Preserve released-score visibility and omit academic source, tests, assessment evidence, feedback bodies, Git data, and infrastructure details.
 - [x] Complete Phase 10D.2 final review, staging, commit, and push through their separate approval boundary.
 
-### Phase 10D.3: operational administration — implemented pending final review
+### Phase 10D.3: operational administration — complete
 
 - [x] Integrate measured health/storage observations without inferred worker or capacity claims.
 - [x] Integrate server-filtered execution and provisioning job inspection without Java or arbitrary recovery controls.
 - [x] Integrate eligible version-aware provisioning retry, Git credential metadata/revocation, and allowlisted audit events.
 - [x] Add the health-only HTTP 503 data-envelope compatibility path while preserving default fail-closed API behavior.
 - [x] Redirect legacy storage/system routes and retire the unreachable admin prototype module and unused admin datasets.
-- [ ] Complete Phase 10D.3 final review, staging, commit, and push through their separate approval boundary.
+- [x] Complete Phase 10D.3 final review, staging, commit, and push through their separate approval boundary.
 
-### Remaining Phase 10 milestones
+### Phase 10 closeout
 
-- [ ] Preserve current routes, CSS, responsive behavior, and unrelated mocks until their owning workflow replaces them.
+- [x] Preserve current routes, CSS, responsive behavior, and unrelated mocks until their owning workflow replaces them.
+- [x] Replace the remaining reachable student to-do prototype records with an honest backend-gap state.
+- [ ] Complete final Phase 10 closeout acceptance and integration through their separate approval boundary.
+
+### Deferred after Phase 10
+
 - [ ] Add persisted notifications, canonical analytics, and role-appropriate similarity projections when their backend support exists.
-- [ ] Complete Phase 10D.3 final review and Phase 10 acceptance/integration through their separate approval boundaries.
 
 ## Phase 11: hardening, deployment, and evaluation — pending
 
