@@ -6,7 +6,6 @@ import { ApiError } from '../api/api-client.js'
 import { AuthContext } from '../auth/auth-context.js'
 import {
   AdminOverviewPage,
-  AdminPendingPage,
   AdminUserDetailPage,
   AdminUsersPage,
 } from './AdminViews.jsx'
@@ -242,10 +241,5 @@ describe('Phase 10D.1 admin views', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Revoke sessions' }))
     expect(await screen.findByText('2 active sessions revoked.')).toBeInTheDocument()
     expect(api.revokeUserSessions).toHaveBeenCalledWith(directoryUser.id, { reason: 'Approved account security recovery.' })
-  })
-
-  it('renders later admin milestones as honest empty states', () => {
-    render(<AdminPendingPage area="Operations and recovery" />)
-    expect(screen.getByText('No prototype records or local-only actions are shown here.')).toBeInTheDocument()
   })
 })

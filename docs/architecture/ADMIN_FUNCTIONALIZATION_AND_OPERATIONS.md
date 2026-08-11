@@ -2,7 +2,7 @@
 
 ## Phase 9 boundary
 
-Phase 9 is backend-focused. Phase 10D owns frontend integration using the student/instructor visual language. Phase 10D.1 replaces the temporary shell, overview, and account-management routes. Phase 10D.2 integrates class governance and bounded academic oversight; operational administration remains assigned to Phase 10D.3.
+Phase 9 is backend-focused. Phase 10D owns frontend integration using the student/instructor visual language. Phase 10D.1 replaces the temporary shell, overview, and account-management routes. Phase 10D.2 integrates class governance and bounded academic oversight. Phase 10D.3 integrates measured operations, narrowly controlled recovery, and the administrative audit ledger.
 
 Phase 9A implements authorization and accountability. Phase 9B implements bounded read-only academic and operational oversight. Phase 9C adds only controlled Git-credential revocation and eligible repository-provisioning recovery.
 
@@ -103,7 +103,7 @@ The additive Phase 9A and Phase 9C migrations are applied to both approved local
 
 The redesigned admin foundation uses the real overview, user directory, account summary, student/instructor provisioning, setup resend, status transition, and session-revocation contracts. Directory filters and pagination are server-owned and reflected in the URL. Account details fail closed when the route identity and safe directory/account projections disagree. Status changes chain the authoritative `updatedAt`, preserve unsent reasons across stale conflicts, refetch current state, and require deliberate retry.
 
-The frontend exposes aggregate session counts only and never setup tokens, session identifiers, cookies, IP addresses, user-agent strings, passwords, academic source/evidence, Git secrets, or infrastructure paths. It offers no ADMIN provisioning or role mutation. Phase 10D.3 owns health, storage, jobs, credential recovery, provisioning retry, and audit events.
+The frontend exposes aggregate session counts only and never setup tokens, session identifiers, cookies, IP addresses, user-agent strings, passwords, academic source/evidence, Git secrets, or infrastructure paths. It offers no ADMIN provisioning or role mutation.
 
 ## Phase 10D.2 frontend boundary
 
@@ -112,3 +112,15 @@ The administrator class catalog, creation flow, class detail, metadata lifecycle
 Join codes are fetched only after deliberate reveal and remain in component memory. They are cleared by navigation, resource refresh, and unmount; an inactive or revoked code is never redisplayed as usable. Codes are absent from catalogs, URLs, browser storage, logs, and documents.
 
 Read-only academic routes use the Phase 9 administrator projections for classes, activities, submissions, project tasks, and repositories. Filters, sorting, and pagination remain server-owned. Submission scores render only when the backend marks the submission `RELEASED`. These routes omit instructions, source, test definitions or evidence, compiler output, score corrections, feedback bodies, repository source/history, credentials, storage paths, and operational internals. Phase 10D.2 adds no authoring, grading, review, or recovery mutation.
+
+## Phase 10D.3 frontend boundary
+
+The operations overview consumes the Phase 9 health and storage contracts through explicit frontend allowlists. It reports only API reachability, direct PostgreSQL connectivity, persisted queue/lease observations, `workerHealth: not_observed`, storage-state totals, known measured bytes, and measured/unmeasured repository counts. Manual refresh replaces continuous polling. The interface does not infer uptime, worker availability, host capacity, utilization, integrity, retention, snapshot, export, or email-delivery status.
+
+The shared API client retains fail-closed non-2xx behavior by default. Only the operational-health adapter opts into HTTP 503 as a potential data response, and only a valid standard success envelope is consumable; an error envelope, missing data, or null data still raises a safe `ApiError`. The returned metadata preserves the HTTP status so degraded transport is not represented as HTTP 200.
+
+Execution and provisioning lists use server-owned filters, sorting, and bounded pagination. Their projections expose safe resource IDs, lifecycle/claim/timestamp metadata, an allowlisted failure code, and lease-derived `stuck` only. Java retry remains unavailable. Eligible failed provisioning jobs may be requeued only through the Phase 9C endpoint with a mandatory reason and the authoritative `updatedAt`; stale conflicts preserve the reason, refetch the current version, and require a deliberate second submission. The browser never executes Git, reads storage paths, or repairs quarantined storage.
+
+Git credential administration exposes repository/user IDs, allowed operations, lifecycle timestamps, and revocation only. It never exposes or issues a credential secret or verifier. Active and expired credentials can be deliberately revoked with a reason, and already-revoked responses are represented truthfully. Audit list/detail views render actor identity, action, target, bounded reason, request ID, time, and a second action-specific metadata allowlist; arbitrary metadata is omitted rather than serialized.
+
+Canonical routes are `/admin/operations`, its execution/provisioning/credential children, and `/admin/audit-events`. Legacy `/admin/storage` and `/admin/system` redirect to operations. The unreachable prototype `AdminPages.jsx` and its unused admin record arrays are retired; current routes never fall back to mock operational or academic records after an API failure.

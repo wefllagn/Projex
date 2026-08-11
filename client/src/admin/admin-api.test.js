@@ -81,4 +81,41 @@ describe('admin API mapping', () => {
     expect(api).not.toHaveProperty('getSubmissionSource')
     expect(api).not.toHaveProperty('getHiddenTests')
   })
+
+  it('maps operational observations with the health-only accepted 503 behavior', async () => {
+    const transport = client()
+    const api = createAdminApi(transport)
+    await api.getOperationalHealth({ signal: 'health-signal' })
+    await api.getStorageSummary()
+    await api.listExecutionJobs({ status: 'RUNNING', stuck: true, page: 2 })
+    await api.listProvisioningJobs({ status: 'FAILED', sortBy: 'updatedAt' })
+    await api.listGitCredentials({ lifecycle: 'ACTIVE', operation: 'WRITE' })
+    await api.listAuditEvents({ action: 'CLASS_ARCHIVED', targetType: 'CLASS' })
+    expect(transport.get).toHaveBeenNthCalledWith(1, '/admin/operations/health', {
+      signal: 'health-signal',
+      acceptedDataStatuses: [503],
+    })
+    expect(transport.get).toHaveBeenNthCalledWith(2, '/admin/operations/storage', undefined)
+    expect(transport.get).toHaveBeenNthCalledWith(3, '/admin/operations/execution-jobs?status=RUNNING&stuck=true&page=2', undefined)
+    expect(transport.get).toHaveBeenNthCalledWith(4, '/admin/operations/repository-provisioning-jobs?status=FAILED&sortBy=updatedAt', undefined)
+    expect(transport.get).toHaveBeenNthCalledWith(5, '/admin/operations/git-credentials?lifecycle=ACTIVE&operation=WRITE', undefined)
+    expect(transport.get).toHaveBeenNthCalledWith(6, '/admin/audit-events?action=CLASS_ARCHIVED&targetType=CLASS', undefined)
+  })
+
+  it('maps only the approved operational recovery mutations', async () => {
+    const transport = client()
+    const api = createAdminApi(transport)
+    await api.retryProvisioningJob('job-1', {
+      reason: 'Approved bounded provisioning recovery.',
+      expectedUpdatedAt: '2030-01-01T00:00:00.000Z',
+    })
+    await api.revokeGitCredential('credential-1', {
+      reason: 'Approved credential revocation.',
+    })
+    expect(transport.post).toHaveBeenNthCalledWith(1, '/admin/operations/repository-provisioning-jobs/job-1/retry', expect.objectContaining({ expectedUpdatedAt: '2030-01-01T00:00:00.000Z' }), undefined)
+    expect(transport.post).toHaveBeenNthCalledWith(2, '/admin/operations/git-credentials/credential-1/revoke', { reason: 'Approved credential revocation.' }, undefined)
+    expect(api).not.toHaveProperty('retryExecutionJob')
+    expect(api).not.toHaveProperty('issueGitCredential')
+    expect(api).not.toHaveProperty('repairQuarantine')
+  })
 })

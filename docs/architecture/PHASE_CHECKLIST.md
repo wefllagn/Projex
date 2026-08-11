@@ -334,24 +334,29 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 - [x] Retire authoritative admin overview/account mocks and show honest pending states for 10D.2/10D.3.
 - [x] Complete Phase 10D.1 final review, staging, commit, and push through their separate approval boundary.
 
-### Phase 10D.2: class governance and academic oversight — implemented pending final review
+### Phase 10D.2: class governance and academic oversight — complete
 
 - [x] Integrate administrator class catalog/detail, ACTIVE-instructor creation, metadata lifecycle, and archive/restore.
 - [x] Integrate deliberate join-code reveal, rotation, revocation, and inactive-code secrecy.
 - [x] Add detailed roster membership-version projection and version-aware removal/reactivation with stale-conflict recovery.
 - [x] Integrate bounded read-only classes, activities, submissions, project tasks, and repositories with server-owned filters, sorting, and pagination.
 - [x] Preserve released-score visibility and omit academic source, tests, assessment evidence, feedback bodies, Git data, and infrastructure details.
-- [ ] Complete Phase 10D.2 final review, staging, commit, and push through their separate approval boundary.
+- [x] Complete Phase 10D.2 final review, staging, commit, and push through their separate approval boundary.
 
-### Remaining Phase 10D milestones
+### Phase 10D.3: operational administration — implemented pending final review
 
-- [ ] Phase 10D.3: operational oversight, controlled recovery, audit events, and final admin mock retirement.
+- [x] Integrate measured health/storage observations without inferred worker or capacity claims.
+- [x] Integrate server-filtered execution and provisioning job inspection without Java or arbitrary recovery controls.
+- [x] Integrate eligible version-aware provisioning retry, Git credential metadata/revocation, and allowlisted audit events.
+- [x] Add the health-only HTTP 503 data-envelope compatibility path while preserving default fail-closed API behavior.
+- [x] Redirect legacy storage/system routes and retire the unreachable admin prototype module and unused admin datasets.
+- [ ] Complete Phase 10D.3 final review, staging, commit, and push through their separate approval boundary.
 
 ### Remaining Phase 10 milestones
 
 - [ ] Preserve current routes, CSS, responsive behavior, and unrelated mocks until their owning workflow replaces them.
 - [ ] Add persisted notifications, canonical analytics, and role-appropriate similarity projections when their backend support exists.
-- [ ] Complete Phase 10D.3 on the redesigned 10D.1 admin foundation.
+- [ ] Complete Phase 10D.3 final review and Phase 10 acceptance/integration through their separate approval boundaries.
 
 ## Phase 11: hardening, deployment, and evaluation — pending
 

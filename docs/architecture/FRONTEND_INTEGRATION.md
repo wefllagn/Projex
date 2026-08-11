@@ -4,9 +4,9 @@
 
 This is the single current owner for Projex frontend integration: API-client behavior, browser authentication and CSRF, role routing, frontend state ownership, mock retirement, visual preservation, frontend testing, backend-gap handling, and Phase 10 milestone tracking.
 
-The client remains React 19, Vite 8, JavaScript/JSX, React Router, and the existing CSS. Phase 10 does not authorize a TypeScript migration, a general state/query/form library, or a student/instructor redesign. Phase 10D.1 replaces the admin shell, overview, and account-management routes; Phase 10D.2 adds class governance and bounded academic oversight using the same visual language. Remaining old operational admin pages are non-authoritative references for Phase 10D.3 only.
+The client remains React 19, Vite 8, JavaScript/JSX, React Router, and the existing CSS. Phase 10 does not authorize a TypeScript migration, a general state/query/form library, or a student/instructor redesign. Phase 10D replaces the old admin prototype with foundation/accounts, class/academic governance, and bounded operational administration using the same visual language.
 
-Phase 10A completed shared infrastructure, authentication, classes, and memberships. Phase 10B completed activity/test-case authoring, student practice/submissions, and instructor assessment/release. Phase 10C completed project tasks, repository foundation, collaboration/review, read-only Git inspection, and controlled local Git access. Phase 10D.1 completed the backend-connected admin foundation and accounts. Phase 10D.2 implements class governance and bounded academic oversight; operations, recovery, and audit remain Phase 10D.3. Backend records are authoritative; production routes never fall back to mocks after an API failure.
+Phase 10A completed shared infrastructure, authentication, classes, and memberships. Phase 10B completed activity/test-case authoring, student practice/submissions, and instructor assessment/release. Phase 10C completed project tasks, repository foundation, collaboration/review, read-only Git inspection, and controlled local Git access. Phase 10D.1 completed the backend-connected admin foundation and accounts, Phase 10D.2 completed class governance and bounded academic oversight, and Phase 10D.3 implements measured operations, controlled recovery, and audit events pending final review. Backend records are authoritative; production routes never fall back to mocks after an API failure.
 
 ## Shared client contract
 
@@ -17,6 +17,7 @@ Phase 10A completed shared infrastructure, authentication, classes, and membersh
 - Protected mutations read the `projex_csrf` cookie only while constructing the request and send it as `X-CSRF-Token`.
 - The client never logs request/response bodies, credentials, cookies, passwords, source, hidden tests, feedback, reasons, or host paths.
 - A protected request may trigger one shared refresh operation after a 401. Login and refresh never recursively refresh. If refresh or the single retry proves the session unusable, the API client notifies `AuthProvider` so protected content is removed and routing returns to login.
+- Non-2xx responses remain errors by default. The operational-health adapter alone opts into HTTP 503 as a possible data response; the client accepts it only with a valid non-null success-envelope `data` field, preserves `meta.httpStatus`, and still rejects error envelopes and malformed payloads.
 
 ### Authentication and role routing
 
@@ -99,7 +100,9 @@ This inventory is maintained in both directions throughout Phase 10: prototype c
 | Similarity indicators and verified contribution analytics | Yes | No | Deferred | DEFERRED | Future research/product decision | No approved computation/projection exists; preserve as recognized research concepts and show no fake percentages |
 | Admin overview, user directory, account detail, provisioning, setup resend, status, and session revocation | Yes | Yes | Core | INTEGRATED | 10D.1 | Real admin shell, URL-owned directory filters, safe account projections, version-aware status changes, and confirmed recovery actions |
 | Admin class governance and read-only academic oversight | Yes | Yes | Core | INTEGRATED | 10D.2 | Real class/member governance plus Phase 9 safe academic lists without instructor-only academic content |
-| Admin operational oversight, recovery, and audit events | Yes | Yes | Core | UI GAP | 10D.3 | Add bounded health/storage/jobs/credential/audit projections and only the approved recovery mutations |
+| Admin operational oversight, recovery, and audit events | Yes | Yes | Core | INTEGRATED | 10D.3 | Measured health/storage, server-backed jobs and credentials, eligible provisioning retry, credential revocation, and action-specific audit projections |
+| Admin worker-online health, host capacity/utilization, integrity, retention, snapshot, export, and delivery claims | Yes | No | Deferred | UNSUPPORTED PROTOTYPE | 10D.3 retirement | Show only measured Phase 9 observations; retain these concepts for a separately authorized hardening/operations source |
+| Admin Java retry, quarantine repair, arbitrary infrastructure execution, and Git credential issuance | Yes | No | Deferred | UNSUPPORTED PROTOTYPE | 10D.3 retirement | No controls; ADMIN receives only the approved provisioning retry and credential revocation capabilities |
 | Admin creation and arbitrary role changes | Yes | No | Deferred | UNSUPPORTED PROTOTYPE | 10D.1 retirement | No controls; the accepted backend provisions STUDENT and INSTRUCTOR accounts only and has no role-mutation contract |
 | Separate Course/Section management and instructor reassignment | Yes | No | Deferred | UNSUPPORTED PROTOTYPE | 10D reconciliation | Represent section as Class metadata; retain ownership transfer/reassignment only as a documented backend gap |
 | Attachments, project rubric/grading, and post-release grade versioning | Yes | No | Deferred | DEFERRED | Future product decision | Retain inventory only until separately approved |
@@ -198,15 +201,18 @@ Phase 10D.1 replaces the admin foundation and account routes. Phase 10D.2 replac
 | `/admin/academic/submissions` | `AdminAcademicListPage` | Connected in 10D.2 | Operational status and released score only | Phase 9 submission projection | 10D.2 complete | Assessment/source/feedback fixtures omitted |
 | `/admin/academic/project-tasks` | `AdminAcademicListPage` | Connected in 10D.2 | Metadata/counts only; no authoring, instructions, grading, or review | Phase 9 project-task projection | 10D.2 complete | Prototype project records retired |
 | `/admin/academic/repositories` | `AdminAcademicListPage` | Connected in 10D.2 | Lifecycle/ownership/storage summaries only; no source, history, credentials, or feedback | Phase 9 repository projection | 10D.2 complete | Prototype repository records retired |
-| `/admin/operations` | `AdminPendingPage` | Honest pending state | No fake health, storage, jobs, credentials, or recovery | Phase 9 operations/recovery | 10D.3 | No mock fallback |
-| `/admin/audit-events` | `AdminPendingPage` | Honest pending state | No fabricated audit records | Phase 9 allowlisted audit list | 10D.3 | No mock fallback |
+| `/admin/operations` | `AdminOperationsOverviewPage` | Connected in 10D.3 | Manual measured health/storage observations; worker explicitly not observed and no inferred capacity | Phase 9 health/storage APIs | 10D.3 implemented | Health alone uses the scoped accepted-503 data contract; no mock fallback |
+| `/admin/operations/execution-jobs` | `AdminOperationalListPage` | Connected in 10D.3 | Server filters/sort/pagination and sanitized lease/job evidence only; no Java retry | Phase 9 execution-job API | 10D.3 implemented | No source, compiler output, worker identity, or raw failure text |
+| `/admin/operations/repository-provisioning-jobs` | `AdminOperationalListPage` | Connected in 10D.3 | Safe job inspection plus reasoned, version-aware retry for eligible failed jobs | Phase 9 provisioning list and Phase 9C retry | 10D.3 implemented | Stale conflicts retain reason, refetch, and require deliberate retry |
+| `/admin/operations/git-credentials` | `AdminOperationalListPage` | Connected in 10D.3 | Metadata/lifecycle list and reasoned revocation only | Phase 9 credential list and Phase 9C revocation | 10D.3 implemented | No issuance, secret, verifier, cookie, or transport detail |
+| `/admin/audit-events` | `AdminAuditEventsPage` | Connected in 10D.3 | Server filters and read-only action-specific metadata allowlist | Phase 9 allowlisted audit list | 10D.3 implemented | Unknown metadata is omitted rather than serialized |
 | Legacy `/admin/courses`, `/sections`, `/enrollments`, `/instructor-assignments`, `/repositories`, `/storage`, `/system`, `/archive` | Redirects | Compatibility-only | Unsupported separate entities/actions are not functionalized | Canonical academic/operations destinations above | 10D.1–10D.3 | Prototype records are unreachable |
 
 ## Hardcoded and duplicated entity inventory
 
 ### Central mock module
 
-`client/src/data/projexData.js` retains roles, course/section options, the historical route catalog, analytics/archive records, deferred contribution/similarity/student-profile references, and old admin tables/summaries. Phase 10B retired activity, workspace, submission, score, feedback, and instructor assessment fixtures from authoritative routes. Phase 10C retired fixed project/repository identities, local collaboration/review behavior, and the obsolete student/instructor Git workspace components. Phase 10D.1 removes admin overview/account fixtures from production routing; Phase 10D.2 removes academic fixtures from authoritative routes. Operations fixtures remain unreachable visual references until Phase 10D.3 retires them.
+`client/src/data/projexData.js` retains roles, course/section options, the historical route catalog, analytics/archive records, and deferred contribution/similarity/student-profile references. Phase 10B retired activity, workspace, submission, score, feedback, and instructor assessment fixtures from authoritative routes. Phase 10C retired fixed project/repository identities, local collaboration/review behavior, and the obsolete student/instructor Git workspace components. Phase 10D replaces all authoritative admin routes and retires the unreachable `AdminPages.jsx` module plus its unused admin statistics, user, course, section, enrollment, instructor-assignment, repository, storage, health, and archive arrays.
 
 ### Student page inline records
 
@@ -220,13 +226,13 @@ Phase 10A.2 retires `instructorClass`, class dashboard/home cards and statistics
 
 The layout class arrays and both client-side class-code generators were retired in 10A.2. The role shell now consumes authorized class projections from the bounded class context.
 
-The activity example identifier `act-loops-01` was retired from production routing in 10B.1. Project/repository examples such as `prelim-group-project-1` and `repo-campus-nav` were retired from production routing in 10C.1; residual references belong only to deferred research or Phase 10D mock inventories. `stu-alyssa` remains assigned to a later or deferred milestone.
+The activity example identifier `act-loops-01` was retired from production routing in 10B.1. Project/repository examples such as `prelim-group-project-1` and `repo-campus-nav` were retired from production routing in 10C.1; residual references belong only to deferred research or historical inventories. `stu-alyssa` remains assigned to a later or deferred milestone.
 
 ## Local-only and visually misleading actions
 
 - Login and prototype role switching previously bypassed authentication; retired in 10A.1.
 - Header sign-out previously navigated without revoking the session; retired in 10A.1.
-- Class announcements/comments, class invitation decisions, browser class-code generation, and local roster removal were retired in 10A.2. Activity authoring, test configuration, lifecycle, practice, submissions, and instructor assessment became real in 10B. Project-task authoring/lifecycle, repository foundation, collaboration/review, read-only Git inspection, and local Git credentials became real in 10C. The admin shell, overview, and account workflows became real in 10D.1; class governance and academic oversight become real in 10D.2; operations remain an honest pending state for 10D.3.
+- Class announcements/comments, class invitation decisions, browser class-code generation, and local roster removal were retired in 10A.2. Activity authoring, test configuration, lifecycle, practice, submissions, and instructor assessment became real in 10B. Project-task authoring/lifecycle, repository foundation, collaboration/review, read-only Git inspection, and local Git credentials became real in 10C. The admin shell, overview, and account workflows became real in 10D.1; class governance and academic oversight became real in 10D.2; measured operations, controlled recovery, and audit events become real in 10D.3.
 - The following student-practice statement records the Phase 10 baseline behavior and is superseded by the 10B.2 retirement directly below it.
 - The Phase 10 baseline alternated fake student practice pass/fail and made instructor “Run Tests” force a fake failed state; both behaviors are retired.
 - The student practice, submission, score, feedback, fake local compiler output, custom-input, and fake-autosave prototypes are retired in 10B.2. Phase 10B.3 retires fake instructor compiler output, test execution, per-test point edits, similarity, local grading/release, and released-record reopening.
@@ -247,7 +253,7 @@ The activity example identifier `act-loops-01` was retired from production routi
 
 Preserve the student/instructor landing and login presentation; shells, sidebars, headers, tabs, cards, forms, tables, workspace panes, modals, repository grids, responsive breakpoints, and reduced-motion behavior. Add only scoped loading/error/empty states, accessibility corrections, dynamic route/data bindings, and the smallest adjustment required for truthful backend behavior. Avoid broad `App.css` cleanup or unrelated markup refactoring.
 
-The original admin interface is not protected. Phase 10D.1 replaces its generic dense shell with student/instructor typography, spacing, hierarchy, cards, chips, tables, dialogs, responsive behavior, confirmations, reason collection, and stale-version recovery. Phase 10D.2 extends this foundation for class governance and bounded academic lists. Phase 10D.3 may extend it only with Phase 9-supported operational metrics and actions.
+The original admin interface is not protected. Phase 10D.1 replaces its generic dense shell with student/instructor typography, spacing, hierarchy, cards, chips, tables, dialogs, responsive behavior, confirmations, reason collection, and stale-version recovery. Phase 10D.2 extends this foundation for class governance and bounded academic lists. Phase 10D.3 completes it with only Phase 9-supported operational observations, recovery, and audit evidence.
 
 ## Frontend testing
 

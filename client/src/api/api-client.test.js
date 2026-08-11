@@ -55,6 +55,62 @@ describe('API client', () => {
     })
   })
 
+  it('keeps HTTP 503 fail-closed without an explicit data-status opt-in', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(503, {
+      data: { database: { status: 'unavailable' } },
+      meta: { requestId: 'health-request' },
+    }))
+    const client = createApiClient({ fetchImpl })
+
+    await expect(client.get('/admin/operations/health')).rejects.toMatchObject({
+      status: 503,
+      code: 'REQUEST_FAILED',
+    })
+  })
+
+  it('consumes an explicitly accepted 503 only when it has a valid data envelope', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(503, {
+      data: { database: { status: 'unavailable' } },
+      meta: { requestId: 'health-request' },
+    }))
+    const client = createApiClient({ fetchImpl })
+
+    await expect(client.get('/admin/operations/health', {
+      acceptedDataStatuses: [503],
+    })).resolves.toEqual({
+      data: { database: { status: 'unavailable' } },
+      meta: { requestId: 'health-request', httpStatus: 503 },
+    })
+  })
+
+  it('still throws an accepted-status error envelope and rejects malformed data', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(failure(503, 'DATABASE_UNAVAILABLE', 'Database unavailable.'))
+      .mockResolvedValueOnce(jsonResponse(503, { meta: { requestId: 'malformed' } }))
+      .mockResolvedValueOnce(jsonResponse(503, { data: null, meta: { requestId: 'null-data' } }))
+    const client = createApiClient({ fetchImpl })
+
+    await expect(client.get('/admin/operations/health', {
+      acceptedDataStatuses: [503],
+    })).rejects.toMatchObject({ status: 503, code: 'DATABASE_UNAVAILABLE' })
+    await expect(client.get('/admin/operations/health', {
+      acceptedDataStatuses: [503],
+    })).rejects.toMatchObject({ status: 503, code: 'INVALID_API_RESPONSE' })
+    await expect(client.get('/admin/operations/health', {
+      acceptedDataStatuses: [503],
+    })).rejects.toMatchObject({ status: 503, code: 'INVALID_API_RESPONSE' })
+  })
+
+  it('does not leak accepted-status behavior into unrelated requests', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(503, { data: { observed: true }, meta: { requestId: 'health' } }))
+      .mockResolvedValueOnce(jsonResponse(503, { data: { observed: true }, meta: { requestId: 'users' } }))
+    const client = createApiClient({ fetchImpl })
+
+    await client.get('/admin/operations/health', { acceptedDataStatuses: [503] })
+    await expect(client.get('/users')).rejects.toMatchObject({ status: 503 })
+  })
+
   it('adds JSON and CSRF headers to protected mutations', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(success())
     const client = createApiClient({ fetchImpl, getCsrfToken: () => 'synthetic-csrf' })

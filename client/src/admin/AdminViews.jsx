@@ -66,7 +66,7 @@ export function AdminMetric({ label, value, detail, tone = 'default' }) {
   )
 }
 
-export function AdminDialog({ title, summary, children, onClose, onSubmit, submitLabel, busy, danger = false }) {
+export function AdminDialog({ title, summary, children, onClose, onSubmit, submitLabel, busy, submitDisabled = false, danger = false }) {
   return (
     <div className="student-submit-backdrop" role="presentation">
       <form className="admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title" onSubmit={onSubmit}>
@@ -77,7 +77,7 @@ export function AdminDialog({ title, summary, children, onClose, onSubmit, submi
         {children}
         <div className="admin-dialog__actions">
           <button type="button" className="student-outline-action" onClick={onClose} disabled={busy}>Cancel</button>
-          <button type="submit" className={danger ? 'admin-danger-action' : 'student-primary-action'} disabled={busy}>
+          <button type="submit" className={danger ? 'admin-danger-action' : 'student-primary-action'} disabled={busy || submitDisabled}>
             {busy ? 'Working…' : submitLabel}
           </button>
         </div>
@@ -500,31 +500,11 @@ export function AdminUserDetailPage({ api = adminApi }) {
   )
 }
 
-export function AdminPendingPage({ area }) {
-  return (
-    <div className="admin-page-stack">
-      <AdminPageHeader eyebrow="Planned admin capability" title={area} summary="This area will use real Phase 9 projections in its approved Phase 10D milestone." />
-      <RequestState kind="empty" title="Integration pending" message="No prototype records or local-only actions are shown here." />
-    </div>
-  )
-}
-
 export default function AdminRoutePage({ pagePath, api = adminApi }) {
   const pages = {
     dashboard: <AdminOverviewPage api={api} />,
     users: <AdminUsersPage api={api} />,
     'user-detail': <AdminUserDetailPage api={api} />,
-    academic: <AdminPendingPage area="Academic oversight" />,
-    operations: <AdminPendingPage area="Operations and recovery" />,
-    'audit-events': <AdminPendingPage area="Administrative audit" />,
-    courses: <Navigate to="/admin/academic" replace />,
-    sections: <Navigate to="/admin/academic" replace />,
-    enrollments: <Navigate to="/admin/academic" replace />,
-    'instructor-assignments': <Navigate to="/admin/academic" replace />,
-    repositories: <Navigate to="/admin/academic" replace />,
-    storage: <Navigate to="/admin/operations" replace />,
-    system: <Navigate to="/admin/operations" replace />,
-    archive: <Navigate to="/admin/academic" replace />,
   }
   return pages[pagePath] ?? <Navigate to="/admin" replace />
 }

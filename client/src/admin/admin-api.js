@@ -85,6 +85,33 @@ export function createAdminApi(client = apiClient) {
     updateClassMember(classId, memberId, input, options) {
       return client.patch(`/classes/${classId}/members/${memberId}`, input, options)
     },
+    getOperationalHealth(options) {
+      return client.get('/admin/operations/health', {
+        ...options,
+        acceptedDataStatuses: [503],
+      })
+    },
+    getStorageSummary(options) {
+      return client.get('/admin/operations/storage', options)
+    },
+    listExecutionJobs(query, options) {
+      return client.get(`/admin/operations/execution-jobs${queryString(query)}`, options)
+    },
+    listProvisioningJobs(query, options) {
+      return client.get(`/admin/operations/repository-provisioning-jobs${queryString(query)}`, options)
+    },
+    retryProvisioningJob(jobId, input, options) {
+      return client.post(`/admin/operations/repository-provisioning-jobs/${jobId}/retry`, input, options)
+    },
+    listGitCredentials(query, options) {
+      return client.get(`/admin/operations/git-credentials${queryString(query)}`, options)
+    },
+    revokeGitCredential(credentialId, input, options) {
+      return client.post(`/admin/operations/git-credentials/${credentialId}/revoke`, input, options)
+    },
+    listAuditEvents(query, options) {
+      return client.get(`/admin/audit-events${queryString(query)}`, options)
+    },
   }
 }
 

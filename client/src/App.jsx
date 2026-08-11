@@ -9,13 +9,7 @@ import ProtectedRoute from './auth/ProtectedRoute.jsx'
 import ClassProvider from './classes/ClassProvider.jsx'
 import DashboardLayout from './layouts/DashboardLayout.jsx'
 import AdminRoutePage from './admin/AdminViews.jsx'
-import {
-  AdminAcademicHomePage,
-  AdminAcademicListPage,
-  AdminClassCreatePage,
-  AdminClassDetailPage,
-  AdminClassListPage,
-} from './admin/AdminAcademicViews.jsx'
+import { adminChildren } from './admin/admin-routes.jsx'
 import AccountSetupPage from './pages/AccountSetupPage.jsx'
 import LoginPage, { InstructorLoginPage, RoleLandingPage } from './pages/LoginPage.jsx'
 import PlaceholderPage from './pages/PlaceholderPage.jsx'
@@ -46,27 +40,6 @@ function RoleLayout({ role }) {
     ? <ClassProvider>{layout}</ClassProvider>
     : layout
 }
-
-const adminChildren = [
-  { index: true, element: <AdminRoutePage pagePath="dashboard" /> },
-  { path: 'users', element: <AdminRoutePage pagePath="users" /> },
-  { path: 'users/:userId', element: <AdminRoutePage pagePath="user-detail" /> },
-  { path: 'academic', element: <AdminAcademicHomePage /> },
-  { path: 'academic/classes', element: <AdminClassListPage /> },
-  { path: 'academic/classes/new', element: <AdminClassCreatePage /> },
-  { path: 'academic/classes/:classId', element: <AdminClassDetailPage /> },
-  { path: 'academic/activities', element: <AdminAcademicListPage kind="activities" /> },
-  { path: 'academic/submissions', element: <AdminAcademicListPage kind="submissions" /> },
-  { path: 'academic/project-tasks', element: <AdminAcademicListPage kind="project-tasks" /> },
-  { path: 'academic/repositories', element: <AdminAcademicListPage kind="repositories" /> },
-  { path: 'operations', element: <AdminRoutePage pagePath="operations" /> },
-  { path: 'audit-events', element: <AdminRoutePage pagePath="audit-events" /> },
-  ...['courses', 'sections', 'enrollments', 'instructor-assignments']
-    .map((path) => ({ path, element: <Navigate to="/admin/academic/classes" replace /> })),
-  { path: 'repositories', element: <Navigate to="/admin/academic/repositories" replace /> },
-  { path: 'archive', element: <Navigate to="/admin/academic" replace /> },
-  ...['storage', 'system'].map((path) => ({ path, element: <AdminRoutePage pagePath={path} /> })),
-]
 
 const roleRoutes = routeCatalog.flatMap((role) => [
   {

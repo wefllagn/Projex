@@ -145,7 +145,10 @@ export function createApiClient({
     }
 
     const payload = await readResponseBody(response)
-    if (!response.ok) {
+    const acceptedDataStatus =
+      Array.isArray(options.acceptedDataStatuses) &&
+      options.acceptedDataStatuses.includes(response.status)
+    if (!response.ok && (!acceptedDataStatus || payload?.error)) {
       throw new ApiError({
         status: response.status,
         code: payload?.error?.code,
@@ -155,7 +158,16 @@ export function createApiClient({
       })
     }
 
-    if (payload === null) return { data: null, meta: { requestId: null } }
+    if (payload === null) {
+      if (acceptedDataStatus) {
+        throw new ApiError({
+          status: response.status,
+          code: 'INVALID_API_RESPONSE',
+          message: 'Projex returned an invalid response.',
+        })
+      }
+      return { data: null, meta: { requestId: null } }
+    }
     if (!Object.prototype.hasOwnProperty.call(payload, 'data')) {
       throw new ApiError({
         status: response.status,
@@ -163,8 +175,17 @@ export function createApiClient({
         message: 'Projex returned an invalid response.',
       })
     }
+    if (acceptedDataStatus && payload.data === null) {
+      throw new ApiError({
+        status: response.status,
+        code: 'INVALID_API_RESPONSE',
+        message: 'Projex returned an invalid response.',
+      })
+    }
 
-    return payload
+    return acceptedDataStatus
+      ? { ...payload, meta: { ...payload.meta, httpStatus: response.status } }
+      : payload
   }
 
   async function refreshSession() {
