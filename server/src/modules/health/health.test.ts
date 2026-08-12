@@ -19,6 +19,11 @@ function createTestApp(databaseHealth: DatabaseHealth) {
 }
 
 describe('GET /api/v1/health', () => {
+  it('uses only the configured numeric reverse-proxy hop count', () => {
+    const app = createApp({ config: { frontendOrigin: 'http://localhost:5173', requestBodyLimit: '1mb', trustProxyHops: 1 }, databaseHealth: { checkConnection: async () => undefined }, logger: createLogger('silent') })
+    expect(app.get('trust proxy')).not.toBe(true)
+    expect(app.get('trust proxy fn')).toBeTypeOf('function')
+  })
   it('returns a standard success envelope when the database is available', async () => {
     const app = createTestApp({
       checkConnection: async () => undefined,

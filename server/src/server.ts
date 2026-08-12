@@ -60,6 +60,8 @@ import { createAdminService } from './modules/admin/admin.service.js'
 import { createAdminRouter } from './modules/admin/admin.routes.js'
 import { createPrismaAdminOversightRepository } from './modules/admin/admin-oversight.repository.js'
 import { createAdminOversightService } from './modules/admin/admin-oversight.service.js'
+import { createCapabilitiesRouter } from './modules/capabilities/capabilities.routes.js'
+import { createCapabilitiesService } from './modules/capabilities/capabilities.service.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
@@ -76,15 +78,17 @@ async function bootstrap(): Promise<void> {
     passwordService,
     tokenService,
     logger,
-    config: { refreshTokenTtlDays: env.refreshTokenTtlDays },
+    config: { refreshTokenTtlDays: env.refreshTokenTtlDays, sessionIdleTtlMinutes: env.sessionIdleTtlMinutes },
   })
   const requireAuthentication = createAuthenticationMiddleware({
     repository: authRepository,
     tokenService,
+    sessionIdleTtlMinutes: env.sessionIdleTtlMinutes,
   })
   const requireLogoutAuthentication = createAuthenticationMiddleware({
     repository: authRepository,
     tokenService,
+    sessionIdleTtlMinutes: env.sessionIdleTtlMinutes,
     allowRevokedSession: true,
     allowInactiveUser: true,
   })
@@ -175,6 +179,7 @@ async function bootstrap(): Promise<void> {
       provisioningMaxAttempts: env.gitProvisioningMaxAttempts,
     }),
     logger,
+    provisioningEnabled: env.gitExecutionMode === 'local_process',
   })
   const gitTransportRepository = createPrismaGitTransportRepository(prisma)
   const gitCredentialService = createGitCredentialService({
@@ -233,10 +238,20 @@ async function bootstrap(): Promise<void> {
     config: {
       frontendOrigin: env.frontendOrigin,
       requestBodyLimit: env.requestBodyLimit,
+      trustProxyHops: env.trustProxyHops,
     },
     databaseHealth: createPrismaDatabaseHealth(prisma),
     logger,
     featureRouters: {
+      capabilities: createCapabilitiesRouter(createCapabilitiesService({
+        profile: env.nodeEnv === 'production' ? 'HOSTED_SAFE' : 'LOCAL_FULL',
+        java: { execution: env.javaExecutionMode === 'local_process' },
+        git: {
+          provisioning: env.gitExecutionMode === 'local_process',
+          inspection: env.gitExecutionMode === 'local_process',
+          smartHttp: env.gitSmartHttpEnabled,
+        },
+      })),
       auth: createAuthRouter({
         authService,
         cookieConfig,

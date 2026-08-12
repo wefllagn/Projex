@@ -1,6 +1,6 @@
 # Projex Server
 
-Phases 8A through 8C provide controlled-local Git provisioning, disabled-by-default loopback Smart HTTP, and bounded repository inspection. Phase 9 adds minimized administrator account, academic, and operational oversight plus two controlled recovery actions. Frontend integration, hosted transport, public/SSH access, arbitrary infrastructure control, and admin source/grade authority remain unavailable.
+Projex includes the Phase 1–10 backend and integrated frontend contracts. Phase 11A adds hosted-safe capability gating and deployment prerequisites; it does not deploy or publicly expose the service. Hosted Java and Git execution, public/SSH Git access, arbitrary infrastructure control, and admin source/grade authority remain unavailable.
 
 ## Prerequisites
 
@@ -26,9 +26,11 @@ Required variables:
 - `FRONTEND_ORIGIN`
 - `LOG_LEVEL`
 - `REQUEST_BODY_LIMIT`
+- `TRUST_PROXY_HOPS` (`0` locally; exactly `1` for the approved single reverse-proxy production shape)
 - `ACCESS_TOKEN_SECRET`
 - `ACCESS_TOKEN_TTL_MINUTES`
 - `REFRESH_TOKEN_TTL_DAYS`
+- `SESSION_IDLE_TTL_MINUTES`
 - `ACCOUNT_SETUP_TOKEN_TTL_HOURS`
 - `AUTH_COOKIE_SECURE`
 - `AUTH_COOKIE_SAME_SITE`
@@ -53,6 +55,10 @@ Required variables:
 - `PRACTICE_MAX_ACTIVE_PER_ACTIVITY`
 
 When `MAIL_TRANSPORT=smtp`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, and `SMTP_PASSWORD` are also required. Preview transport is rejected in production.
+
+Use `.env.hosted-safe.example` only as a placeholder inventory. Before a hosted process is started, run `npm run deployment:preflight`; any blocking check stops deployment. The command does not apply migrations or start workers.
+
+Prisma remains pinned at `6.19.3`. On the current Windows workstation the matching schema engine is present under `@prisma/engines`, but the Prisma CLI package-local copy may be absent after an incomplete postinstall and then attempts an online engine download. Do not upgrade Prisma to work around this. Repair the pinned installation in the future deployment build or use an explicitly validated process-local engine path for diagnostics; never commit that host path or place it in application environment examples.
 
 ## Install and generate Prisma Client
 

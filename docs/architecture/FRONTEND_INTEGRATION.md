@@ -294,3 +294,12 @@ Within the Phase 10B umbrella, **10B.1 activity and test-case integration is com
 Within Phase 10C, **10C.1 project-task and repository foundation is complete and committed**: selected-class catalogs/details, supported authoring and lifecycle with optimistic concurrency, student personal/class repository creation, role-scoped catalogs, repository metadata, bounded provisioning polling, archived presentation, and cross-resource identity checks. **10C.2 collaboration/review is complete and committed**: student-safe membership and invitations, owner membership management, review submission/resubmission, instructor corrective actions, version-safe feedback drafts, request changes, approval, released feedback, and authorized repository archive/restore. **10C.3 Git inspection/credentials is complete and committed**: real summary/branches/history/commit/tree/text-file/diff inspection, fail-closed short-lived credential issuance/list/revoke, credential-free local-client guidance, and retirement of the obsolete Git prototypes.
 
 Each milestone may use multiple reviewable commits on `phase/10-frontend-integration`. Integration into `development/fullstack` remains a separate approval after complete Phase 10 acceptance.
+
+## Phase 11A runtime capability disposition
+
+| Feature | Frontend | Backend | Iteration | Status | Owner | Final UI treatment |
+| --- | --- | --- | --- | --- | --- | --- |
+| Java execution availability | Yes | Yes | Core | INTEGRATED | Phase 11A | Practice, submission, and retry actions become unavailable when execution is disabled; records remain readable. |
+| Repository provisioning availability | Yes | Yes | Core | INTEGRATED | Phase 11A | Personal/class repository creation becomes unavailable when provisioning is disabled; existing metadata remains readable. |
+| Git inspection availability | Yes | Yes | Core | INTEGRATED | Phase 11A | Git source/history panels show an unavailable state when inspection is disabled. |
+| Native Git Smart HTTP availability | Yes | Yes | Local-only | INTEGRATED | Phase 11A | Local credential UI is omitted when Smart HTTP is disabled; hosted proxying remains prohibited. |

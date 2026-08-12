@@ -431,3 +431,8 @@ History accepts an optional validated `branchName`, `page`, and `limit` capped a
 Responses may include branch names, commit IDs, bounded author display names, timestamps, subjects, safe tree entries, bounded UTF-8 file content, and bounded unified patches. They omit author emails, storage paths, credentials/verifiers, environment/configuration, raw stderr, unsupported binary data, and arbitrary Git objects. Empty repositories return explicit empty projections.
 
 Stable inspection errors include `GIT_INSPECTION_UNAVAILABLE`, `GIT_REVISION_NOT_FOUND`, `GIT_CONTENT_NOT_FOUND`, `GIT_BINARY_FILE_UNSUPPORTED`, operation-specific limit errors, and the generic safe `GIT_INSPECTION_FAILED`. Validation errors never echo a host path or unrestricted revision expression.
+## Phase 11A runtime capabilities
+
+`GET /api/v1/capabilities` is public so the frontend can render truthful environment behavior before authentication. Its response contains only `profile`, `java.execution`, `git.provisioning`, `git.inspection`, and `git.smartHttp` in the standard success envelope. It never includes environment modes, paths, hosts, executables, limits, or secrets.
+
+The response is advisory for presentation; every backend operation independently enforces capability and authorization. Repository creation returns `503 REPOSITORY_PROVISIONING_UNAVAILABLE` before persistence when provisioning is disabled. Java enqueue endpoints retain `503 EXECUTION_UNAVAILABLE`.

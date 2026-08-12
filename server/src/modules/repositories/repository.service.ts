@@ -164,9 +164,20 @@ export function createRepositoryService(dependencies: {
   repository: RepositoryRepository
   logger: Logger
   now?: () => Date
+  provisioningEnabled?: boolean
 }): RepositoryService {
   const { repository, logger } = dependencies
   const now = dependencies.now ?? (() => new Date())
+
+  function requireProvisioning(): void {
+    if (dependencies.provisioningEnabled === false) {
+      throw new AppError({
+        statusCode: 503,
+        code: 'REPOSITORY_PROVISIONING_UNAVAILABLE',
+        message: 'Repository provisioning is unavailable in this environment.',
+      })
+    }
+  }
 
   async function loadAccess(caller: SafeUserProfile, repositoryId: string): Promise<RepositoryAccessRecord> {
     requireActive(caller)
@@ -185,6 +196,7 @@ export function createRepositoryService(dependencies: {
     async createClassProject(caller, projectTaskId, input) {
       requireActive(caller)
       if (caller.role !== 'STUDENT') throw forbidden()
+      requireProvisioning()
       const result = await repository.createClassProject({ projectTaskId, ownerId: caller.id, repository: input, now: now() })
       const projection = unwrapRepository(result)
       logger.info({ event: 'repository.class_project_created', actorId: caller.id, repositoryId: projection.id, teamId: projection.teamId, projectTaskId }, 'class project repository and team created')
@@ -193,6 +205,7 @@ export function createRepositoryService(dependencies: {
     async createPersonal(caller, input) {
       requireActive(caller)
       if (caller.role !== 'STUDENT') throw forbidden()
+      requireProvisioning()
       const projection = unwrapRepository(await repository.createPersonal({ ownerId: caller.id, repository: input, now: now() }))
       logger.info({ event: 'repository.personal_created', actorId: caller.id, repositoryId: projection.id }, 'personal repository created')
       return projection

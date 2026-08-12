@@ -16,6 +16,7 @@ import { ApiError, describeApiError } from '../api/api-client.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { useCapabilities } from '../capabilities/capability-context.js'
 import { submissionApi } from './submission-api.js'
 import {
   isPracticePending,
@@ -156,6 +157,7 @@ export function StudentProgrammingWorkspace({
   submissions = submissionApi,
   pollingOptions,
 }) {
+  const capabilities = useCapabilities()
   const { activityId } = useParams()
   const navigate = useNavigate()
   const { selectedClass, selectionStatus } = useClasses()
@@ -421,13 +423,14 @@ export function StudentProgrammingWorkspace({
           {!canSubmit && <span>This activity is not accepting an ordinary submission.</span>}
           {submission.status === 'error' && <span className="student-coding-failure">{submissionErrorMessage(submission.error)}</span>}
         </div>
-        <button type="button" className="student-run-tests" disabled={!canRun || practice.requesting || isPracticePending(practice.record)} onClick={runVisibleTests}>
+        <button type="button" className="student-run-tests" disabled={!capabilities.java.execution || !canRun || practice.requesting || isPracticePending(practice.record)} onClick={runVisibleTests}>
           {practice.requesting || isPracticePending(practice.record) ? 'Running visible tests...' : 'Run Visible Tests'}
         </button>
-        <button type="button" className="student-submit-code" disabled={!canSubmit || !source.value.trim() || submission.status === 'submitting' || submission.status === 'ambiguous'} onClick={() => setConfirmMode('new')}>
+        <button type="button" className="student-submit-code" disabled={!capabilities.java.execution || !canSubmit || !source.value.trim() || submission.status === 'submitting' || submission.status === 'ambiguous'} onClick={() => setConfirmMode('new')}>
           {submission.status === 'submitting' ? 'Submitting...' : replacement ? 'Submit replacement' : 'Submit'}
         </button>
       </footer>
+      {!capabilities.java.execution && <RequestState kind="unavailable" compact title="Java execution unavailable" message="This environment preserves activity and submission records but cannot run or assess Java code." />}
 
       {submission.status === 'ambiguous' && (
         <section className="submission-ambiguity-panel" role="alert">

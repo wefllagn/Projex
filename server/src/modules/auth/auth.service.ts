@@ -28,6 +28,7 @@ function safeProfile(user: AuthUser): SafeUserProfile {
 
 export interface AuthServiceConfig {
   refreshTokenTtlDays: number
+  sessionIdleTtlMinutes?: number
 }
 
 export interface AuthResult {
@@ -186,6 +187,8 @@ export function createAuthService(dependencies: {
       verifyCsrfHash(record.session.csrfTokenHash, csrfCookie, csrfHeader)
       if (
         record.session.expiresAt <= currentTime ||
+        currentTime.getTime() - (record.session.lastUsedAt ?? record.session.createdAt).getTime() >=
+          (config.sessionIdleTtlMinutes ?? 30) * 60 * 1000 ||
         record.user.status !== 'ACTIVE'
       ) {
         await repository.revokeFamily(record.session.familyId, currentTime)
@@ -202,10 +205,7 @@ export function createAuthService(dependencies: {
         familyId: record.session.familyId,
         tokenHash: tokenService.hashOpaqueToken(newRefreshToken),
         csrfTokenHash: tokenService.hashOpaqueToken(newCsrfToken),
-        expiresAt: new Date(
-          currentTime.getTime() +
-            config.refreshTokenTtlDays * 24 * 60 * 60 * 1000,
-        ),
+        expiresAt: record.session.expiresAt,
         usedAt: currentTime,
         ...metadata,
       })

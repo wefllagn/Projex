@@ -22,6 +22,7 @@ export function createAuthenticationMiddleware(dependencies: {
   repository: AuthRepository
   tokenService: TokenService
   now?: () => Date
+  sessionIdleTtlMinutes?: number
   allowRevokedSession?: boolean
   allowInactiveUser?: boolean
 }): RequestHandler {
@@ -29,6 +30,7 @@ export function createAuthenticationMiddleware(dependencies: {
     repository,
     tokenService,
     now = () => new Date(),
+    sessionIdleTtlMinutes = 30,
     allowRevokedSession = false,
     allowInactiveUser = false,
   } = dependencies
@@ -39,11 +41,14 @@ export function createAuthenticationMiddleware(dependencies: {
       if (!token) throw authenticationError()
       const claims = await tokenService.verifyAccessToken(token)
       const context = await repository.findContext(claims.sub, claims.sid)
+      const currentTime = now()
       if (
         !context ||
         (!allowInactiveUser && context.user.status !== 'ACTIVE') ||
         (!allowRevokedSession && context.session.revokedAt) ||
-        context.session.expiresAt <= now()
+        currentTime.getTime() - (context.session.lastUsedAt ?? context.session.createdAt).getTime() >=
+          sessionIdleTtlMinutes * 60 * 1000 ||
+        context.session.expiresAt <= currentTime
       ) {
         throw authenticationError()
       }

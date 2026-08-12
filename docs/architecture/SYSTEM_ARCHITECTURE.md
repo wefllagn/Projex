@@ -2,11 +2,11 @@
 
 ## Status and scope
 
-This document records the architecture for turning the existing Projex UI prototype into a controlled full-stack system and the durable cross-system decisions accepted through Phase 8.
+This document records the architecture for the controlled Projex full-stack system and its durable cross-system decisions.
 
 - Current frontend: React 19, Vite, JavaScript/JSX, React Router, and the existing CSS.
 - Current backend: Node.js, Express, TypeScript, Zod, Prisma ORM, and PostgreSQL.
-- Accepted baseline: Phase 0 established architecture and planning, and implementation Phases 1 through 8 are complete. Phase 8A provides local Git provisioning, Phase 8B provides controlled authenticated Smart HTTP, and Phase 8C provides authenticated read-only repository inspection. `PHASE_CHECKLIST.md` owns roadmap milestone status; Git owns the live branch and worktree.
+- Accepted baseline: Phase 0 established architecture and planning, and implementation Phases 1 through 10 are complete and integrated. Phase 11 hardening and deployment preparation is current. `PHASE_CHECKLIST.md` owns roadmap milestone status; Git owns the live branch and worktree.
 - Development approach: local-first, feature-by-feature, and cloud-provider-neutral.
 - Roles: `STUDENT`, `INSTRUCTOR`, and `ADMIN` are part of the authorization model from the beginning.
 - Implementation priority: Student and Instructor workflows first, followed by dedicated Admin functionalization.

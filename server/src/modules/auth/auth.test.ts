@@ -137,6 +137,8 @@ function toSession(input: CreateSessionInput): AuthSession {
     familyId: input.familyId,
     tokenHash: input.tokenHash,
     csrfTokenHash: input.csrfTokenHash,
+    createdAt: new Date(),
+    lastUsedAt: null,
     expiresAt: input.expiresAt,
     revokedAt: null,
     replacedBySessionId: null,
@@ -319,6 +321,7 @@ describe('authentication HTTP and session security', () => {
     const oldRefresh = cookiePair(oldCookies, 'projex_refresh')
     const oldCsrfPair = cookiePair(oldCookies, 'projex_csrf')
     const oldCsrf = cookieValue(oldCookies, 'projex_csrf')
+    const originalExpiry = [...repository.sessions.values()][0]!.expiresAt.getTime()
 
     const refreshed = await request(app)
       .post('/api/v1/auth/refresh')
@@ -332,6 +335,15 @@ describe('authentication HTTP and session security', () => {
       cookieValue(oldCookies, 'projex_refresh'),
     )
     expect([...repository.sessions.values()].filter((session) => session.revokedAt)).toHaveLength(1)
+    expect([...repository.sessions.values()].find((session) => !session.revokedAt)!.expiresAt.getTime()).toBe(originalExpiry)
+  })
+
+  it('rejects a session whose existing activity timestamp exceeds the idle limit', async () => {
+    const { app, repository } = createHarness()
+    const loggedIn = await login(app)
+    const session = [...repository.sessions.values()][0]!
+    session.createdAt = new Date(Date.now() - 31 * 60 * 1000)
+    await request(app).get('/api/v1/auth/me').set('cookie', cookiePair(setCookies(loggedIn), 'projex_access')).expect(401)
   })
 
   it('detects refresh reuse and revokes the whole family', async () => {

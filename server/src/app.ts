@@ -15,6 +15,7 @@ import { AppError } from './shared/errors/app-error.js'
 export interface AppConfig {
   frontendOrigin: string
   requestBodyLimit: string
+  trustProxyHops?: number
 }
 
 export interface AppDependencies {
@@ -34,6 +35,7 @@ export interface AppDependencies {
     repositories?: Router
     gitTransport?: Router
     repositoryContent?: Router
+    capabilities?: Router
   }
 }
 
@@ -48,6 +50,7 @@ export function createApp({
   const healthService = createHealthService({ databaseHealth, now })
 
   app.disable('x-powered-by')
+  if ((config.trustProxyHops ?? 0) > 0) app.set('trust proxy', config.trustProxyHops)
   app.use(requestIdMiddleware)
   app.use(createRequestLogger(logger))
   app.use(
@@ -72,6 +75,7 @@ export function createApp({
   app.use(cookieParser())
 
   app.use('/api/v1/health', createHealthRouter(healthService))
+  if (featureRouters?.capabilities) app.use('/api/v1/capabilities', featureRouters.capabilities)
   if (featureRouters) {
     app.use('/api/v1/auth', featureRouters.auth)
     app.use('/api/v1/account-setup', featureRouters.accountSetup)

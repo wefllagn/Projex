@@ -362,7 +362,16 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 
 - [ ] Add persisted notifications, canonical analytics, and role-appropriate similarity projections when their backend support exists.
 
-## Phase 11: hardening, deployment, and evaluation — pending
+## Phase 11: hardening, deployment, and evaluation — in progress
+
+### Phase 11A: hosted safety and deployment prerequisites — implemented, pending final review
+
+- [x] Add server-authoritative local/full versus hosted/safe capabilities with a public allowlisted contract.
+- [x] Fail closed before Java enqueue and repository/provisioning creation when their execution modes are disabled.
+- [x] Require production secure cookies, bounded proxy trust, preserved absolute session expiry, and persisted-timestamp idle expiry.
+- [x] Add placeholder-only hosted configuration, a provider-neutral TLS reverse-proxy/static-hosting template, and a non-mutating deployment preflight.
+- [x] Present disabled Java/Git capabilities truthfully in the integrated frontend without weakening backend authorization.
+- [ ] Complete Phase 11A final review, staging, commit, and push through a separate approval boundary.
 
 - [ ] Complete security hardening, durable administrative auditing, integration/end-to-end tests, and laboratory evaluation.
 - [ ] Add hosted TLS, reverse proxy, secret injection, backups, restore testing, health monitoring, and incident/shutdown procedures.

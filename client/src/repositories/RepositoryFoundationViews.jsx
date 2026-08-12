@@ -5,6 +5,7 @@ import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { useCapabilities } from '../capabilities/capability-context.js'
 import { projectApi } from '../projects/project-api.js'
 import { formatProjectDate, formatProjectStatus, projectMatchesClass, projectTaskProjection } from '../projects/project-projections.js'
 import useBoundedPolling from '../submissions/use-bounded-polling.js'
@@ -79,6 +80,7 @@ function PersonalRepositoryForm({ busy, onSubmit, onCancel }) {
 }
 
 export function StudentRepositoryCatalog({ archived = false, api = repositoryApi }) {
+  const capabilities = useCapabilities()
   const [query, setQuery] = useState({ ...FIRST_PAGE, repositoryType: '', status: archived ? 'ARCHIVED' : 'ACTIVE' })
   const [state, setState] = useState({ status: 'loading', items: [], pagination: null, error: null })
   const [createOpen, setCreateOpen] = useState(false)
@@ -119,7 +121,8 @@ export function StudentRepositoryCatalog({ archived = false, api = repositoryApi
       <section className="student-repository-stats" aria-label="Repository overview"><article className="student-dashboard-stat"><div><span>Repositories</span><strong>{state.pagination?.totalItems ?? state.items.length}</strong><small>{archived ? 'archived records' : 'authorized records'}</small></div></article><article className="student-dashboard-stat"><div><span>Ready</span><strong>{state.items.filter((item) => item.storageStatus === 'READY').length}</strong><small>on this page</small></div></article><article className="student-dashboard-stat"><div><span>Provisioning</span><strong>{state.items.filter((item) => isProvisioning(item.storageStatus)).length}</strong><small>on this page</small></div></article></section>
       {!archived && <StudentInvitationInbox api={api} />}
       <section className="student-global-panel student-repository-board">
-        <div className="student-assignment-toolbar student-assignment-toolbar--board"><div><strong>{archived ? 'Archived Repositories' : 'My Repository Catalog'}</strong><p>Server-authorized repository and collaboration records. Git content remains deferred to Phase 10C.3.</p></div><div className="repository-catalog-actions"><label className="student-sort-control">Type<select value={query.repositoryType} onChange={(event) => setQuery((current) => ({ ...current, page: 1, repositoryType: event.target.value }))}><option value="">All types</option><option value="CLASS_PROJECT">Class project</option><option value="PERSONAL">Personal</option></select></label>{!archived && <button type="button" className="student-primary-action" onClick={() => setCreateOpen(true)}>New Personal Repository</button>}</div></div>
+        <div className="student-assignment-toolbar student-assignment-toolbar--board"><div><strong>{archived ? 'Archived Repositories' : 'My Repository Catalog'}</strong><p>Server-authorized repository and collaboration records.</p></div><div className="repository-catalog-actions"><label className="student-sort-control">Type<select value={query.repositoryType} onChange={(event) => setQuery((current) => ({ ...current, page: 1, repositoryType: event.target.value }))}><option value="">All types</option><option value="CLASS_PROJECT">Class project</option><option value="PERSONAL">Personal</option></select></label>{!archived && <button type="button" className="student-primary-action" disabled={!capabilities.git.provisioning} onClick={() => setCreateOpen(true)}>New Personal Repository</button>}</div></div>
+        {!archived && !capabilities.git.provisioning && <RequestState kind="unavailable" compact title="Repository provisioning unavailable" message="Existing repository records remain available, but this environment cannot create new Git storage." />}
         {state.status === 'loading' && <RequestState kind="loading" compact message="Loading repositories." />}
         {state.status === 'error' && <RequestState kind="unavailable" compact error={state.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />}
         {state.status === 'ready' && state.items.length === 0 && <RequestState kind="empty" compact message={archived ? 'No archived repositories are available.' : 'No repositories match this view.'} />}

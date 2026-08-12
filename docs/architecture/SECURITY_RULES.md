@@ -223,6 +223,15 @@ Expected categories include database URL, session secret/key material, allowed o
 
 ## Hosted testing rules
 
+Phase 11A adds these prerequisites without authorizing deployment:
+
+- Production requires secure authentication cookies and exactly one trusted reverse-proxy hop. Never configure Express with blanket `trust proxy=true`.
+- Session rotation preserves the original absolute family expiry and enforces the configured idle lifetime from persisted session timestamps.
+- Production derives a `HOSTED_SAFE` capability profile with Java execution and all local Git capabilities disabled. A client cannot request a stronger profile.
+- Disabled execution/provisioning fails before durable work is enqueued. Existing authorized records remain readable without presenting unavailable actions as functional.
+- The public capability response contains only allowlisted booleans and no paths, executables, environment values, limits, or secrets.
+- The TLS proxy template blocks native Git Smart HTTP instead of exposing the controlled-local transport.
+
 - Use HTTPS and a controlled domain/address.
 - Create only required test/defense accounts and least-privilege roles.
 - Do not import unnecessary real student records.

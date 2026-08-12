@@ -6,6 +6,7 @@ import { ApiError } from '../api/api-client.js'
 import { classHref } from '../classes/class-links.js'
 import { useClasses } from '../classes/class-context.js'
 import RequestState from '../components/RequestState.jsx'
+import { useCapabilities } from '../capabilities/capability-context.js'
 import {
   canCorrectOrReview,
   canRelease,
@@ -171,6 +172,7 @@ function CorrectionHistory({ corrections }) {
 }
 
 export function InstructorSubmissionReview({ api = activityApi, submissions = submissionApi, pollingOptions }) {
+  const capabilities = useCapabilities()
   const { activityId, submissionId } = useParams()
   const { selectedClass, selectionStatus } = useClasses()
   const [state, setState] = useState({ key: null, status: 'idle', activity: null, record: null, error: null, notice: '', bounded: false })
@@ -286,6 +288,7 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
   }
 
   const retry = async () => {
+    if (!capabilities.java.execution) return
     if (!window.confirm('Retry assessment for this same immutable submission?')) return
     setBusy('retry')
     try {
@@ -351,7 +354,7 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
       {canRelease(record) && !archived && <section className="instructor-release-panel"><div><h3>Release result</h3><p>Release snapshots the server-calculated final score and makes this submission immutable.</p></div><button type="button" className="student-primary-action" disabled={Boolean(busy)} onClick={release}>{busy === 'release' ? 'Releasing…' : 'Release final result'}</button></section>}
       {record.status === 'released' && <section className="submission-released-result"><p className="student-feedback-eyebrow">Released result</p><h2>{score(record.scores.finalScore)} / {score(record.scores.totalPoints)} points</h2><p>{record.feedback?.text || 'No textual feedback was released.'}</p>{record.feedback?.releasedAt && <small>Feedback released {formatDate(record.feedback.releasedAt)}</small>}</section>}
 
-      {canResolveAssessmentFailure(record) && !archived && <section className="instructor-failure-panel"><div className="instructor-section-title"><h3>Infrastructure assessment failure</h3><span>The original submission remains immutable</span></div><p>Retry the same assessment first when appropriate, or explicitly resolve the infrastructure failure.</p><button type="button" className="student-outline-action" onClick={retry} disabled={Boolean(busy)}>{busy === 'retry' ? 'Queueing retry…' : 'Retry same assessment'}</button><form onSubmit={resolveFailure}><label>Resolution<select value={resolution.resolutionType} onChange={(event) => setResolution((value) => ({ ...value, resolutionType: event.target.value, replacementExpiresAt: '' }))}><option value="CLOSED_WITHOUT_REPLACEMENT">Close without replacement</option><option value="REPLACEMENT_GRANTED">Grant replacement attempt</option></select></label>{resolution.resolutionType === 'REPLACEMENT_GRANTED' && <label>Replacement expires (local time)<input type="datetime-local" value={resolution.replacementExpiresAt} onChange={(event) => setResolution((value) => ({ ...value, replacementExpiresAt: event.target.value }))} /><small>The browser converts this local time to an unambiguous ISO timestamp. The server decides whether the grant remains valid.</small></label>}<label>Mandatory reason<textarea value={resolution.reason} maxLength={2000} onChange={(event) => setResolution((value) => ({ ...value, reason: event.target.value }))} /></label><button type="submit" className="student-primary-action" disabled={!resolutionValid || Boolean(busy)}>{busy === 'resolution' ? 'Resolving…' : 'Resolve failure'}</button></form></section>}
+      {canResolveAssessmentFailure(record) && !archived && <section className="instructor-failure-panel"><div className="instructor-section-title"><h3>Infrastructure assessment failure</h3><span>The original submission remains immutable</span></div><p>Retry the same assessment first when appropriate, or explicitly resolve the infrastructure failure.</p><button type="button" className="student-outline-action" onClick={retry} disabled={Boolean(busy) || !capabilities.java.execution}>{busy === 'retry' ? 'Queueing retry…' : 'Retry same assessment'}</button>{!capabilities.java.execution && <p className="activity-lifecycle-note">Java assessment retry is unavailable in this environment.</p>}<form onSubmit={resolveFailure}><label>Resolution<select value={resolution.resolutionType} onChange={(event) => setResolution((value) => ({ ...value, resolutionType: event.target.value, replacementExpiresAt: '' }))}><option value="CLOSED_WITHOUT_REPLACEMENT">Close without replacement</option><option value="REPLACEMENT_GRANTED">Grant replacement attempt</option></select></label>{resolution.resolutionType === 'REPLACEMENT_GRANTED' && <label>Replacement expires (local time)<input type="datetime-local" value={resolution.replacementExpiresAt} onChange={(event) => setResolution((value) => ({ ...value, replacementExpiresAt: event.target.value }))} /><small>The browser converts this local time to an unambiguous ISO timestamp. The server decides whether the grant remains valid.</small></label>}<label>Mandatory reason<textarea value={resolution.reason} maxLength={2000} onChange={(event) => setResolution((value) => ({ ...value, reason: event.target.value }))} /></label><button type="submit" className="student-primary-action" disabled={!resolutionValid || Boolean(busy)}>{busy === 'resolution' ? 'Resolving…' : 'Resolve failure'}</button></form></section>}
 
       {record.failureResolution && <section className="submission-resolution instructor-resolution-record"><h2>Infrastructure resolution</h2><p>{formatStatus(record.failureResolution.resolutionType)}</p><p>{record.failureResolution.reason}</p><dl><div><dt>Resolved</dt><dd>{formatDate(record.failureResolution.resolvedAt)}</dd></div>{record.failureResolution.replacementExpiresAt && <div><dt>Replacement expiration</dt><dd>{formatDate(record.failureResolution.replacementExpiresAt)}</dd></div>}<div><dt>Replacement status</dt><dd>{record.failureResolution.replacementConsumedAt ? `Consumed ${formatDate(record.failureResolution.replacementConsumedAt)}` : record.failureResolution.replacementExpiresAt ? 'Unconsumed; the server enforces expiration when the student submits' : 'No replacement granted'}</dd></div></dl></section>}
     </div>

@@ -23,6 +23,8 @@ const sessionSelect = {
   familyId: true,
   tokenHash: true,
   csrfTokenHash: true,
+  createdAt: true,
+  lastUsedAt: true,
   expiresAt: true,
   revokedAt: true,
   replacedBySessionId: true,

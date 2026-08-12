@@ -14,6 +14,21 @@ function validEnvironment(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv 
 }
 
 describe('execution environment boundaries', () => {
+  it('requires secure cookies and exactly one proxy hop in production', () => {
+    const production = { NODE_ENV: 'production', MAIL_TRANSPORT: 'smtp', SMTP_HOST: 'smtp.example.invalid', SMTP_USER: 'placeholder', SMTP_PASSWORD: 'placeholder' }
+    expect(() => loadEnv(validEnvironment(production))).toThrow(EnvironmentValidationError)
+    const env = loadEnv(validEnvironment({ ...production, AUTH_COOKIE_SECURE: 'true', TRUST_PROXY_HOPS: '1' }))
+    expect(env.authCookieSecure).toBe(true)
+    expect(env.trustProxyHops).toBe(1)
+    expect(env.javaExecutionMode).toBe('disabled')
+    expect(env.gitExecutionMode).toBe('disabled')
+  })
+
+  it('bounds idle expiry within the absolute refresh lifetime', () => {
+    expect(loadEnv(validEnvironment()).sessionIdleTtlMinutes).toBe(30)
+    expect(() => loadEnv(validEnvironment({ REFRESH_TOKEN_TTL_DAYS: '1', SESSION_IDLE_TTL_MINUTES: '1441' }))).toThrow(EnvironmentValidationError)
+    expect(() => loadEnv(validEnvironment({ ACCESS_TOKEN_TTL_MINUTES: '30', SESSION_IDLE_TTL_MINUTES: '30' }))).toThrow(EnvironmentValidationError)
+  })
   it('keeps Java execution disabled by default', () => {
     expect(loadEnv(validEnvironment()).javaExecutionMode).toBe('disabled')
   })

@@ -25,7 +25,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "admin:create": "tsx src/scripts/create-initial-admin.ts"
+    "admin:create": "tsx src/scripts/create-initial-admin.ts",
+    "deployment:preflight": "tsx src/scripts/deployment-preflight.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

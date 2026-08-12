@@ -19,6 +19,8 @@ export interface AuthSession {
   familyId: string
   tokenHash: string
   csrfTokenHash: string
+  createdAt: Date
+  lastUsedAt: Date | null
   expiresAt: Date
   revokedAt: Date | null
   replacedBySessionId: string | null

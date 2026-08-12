@@ -241,3 +241,6 @@ A phase is ready to merge into `development/fullstack` only when:
 - The UI remains visually equivalent except for explicitly approved functional states.
 - Changed files and known limitations are reported.
 - No secret or untracked runtime data is included.
+## Phase 11A hosted preflight
+
+Production configuration uses placeholder inventory from `server/.env.hosted-safe.example`, private host-injected secrets, secure cookies, exactly one trusted proxy hop, disabled local-process Java/Git modes, and a passing `npm run deployment:preflight`. A passing preflight is necessary but does not authorize deployment.

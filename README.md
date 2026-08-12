@@ -1,6 +1,6 @@
 # Projex
 
-Projex is a web-based academic repository-learning platform prototype for programming education at Saint Louis University.
+Projex is a local-first academic programming and repository collaboration platform for Saint Louis University.
 
 ## Frontend
 
@@ -20,11 +20,11 @@ cd client
 npm run dev
 ```
 
-## Backend foundation
+## Backend
 
-The Phase 1 Node.js, Express, TypeScript, Prisma, and PostgreSQL backend is located in [`server/`](server/).
+The Node.js, Express, TypeScript, Prisma, and PostgreSQL backend is located in [`server/`](server/).
 
-PostgreSQL 18 is currently installed directly on Windows. Docker is not required for Phase 1.
+PostgreSQL 18 is currently installed directly on Windows. Docker is not required for controlled local development.
 
 Configure the backend with private local environment variables using [`server/.env.example`](server/.env.example) as the placeholder reference, then run:
 
@@ -35,6 +35,6 @@ npm run prisma:generate
 npm run dev
 ```
 
-No real database credentials are stored in the repository. See [`server/README.md`](server/README.md) for the complete Phase 1 commands and health-check instructions.
+No real database credentials are stored in the repository. See [`server/README.md`](server/README.md) for current commands and health-check instructions. Phase 11A provides hosted-safety prerequisites only; no deployment has been performed.
 
 The product and architecture documentation remains in [`docs/`](docs/).

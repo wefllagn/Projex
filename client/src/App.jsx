@@ -17,6 +17,7 @@ import InstructorRoutePage from './pages/InstructorPages.jsx'
 import RoleDashboard from './pages/RoleDashboard.jsx'
 import StudentRoutePage from './pages/StudentPages.jsx'
 import { routeCatalog } from './data/projexData.js'
+import { CapabilityProvider } from './capabilities/CapabilityProvider.jsx'
 
 function getRouteElement(role, route) {
   if (role.id === 'student') {
@@ -101,9 +102,11 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <CapabilityProvider>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </CapabilityProvider>
   )
 }
 

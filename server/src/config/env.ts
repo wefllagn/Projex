@@ -16,9 +16,11 @@ const envSchema = z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
     REQUEST_BODY_LIMIT: z.string().min(1).max(32).default('1mb'),
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(1).default(0),
     ACCESS_TOKEN_SECRET: z.string().min(32),
     ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().min(1).max(60).default(15),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+    SESSION_IDLE_TTL_MINUTES: z.coerce.number().int().min(15).max(43_200).default(30),
     ACCOUNT_SETUP_TOKEN_TTL_HOURS: z.coerce
       .number()
       .int()
@@ -82,6 +84,22 @@ const envSchema = z
         path: ['AUTH_COOKIE_SECURE'],
         message: 'AUTH_COOKIE_SECURE must be true when SameSite is none',
       })
+    }
+
+    if (value.NODE_ENV === 'production' && !value.AUTH_COOKIE_SECURE) {
+      context.addIssue({ code: 'custom', path: ['AUTH_COOKIE_SECURE'], message: 'Secure authentication cookies are required in production' })
+    }
+
+    if (value.NODE_ENV === 'production' && value.TRUST_PROXY_HOPS !== 1) {
+      context.addIssue({ code: 'custom', path: ['TRUST_PROXY_HOPS'], message: 'Hosted production requires exactly one trusted reverse-proxy hop' })
+    }
+
+    if (value.SESSION_IDLE_TTL_MINUTES > value.REFRESH_TOKEN_TTL_DAYS * 24 * 60) {
+      context.addIssue({ code: 'custom', path: ['SESSION_IDLE_TTL_MINUTES'], message: 'Session idle expiry cannot exceed absolute refresh-session expiry' })
+    }
+
+    if (value.SESSION_IDLE_TTL_MINUTES <= value.ACCESS_TOKEN_TTL_MINUTES) {
+      context.addIssue({ code: 'custom', path: ['SESSION_IDLE_TTL_MINUTES'], message: 'Session idle expiry must exceed the access-token lifetime' })
     }
 
     if (value.NODE_ENV === 'production' && value.MAIL_TRANSPORT === 'preview') {
@@ -168,9 +186,11 @@ export interface AppEnv {
   frontendOrigin: string
   logLevel: z.infer<typeof envSchema>['LOG_LEVEL']
   requestBodyLimit: string
+  trustProxyHops: number
   accessTokenSecret: string
   accessTokenTtlMinutes: number
   refreshTokenTtlDays: number
+  sessionIdleTtlMinutes: number
   accountSetupTokenTtlHours: number
   authCookieSecure: boolean
   authCookieSameSite: z.infer<typeof envSchema>['AUTH_COOKIE_SAME_SITE']
@@ -249,9 +269,11 @@ export function loadEnv(input: NodeJS.ProcessEnv = process.env): AppEnv {
     frontendOrigin: result.data.FRONTEND_ORIGIN,
     logLevel: result.data.LOG_LEVEL,
     requestBodyLimit: result.data.REQUEST_BODY_LIMIT,
+    trustProxyHops: result.data.TRUST_PROXY_HOPS,
     accessTokenSecret: result.data.ACCESS_TOKEN_SECRET,
     accessTokenTtlMinutes: result.data.ACCESS_TOKEN_TTL_MINUTES,
     refreshTokenTtlDays: result.data.REFRESH_TOKEN_TTL_DAYS,
+    sessionIdleTtlMinutes: result.data.SESSION_IDLE_TTL_MINUTES,
     accountSetupTokenTtlHours: result.data.ACCOUNT_SETUP_TOKEN_TTL_HOURS,
     authCookieSecure: result.data.AUTH_COOKIE_SECURE,
     authCookieSameSite: result.data.AUTH_COOKIE_SAME_SITE,

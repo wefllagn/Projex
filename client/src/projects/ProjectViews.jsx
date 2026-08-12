@@ -4,6 +4,7 @@ import { ApiError, describeApiError } from '../api/api-client.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { useCapabilities } from '../capabilities/capability-context.js'
 import { repositoryApi } from '../repositories/repository-api.js'
 import { repositoryCatalogProjection, repositoryMatchesProject } from '../repositories/repository-projections.js'
 import { projectApi } from './project-api.js'
@@ -128,6 +129,7 @@ function ClassRepositoryForm({ busy, onSubmit }) {
 }
 
 export function StudentProjectDetail({ api = projectApi, repositories = repositoryApi }) {
+  const capabilities = useCapabilities()
   const { projectTaskId } = useParams()
   const navigate = useNavigate()
   const { selectedClass, selectionStatus } = useClasses()
@@ -203,7 +205,7 @@ export function StudentProjectDetail({ api = projectApi, repositories = reposito
       </main>
       <aside className="student-work-rail">
         <section className="student-work-card">
-          {mayCreate ? <ClassRepositoryForm busy={creating} onSubmit={createRepository} /> : <RequestState kind="unavailable" compact title="Repository creation is closed" message="A team repository can be created only while the project is published, before its deadline, in an active class." />}
+          {mayCreate && capabilities.git.provisioning ? <ClassRepositoryForm busy={creating} onSubmit={createRepository} /> : <RequestState kind="unavailable" compact title={mayCreate ? 'Repository provisioning unavailable' : 'Repository creation is closed'} message={mayCreate ? 'This environment preserves repository records but cannot provision new Git storage.' : 'A team repository can be created only while the project is published, before its deadline, in an active class.'} />}
           {actionError && <p className="activity-action-error">{describeApiError(actionError)}</p>}
         </section>
         <section className="student-work-card student-private-card"><h2>Collaboration</h2><p>Repository invitations are available from My Repositories. Direct arbitrary repository joining is not supported.</p></section>

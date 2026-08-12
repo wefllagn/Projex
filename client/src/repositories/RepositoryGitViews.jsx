@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, describeApiError } from '../api/api-client.js'
 import RequestState from '../components/RequestState.jsx'
+import { useCapabilities } from '../capabilities/capability-context.js'
 import { formatProjectDate } from '../projects/project-projections.js'
 import { repositoryContentApi } from './repository-content-api.js'
 import {
@@ -300,13 +301,14 @@ function LocalGitView({ api, repository, role, project }) {
 }
 
 export function RepositoryGitPanel({ repository, role = 'student', project = null, api = repositoryContentApi }) {
+  const capabilities = useCapabilities()
   const [activeTab, setActiveTab] = useState('files')
   const [summary, setSummary] = useState(state())
   const [branches, setBranches] = useState(state())
   const [selectedBranch, setSelectedBranch] = useState(repository.defaultBranch)
 
   useEffect(() => {
-    if (repository.storageStatus !== 'READY') return undefined
+    if (repository.storageStatus !== 'READY' || !capabilities.git.inspection) return undefined
     const controller = new AbortController()
     Promise.resolve().then(() => { if (!controller.signal.aborted) setSummary(state('loading')) })
     Promise.resolve().then(() => api.getSummary(repository.id, { signal: controller.signal }))
@@ -318,7 +320,7 @@ export function RepositoryGitPanel({ repository, role = 'student', project = nul
       })
       .catch((error) => { if (error?.name !== 'AbortError') setSummary(state('error', null, error)) })
     return () => controller.abort()
-  }, [api, repository.defaultBranch, repository.id, repository.storageStatus])
+  }, [api, capabilities.git.inspection, repository, repository.defaultBranch, repository.id, repository.storageStatus])
 
   useEffect(() => {
     if (summary.status !== 'ready' || summary.data.empty || !['files', 'history', 'branches'].includes(activeTab) || branches.status !== 'idle') return undefined
@@ -337,10 +339,11 @@ export function RepositoryGitPanel({ repository, role = 'student', project = nul
 
   if (['PENDING', 'PROVISIONING'].includes(repository.storageStatus)) return <RequestState kind="loading" compact title="Git repository provisioning" message="Git inspection will become available only after the backend marks storage Ready." />
   if (['FAILED', 'QUARANTINED'].includes(repository.storageStatus)) return <RequestState kind="unavailable" compact title="Git repository unavailable" message="Failed or quarantined repository storage cannot be inspected or used." />
+  if (!capabilities.git.inspection) return <RequestState kind="unavailable" compact title="Git inspection unavailable" message="Repository metadata is preserved, but this environment cannot inspect Git source or history." />
   return (
     <section className="student-repo-card repository-git-panel">
       <div className="repository-git-heading"><div><h2>Repository Git</h2><p>Backend-authorized source inspection and short-lived local Git access.</p></div>{summary.status === 'ready' && <dl><div><dt>Branches</dt><dd>{summary.data.branchCount}</dd></div><div><dt>Commits</dt><dd>{summary.data.commitCount}</dd></div></dl>}</div>
-      <div className="repository-git-tabs" role="tablist" aria-label="Repository Git views">{TABS.map(([id, label]) => <button type="button" role="tab" aria-selected={activeTab === id} key={id} onClick={() => setActiveTab(id)}>{label}</button>)}</div>
+      <div className="repository-git-tabs" role="tablist" aria-label="Repository Git views">{TABS.filter(([id]) => id !== 'local' || capabilities.git.smartHttp).map(([id, label]) => <button type="button" role="tab" aria-selected={activeTab === id} key={id} onClick={() => setActiveTab(id)}>{label}</button>)}</div>
       {activeTab !== 'local' && summary.status === 'loading' && <RequestState kind="loading" compact message="Loading repository Git summary." />}
       {activeTab !== 'local' && summary.status === 'error' && <RequestState kind="unavailable" compact title="Git inspection unavailable" message={gitErrorMessage(summary.error)} />}
       {summary.status === 'ready' && activeTab === 'files' && <FilesView key={`${repository.id}:${selectedBranch}`} api={api} repositoryId={repository.id} summary={summary.data} branches={branches.data ?? []} selectedBranch={selectedBranch} onSelectBranch={setSelectedBranch} />}
