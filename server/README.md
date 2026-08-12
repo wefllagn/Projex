@@ -1,6 +1,6 @@
 # Projex Server
 
-Projex includes the Phase 1–10 backend and integrated frontend contracts. Phase 11A adds hosted-safe capability gating and deployment prerequisites; it does not deploy or publicly expose the service. Hosted Java and Git execution, public/SSH Git access, arbitrary infrastructure control, and admin source/grade authority remain unavailable.
+Projex includes the Phase 1–10 backend and integrated frontend contracts. Phase 11A adds hosted-safe capability gating and deployment prerequisites; Phase 11B.1 adds guarded backup/restore planning and the canonical operations runbook. Neither milestone deploys or publicly exposes the service, and no real backup/restore proof is part of 11B.1. Hosted Java and Git execution, public/SSH Git access, arbitrary infrastructure control, and admin source/grade authority remain unavailable.
 
 ## Prerequisites
 
@@ -57,6 +57,8 @@ Required variables:
 When `MAIL_TRANSPORT=smtp`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, and `SMTP_PASSWORD` are also required. Preview transport is rejected in production.
 
 Use `.env.hosted-safe.example` only as a placeholder inventory. Before a hosted process is started, run `npm run deployment:preflight`; any blocking check stops deployment. The command does not apply migrations or start workers.
+
+The canonical host, release, migration, process, backup, restore-verification, rollback, maintenance, and teardown procedure is `docs/architecture/DEPLOYMENT_AND_OPERATIONS_RUNBOOK.md`. Operational backup/restore values are private operator inputs and are intentionally not added to application environment examples.
 
 Prisma remains pinned at `6.19.3`. On the current Windows workstation the matching schema engine is present under `@prisma/engines`, but the Prisma CLI package-local copy may be absent after an incomplete postinstall and then attempts an online engine download. Do not upgrade Prisma to work around this. Repair the pinned installation in the future deployment build or use an explicitly validated process-local engine path for diagnostics; never commit that host path or place it in application environment examples.
 
@@ -128,6 +130,15 @@ npm run build
 npm start
 npm run start:worker
 ```
+
+Phase 11B.1 adds two operator commands:
+
+```powershell
+npm run operations:backup -- --execute
+npm run operations:restore:preflight
+```
+
+The backup command requires an explicit confirmation and performs guarded paired PostgreSQL/Git backup work. Do not run it against normal data without separate backup-execution approval. The restore command is preflight-only: it validates a dedicated `projex_restore_verify_<id>` target, paths, manifest, checksums, and command plans but does not run `pg_restore`. Neither command may fall back from its explicit restore/operations inputs, and credentials are excluded from arguments and output.
 
 ## API endpoints
 

@@ -27,9 +27,9 @@ Status markers:
 | 6 | Submissions and Automated Assessment | Complete | `2ff3e4e` |
 | 7 | Project and Repository Collaboration | Complete | `741ba60` |
 | 8 | Local Git Operations (8A provisioning, 8B Smart HTTP, 8C inspection) | Complete | `893443a` |
-| 9 | Admin backend capabilities | In progress: 9A implemented for review | Pending |
-| 10 | Frontend integration | Pending | Pending |
-| 11 | Hardening, deployment, and evaluation | Pending | Pending |
+| 9 | Admin backend capabilities | Complete | `8df8215` |
+| 10 | Frontend integration | Complete | `c6635b6` |
+| 11 | Hardening, deployment, and evaluation | In progress: 11A complete; 11B.1 current | Pending |
 
 ## Phase 0: architecture and planning — complete
 
@@ -364,14 +364,23 @@ The remaining persistent normal-loopback enablement item is a deferred operation
 
 ## Phase 11: hardening, deployment, and evaluation — in progress
 
-### Phase 11A: hosted safety and deployment prerequisites — implemented, pending final review
+### Phase 11A: hosted safety and deployment prerequisites — complete
 
 - [x] Add server-authoritative local/full versus hosted/safe capabilities with a public allowlisted contract.
 - [x] Fail closed before Java enqueue and repository/provisioning creation when their execution modes are disabled.
 - [x] Require production secure cookies, bounded proxy trust, preserved absolute session expiry, and persisted-timestamp idle expiry.
 - [x] Add placeholder-only hosted configuration, a provider-neutral TLS reverse-proxy/static-hosting template, and a non-mutating deployment preflight.
 - [x] Present disabled Java/Git capabilities truthfully in the integrated frontend without weakening backend authorization.
-- [ ] Complete Phase 11A final review, staging, commit, and push through a separate approval boundary.
+- [x] Complete Phase 11A final review, staging, commit, dependency remediation, and push through separate approval boundaries.
+
+### Phase 11B: deployment and operations
+
+- [x] Define the paired PostgreSQL/managed-Git recovery model and authoritative/disposable state boundary.
+- [x] Add fail-closed PostgreSQL argument plans, explicit restore-database naming, canonical path guards, quiescence checks, secret-free manifests, checksums, and restore-verification framework.
+- [x] Add the canonical deployment/operations runbook, Linux release-preparation script, and HOSTED_SAFE systemd API template.
+- [x] Keep migrations, service startup, backup execution, restore execution, and public exposure outside automatic startup/tooling.
+- [ ] Complete Phase 11B.1 final review, staging, commit, and push.
+- [ ] Perform the separately approved Phase 11B.2 isolated paired backup/restore proof.
 
 - [ ] Complete security hardening, durable administrative auditing, integration/end-to-end tests, and laboratory evaluation.
 - [ ] Add hosted TLS, reverse proxy, secret injection, backups, restore testing, health monitoring, and incident/shutdown procedures.

@@ -244,6 +244,10 @@ The deployable unit should use standard containers or ordinary Node/PostgreSQL p
 
 The hosted system is for controlled testing and defense only. It should have a defined test window, restricted accounts, backups appropriate to the demonstration, and a shutdown/removal plan. University-wide rollout, horizontal scaling, multi-region failover, and continuous availability are not Phase goals.
 
+### Operational recovery boundary
+
+PostgreSQL and the complete managed Git storage root form one recovery point. A backup requires stopped public writes, drained API/workers, no running execution/provisioning work, empty provisioning staging, and recovered Smart HTTP requests. The database dump, Git archive, safe manifest, and checksums remain paired; rollback after a data or migration failure restores the matching pair rather than running down migrations or partially replacing live state. `DEPLOYMENT_AND_OPERATIONS_RUNBOOK.md` owns operator procedure. Phase 11B.1 supplies guarded tooling only; actual backup/restore proof and deployment require later approval.
+
 ## Architecture rules
 
 - API base path is `/api/v1`.

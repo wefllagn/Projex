@@ -1,0 +1,24 @@
+[Unit]
+Description=Projex API (HOSTED_SAFE)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=projex
+Group=projex
+WorkingDirectory=/opt/projex/current/server
+EnvironmentFile=/etc/projex/projex.env
+ExecStart=/usr/bin/env HOST=127.0.0.1 /usr/bin/node /opt/projex/current/server/dist/server.js
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=15s
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/projex
+
+[Install]
+WantedBy=multi-user.target

@@ -6,7 +6,7 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Boundary
 
-Phase 0 (architecture and planning) and implementation Phases 1 through 10 are complete, accepted, and integrated into `development/fullstack`. The retained `phase/10-frontend-integration` branch records the Phase 10 milestone history. Phase 11 has not started and remains a separate planning and approval boundary.
+Phase 0 (architecture and planning) and implementation Phases 1 through 10 are complete, accepted, and integrated into `development/fullstack`. Phase 11A hosted-safety prerequisites and dependency remediation are complete on `phase/11-hardening-deployment-evaluation`. Phase 11B.1 operational tooling and runbook work is current; real backup/restore proof, deployment, public exposure, and integration remain separate approval boundaries.
 
 ## Live-State Authority
 

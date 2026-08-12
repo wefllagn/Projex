@@ -242,6 +242,17 @@ Phase 11A adds these prerequisites without authorizing deployment:
 - Deployment stays portable and may use a temporary VPS, GitHub Student Developer Pack credits, Azure for Students, another student cloud credit, or an SLU-provided host. PostgreSQL, OpenJDK/Java, and Git remain self-hosted; no provider or Cloudflare Tunnel is mandatory.
 - High availability and multi-server failover are out of scope for the controlled pilot.
 
+## Backup and restore security
+
+- Treat database dumps, Git archives, manifests, and restore environments as sensitive host state even when the manifest itself is allowlisted.
+- Stop public writes and transitional Git/job activity before producing the paired PostgreSQL/Git recovery point.
+- Invoke `pg_dump`, `pg_restore`, tar, and Git through fixed executables and argument arrays with `shell: false`; connection secrets belong only in the private child environment.
+- Require absolute canonical roots and reject source, test, backup, normal-storage, restore-source/destination, symlink, junction, and reparse overlaps.
+- A restore verifier requires an explicit `projex_restore_verify_<id>` database and never falls back to the normal database or Git root.
+- Quarantine and repository markers are authoritative recovery evidence. Never overwrite or automatically delete them.
+- Manifests contain safe counts, versions, migration names, filenames, sizes, and hashes only. They exclude people, secrets, URLs, host paths, source, hidden tests, feedback, and credential material.
+- Real backup creation, restore/database creation, destructive replacement, and cleanup each remain explicit approval gates.
+
 ## Phase 8A enforced Git boundary
 
 The current tested executable is Git for Windows `2.55.0.windows.3`; the worker requires a validated absolute Git for Windows executable at version `2.55.0` or later. It sanitizes inherited Git configuration/environment, disables prompts, uses `shell: false`, bounds time/output, and never logs arguments or paths. Only empty bare initialization and verification operations are available. Unsafe marker, canonical-path, link, junction, reparse, or repository state is quarantined rather than overwritten or deleted.

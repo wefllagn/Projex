@@ -35,6 +35,6 @@ npm run prisma:generate
 npm run dev
 ```
 
-No real database credentials are stored in the repository. See [`server/README.md`](server/README.md) for current commands and health-check instructions. Phase 11A provides hosted-safety prerequisites only; no deployment has been performed.
+No real database credentials are stored in the repository. See [`server/README.md`](server/README.md) for current commands and health-check instructions. Phase 11A provides hosted-safety prerequisites, and Phase 11B.1 provides non-mutating operational tooling and the [`deployment runbook`](docs/architecture/DEPLOYMENT_AND_OPERATIONS_RUNBOOK.md). No deployment or real backup/restore proof has been performed.
 
 The product and architecture documentation remains in [`docs/`](docs/).

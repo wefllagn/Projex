@@ -185,6 +185,8 @@ Deployment comes after local functionality and isolation controls pass.
 - Document the hosted URL and test accounts privately; never commit credentials.
 - Remove or disable the temporary deployment after the approved use period.
 
+Phase 11B operational work uses `DEPLOYMENT_AND_OPERATIONS_RUNBOOK.md` as the canonical procedure. Non-mutating tooling may construct and test fixed command plans with mocks and temporary fixtures, but a real database dump, Git archive, restore target, host configuration, migration, service installation, or exposure remains a separate approval gate. Recovery snapshots pair PostgreSQL with the complete managed Git root; partial live restores and down migrations are not an accepted rollback mechanism.
+
 University-wide deployment, high availability, multi-server failover, autoscaling, on-call operations, and a 24/7 SLA are out of scope.
 
 ## Codex execution and approval boundaries
@@ -244,3 +246,7 @@ A phase is ready to merge into `development/fullstack` only when:
 ## Phase 11A hosted preflight
 
 Production configuration uses placeholder inventory from `server/.env.hosted-safe.example`, private host-injected secrets, secure cookies, exactly one trusted proxy hop, disabled local-process Java/Git modes, and a passing `npm run deployment:preflight`. A passing preflight is necessary but does not authorize deployment.
+
+## Phase 11B operational gates
+
+Phase 11B.1 may implement and unit-test guarded backup/restore planning, checksums, release preparation, service templates, and operator documentation. Phase 11B.2 requires separate approval before any dump, archive, restore database/root, or cleanup is created. Hosted migrations, services, SMTP credentials, DNS/firewall changes, TLS exposure, deployment, and teardown remain later approval boundaries.
