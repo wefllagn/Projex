@@ -10,8 +10,13 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import path from 'node:path'
+import {
+  isManagedRepositoryUuid,
+  ManagedRepositoryLocatorError,
+  resolveManagedRepositoryLocation as resolveRepositoryLocation,
+  validateManagedRepositoryLocator,
+} from './managed-repository-locator.js'
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i
 const MARKER_FILE = 'projex-repository.json'
 const TEST_SENTINEL = '.projex-test-run.json'
@@ -115,17 +120,13 @@ export function createRepositoryStorage(options: {
   const configuredRoot = path.resolve(options.root)
 
   function pathsFor(repositoryId: string, provisioningJobId: string): RepositoryStoragePaths {
-    if (!UUID_PATTERN.test(repositoryId) || !UUID_PATTERN.test(provisioningJobId)) {
+    if (!isManagedRepositoryUuid(repositoryId) || !isManagedRepositoryUuid(provisioningJobId)) {
       throw new RepositoryStorageError('INVALID_STORAGE_IDENTIFIER')
     }
     const normalizedId = repositoryId.toLowerCase()
-    const relativeRepositoryPath = path.join(
-      'repositories',
-      normalizedId.slice(0, 2),
-      normalizedId.slice(2, 4),
-      `${normalizedId}.git`,
-    )
-    const repositoryPath = path.resolve(configuredRoot, relativeRepositoryPath)
+    const managed = resolveRepositoryLocation({ root: configuredRoot, repositoryId })
+    const relativeRepositoryPath = managed.canonicalLocator
+    const repositoryPath = managed.repositoryPath
     const stagingPath = path.resolve(
       configuredRoot,
       'staging',
@@ -144,25 +145,22 @@ export function createRepositoryStorage(options: {
     return { relativeRepositoryPath, repositoryPath, stagingPath, quarantinePath }
   }
 
-  async function resolveManagedRepository(
+  async function resolveManagedRepositoryLocation(
     repositoryId: string,
     relativeRepositoryPath: string,
-  ): Promise<string> {
-    if (!UUID_PATTERN.test(repositoryId)) {
-      throw new RepositoryStorageError('INVALID_STORAGE_IDENTIFIER')
-    }
-    const normalizedId = repositoryId.toLowerCase()
-    const expected = path.join(
-      'repositories',
-      normalizedId.slice(0, 2),
-      normalizedId.slice(2, 4),
-      `${normalizedId}.git`,
-    )
-    if (normalizedForComparison(relativeRepositoryPath) !== normalizedForComparison(expected)) {
-      throw new RepositoryStorageError('STORAGE_PATH_MISMATCH')
+  ): Promise<{ repositoryPath: string; canonicalLocator: string }> {
+    let validated: ReturnType<typeof validateManagedRepositoryLocator>
+    try {
+      validated = validateManagedRepositoryLocator(repositoryId, relativeRepositoryPath)
+    } catch (error) {
+      if (error instanceof ManagedRepositoryLocatorError) {
+        throw new RepositoryStorageError(error.code)
+      }
+      throw error
     }
     const canonicalRoot = await initializeRoot()
-    const candidate = path.resolve(canonicalRoot, relativeRepositoryPath)
+    const managed = resolveRepositoryLocation({ root: canonicalRoot, repositoryId: validated.repositoryId })
+    const candidate = managed.repositoryPath
     if (!isWithin(canonicalRoot, candidate) || candidate === canonicalRoot) {
       throw new RepositoryStorageError('STORAGE_PATH_ESCAPE')
     }
@@ -178,10 +176,17 @@ export function createRepositoryStorage(options: {
         throw new RepositoryStorageError('STORAGE_MARKER_INVALID')
       }),
     ) as Partial<Marker>
-    if (marker.version !== 1 || marker.repositoryId !== repositoryId) {
+    if (marker.version !== 1 || marker.repositoryId !== managed.repositoryId) {
       throw new RepositoryStorageError('STORAGE_MARKER_MISMATCH')
     }
-    return canonicalRepository
+    return { repositoryPath: canonicalRepository, canonicalLocator: managed.canonicalLocator }
+  }
+
+  async function resolveManagedRepository(
+    repositoryId: string,
+    relativeRepositoryPath: string,
+  ): Promise<string> {
+    return (await resolveManagedRepositoryLocation(repositoryId, relativeRepositoryPath)).repositoryPath
   }
 
   async function initializeRoot(): Promise<string> {
@@ -276,6 +281,7 @@ export function createRepositoryStorage(options: {
     root: configuredRoot,
     pathsFor,
     resolveManagedRepository,
+    resolveManagedRepositoryLocation,
     initializeRoot,
     prepareStaging,
     verifyMarker,

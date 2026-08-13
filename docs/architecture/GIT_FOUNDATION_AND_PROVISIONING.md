@@ -28,6 +28,10 @@ The tested Windows toolchain is Git for Windows `2.55.0.windows.3`. The worker a
 
 Every managed staging/final repository has a versioned, non-secret ownership marker. Path handling checks canonical containment, Windows case-insensitive comparisons, reserved device names, trailing dots/spaces, alternate data streams, traversal, symbolic links, junctions, reparse escapes, and unsupported filesystem entries.
 
+`Repository.storagePath` is a portable, server-owned READY-state integrity locator, not authoritative host placement. New values always use forward slashes in the exact UUID-derived form `repositories/<first-two>/<next-two>/<repository-uuid>.git`, including on Windows. Runtime filesystem placement is independently derived from the configured root and validated repository UUID. Exact legacy Windows backslash locators remain readable for existing repositories, but mixed separators, absolute paths, traversal, alternate buckets, mismatched UUIDs, and all other path forms are rejected. Existing rows and repository directories do not require normalization or movement.
+
+`quarantineKey` remains internal recovery evidence and is never used to resolve a READY repository. Quarantined state is retained for separately approved recovery; this portability correction neither rewrites nor deletes quarantine records or directories.
+
 Local development may configure an ignored `.git-storage` location, but hosted deployment requires a separately approved persistent volume and hardening review. Physical repository deletion is not part of Phase 8A.
 
 ## Database lifecycle
@@ -49,7 +53,7 @@ The migration backfills existing repositories as `PENDING` and creates jobs idem
 Filesystem/Git work cannot share a PostgreSQL transaction, so recovery uses an ownership marker and an atomic same-volume rename:
 
 1. Claim the PostgreSQL job with `FOR UPDATE SKIP LOCKED` and a lease.
-2. Derive UUID-only staging and final paths.
+2. Derive UUID-only staging and final paths plus the canonical portable database locator.
 3. Create the owned staging directory.
 4. Run `git init --bare --initial-branch=main`.
 5. Verify the repository is bare, `HEAD` is `refs/heads/main`, no refs exist, and `git fsck` succeeds.

@@ -6,6 +6,10 @@ import { OperationsSafetyError } from './operations-error.js'
 import { validateRestorePaths } from './path-guards.js'
 import { buildPgRestorePlan } from './postgres-tools.js'
 import type { CommandPlan } from './process-runner.js'
+import {
+  ManagedRepositoryLocatorError,
+  resolveManagedRepositoryLocation,
+} from '../storage/managed-repository-locator.js'
 
 export type RestoreEvidence = Readonly<{
   manifestValid: boolean
@@ -54,14 +58,25 @@ function within(root: string, candidate: string): boolean {
 export async function verifyRepositoryCorrespondence(
   restoreGitRoot: string,
   repositories: readonly RestoredRepositoryRecord[],
-): Promise<{ verifiedRepositories: number; orphanRepositories: number }> {
+): Promise<{
+  verifiedRepositories: number
+  orphanRepositories: number
+  repositoryPaths: readonly string[]
+}> {
   const canonicalRoot = await realpath(restoreGitRoot)
   const expectedDirectories = new Set<string>()
   for (const repository of repositories) {
-    if (path.isAbsolute(repository.storagePath) || repository.storagePath.includes('..')) {
+    let repositoryPath: string
+    try {
+      repositoryPath = resolveManagedRepositoryLocation({
+        root: canonicalRoot,
+        repositoryId: repository.repositoryId,
+        persistedLocator: repository.storagePath,
+      }).repositoryPath
+    } catch (error) {
+      if (!(error instanceof ManagedRepositoryLocatorError)) throw error
       throw new OperationsSafetyError('RESTORED_REPOSITORY_PATH_INVALID')
     }
-    const repositoryPath = path.resolve(canonicalRoot, repository.storagePath)
     if (!within(canonicalRoot, repositoryPath)) throw new OperationsSafetyError('RESTORED_REPOSITORY_PATH_INVALID')
     const canonicalRepository = await realpath(repositoryPath).catch(() => {
       throw new OperationsSafetyError('RESTORED_REPOSITORY_MISSING')
@@ -103,7 +118,11 @@ export async function verifyRepositoryCorrespondence(
   await walk(path.join(canonicalRoot, 'repositories'))
   const orphanRepositories = [...discovered].filter((item) => !expectedDirectories.has(item)).length
   if (orphanRepositories > 0) throw new OperationsSafetyError('RESTORED_REPOSITORY_ORPHANED')
-  return { verifiedRepositories: expectedDirectories.size, orphanRepositories }
+  return {
+    verifiedRepositories: expectedDirectories.size,
+    orphanRepositories,
+    repositoryPaths: [...expectedDirectories].sort(),
+  }
 }
 
 export async function buildRestoreVerificationPlan(input: {

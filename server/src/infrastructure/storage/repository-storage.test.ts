@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -26,7 +26,7 @@ describe('repository storage paths', () => {
       '22222222-2222-4222-8222-222222222222',
     )
     expect(paths.relativeRepositoryPath).toBe(
-      path.join('repositories', '11', '11', '11111111-1111-4111-8111-111111111111.git'),
+      'repositories/11/11/11111111-1111-4111-8111-111111111111.git',
     )
     await expect(readFile(root)).rejects.toMatchObject({ code: 'ENOENT' })
   })
@@ -36,6 +36,55 @@ describe('repository storage paths', () => {
     expect(() => storage.pathsFor('../escape', '22222222-2222-4222-8222-222222222222')).toThrow(
       RepositoryStorageError,
     )
+  })
+
+  it('rejects a mismatched persisted locator before creating the configured root', async () => {
+    const parent = await mkdtemp(path.join(os.tmpdir(), 'projex-storage-invalid-locator-'))
+    temporaryRoots.push(parent)
+    const root = path.join(parent, 'must-not-be-created')
+    const storage = createRepositoryStorage({ root, repositorySizeLimitBytes: 1_000_000 })
+    await expect(storage.resolveManagedRepository(
+      '11111111-1111-4111-8111-111111111111',
+      '../outside.git',
+    )).rejects.toThrowError('STORAGE_PATH_MISMATCH')
+    await expect(readFile(root)).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it('resolves exact legacy locators through UUID-derived components and verifies the marker', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'projex-storage-legacy-'))
+    temporaryRoots.push(root)
+    const repositoryId = '11111111-1111-4111-8111-111111111111'
+    const repositoryPath = path.join(root, 'repositories', '11', '11', `${repositoryId}.git`)
+    await mkdir(repositoryPath, { recursive: true })
+    await writeFile(
+      path.join(repositoryPath, 'projex-repository.json'),
+      JSON.stringify({
+        version: 1,
+        repositoryId,
+        provisioningJobId: '22222222-2222-4222-8222-222222222222',
+      }),
+    )
+    const resolved = await createRepositoryStorage({ root, repositorySizeLimitBytes: 1_000_000 })
+      .resolveManagedRepositoryLocation(
+        repositoryId,
+        `repositories\\11\\11\\${repositoryId}.git`,
+    )
+    expect(resolved).toEqual({
+      repositoryPath: await realpath(repositoryPath),
+      canonicalLocator: `repositories/11/11/${repositoryId}.git`,
+    })
+  })
+
+  it('rejects a managed path redirected through a link or junction', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'projex-storage-link-'))
+    const outside = await mkdtemp(path.join(os.tmpdir(), 'projex-storage-outside-'))
+    temporaryRoots.push(root, outside)
+    const repositoryId = '11111111-1111-4111-8111-111111111111'
+    await mkdir(path.join(root, 'repositories', '11'), { recursive: true })
+    await symlink(outside, path.join(root, 'repositories', '11', '11'), process.platform === 'win32' ? 'junction' : 'dir')
+    await expect(createRepositoryStorage({ root, repositorySizeLimitBytes: 1_000_000 })
+      .resolveManagedRepository(repositoryId, `repositories/11/11/${repositoryId}.git`))
+      .rejects.toThrowError('STORAGE_REPARSE_POINT_REJECTED')
   })
 })
 

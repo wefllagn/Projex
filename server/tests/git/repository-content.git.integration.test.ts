@@ -194,6 +194,25 @@ describe('Phase 8C repository inspection', () => {
     await expect(contentService.tree(owner, repository.id, {})).resolves.toMatchObject({ commitId: null, entries: [] })
   })
 
+  it('inspects existing archived READY storage through an exact legacy Windows locator', async () => {
+    const owner = await createActiveUser(prisma, 'STUDENT')
+    const { repository } = await provisionPersonal(owner.id)
+    await prisma.repository.update({
+      where: { id: repository.id },
+      data: {
+        status: 'ARCHIVED',
+        archivedAt: new Date(),
+        storagePath: repository.storagePath!.replaceAll('/', '\\'),
+      },
+    })
+    await expect(contentService.summary(owner, repository.id)).resolves.toMatchObject({
+      repositoryId: repository.id,
+      repositoryStatus: 'ARCHIVED',
+      storageStatus: 'READY',
+      empty: true,
+    })
+  })
+
   it('rejects binary, oversized, unreachable, and traversal content safely', async () => {
     const owner = await createActiveUser(prisma, 'STUDENT')
     const { repository, repositoryPath } = await provisionPersonal(owner.id)

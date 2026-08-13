@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, realpath, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -90,13 +90,53 @@ describe('restore verification framework', () => {
   it('matches restored database repository records to filesystem markers and detects orphans', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'projex-restore-markers-'))
     roots.push(root)
-    const repositoryPath = path.join(root, 'repositories', '11', 'repo.git')
+    const repositoryId = '11111111-1111-4111-8111-111111111111'
+    const provisioningJobId = '22222222-2222-4222-8222-222222222222'
+    const canonicalLocator = `repositories/11/11/${repositoryId}.git`
+    const legacyWindowsLocator = `repositories\\11\\11\\${repositoryId}.git`
+    const repositoryPath = path.join(root, 'repositories', '11', '11', `${repositoryId}.git`)
     await mkdir(repositoryPath, { recursive: true })
-    await writeFile(path.join(repositoryPath, 'projex-repository.json'), JSON.stringify({ version: 1, repositoryId: 'repo-1', provisioningJobId: 'job-1' }))
-    await expect(verifyRepositoryCorrespondence(root, [{ repositoryId: 'repo-1', provisioningJobId: 'job-1', storagePath: path.join('repositories', '11', 'repo.git') }])).resolves.toEqual({ verifiedRepositories: 1, orphanRepositories: 0 })
-    const orphan = path.join(root, 'repositories', '22', 'orphan.git')
+    await writeFile(path.join(repositoryPath, 'projex-repository.json'), JSON.stringify({ version: 1, repositoryId, provisioningJobId }))
+    const canonicalRepositoryPath = await realpath(repositoryPath)
+    await expect(verifyRepositoryCorrespondence(root, [{ repositoryId, provisioningJobId, storagePath: canonicalLocator }])).resolves.toEqual({
+      verifiedRepositories: 1,
+      orphanRepositories: 0,
+      repositoryPaths: [canonicalRepositoryPath],
+    })
+    await expect(verifyRepositoryCorrespondence(root, [{ repositoryId, provisioningJobId, storagePath: legacyWindowsLocator }])).resolves.toEqual({
+      verifiedRepositories: 1,
+      orphanRepositories: 0,
+      repositoryPaths: [canonicalRepositoryPath],
+    })
+    const orphanId = '33333333-3333-4333-8333-333333333333'
+    const orphan = path.join(root, 'repositories', '33', '33', `${orphanId}.git`)
     await mkdir(orphan, { recursive: true })
-    await writeFile(path.join(orphan, 'projex-repository.json'), JSON.stringify({ version: 1, repositoryId: 'repo-2', provisioningJobId: 'job-2' }))
-    await expect(verifyRepositoryCorrespondence(root, [{ repositoryId: 'repo-1', provisioningJobId: 'job-1', storagePath: path.join('repositories', '11', 'repo.git') }])).rejects.toThrowError('RESTORED_REPOSITORY_ORPHANED')
+    await writeFile(path.join(orphan, 'projex-repository.json'), JSON.stringify({ version: 1, repositoryId: orphanId, provisioningJobId: '44444444-4444-4444-8444-444444444444' }))
+    await expect(verifyRepositoryCorrespondence(root, [{ repositoryId, provisioningJobId, storagePath: legacyWindowsLocator }])).rejects.toThrowError('RESTORED_REPOSITORY_ORPHANED')
+  })
+
+  it('rejects unsafe locators, missing repositories, duplicate mappings, and marker mismatches', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'projex-restore-correspondence-'))
+    roots.push(root)
+    const repositoryId = '11111111-1111-4111-8111-111111111111'
+    const provisioningJobId = '22222222-2222-4222-8222-222222222222'
+    const storagePath = `repositories/11/11/${repositoryId}.git`
+    const record = { repositoryId, provisioningJobId, storagePath }
+
+    await expect(verifyRepositoryCorrespondence(root, [record])).rejects.toThrowError('RESTORED_REPOSITORY_MISSING')
+
+    const repositoryPath = path.join(root, 'repositories', '11', '11', `${repositoryId}.git`)
+    await mkdir(repositoryPath, { recursive: true })
+    await writeFile(path.join(repositoryPath, 'projex-repository.json'), JSON.stringify({
+      version: 1,
+      repositoryId,
+      provisioningJobId: '33333333-3333-4333-8333-333333333333',
+    }))
+    await expect(verifyRepositoryCorrespondence(root, [record])).rejects.toThrowError('RESTORED_REPOSITORY_MARKER_INVALID')
+
+    await writeFile(path.join(repositoryPath, 'projex-repository.json'), JSON.stringify({ version: 1, repositoryId, provisioningJobId }))
+    await expect(verifyRepositoryCorrespondence(root, [record, record])).rejects.toThrowError('RESTORED_REPOSITORY_PATH_DUPLICATE')
+    await expect(verifyRepositoryCorrespondence(root, [{ ...record, storagePath: `../${storagePath}` }]))
+      .rejects.toThrowError('RESTORED_REPOSITORY_PATH_INVALID')
   })
 })

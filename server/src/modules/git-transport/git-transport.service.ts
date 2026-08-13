@@ -8,7 +8,10 @@ import type { GitTransportRepository } from './git-transport.repository.js'
 import type { AcceptedPushReceipt } from './git-transport.types.js'
 
 interface StorageResolver {
-  resolveManagedRepository(repositoryId: string, relativeRepositoryPath: string): Promise<string>
+  resolveManagedRepositoryLocation(
+    repositoryId: string,
+    relativeRepositoryPath: string,
+  ): Promise<{ repositoryPath: string; canonicalLocator: string }>
 }
 
 interface SmartHttpBackend {
@@ -109,20 +112,20 @@ export function createGitTransportService(dependencies: {
         repositoryId: input.repositoryId,
         operation,
       })
-      const relativeRepositoryPath = authentication.access.storagePath
-      if (authentication.access.storageStatus !== 'READY' || !relativeRepositoryPath) {
+      const persistedLocator = authentication.access.storagePath
+      if (authentication.access.storageStatus !== 'READY' || !persistedLocator) {
         throw unavailable()
       }
-      const repositoryPath = await storage.resolveManagedRepository(
+      const { repositoryPath, canonicalLocator } = await storage.resolveManagedRepositoryLocation(
         input.repositoryId,
-        relativeRepositoryPath,
+        persistedLocator,
       )
       const operationId = randomUUID()
       await backend.execute({
         request: input.request,
         response: input.response,
         repositoryPath,
-        relativeRepositoryPath,
+        relativeRepositoryPath: canonicalLocator,
         routeSuffix: input.routeSuffix,
         queryString: input.service ? `service=${input.service}` : '',
         authentication,

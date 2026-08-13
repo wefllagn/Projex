@@ -261,6 +261,46 @@ describe('authenticated Git Smart HTTP', () => {
     expect(activities.every((item) => item.transportRequestId !== null)).toBe(true)
   })
 
+  it('canonicalizes an exact legacy Windows locator before Smart HTTP execution', async () => {
+    const { owner, repository } = await provisionPersonal()
+    const legacyLocator = repository.storagePath!.replaceAll('/', '\\')
+    await prisma.repository.update({
+      where: { id: repository.id },
+      data: { storagePath: legacyLocator },
+    })
+    let backendLocator: string | null = null
+    const recordingBackend = {
+      ...backend,
+      async execute(input: Parameters<typeof backend.execute>[0]) {
+        backendLocator = input.relativeRepositoryPath
+        await backend.execute(input)
+      },
+    }
+    const recordingService = createGitTransportService({
+      enabled: true,
+      credentialService,
+      repository: transportRepository,
+      storage,
+      backend: recordingBackend,
+      logger,
+    })
+    const local = await startLoopbackServer(recordingService)
+    try {
+      const authorization = await issue(owner, repository.id, ['READ'])
+      const clients = path.join(storageRoot, 'clients', crypto.randomUUID())
+      await mkdir(clients, { recursive: true })
+      expect((await runGit(
+        ['clone', `${local.origin}/api/v1/git/repositories/${repository.id}`, path.join(clients, 'legacy')],
+        clients,
+        authorization,
+      )).code).toBe(0)
+      expect(backendLocator).toBe(repository.storagePath)
+      expect(backendLocator).not.toContain('\\')
+    } finally {
+      await new Promise<void>((resolve) => local.server.close(() => resolve()))
+    }
+  })
+
   it('rejects force push, main deletion, tags, branch-case collisions, and oversized blobs without fake activities', async () => {
     const { owner, repository } = await provisionPersonal()
     const authorization = await issue(owner, repository.id, ['READ', 'WRITE'])

@@ -10,6 +10,8 @@ The implemented scope is deliberately limited to repository summary, branch list
 
 No Phase 8C database migration is required. Inspection reads current repository metadata and authorization state, resolves the existing server-owned storage path, and invokes only allowlisted read-only Git commands.
 
+Repository placement is server-derived rather than selected by the persisted string. Inspection validates `storagePath` as the exact canonical or legacy UUID locator, resolves host-native components beneath the configured managed root, verifies containment and the ownership marker, and supplies only the resulting absolute path to the read-only Git adapter. This supports storage-root relocation and Windows-origin repositories without exposing or rewriting locators.
+
 ## Deferred operations
 
 Server-created branches, file commits, merges, conflict resolution, and branch deletion remain deferred. Phase 8B already provides the approved authenticated write path through protected Smart HTTP. Adding a second server-side write path would require a separately approved database-backed repository lock/lease, temporary-worktree lifecycle, author-identity policy, mutation idempotency, audit semantics, and recovery design.

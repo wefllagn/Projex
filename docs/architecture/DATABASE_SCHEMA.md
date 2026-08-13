@@ -126,7 +126,7 @@ The following rules require transactional application services because they depe
 17. For a class project, the owner and members must be actively enrolled in the class connected to the project task.
 18. A student may belong to only one ACTIVE team/repository for the same project task. The service and partial unique index enforce this rule transactionally.
 19. Main academic records use archive, inactive, removed, closed, or other lifecycle transitions instead of routine permanent deletion.
-20. `storagePath` is a server-owned internal identifier/path. APIs must never accept it from clients or expose it as unrestricted host filesystem access.
+20. `storagePath` is a server-owned portable relative integrity locator required for READY storage, not authoritative host placement. New values use the exact forward-slash UUID layout; exact legacy Windows locators remain compatible. Runtime paths are derived beneath `GIT_STORAGE_ROOT`, and APIs must never accept or expose this field as filesystem access.
 21. Only an ACTIVE instructor may own a newly created class; instructor ownership cannot be transferred in Phase 4.
 22. Class codes are server-generated, normalized, unique, bounded-retry capabilities. Archive disables the code atomically and restore leaves it disabled.
 23. Joining with an existing ACTIVE membership is idempotent. A REMOVED membership cannot be replaced or rejoined; the existing unique row requires explicit owner/admin reactivation.

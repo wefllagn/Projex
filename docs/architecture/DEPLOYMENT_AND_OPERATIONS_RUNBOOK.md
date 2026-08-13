@@ -131,7 +131,7 @@ Restore proof is isolated from normal data. Use an explicit database matching `p
 
 A later Phase 11B.2 proof must separately approve database/root creation and verify migrations, safe row counts, representative relationships, repository markers, DB/filesystem correspondence, orphan absence, `git fsck --full`, API health/capabilities, and synthetic authentication. Evidence contains booleans, safe counts, IDs only where needed, and stable codes—never credentials, paths, source, tests, feedback, or personal data.
 
-Before any Windows-created managed Git state is restored onto Linux, audit the database `storagePath` values for path-separator portability. Existing repository paths were generated with the host path library and may contain Windows separators. Do not silently rewrite those authoritative values during restore; cross-platform normalization requires a separately reviewed compatibility correction before a Windows-to-Linux recovery can be accepted.
+Managed repository identity is independent of the source host root. New `storagePath` values use the portable forward-slash UUID locator, while the runtime and restore verifier accept only that exact form or the exact legacy Windows backslash form and then derive physical placement beneath the approved destination root. Restore never rebases database rows or trusts raw path segments; repository and provisioning-job markers establish correspondence. This correction makes the tooling architecture portable, but the actual guarded Phase 11B.2 paired backup/restore proof has not yet been executed.
 
 ## Rollback
 

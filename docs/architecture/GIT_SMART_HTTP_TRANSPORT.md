@@ -65,6 +65,8 @@ POST /api/v1/git/repositories/:repositoryId/git-receive-pack
 
 Client filesystem paths and arbitrary CGI variables are never accepted. CGI headers are bounded before protocol streaming begins. Request and response streams use backpressure and byte counters. Timeout, limit, start, disconnect, and process failures terminate the child process tree and return safe errors.
 
+Transport storage resolution validates the database locator as either the exact portable UUID layout or the exact legacy Windows representation, derives the absolute bare-repository path from the configured root and repository UUID, and passes only the canonical forward-slash locator to `git-http-backend`. Raw legacy values never select or reach a filesystem path.
+
 ## Push/ref policy and limits
 
 The Projex-owned `pre-receive` hook validates all updates before any ref is accepted. Only `refs/heads/*` is supported. Tags, notes, replace refs, remotes, custom namespaces, malformed refs, `main` deletion, unauthorized `main` updates, force/non-fast-forward updates, and case-insensitive branch collisions are rejected. A multi-ref push is accepted only when every update passes.

@@ -86,8 +86,9 @@ describe('real Git repository provisioning', () => {
     })
     expect(stored.storageStatus).toBe('READY')
     expect(stored.storagePath).toBe(
-      path.join('repositories', created.id.slice(0, 2), created.id.slice(2, 4), `${created.id}.git`),
+      `repositories/${created.id.slice(0, 2)}/${created.id.slice(2, 4)}/${created.id}.git`,
     )
+    expect(stored.storagePath).not.toContain('\\')
     expect(stored.provisioningJob?.status).toBe('SUCCEEDED')
     expect(stored.activities).toHaveLength(1)
     expect(stored.activities[0]).toMatchObject({
@@ -95,7 +96,7 @@ describe('real Git repository provisioning', () => {
       userId: null,
       activityType: 'REPOSITORY_PROVISIONED',
     })
-    const repositoryPath = path.join(env.gitStorageRoot, stored.storagePath!)
+    const repositoryPath = await storage.resolveManagedRepository(created.id, stored.storagePath!)
     await expect(git.verifyEmptyBare(repositoryPath)).resolves.toBeUndefined()
   })
 
