@@ -44,6 +44,34 @@ describe('GET /api/v1/health', () => {
     expect(response.headers['x-request-id']).toBe(response.body.meta.requestId)
   })
 
+  it('allows only the exact configured LAN frontend origin', async () => {
+    const app = createApp({
+      config: {
+        frontendOrigin: 'http://192.0.2.20:5173',
+        requestBodyLimit: '1mb',
+      },
+      databaseHealth: { checkConnection: async () => undefined },
+      logger: createLogger('silent'),
+      now: () => new Date(fixedTimestamp),
+    })
+
+    const allowed = await request(app)
+      .get('/api/v1/health')
+      .set('Origin', 'http://192.0.2.20:5173')
+      .expect(200)
+    expect(allowed.headers['access-control-allow-origin']).toBe('http://192.0.2.20:5173')
+    expect(allowed.headers['access-control-allow-credentials']).toBe('true')
+
+    const denied = await request(app)
+      .get('/api/v1/health')
+      .set('Origin', 'http://192.0.2.21:5173')
+      .expect(403)
+    expect(denied.body.error).toEqual({
+      code: 'CORS_ORIGIN_DENIED',
+      message: 'Origin is not allowed.',
+    })
+  })
+
   it('propagates a valid caller request ID', async () => {
     const app = createTestApp({
       checkConnection: async () => undefined,

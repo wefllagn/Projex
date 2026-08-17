@@ -31,6 +31,13 @@ describe('API client', () => {
     })).toBe('https://projex.example.edu/gateway/api/v1/git/repositories/repo-1')
   })
 
+  it('uses an operator-supplied LAN API address without rewriting its host', () => {
+    expect(buildPublicApiUrl('/health', {
+      baseUrl: 'http://192.0.2.20:3000/api/v1',
+      origin: 'http://192.0.2.20:5173',
+    })).toBe('http://192.0.2.20:3000/api/v1/health')
+  })
+
   it('includes browser credentials and parses the standard envelope', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(success({ id: 'user-1' }))
     const client = createApiClient({ baseUrl: '/api/v1', fetchImpl })

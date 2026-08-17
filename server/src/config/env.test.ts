@@ -108,6 +108,22 @@ describe('execution environment boundaries', () => {
     expect(env.gitInspectionMaxChangedFiles).toBe(500)
   })
 
+  it('allows an explicit private-LAN development bind without changing secure defaults', () => {
+    const env = loadEnv(validEnvironment({
+      HOST: '0.0.0.0',
+      FRONTEND_ORIGIN: 'http://192.0.2.20:5173',
+      AUTH_COOKIE_SECURE: 'false',
+      TRUST_PROXY_HOPS: '0',
+    }))
+
+    expect(env.nodeEnv).toBe('development')
+    expect(env.host).toBe('0.0.0.0')
+    expect(env.frontendOrigin).toBe('http://192.0.2.20:5173')
+    expect(env.authCookieSecure).toBe(false)
+    expect(env.trustProxyHops).toBe(0)
+    expect(env.gitSmartHttpEnabled).toBe(false)
+  })
+
   it('requires local Git, an absolute backend, and a loopback host for Smart HTTP', () => {
     const smartHttp = {
       GIT_EXECUTION_MODE: 'local_process',

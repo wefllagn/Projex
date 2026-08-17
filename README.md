@@ -20,6 +20,8 @@ cd client
 npm run dev
 ```
 
+Private home-LAN browser testing uses an explicit opt-in startup and exact-origin configuration. See the [home-LAN browser testing guide](docs/architecture/HOME_LAN_BROWSER_TESTING.md); ordinary localhost development remains unchanged.
+
 ## Backend
 
 The Node.js, Express, TypeScript, Prisma, and PostgreSQL backend is located in [`server/`](server/).
