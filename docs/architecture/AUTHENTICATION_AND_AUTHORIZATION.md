@@ -40,6 +40,8 @@ An ACTIVE administrator may request a safe account summary and revoke all active
 
 Resending is limited to pending accounts, has a five-minute cooldown, invalidates previous unused tokens, and applies instructor student/class-ownership checks again.
 
+For manual controlled-test delivery, an ACTIVE administrator receives the same newly generated setup link only in the successful provisioning or explicit reissue response. The response is marked `no-store`, and the Admin frontend retains the link only in the issuing dialog's component memory so it disappears on close/navigation/reload. Instructor provisioning and resend responses remain mail-only and never receive the raw link. Normal user directories, account summaries, audit events, health/operational projections, and later reads never expose it. Because only the hash is persisted, a raw link cannot be recovered; an administrator must explicitly issue a new one for a still-`SETUP_PENDING` account, subject to the existing cooldown and invalidation rules.
+
 ## Password security
 
 Passwords are hashed with Argon2id. They are never trimmed, returned, logged, placed in URLs, or stored as plaintext.

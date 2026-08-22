@@ -17,19 +17,33 @@ export interface UserProvisioningService {
     caller: SafeUserProfile,
     input: ProvisionStudentInput,
     requestId?: string,
-  ): Promise<SafeUserProfile>
+  ): Promise<ProvisionedAccountResult>
   provisionInstructor(
     caller: SafeUserProfile,
     input: ProvisionInstructorInput,
     requestId?: string,
-  ): Promise<SafeUserProfile>
-  resendSetup(caller: SafeUserProfile, userId: string, requestId?: string): Promise<void>
+  ): Promise<ProvisionedAccountResult>
+  resendSetup(
+    caller: SafeUserProfile,
+    userId: string,
+    requestId?: string,
+  ): Promise<ManualSetupLink | null>
   updateStatus(
     caller: SafeUserProfile,
     userId: string,
     input: UpdateUserStatusInput,
     requestId?: string,
   ): Promise<SafeUserProfile>
+}
+
+export interface ManualSetupLink {
+  setupLink: string
+  expiresAt: Date
+}
+
+export interface ProvisionedAccountResult {
+  user: SafeUserProfile
+  manualSetupLink: ManualSetupLink | null
 }
 
 export function createUserProvisioningService(dependencies: {
@@ -85,17 +99,17 @@ export function createUserProvisioningService(dependencies: {
     }
   }
 
-  async function sendSetupEmail(
-    user: SafeUserProfile,
-    rawToken: string,
-  ): Promise<void> {
-    const setupUrl = `${frontendOrigin.replace(/\/$/, '')}/account-setup#token=${encodeURIComponent(rawToken)}`
+  function createSetupLink(rawToken: string): string {
+    return `${frontendOrigin.replace(/\/$/, '')}/account-setup#token=${encodeURIComponent(rawToken)}`
+  }
+
+  async function sendSetupEmail(user: SafeUserProfile, setupLink: string): Promise<void> {
     try {
       await emailClient.send(
         createAccountSetupEmail({
           recipientName: user.fullName,
           accountEmail: user.email,
-          setupUrl,
+          setupUrl: setupLink,
           expiresInHours: setupTokenTtlHours,
         }),
       )
@@ -107,6 +121,15 @@ export function createUserProvisioningService(dependencies: {
         cause,
       })
     }
+  }
+
+  function manualSetupLink(
+    caller: SafeUserProfile,
+    rawToken: string,
+    expiresAt: Date,
+  ): ManualSetupLink | null {
+    if (caller.role !== 'ADMIN') return null
+    return { setupLink: createSetupLink(rawToken), expiresAt }
   }
 
   function duplicateOrClassError(kind: string): never {
@@ -166,12 +189,20 @@ export function createUserProvisioningService(dependencies: {
             : undefined,
       })
       if (result.kind !== 'created') duplicateOrClassError(result.kind)
-      await sendSetupEmail(result.user, token.rawToken)
+      const setupLink = createSetupLink(token.rawToken)
+      await sendSetupEmail(result.user, setupLink)
       logger.info(
         { event: 'user.student.provisioned', userId: result.user.id, actorId: caller.id },
         'student provisioned',
       )
-      return result.user
+      return {
+        user: result.user,
+        manualSetupLink: manualSetupLink(
+          caller,
+          token.rawToken,
+          token.record.expiresAt,
+        ),
+      }
     },
     async provisionInstructor(caller, input, requestId) {
       requireActiveCaller(caller)
@@ -187,12 +218,20 @@ export function createUserProvisioningService(dependencies: {
         adminAudit: { actorAdminId: caller.id, requestId: requestId! },
       })
       if (result.kind !== 'created') duplicateOrClassError(result.kind)
-      await sendSetupEmail(result.user, token.rawToken)
+      const setupLink = createSetupLink(token.rawToken)
+      await sendSetupEmail(result.user, setupLink)
       logger.info(
         { event: 'user.instructor.provisioned', userId: result.user.id, actorId: caller.id },
         'instructor provisioned',
       )
-      return result.user
+      return {
+        user: result.user,
+        manualSetupLink: manualSetupLink(
+          caller,
+          token.rawToken,
+          token.record.expiresAt,
+        ),
+      }
     },
     async resendSetup(caller, userId, requestId) {
       requireActiveCaller(caller)
@@ -232,11 +271,13 @@ export function createUserProvisioningService(dependencies: {
       if (result.kind === 'forbidden') {
         throw new AppError({ statusCode: 403, code: 'FORBIDDEN', message: 'Not authorized.' })
       }
-      await sendSetupEmail(result.user, token.rawToken)
+      const setupLink = createSetupLink(token.rawToken)
+      await sendSetupEmail(result.user, setupLink)
       logger.info(
         { event: 'auth.setup.resent', userId: result.user.id, actorId: caller.id },
         'setup link resent',
       )
+      return manualSetupLink(caller, token.rawToken, token.record.expiresAt)
     },
     async updateStatus(caller, userId, input, requestId) {
       requireActiveCaller(caller)

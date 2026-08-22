@@ -9,17 +9,40 @@ import {
 } from './user-provisioning.schemas.js'
 import type { UserProvisioningService } from './user-provisioning.service.js'
 
+function preventSetupCredentialCaching(response: Response): void {
+  response.setHeader('Cache-Control', 'no-store')
+  response.setHeader('Pragma', 'no-cache')
+}
+
+function manualSetupResponse(manualSetupLink: {
+  setupLink: string
+  expiresAt: Date
+} | null) {
+  return manualSetupLink
+    ? {
+        manualSetup: {
+          setupLink: manualSetupLink.setupLink,
+          expiresAt: manualSetupLink.expiresAt,
+        },
+      }
+    : {}
+}
+
 export function createUserProvisioningController(service: UserProvisioningService) {
   return {
     student: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const input = parseRequest(provisionStudentSchema, request.body)
-        const user = await service.provisionStudent(
+        const result = await service.provisionStudent(
           request.auth!.user,
           input,
           request.requestId,
         )
-        response.status(201).json(successResponse(user, request.requestId))
+        preventSetupCredentialCaching(response)
+        response.status(201).json(successResponse({
+          ...result.user,
+          ...manualSetupResponse(result.manualSetupLink),
+        }, request.requestId))
       } catch (error) {
         next(error)
       }
@@ -27,12 +50,16 @@ export function createUserProvisioningController(service: UserProvisioningServic
     instructor: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const input = parseRequest(provisionInstructorSchema, request.body)
-        const user = await service.provisionInstructor(
+        const result = await service.provisionInstructor(
           request.auth!.user,
           input,
           request.requestId,
         )
-        response.status(201).json(successResponse(user, request.requestId))
+        preventSetupCredentialCaching(response)
+        response.status(201).json(successResponse({
+          ...result.user,
+          ...manualSetupResponse(result.manualSetupLink),
+        }, request.requestId))
       } catch (error) {
         next(error)
       }
@@ -40,10 +67,18 @@ export function createUserProvisioningController(service: UserProvisioningServic
     resend: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const { userId } = parseRequest(userIdParamsSchema, request.params)
-        await service.resendSetup(request.auth!.user, userId, request.requestId)
+        const manualSetupLink = await service.resendSetup(
+          request.auth!.user,
+          userId,
+          request.requestId,
+        )
+        preventSetupCredentialCaching(response)
         response
           .status(200)
-          .json(successResponse({ setupLinkSent: true }, request.requestId))
+          .json(successResponse({
+            setupLinkSent: true,
+            ...manualSetupResponse(manualSetupLink),
+          }, request.requestId))
       } catch (error) {
         next(error)
       }

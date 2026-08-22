@@ -3,6 +3,7 @@ import {
   AdminProjectionError,
   assertMatchingAdminAccount,
   projectAdminAccount,
+  projectAdminManualSetup,
   projectAdminOverview,
   projectAdminUser,
 } from './admin-projections.js'
@@ -11,6 +12,7 @@ const user = {
   id: 'user-1', fullName: 'Synthetic User', email: 'synthetic@slu.edu.ph', role: 'STUDENT', status: 'ACTIVE',
   createdAt: '2030-01-01T00:00:00.000Z', updatedAt: '2030-01-02T00:00:00.000Z',
   passwordHash: 'must-not-leak', tokenHash: 'must-not-leak', ipAddress: '127.0.0.1',
+  manualSetup: { setupLink: 'http://example.test/account-setup#token=must-not-leak' },
 }
 
 const summary = {
@@ -22,6 +24,24 @@ const summary = {
 }
 
 describe('admin projection allowlists', () => {
+  it('accepts only a fragment-based HTTP(S) manual setup link with an expiration', () => {
+    expect(projectAdminManualSetup({
+      manualSetup: {
+        setupLink: 'http://192.0.2.20:5173/account-setup#token=abcdefghijklmnopqrstuvwxyz123456',
+        expiresAt: '2030-01-02T00:00:00.000Z',
+      },
+    })).toEqual({
+      setupLink: 'http://192.0.2.20:5173/account-setup#token=abcdefghijklmnopqrstuvwxyz123456',
+      expiresAt: '2030-01-02T00:00:00.000Z',
+    })
+    expect(() => projectAdminManualSetup({
+      manualSetup: {
+        setupLink: 'http://192.0.2.20:5173/account-setup?token=abcdefghijklmnopqrstuvwxyz123456',
+        expiresAt: '2030-01-02T00:00:00.000Z',
+      },
+    })).toThrow(AdminProjectionError)
+  })
+
   it('keeps directory records minimal', () => {
     const projected = projectAdminUser(user, 'user-1')
     expect(projected).toEqual({

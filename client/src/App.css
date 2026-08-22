@@ -14586,6 +14586,7 @@ textarea:focus-visible {
 .admin-form-grid input,
 .admin-form-grid select,
 .admin-form-grid textarea,
+.admin-dialog-field input,
 .admin-dialog-field textarea {
   width: 100%;
   padding: 10px 12px;
@@ -14594,6 +14595,21 @@ textarea:focus-visible {
   color: #1d2a43;
   background: #fff;
   font: inherit;
+}
+
+.admin-setup-identity {
+  margin: 18px 0;
+}
+
+.admin-setup-warning {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #efd09a;
+  border-radius: 10px;
+  color: #76510c;
+  background: #fff9ec;
+  font-size: 12px;
+  font-weight: 750;
 }
 
 .admin-form-grid textarea,

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
 import { AuthContext } from '../auth/auth-context.js'
 import {
@@ -19,6 +19,15 @@ const directoryUser = {
   createdAt: '2030-01-01T00:00:00.000Z',
   updatedAt: '2030-01-02T00:00:00.000Z',
 }
+const setupLink = 'http://192.0.2.20:5173/account-setup#token=abcdefghijklmnopqrstuvwxyz123456'
+const manualSetup = {
+  setupLink,
+  expiresAt: '2030-01-03T00:00:00.000Z',
+}
+
+afterEach(() => {
+  Reflect.deleteProperty(navigator, 'clipboard')
+})
 
 function account(overrides = {}) {
   return {
@@ -124,8 +133,8 @@ describe('Phase 10D.1 admin views', () => {
   it('provisions students and instructors without admin or role-change controls', async () => {
     const api = {
       listUsers: vi.fn().mockResolvedValue({ data: [], pagination: { page: 1, totalPages: 0, totalItems: 0, hasPreviousPage: false, hasNextPage: false } }),
-      provisionStudent: vi.fn().mockResolvedValue({ data: { ...directoryUser, status: 'SETUP_PENDING' } }),
-      provisionInstructor: vi.fn().mockResolvedValue({ data: { ...directoryUser, id: 'instructor-1', fullName: 'Synthetic Instructor', email: 'instructor@slu.edu.ph', role: 'INSTRUCTOR', status: 'SETUP_PENDING' } }),
+      provisionStudent: vi.fn().mockResolvedValue({ data: { ...directoryUser, status: 'SETUP_PENDING', manualSetup } }),
+      provisionInstructor: vi.fn().mockResolvedValue({ data: { ...directoryUser, id: 'instructor-1', fullName: 'Synthetic Instructor', email: 'instructor@slu.edu.ph', role: 'INSTRUCTOR', status: 'SETUP_PENDING', manualSetup } }),
     }
     const user = userEvent.setup()
     renderUsers(api)
@@ -135,12 +144,16 @@ describe('Phase 10D.1 admin views', () => {
     await user.type(screen.getByLabelText('University email'), 'synthetic.student@slu.edu.ph')
     await user.click(screen.getByRole('button', { name: 'Provision account' }))
     await screen.findByText(/was provisioned/i)
+    expect(screen.getByRole('dialog')).toHaveTextContent('Account created')
+    expect(screen.getByLabelText('Setup link')).toHaveValue(setupLink)
     expect(api.provisionStudent).toHaveBeenCalledWith({ fullName: 'Synthetic Student', universityEmail: 'synthetic.student@slu.edu.ph' })
+    await user.click(screen.getByRole('button', { name: 'Close' }))
     await user.click(screen.getByRole('button', { name: 'Add instructor' }))
     await user.type(screen.getByLabelText('Full name'), 'Synthetic Instructor')
     await user.type(screen.getByLabelText('University email'), 'instructor@slu.edu.ph')
     await user.click(screen.getByRole('button', { name: 'Provision account' }))
     await screen.findByText(/Synthetic Instructor was provisioned/i)
+    expect(screen.getByLabelText('Setup link')).toHaveValue(setupLink)
     expect(api.provisionInstructor).toHaveBeenCalledWith({ fullName: 'Synthetic Instructor', universityEmail: 'instructor@slu.edu.ph' })
     expect(screen.queryByRole('button', { name: /add admin|change role/i })).not.toBeInTheDocument()
   })
@@ -198,16 +211,41 @@ describe('Phase 10D.1 admin views', () => {
     expect(api.getAccountSummary).toHaveBeenCalledTimes(2)
   })
 
-  it('resends setup only through the real account flow and never displays a token', async () => {
+  it('generates and displays a new setup link only for a pending account', async () => {
     const pending = account({ status: 'SETUP_PENDING', accountSetup: { state: 'PENDING', lastIssuedAt: '2030-01-01T00:00:00.000Z', expiresAt: '2030-01-02T00:00:00.000Z' } })
     const api = detailApi(pending)
     api.getUser.mockResolvedValue({ data: { ...directoryUser, status: 'SETUP_PENDING' } })
-    api.resendSetup.mockResolvedValue({ data: { setupLinkSent: true, setupToken: 'must-not-render' } })
+    api.resendSetup.mockResolvedValue({ data: { setupLinkSent: true, manualSetup } })
     const user = userEvent.setup()
     renderDetail(api)
-    await user.click(await screen.findByRole('button', { name: 'Resend setup instructions' }))
-    expect(await screen.findByText(/instructions were sent/i)).toBeInTheDocument()
-    expect(screen.queryByText('must-not-render')).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: 'Generate new setup link' }))
+    expect(await screen.findByText('New setup link generated')).toBeInTheDocument()
+    expect(screen.getByLabelText('Setup link')).toHaveValue(setupLink)
+    expect(screen.getByText(/will not be shown again/i)).toBeInTheDocument()
+  })
+
+  it('does not offer initial setup-link generation for an activated account', async () => {
+    renderDetail(detailApi())
+    await screen.findByText('Synthetic Student')
+    expect(screen.queryByRole('button', { name: 'Generate new setup link' })).not.toBeInTheDocument()
+  })
+
+  it('copies the issued setup link through the available browser capability', async () => {
+    const api = {
+      listUsers: vi.fn().mockResolvedValue({ data: [], pagination: { page: 1, totalPages: 0, totalItems: 0, hasPreviousPage: false, hasNextPage: false } }),
+      provisionStudent: vi.fn().mockResolvedValue({ data: { ...directoryUser, status: 'SETUP_PENDING', manualSetup } }),
+    }
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    const user = userEvent.setup()
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    renderUsers(api)
+    await user.click(await screen.findByRole('button', { name: 'Add student' }))
+    await user.type(screen.getByLabelText('Full name'), 'Synthetic Student')
+    await user.type(screen.getByLabelText('University email'), 'synthetic.student@slu.edu.ph')
+    await user.click(screen.getByRole('button', { name: 'Provision account' }))
+    await user.click(await screen.findByRole('button', { name: 'Copy Setup Link' }))
+    expect(writeText).toHaveBeenCalledWith(setupLink)
+    expect(screen.getByText('Setup link copied.')).toBeInTheDocument()
   })
 
   it.each([
@@ -224,7 +262,7 @@ describe('Phase 10D.1 admin views', () => {
     }))
     const user = userEvent.setup()
     renderDetail(api)
-    await user.click(await screen.findByRole('button', { name: 'Resend setup instructions' }))
+    await user.click(await screen.findByRole('button', { name: 'Generate new setup link' }))
     expect(await screen.findByText(expectedMessage)).toBeInTheDocument()
   })
 

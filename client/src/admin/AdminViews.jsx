@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ApiError, describeApiError } from '../api/api-client.js'
 import RequestState from '../components/RequestState.jsx'
@@ -9,9 +9,11 @@ import {
   AdminProjectionError,
   assertMatchingAdminAccount,
   projectAdminAccount,
+  projectAdminManualSetup,
   projectAdminOverview,
   projectAdminUser,
 } from './admin-projections.js'
+import { copySensitiveText } from './copy-sensitive-text.js'
 import { formatDate, humanize, pageNumber } from './admin-view-utils.js'
 
 const PAGE_SIZE = 20
@@ -156,6 +158,7 @@ function ProvisionUserDialog({ role, api, onClose, onCreated }) {
   const [form, setForm] = useState({ fullName: '', universityEmail: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [issuance, setIssuance] = useState(null)
   const submit = async (event) => {
     event.preventDefault()
     setBusy(true)
@@ -164,16 +167,20 @@ function ProvisionUserDialog({ role, api, onClose, onCreated }) {
       const response = role === 'STUDENT'
         ? await api.provisionStudent(form)
         : await api.provisionInstructor(form)
-      onCreated(projectAdminUser(response.data))
+      const user = projectAdminUser(response.data)
+      const manualSetup = projectAdminManualSetup(response.data)
+      setIssuance({ user, ...manualSetup, kind: 'created' })
+      onCreated(user)
     } catch (requestError) {
       setError(requestError)
       setBusy(false)
     }
   }
+  if (issuance) return <SetupLinkDialog issuance={issuance} onClose={onClose} />
   return (
     <AdminDialog
       title={`Provision ${role === 'STUDENT' ? 'student' : 'instructor'}`}
-      summary="Projex will deliver the normal account-setup instructions. No password or setup token is created in the browser."
+      summary="Projex will create a temporary one-time setup link and also use the configured delivery channel."
       onClose={onClose}
       onSubmit={submit}
       submitLabel="Provision account"
@@ -185,6 +192,49 @@ function ProvisionUserDialog({ role, api, onClose, onCreated }) {
       </div>
       {error && <p className="class-form-error" role="alert">{describeApiError(error)}</p>}
     </AdminDialog>
+  )
+}
+
+function SetupLinkDialog({ issuance, onClose }) {
+  const [copyState, setCopyState] = useState('idle')
+  const linkField = useRef(null)
+
+  const copy = async () => {
+    try {
+      await copySensitiveText(issuance.setupLink)
+      setCopyState('copied')
+    } catch {
+      linkField.current?.focus()
+      linkField.current?.select()
+      setCopyState('manual')
+    }
+  }
+
+  return (
+    <div className="student-submit-backdrop" role="presentation">
+      <section className="admin-dialog" role="dialog" aria-modal="true" aria-labelledby="setup-link-dialog-title">
+        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close dialog" />
+        <p className="eyebrow">Setup required</p>
+        <h2 id="setup-link-dialog-title">{issuance.kind === 'created' ? 'Account created' : 'New setup link generated'}</h2>
+        <p>Send this link only to the intended user. It is a temporary one-time credential and will not be shown again after you close this dialog.</p>
+        <div className="admin-detail-values admin-setup-identity">
+          <DetailValue label="Name">{issuance.user.fullName}</DetailValue>
+          <DetailValue label="University email">{issuance.user.universityEmail}</DetailValue>
+          <DetailValue label="Expires">{formatDate(issuance.expiresAt)}</DetailValue>
+        </div>
+        <label className="admin-dialog-field">
+          Setup link
+          <input ref={linkField} readOnly autoComplete="off" value={issuance.setupLink} onFocus={(event) => event.currentTarget.select()} />
+        </label>
+        <p className="admin-setup-warning">Anyone with this link can choose the initial Projex password until the link expires, is replaced, or is used.</p>
+        {copyState === 'copied' && <p className="admin-notice" role="status">Setup link copied.</p>}
+        {copyState === 'manual' && <p className="class-form-error" role="status">Automatic copy is unavailable. The setup link is selected; copy it manually.</p>}
+        <div className="admin-dialog__actions">
+          <button type="button" className="student-outline-action" onClick={onClose}>Close</button>
+          <button type="button" className="student-primary-action" onClick={copy}>Copy Setup Link</button>
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -284,8 +334,7 @@ export function AdminUsersPage({ api = adminApi }) {
           api={api}
           onClose={() => setProvisionRole(null)}
           onCreated={(user) => {
-            setProvisionRole(null)
-            setNotice(`${user.fullName} was provisioned. Account-setup instructions were sent through the configured delivery channel.`)
+            setNotice(`${user.fullName} was provisioned and requires account setup.`)
             load()
           }}
         />
@@ -366,6 +415,7 @@ export function AdminUserDetailPage({ api = adminApi }) {
   const [dialog, setDialog] = useState(null)
   const [notice, setNotice] = useState('')
   const [resending, setResending] = useState(false)
+  const [setupIssuance, setSetupIssuance] = useState(null)
 
   const load = useCallback(async ({ signal, silent = false } = {}) => {
     if (!silent) setState((current) => ({ ...current, status: 'loading', error: null }))
@@ -408,8 +458,17 @@ export function AdminUserDetailPage({ api = adminApi }) {
     try {
       const response = await api.resendSetup(account.userId)
       if (response.data?.setupLinkSent !== true) throw new AdminProjectionError()
+      const manualSetup = projectAdminManualSetup(response.data)
+      setSetupIssuance({
+        user: {
+          fullName: account.fullName,
+          universityEmail: account.universityEmail,
+        },
+        ...manualSetup,
+        kind: 'reissued',
+      })
       await load({ silent: true })
-      setNotice('Account-setup instructions were sent through the configured delivery channel.')
+      setNotice('A new setup link was generated and the configured delivery channel was also used.')
     } catch (error) {
       setNotice(describeApiError(error))
     } finally {
@@ -448,7 +507,7 @@ export function AdminUserDetailPage({ api = adminApi }) {
             <DetailValue label="Last issued">{formatDate(account.accountSetup.lastIssuedAt)}</DetailValue>
             <DetailValue label="Expires">{formatDate(account.accountSetup.expiresAt, 'Not applicable')}</DetailValue>
           </div>
-          {account.status === 'SETUP_PENDING' && <button type="button" className="student-outline-action" disabled={resending} onClick={resend}>{resending ? 'Sending…' : 'Resend setup instructions'}</button>}
+          {account.status === 'SETUP_PENDING' && <button type="button" className="student-outline-action" disabled={resending} onClick={resend}>{resending ? 'Generating…' : 'Generate new setup link'}</button>}
         </AdminPanel>
         <AdminPanel title="Sessions" eyebrow="Aggregate counts only">
           <div className="admin-session-grid">
@@ -471,6 +530,7 @@ export function AdminUserDetailPage({ api = adminApi }) {
           <p className="admin-panel-note">Class membership governance is scheduled for Phase 10D.2.</p>
         </AdminPanel>
       </div>
+      {setupIssuance && <SetupLinkDialog issuance={setupIssuance} onClose={() => setSetupIssuance(null)} />}
       {dialog === 'status' && (
         <StatusDialog
           account={account}

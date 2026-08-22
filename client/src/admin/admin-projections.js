@@ -49,6 +49,36 @@ export function projectAdminUser(value, expectedId) {
   }
 }
 
+export function projectAdminManualSetup(value) {
+  const source = object(value)
+  const manualSetup = object(source?.manualSetup)
+  const setupLink = string(manualSetup?.setupLink)
+  const expiresAt = string(manualSetup?.expiresAt)
+  if (!setupLink || !expiresAt) throw new AdminProjectionError()
+
+  let parsed
+  try {
+    parsed = new URL(setupLink)
+  } catch {
+    throw new AdminProjectionError()
+  }
+  const fragment = new URLSearchParams(parsed.hash.replace(/^#/, ''))
+  const token = fragment.get('token')
+  if (
+    !['http:', 'https:'].includes(parsed.protocol) ||
+    parsed.username ||
+    parsed.password ||
+    parsed.search ||
+    !parsed.pathname.endsWith('/account-setup') ||
+    !token ||
+    token.length < 32 ||
+    Number.isNaN(Date.parse(expiresAt))
+  ) {
+    throw new AdminProjectionError()
+  }
+  return { setupLink, expiresAt }
+}
+
 export function projectAdminOverview(value) {
   const source = object(value)
   const users = object(source?.users)

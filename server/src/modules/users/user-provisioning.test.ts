@@ -101,9 +101,11 @@ function createHarness(options?: {
   repository?: FakeProvisioningRepository
   emailClient?: EmailClient
   logger?: pino.Logger
+  frontendOrigin?: string
 }) {
   const repository = options?.repository ?? new FakeProvisioningRepository()
   const sent: EmailMessage[] = []
+  const tokenService = createTokenService('c'.repeat(64), 15)
   const emailClient: EmailClient =
     options?.emailClient ??
     ({
@@ -114,26 +116,40 @@ function createHarness(options?: {
     } satisfies EmailClient)
   const service = createUserProvisioningService({
     repository,
-    tokenService: createTokenService('c'.repeat(64), 15),
+    tokenService,
     emailClient,
     logger: options?.logger ?? pino({ level: 'silent' }),
-    frontendOrigin: 'http://localhost:5173',
+    frontendOrigin: options?.frontendOrigin ?? 'http://localhost:5173',
     setupTokenTtlHours: 24,
     now: () => new Date('2026-07-30T06:00:00.000Z'),
   })
-  return { repository, service, sent }
+  return { repository, service, sent, tokenService }
 }
 
 describe('user provisioning policy', () => {
   it('provisions a student as SETUP_PENDING without accepting a caller-selected role', async () => {
-    const { repository, service } = createHarness()
+    const { repository, service, tokenService } = createHarness({
+      frontendOrigin: 'http://192.0.2.20:5173',
+    })
     const result = await service.provisionStudent(admin, {
       fullName: 'Student User',
       universityEmail: 'student@slu.edu',
     }, requestId)
-    expect(result.status).toBe('SETUP_PENDING')
+    expect(result.user.status).toBe('SETUP_PENDING')
     expect(repository.lastStudentInput).not.toHaveProperty('role')
     expect(repository.lastStudentInput?.token.tokenHash).toMatch(/^[a-f0-9]{64}$/)
+    expect(result.manualSetupLink).toMatchObject({
+      setupLink: expect.stringMatching(
+        /^http:\/\/192\.0\.2\.20:5173\/account-setup#token=/,
+      ),
+      expiresAt: new Date('2026-07-31T06:00:00.000Z'),
+    })
+    const rawToken = new URL(result.manualSetupLink!.setupLink).hash
+      .replace(/^#token=/, '')
+    expect(repository.lastStudentInput?.token.tokenHash).toBe(
+      tokenService.hashOpaqueToken(decodeURIComponent(rawToken)),
+    )
+    expect(JSON.stringify(repository.lastStudentInput)).not.toContain(rawToken)
     expect(provisionStudentSchema.safeParse({
       fullName: 'Student User',
       universityEmail: 'student@slu.edu',
@@ -149,6 +165,17 @@ describe('user provisioning policy', () => {
         universityEmail: 'student@slu.edu',
       }),
     ).rejects.toMatchObject({ code: 'CLASS_ID_REQUIRED' })
+  })
+
+  it('does not expose a manual setup link to an instructor provisioning a student', async () => {
+    const { service } = createHarness()
+    const result = await service.provisionStudent(instructor, {
+      fullName: 'Student User',
+      universityEmail: 'student@slu.edu',
+      classId,
+    })
+    expect(result.user.status).toBe('SETUP_PENDING')
+    expect(result.manualSetupLink).toBeNull()
   })
 
   it('requires the instructor to own the supplied class', async () => {
@@ -193,8 +220,9 @@ describe('user provisioning policy', () => {
       fullName: 'Instructor User',
       universityEmail: 'instructor@slu.edu',
     }, requestId)
-    expect(result.role).toBe('INSTRUCTOR')
-    expect(result.status).toBe('SETUP_PENDING')
+    expect(result.user.role).toBe('INSTRUCTOR')
+    expect(result.user.status).toBe('SETUP_PENDING')
+    expect(result.manualSetupLink?.setupLink).toContain('/account-setup#token=')
     expect(repository.lastInstructorInput).not.toHaveProperty('role')
   })
 
@@ -222,11 +250,30 @@ describe('user provisioning policy', () => {
 
   it('replaces setup tokens through one repository transaction boundary', async () => {
     const { repository, service } = createHarness()
-    await service.resendSetup(admin, student.id, requestId)
+    const manualSetupLink = await service.resendSetup(admin, student.id, requestId)
     expect(repository.lastResendInput?.token.tokenHash).toMatch(/^[a-f0-9]{64}$/)
     expect(repository.lastResendInput?.cooldownCutoff).toEqual(
       new Date('2026-07-30T05:55:00.000Z'),
     )
+    expect(manualSetupLink).toMatchObject({
+      setupLink: expect.stringContaining('/account-setup#token='),
+      expiresAt: new Date('2026-07-31T06:00:00.000Z'),
+    })
+  })
+
+  it('keeps setup reissue mail-only for an authorized instructor', async () => {
+    const { service } = createHarness()
+    await expect(service.resendSetup(instructor, student.id)).resolves.toBeNull()
+  })
+
+  it('rejects reissue for an account that is no longer setup-pending', async () => {
+    const repository = new FakeProvisioningRepository()
+    repository.resendResult = { kind: 'not_pending' }
+    const { service } = createHarness({ repository })
+    await expect(service.resendSetup(admin, student.id, requestId)).rejects.toMatchObject({
+      code: 'ACCOUNT_NOT_SETUP_PENDING',
+      statusCode: 409,
+    })
   })
 
   it('delegates suspension to the transactional status repository operation', async () => {

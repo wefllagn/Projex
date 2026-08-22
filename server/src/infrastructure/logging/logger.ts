@@ -18,6 +18,8 @@ const sensitivePaths = [
   '*.csrfToken',
   'setupToken',
   '*.setupToken',
+  'setupLink',
+  '*.setupLink',
   'tokenHash',
   '*.tokenHash',
   'passwordHash',
