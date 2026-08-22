@@ -29,6 +29,7 @@ stateDiagram-v2
     DRAFT --> PUBLISHED: Publish validated definition
     DRAFT --> ARCHIVED: Archive unused draft
     PUBLISHED --> CLOSED: Close manually
+    CLOSED --> PUBLISHED: Reopen explicitly
     PUBLISHED --> ARCHIVED: Archive
     CLOSED --> ARCHIVED: Archive
     ARCHIVED --> DRAFT: Restore never-published activity
@@ -40,7 +41,9 @@ stateDiagram-v2
 - `PUBLISHED` is student-visible to ACTIVE class members. Due state is derived from server time as `OPEN` or `PAST_DUE`; passing the deadline does not silently rewrite lifecycle state.
 - Published title and instructions may be corrected. The due date may only be extended and `maxAttempts` may only increase.
 - Published starter code, language, entry class, total points, credited-result policy, and test cases are immutable.
-- `CLOSED` and `ARCHIVED` activities are read-only.
+- `CLOSED` activities remain read-only unless the owning ACTIVE instructor explicitly reopens them. Reopening changes only the lifecycle state to `PUBLISHED`, clears `closedAt`, and advances `updatedAt`; it preserves publication time, deadline, attempt and assessment history, replacement grants, scoring configuration, and test cases.
+- Reopening never resets attempts or extends the deadline. If the preserved deadline has passed, ordinary submission remains unavailable until the instructor separately extends the due date through the supported published-activity update.
+- `ARCHIVED` activities are read-only and cannot be reopened.
 - Restoring a never-published activity returns it to `DRAFT`. Restoring any previously published activity returns it to `CLOSED`; restore never silently republishes or reopens work.
 - An archived class rejects every activity or test-case mutation. Existing ACTIVE membership may still read published/closed activities in an archived class, consistent with the class archive policy.
 
@@ -101,6 +104,7 @@ GET   /api/v1/activities/:activityId
 PATCH /api/v1/activities/:activityId
 POST  /api/v1/activities/:activityId/publish
 POST  /api/v1/activities/:activityId/close
+POST  /api/v1/activities/:activityId/reopen
 POST  /api/v1/activities/:activityId/archive
 POST  /api/v1/activities/:activityId/restore
 GET   /api/v1/activities/:activityId/test-cases
@@ -151,6 +155,7 @@ Structured events contain actor, class, activity, and bounded count identifiers 
 - `activity.test_cases_replaced`
 - `activity.published`
 - `activity.closed`
+- `activity.reopened`
 - `activity.archived`
 - `activity.restored`
 

@@ -192,6 +192,7 @@ GET   /activities/:activityId
 PATCH /activities/:activityId
 POST  /activities/:activityId/publish
 POST  /activities/:activityId/close
+POST  /activities/:activityId/reopen
 POST  /activities/:activityId/archive
 POST  /activities/:activityId/restore
 GET   /activities/:activityId/test-cases
@@ -291,7 +292,7 @@ When controlled local Git execution is enabled, authenticated users with current
 
 Default inspection limits are configured through `GIT_INSPECTION_FILE_LIMIT_BYTES`, `GIT_INSPECTION_DIFF_LIMIT_BYTES`, and `GIT_INSPECTION_MAX_CHANGED_FILES`. Client filesystem paths, arbitrary revision expressions, binary output, Git arguments/configuration, and host paths are rejected or omitted. Server-created branches, commits, merges, and branch deletion remain deferred. See `docs/architecture/GIT_REPOSITORY_INSPECTION.md`.
 
-Activity and test-case authoring are restricted to the owning instructor. Administrators receive metadata-only activity oversight and cannot retrieve test-case definitions, starter source, practice outcomes, or instructor-only academic projections. Students with ACTIVE membership may read only PUBLISHED or CLOSED activities and visible test cases. Hidden test rows and counts are excluded from student responses. Published scoring/test configuration is immutable.
+Activity and test-case authoring are restricted to the owning instructor. Administrators receive metadata-only activity oversight and cannot retrieve test-case definitions, starter source, practice outcomes, or instructor-only academic projections. Students with ACTIVE membership may read only PUBLISHED or CLOSED activities and visible test cases. Hidden test rows and counts are excluded from student responses. Published scoring/test configuration is immutable. An owning instructor may explicitly reopen a CLOSED activity using its current version; reopening preserves the deadline, attempts, results, grants, scoring configuration, and test cases, so a past-due activity still rejects ordinary submissions until its deadline is separately extended.
 
 Phase 9A admin account summaries expose safe account/setup state, session counts, and class-membership summaries only. Target-session revocation and disruptive status/class/membership actions require bounded reasons and write allowlisted audit events transactionally. The status endpoint also requires `expectedUpdatedAt`, rejects self-disablement, and preserves at least one ACTIVE administrator under concurrency.
 

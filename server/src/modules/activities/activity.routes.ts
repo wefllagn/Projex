@@ -22,6 +22,7 @@ export function createActivityRouter(dependencies: {
   router.patch('/:activityId', ...mutation, controller.update)
   router.post('/:activityId/publish', ...mutation, controller.publish)
   router.post('/:activityId/close', ...mutation, controller.close)
+  router.post('/:activityId/reopen', ...mutation, controller.reopen)
   router.post('/:activityId/archive', ...mutation, controller.archive)
   router.post('/:activityId/restore', ...mutation, controller.restore)
 

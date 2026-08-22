@@ -136,6 +136,179 @@ beforeEach(async () => {
 afterAll(async () => prisma.$disconnect())
 
 describe('Phase 6 PostgreSQL submissions and assessment', () => {
+  it('recalculates ordinary eligibility from lifecycle and deadline after reopen', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, classRecord.id, student.id)
+    const dueDate = new Date(currentNow.getTime() + 60_000)
+    const activity = await publishedActivity({
+      instructorId: instructor.id,
+      classId: classRecord.id,
+      dueDate,
+    })
+    const activityService = createActivityService({
+      repository: createPrismaActivityRepository(prisma),
+      classRepository: createPrismaClassRepository(prisma),
+      logger,
+      now: () => currentNow,
+    })
+    const closed = await activityService.close(instructor, activity.id, {
+      expectedUpdatedAt: activity.updatedAt,
+    })
+    await expect(service().getAttemptState(student, activity.id)).resolves.toMatchObject({
+      dueState: 'CLOSED',
+      countingAttemptsUsed: 0,
+      remainingOrdinaryAttempts: 2,
+      ordinarySubmissionAllowed: false,
+      nextAllowedSubmissionKind: 'NONE',
+    })
+    const reopened = await activityService.reopen(instructor, activity.id, {
+      expectedUpdatedAt: closed.updatedAt,
+    })
+    await expect(service().getAttemptState(student, activity.id)).resolves.toMatchObject({
+      activityStatus: 'PUBLISHED',
+      dueState: 'OPEN',
+      countingAttemptsUsed: 0,
+      remainingOrdinaryAttempts: 2,
+      ordinarySubmissionAllowed: true,
+      nextAllowedSubmissionKind: 'ORDINARY',
+    })
+
+    currentNow = new Date(dueDate.getTime() + 1)
+    const closedPastDue = await activityService.close(instructor, activity.id, {
+      expectedUpdatedAt: reopened.updatedAt,
+    })
+    const reopenedPastDue = await activityService.reopen(instructor, activity.id, {
+      expectedUpdatedAt: closedPastDue.updatedAt,
+    })
+    expect(reopenedPastDue.dueDate).toEqual(dueDate)
+    await expect(service().getAttemptState(student, activity.id)).resolves.toMatchObject({
+      activityStatus: 'PUBLISHED',
+      dueState: 'PAST_DUE',
+      ordinarySubmissionAllowed: false,
+      nextAllowedSubmissionKind: 'NONE',
+      submissionBlockedReason: 'DEADLINE_PASSED',
+    })
+  })
+
+  it('preserves attempts, released credit, and an active replacement across reopen', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, classRecord.id, student.id)
+    const activity = await publishedActivity({
+      instructorId: instructor.id,
+      classId: classRecord.id,
+      maxAttempts: 3,
+      creditPolicy: 'HIGHEST',
+    })
+    const submissions = service()
+    const releasedId = await createReleasedAttempt({
+      submissions,
+      student,
+      activityId: activity.id,
+      key: 'reopen-released-attempt',
+      score: 65,
+      releasedAt: currentNow,
+    })
+    const failedCreated = await submissions.create(
+      student,
+      activity.id,
+      source,
+      'reopen-failed-attempt',
+    )
+    const failedId = (failedCreated.submission as { id: string }).id
+    currentNow = new Date(currentNow.getTime() + 1_000)
+    await prisma.$transaction([
+      prisma.executionJob.update({
+        where: { submissionId: failedId },
+        data: { status: 'FAILED', completedAt: currentNow, lastFailureCode: 'JAVA_RUNTIME_UNAVAILABLE' },
+      }),
+      prisma.submissionExecution.update({
+        where: { submissionId: failedId },
+        data: {
+          compileStatus: 'INFRASTRUCTURE_ERROR',
+          infrastructureFailureCode: 'JAVA_RUNTIME_UNAVAILABLE',
+          startedAt: currentNow,
+          completedAt: currentNow,
+        },
+      }),
+      prisma.activitySubmission.update({
+        where: { id: failedId },
+        data: { submissionStatus: 'ASSESSMENT_FAILED', updatedAt: currentNow },
+      }),
+    ])
+    const failed = await prisma.activitySubmission.findUniqueOrThrow({
+      where: { id: failedId },
+    })
+    const replacementExpiresAt = new Date(currentNow.getTime() + 86_400_000)
+    await submissions.resolveFailure(instructor, failedId, {
+      resolutionType: 'REPLACEMENT_GRANTED',
+      reason: 'The Java runtime remained unavailable after the assessment retries.',
+      replacementExpiresAt,
+      expectedUpdatedAt: failed.updatedAt,
+    })
+    const before = await prisma.activitySubmission.findMany({
+      where: { activityId: activity.id },
+      select: {
+        id: true,
+        attemptNumber: true,
+        submissionStatus: true,
+        countsTowardAttemptLimit: true,
+        releasedFinalScore: true,
+        releasedAt: true,
+      },
+      orderBy: { attemptNumber: 'asc' },
+    })
+    const resolutionBefore = await prisma.submissionFailureResolution.findUniqueOrThrow({
+      where: { failedSubmissionId: failedId },
+    })
+    const activityBefore = await prisma.programmingActivity.findUniqueOrThrow({
+      where: { id: activity.id },
+    })
+    const activityService = createActivityService({
+      repository: createPrismaActivityRepository(prisma),
+      classRepository: createPrismaClassRepository(prisma),
+      logger,
+      now: () => currentNow,
+    })
+    const closed = await activityService.close(instructor, activity.id, {
+      expectedUpdatedAt: activityBefore.updatedAt,
+    })
+    await activityService.reopen(instructor, activity.id, {
+      expectedUpdatedAt: closed.updatedAt,
+    })
+
+    const after = await prisma.activitySubmission.findMany({
+      where: { activityId: activity.id },
+      select: {
+        id: true,
+        attemptNumber: true,
+        submissionStatus: true,
+        countsTowardAttemptLimit: true,
+        releasedFinalScore: true,
+        releasedAt: true,
+      },
+      orderBy: { attemptNumber: 'asc' },
+    })
+    const resolutionAfter = await prisma.submissionFailureResolution.findUniqueOrThrow({
+      where: { failedSubmissionId: failedId },
+    })
+    expect(after).toEqual(before)
+    expect(resolutionAfter).toEqual(resolutionBefore)
+    await expect(submissions.getAttemptState(student, activity.id)).resolves.toMatchObject({
+      maxAttempts: 3,
+      creditPolicy: 'HIGHEST',
+      countingAttemptsUsed: 1,
+      remainingOrdinaryAttempts: 2,
+      replacementAvailable: true,
+      replacement: { expiresAt: replacementExpiresAt },
+      nextAllowedSubmissionKind: 'REPLACEMENT',
+      creditedResult: { submissionId: releasedId, score: 65 },
+    })
+  })
+
   it('derives attempt availability at the deadline and fails closed when execution is disabled', async () => {
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const student = await createActiveUser(prisma, 'STUDENT')

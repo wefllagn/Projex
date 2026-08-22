@@ -51,6 +51,7 @@ GET    /api/v1/activities/:activityId
 PATCH  /api/v1/activities/:activityId
 POST   /api/v1/activities/:activityId/publish
 POST   /api/v1/activities/:activityId/close
+POST   /api/v1/activities/:activityId/reopen
 POST   /api/v1/activities/:activityId/archive
 POST   /api/v1/activities/:activityId/restore
 GET    /api/v1/activities/:activityId/test-cases
@@ -154,10 +155,12 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - Draft test cases are replaced as one ordered transactional set. Array position defines the authoritative one-based order.
 - Publishing requires a future due date, at least one visible test case, positive combined test points, and test points no greater than the activity total.
 - After publication, starter code, Java language/entry-class configuration, total points, credited-result policy, and all test-case content/visibility/points are immutable.
-- A published due date may only be extended and `maxAttempts` may only increase. Closed and archived activities are read-only.
+- A published due date may only be extended and `maxAttempts` may only increase. Archived activities are read-only.
+- Reopening is an owning-instructor-only, version-protected `CLOSED -> PUBLISHED` transition. It clears `closedAt` but preserves `publishedAt`, the deadline, attempt history and allowance, replacement grants, credited-result policy, scoring/test configuration, and test cases.
+- Reopening does not extend a past deadline or reset attempts. A reopened past-due activity remains unavailable for ordinary submissions until the instructor separately extends its due date through the existing supported update contract.
 - Student activity access requires ACTIVE class membership and a `PUBLISHED` or `CLOSED` activity.
 - Student test-case lists contain only visible cases. Hidden records do not contribute to the returned list, count, pagination, or error details.
-- Restoring a previously published activity produces `CLOSED`; it never silently republishes or reopens the activity.
+- Restoring a previously published activity produces `CLOSED`; it never silently republishes or reopens the activity. Reopening requires the explicit reopen endpoint and a current `expectedUpdatedAt`.
 
 ### Phase 6 submission, assessment, and visible-test rules
 

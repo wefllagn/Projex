@@ -297,6 +297,93 @@ describe('instructor activity integration', () => {
     expect(api.transition).toHaveBeenCalledWith(activityId, 'restore', { expectedUpdatedAt: archived.updatedAt })
   })
 
+  it('reopens a closed activity with explicit confirmation and explains a passed deadline', async () => {
+    const closed = {
+      ...activity,
+      status: 'CLOSED',
+      dueDate: '2026-08-09T09:00:00.000Z',
+      dueState: 'CLOSED',
+      publishedAt: '2026-08-08T09:00:00.000Z',
+      closedAt: '2026-08-10T01:00:00.000Z',
+    }
+    const reopened = {
+      ...closed,
+      status: 'PUBLISHED',
+      dueState: 'PAST_DUE',
+      closedAt: null,
+      updatedAt: '2026-08-10T02:00:00.000Z',
+    }
+    const api = {
+      getActivity: vi.fn().mockResolvedValue({ data: closed }),
+      listTestCases: vi.fn().mockResolvedValue({ data: [testCase], pagination }),
+      transition: vi.fn()
+        .mockResolvedValueOnce({ data: reopened })
+        .mockResolvedValueOnce({ data: { ...reopened, status: 'CLOSED', updatedAt: '2026-08-10T03:00:00.000Z' } }),
+    }
+    const confirm = vi.spyOn(window, 'confirm')
+      .mockReturnValueOnce(false)
+      .mockReturnValue(true)
+    const user = userEvent.setup()
+    renderView(<InstructorActivityEditor api={api} mode="edit" />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
+
+    const reopen = await screen.findByRole('button', { name: 'Reopen Activity' })
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
+    await user.click(reopen)
+    expect(confirm).toHaveBeenLastCalledWith('Reopen this activity? Student attempts will not reset, and the deadline will not be extended automatically.')
+    expect(api.transition).not.toHaveBeenCalled()
+
+    await user.click(reopen)
+    expect(api.transition).toHaveBeenCalledWith(activityId, 'reopen', { expectedUpdatedAt: closed.updatedAt })
+    expect(await screen.findByText(/deadline has already passed; extend it separately/i)).toBeInTheDocument()
+    expect(screen.getByText('Published')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reopen Activity' })).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: /^Credited result/ })).toBeDisabled()
+    expect(screen.getByLabelText('Starter source')).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(api.transition).toHaveBeenLastCalledWith(activityId, 'close', { expectedUpdatedAt: reopened.updatedAt })
+  })
+
+  it.each(['DRAFT', 'PUBLISHED', 'ARCHIVED'])('does not show reopen for %s activities', async (status) => {
+    const record = {
+      ...activity,
+      status,
+      publishedAt: status === 'DRAFT' ? null : '2026-08-08T09:00:00.000Z',
+      archivedAt: status === 'ARCHIVED' ? '2026-08-10T01:00:00.000Z' : null,
+    }
+    const api = {
+      getActivity: vi.fn().mockResolvedValue({ data: record }),
+      listTestCases: vi.fn().mockResolvedValue({ data: [testCase], pagination }),
+    }
+    renderView(<InstructorActivityEditor api={api} mode="edit" />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
+
+    await screen.findByLabelText('Activity title')
+    expect(screen.queryByRole('button', { name: 'Reopen Activity' })).not.toBeInTheDocument()
+  })
+
+  it('reloads authoritative closed state after a stale reopen conflict', async () => {
+    const closed = {
+      ...activity,
+      status: 'CLOSED',
+      publishedAt: '2026-08-08T09:00:00.000Z',
+      closedAt: '2026-08-10T01:00:00.000Z',
+    }
+    const newer = { ...closed, updatedAt: '2026-08-10T03:00:00.000Z' }
+    const api = {
+      getActivity: vi.fn().mockResolvedValueOnce({ data: closed }).mockResolvedValueOnce({ data: newer }),
+      listTestCases: vi.fn().mockResolvedValue({ data: [testCase], pagination }),
+      transition: vi.fn().mockRejectedValue(new ApiError({ status: 409, code: 'STALE_ACTIVITY_VERSION', message: 'The activity changed.' })),
+    }
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const user = userEvent.setup()
+    renderView(<InstructorActivityEditor api={api} mode="edit" />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
+
+    await user.click(await screen.findByRole('button', { name: 'Reopen Activity' }))
+    expect(await screen.findByText('This record changed while you were working. Refresh it before trying again.')).toBeInTheDocument()
+    expect(api.getActivity).toHaveBeenCalledTimes(2)
+    expect(screen.getByRole('button', { name: 'Reopen Activity' })).toBeInTheDocument()
+  })
+
   it('preserves unsaved form values and reloads the authoritative version after a conflict', async () => {
     const newer = { ...activity, title: 'Server title', updatedAt: '2026-08-10T03:00:00.000Z' }
     const api = {

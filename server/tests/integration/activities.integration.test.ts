@@ -19,20 +19,20 @@ const page = { page: 1, pageSize: 20 }
 const fixedNow = new Date('2030-08-04T02:00:00.000Z')
 const futureDueDate = new Date('2030-08-20T09:00:00.000Z')
 
-function createServices() {
+function createServices(at = fixedNow) {
   const classRepository = createPrismaClassRepository(prisma)
   const activityRepository = createPrismaActivityRepository(prisma)
   const activityService = createActivityService({
     repository: activityRepository,
     classRepository,
     logger,
-    now: () => fixedNow,
+    now: () => at,
   })
   const testCaseService = createTestCaseService({
     repository: createPrismaTestCaseRepository(prisma),
     activityRepository,
     logger,
-    now: () => fixedNow,
+    now: () => at,
   })
   return { activityService, testCaseService }
 }
@@ -220,6 +220,110 @@ describe('PostgreSQL programming activity lifecycle', () => {
         title: 'Cannot edit closed activity',
       }),
     ).rejects.toMatchObject({ code: 'ACTIVITY_NOT_EDITABLE' })
+  })
+
+  it('reopens only a closed activity without changing its deadline or published configuration', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    const { activityService, testCaseService } = createServices()
+    const draft = await activityService.create(
+      instructor,
+      classRecord.id,
+      { ...activityInput(), maxAttempts: 3, creditPolicy: 'HIGHEST' },
+    )
+    await expect(
+      activityService.reopen(instructor, draft.id, {
+        expectedUpdatedAt: draft.updatedAt,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_ACTIVITY_TRANSITION' })
+    const configured = await testCaseService.replace(instructor, draft.id, {
+      expectedUpdatedAt: draft.updatedAt,
+      testCases: publishableTestCases(),
+    })
+    const published = await activityService.publish(instructor, draft.id, {
+      expectedUpdatedAt: configured.activityUpdatedAt,
+    })
+    await expect(
+      activityService.reopen(instructor, draft.id, {
+        expectedUpdatedAt: published.updatedAt,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_ACTIVITY_TRANSITION' })
+    const closed = await activityService.close(instructor, draft.id, {
+      expectedUpdatedAt: published.updatedAt,
+    })
+
+    const reopened = await activityService.reopen(instructor, draft.id, {
+      expectedUpdatedAt: closed.updatedAt,
+    })
+    expect(reopened).toMatchObject({
+      status: 'PUBLISHED',
+      dueDate: published.dueDate,
+      publishedAt: published.publishedAt,
+      closedAt: null,
+      archivedAt: null,
+      maxAttempts: 3,
+      creditPolicy: 'HIGHEST',
+      totalPoints: 100,
+    })
+    expect(reopened.updatedAt.getTime()).toBeGreaterThan(closed.updatedAt.getTime())
+    expect(await prisma.testCase.count({ where: { activityId: draft.id } })).toBe(2)
+    await expect(
+      activityService.update(instructor, draft.id, {
+        expectedUpdatedAt: reopened.updatedAt,
+        creditPolicy: 'LATEST',
+      }),
+    ).rejects.toMatchObject({ code: 'PUBLISHED_ACTIVITY_FIELD_IMMUTABLE' })
+
+    const closedAgain = await activityService.close(instructor, draft.id, {
+      expectedUpdatedAt: reopened.updatedAt,
+    })
+    const concurrent = await Promise.allSettled([
+      activityService.reopen(instructor, draft.id, {
+        expectedUpdatedAt: closedAgain.updatedAt,
+      }),
+      activityService.reopen(instructor, draft.id, {
+        expectedUpdatedAt: closedAgain.updatedAt,
+      }),
+    ])
+    expect(concurrent.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
+    expect(concurrent.find((result) => result.status === 'rejected')).toMatchObject({
+      status: 'rejected',
+      reason: { code: 'STALE_ACTIVITY_VERSION' },
+    })
+  })
+
+  it('reopens a past-due activity without changing its deadline or ordinary eligibility', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    const dueDate = new Date(fixedNow.getTime() + 60_000)
+    const { activityService, testCaseService } = createServices()
+    const draft = await activityService.create(
+      instructor,
+      classRecord.id,
+      { ...activityInput(), dueDate },
+    )
+    const configured = await testCaseService.replace(instructor, draft.id, {
+      expectedUpdatedAt: draft.updatedAt,
+      testCases: publishableTestCases(),
+    })
+    const published = await activityService.publish(instructor, draft.id, {
+      expectedUpdatedAt: configured.activityUpdatedAt,
+    })
+    const closed = await activityService.close(instructor, draft.id, {
+      expectedUpdatedAt: published.updatedAt,
+    })
+    const afterDeadline = new Date(dueDate.getTime() + 1)
+    const reopened = await createServices(afterDeadline).activityService.reopen(
+      instructor,
+      draft.id,
+      { expectedUpdatedAt: closed.updatedAt },
+    )
+
+    expect(reopened).toMatchObject({
+      status: 'PUBLISHED',
+      dueDate,
+      dueState: 'PAST_DUE',
+    })
   })
 
   it('enforces ownership, active membership, and archived-class boundaries', async () => {

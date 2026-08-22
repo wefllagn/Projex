@@ -325,12 +325,20 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
 
   const transition = async (action) => {
     if (!state.activity || formDirty || testsDirty) return
-    if (!window.confirm(`Confirm ${action} for this activity?`)) return
+    const confirmation = action === 'reopen'
+      ? 'Reopen this activity? Student attempts will not reset, and the deadline will not be extended automatically.'
+      : `Confirm ${action} for this activity?`
+    if (!window.confirm(confirmation)) return
     setBusy(action); setNotice('')
     try {
       const response = await api.transition(state.activity.id, action, { expectedUpdatedAt: state.activity.updatedAt })
       setState((current) => ({ ...current, activity: response.data }))
-      setForm(formFromActivity(response.data)); setFormDirty(false); setNotice(`Activity ${action} succeeded.`)
+      setForm(formFromActivity(response.data)); setFormDirty(false)
+      setNotice(
+        action === 'reopen' && response.data.dueState === 'PAST_DUE'
+          ? 'Activity reopen succeeded. The deadline has already passed; extend it separately before ordinary submissions can resume.'
+          : `Activity ${action} succeeded.`,
+      )
     } catch (error) { await handleError(error) } finally { setBusy('') }
   }
 
@@ -364,6 +372,7 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
           <div className="instructor-form-actions">
             {current.activity.status === 'DRAFT' && <button type="button" className="student-primary-action" disabled={Boolean(busy) || formDirty || testsDirty || publishReasons.length > 0 || selectedClass?.status === 'ARCHIVED'} onClick={() => transition('publish')}>Publish</button>}
             {current.activity.status === 'PUBLISHED' && <button type="button" className="student-primary-action" disabled={Boolean(busy) || formDirty || selectedClass?.status === 'ARCHIVED'} onClick={() => transition('close')}>Close</button>}
+            {current.activity.status === 'CLOSED' && <button type="button" className="student-primary-action" disabled={Boolean(busy) || formDirty || testsDirty || selectedClass?.status === 'ARCHIVED'} onClick={() => transition('reopen')}>Reopen Activity</button>}
             {current.activity.status !== 'ARCHIVED' && <button type="button" className="student-outline-action" disabled={Boolean(busy) || formDirty || testsDirty || selectedClass?.status === 'ARCHIVED'} onClick={() => transition('archive')}>Archive</button>}
             {current.activity.status === 'ARCHIVED' && <button type="button" className="student-primary-action" disabled={Boolean(busy) || selectedClass?.status === 'ARCHIVED'} onClick={() => transition('restore')}>Restore</button>}
           </div>

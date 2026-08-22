@@ -114,6 +114,7 @@ class FakeActivityRepository implements ActivityRepository {
     activity: { ...activityRecord, status: 'PUBLISHED', publishedAt: now },
   }
   lastUpdate?: Parameters<ActivityRepository['update']>[0]
+  lastReopen?: Parameters<ActivityRepository['reopen']>[0]
 
   async create(): Promise<CreateActivityResult> {
     return { kind: 'created', activity: activityRecord }
@@ -134,6 +135,10 @@ class FakeActivityRepository implements ActivityRepository {
   async close() {
     return this.writeResult
   }
+  async reopen(input: Parameters<ActivityRepository['reopen']>[0]) {
+    this.lastReopen = input
+    return this.writeResult
+  }
   async archive() {
     return this.writeResult
   }
@@ -145,13 +150,17 @@ class FakeActivityRepository implements ActivityRepository {
 function createHarness() {
   const repository = new FakeActivityRepository()
   const classRepository = new FakeClassRepository()
+  let logs = ''
   const service = createActivityService({
     repository,
     classRepository,
-    logger: pino({ level: 'silent' }),
+    logger: pino(
+      { level: 'info' },
+      { write: (chunk: string) => { logs += chunk } },
+    ),
     now: () => now,
   })
-  return { repository, classRepository, service }
+  return { repository, classRepository, service, logs: () => logs }
 }
 
 describe('programming activity service policy', () => {
@@ -307,6 +316,119 @@ describe('programming activity service policy', () => {
         title: 'Changed',
       }),
     ).rejects.toMatchObject({ code: 'STALE_ACTIVITY_VERSION' })
+  })
+
+  it('reopens only through the owning active instructor and logs safe identifiers', async () => {
+    const { repository, service, logs } = createHarness()
+    const publishedAt = new Date('2026-08-04T01:00:00.000Z')
+    const closedAt = new Date('2026-08-04T01:30:00.000Z')
+    const closed = {
+      ...activityRecord,
+      status: 'CLOSED' as const,
+      publishedAt,
+      closedAt,
+    }
+    const reopened = {
+      ...closed,
+      status: 'PUBLISHED' as const,
+      closedAt: null,
+      updatedAt: new Date(now.getTime() + 1),
+    }
+    repository.access = { activity: closed, membership: null }
+    repository.writeResult = { kind: 'updated', activity: reopened }
+
+    await expect(
+      service.reopen(instructor, activityRecord.id, { expectedUpdatedAt: now }),
+    ).resolves.toMatchObject({
+      status: 'PUBLISHED',
+      publishedAt,
+      closedAt: null,
+      dueDate: activityRecord.dueDate,
+      maxAttempts: activityRecord.maxAttempts,
+      creditPolicy: activityRecord.creditPolicy,
+    })
+    expect(repository.lastReopen).toEqual({
+      activityId: activityRecord.id,
+      expectedUpdatedAt: now,
+      now,
+    })
+    const event = JSON.parse(logs().trim()) as Record<string, unknown>
+    expect(event).toMatchObject({
+      event: 'activity.reopened',
+      actorId: instructor.id,
+      classId: classRecord.id,
+      activityId: activityRecord.id,
+    })
+    expect(event).not.toHaveProperty('instructions')
+    expect(event).not.toHaveProperty('starterCode')
+    expect(event).not.toHaveProperty('requestBody')
+  })
+
+  it('rejects invalid, stale, unauthorized, inactive, and archived-class reopen requests', async () => {
+    const { repository, service } = createHarness()
+    repository.access = {
+      activity: { ...activityRecord, status: 'CLOSED', publishedAt: now, closedAt: now },
+      membership: null,
+    }
+
+    for (const status of ['DRAFT', 'PUBLISHED', 'ARCHIVED'] as const) {
+      repository.access = {
+        activity: { ...activityRecord, status },
+        membership: null,
+      }
+      repository.writeResult = { kind: 'invalid_state' }
+      await expect(
+        service.reopen(instructor, activityRecord.id, { expectedUpdatedAt: now }),
+      ).rejects.toMatchObject({ code: 'INVALID_ACTIVITY_TRANSITION' })
+    }
+
+    repository.access = {
+      activity: { ...activityRecord, status: 'CLOSED', publishedAt: now, closedAt: now },
+      membership: null,
+    }
+    repository.writeResult = { kind: 'stale' }
+    await expect(
+      service.reopen(instructor, activityRecord.id, { expectedUpdatedAt: now }),
+    ).rejects.toMatchObject({ code: 'STALE_ACTIVITY_VERSION' })
+
+    repository.access = {
+      activity: {
+        ...activityRecord,
+        status: 'CLOSED',
+        class: { ...activityRecord.class, instructorId: '99999999-9999-4999-8999-999999999999' },
+      },
+      membership: null,
+    }
+    await expect(
+      service.reopen(instructor, activityRecord.id, { expectedUpdatedAt: now }),
+    ).rejects.toMatchObject({ code: 'ACTIVITY_NOT_FOUND' })
+    await expect(
+      service.reopen(student, activityRecord.id, { expectedUpdatedAt: now }),
+    ).rejects.toMatchObject({ code: 'ACTIVITY_NOT_FOUND' })
+
+    repository.access = {
+      activity: { ...activityRecord, status: 'CLOSED' },
+      membership: null,
+    }
+    await expect(
+      service.reopen(
+        { ...instructor, status: 'SUSPENDED' },
+        activityRecord.id,
+        { expectedUpdatedAt: now },
+      ),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' })
+
+    repository.access = {
+      activity: {
+        ...activityRecord,
+        status: 'CLOSED',
+        class: { ...activityRecord.class, status: 'ARCHIVED' },
+      },
+      membership: null,
+    }
+    await expect(
+      service.reopen(instructor, activityRecord.id, { expectedUpdatedAt: now }),
+    ).rejects.toMatchObject({ code: 'CLASS_ARCHIVED' })
   })
 
   it('rejects all mutations when the owning class is archived', async () => {

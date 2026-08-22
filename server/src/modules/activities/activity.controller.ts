@@ -76,6 +76,16 @@ export function createActivityController(service: ActivityService) {
         next(error)
       }
     },
+    reopen: async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const { activityId } = parseRequest(activityIdParamsSchema, request.params)
+        const input = parseRequest(activityTransitionSchema, request.body)
+        const activity = await service.reopen(request.auth!.user, activityId, input)
+        response.status(200).json(successResponse(activity, request.requestId))
+      } catch (error) {
+        next(error)
+      }
+    },
     archive: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const { activityId } = parseRequest(activityIdParamsSchema, request.params)

@@ -57,6 +57,11 @@ export interface ActivityService {
     activityId: string,
     input: ActivityTransitionInput,
   ): Promise<ActivityProjection>
+  reopen(
+    caller: SafeUserProfile,
+    activityId: string,
+    input: ActivityTransitionInput,
+  ): Promise<ActivityProjection>
   archive(
     caller: SafeUserProfile,
     activityId: string,
@@ -390,6 +395,26 @@ export function createActivityService(dependencies: {
           activityId,
         },
         'programming activity closed',
+      )
+      return toActivityProjection(result.activity, changedAt)
+    },
+    async reopen(caller, activityId, input) {
+      await loadManagerAccess(caller, activityId)
+      const changedAt = now()
+      const result = await repository.reopen({
+        activityId,
+        expectedUpdatedAt: input.expectedUpdatedAt,
+        now: changedAt,
+      })
+      if (result.kind !== 'updated') mapWriteFailure(result)
+      logger.info(
+        {
+          event: 'activity.reopened',
+          actorId: caller.id,
+          classId: result.activity.classId,
+          activityId,
+        },
+        'programming activity reopened',
       )
       return toActivityProjection(result.activity, changedAt)
     },

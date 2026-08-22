@@ -118,6 +118,11 @@ export interface ActivityRepository {
     expectedUpdatedAt: Date
     now: Date
   }): Promise<ActivityWriteResult>
+  reopen(input: {
+    activityId: string
+    expectedUpdatedAt: Date
+    now: Date
+  }): Promise<ActivityWriteResult>
   archive(input: {
     activityId: string
     expectedUpdatedAt: Date
@@ -155,6 +160,28 @@ async function diagnoseWriteFailure(
   if (current.updatedAt.getTime() !== expectedUpdatedAt.getTime()) {
     return { kind: 'stale' }
   }
+  return { kind: 'stale' }
+}
+
+async function diagnoseReopenFailure(
+  transaction: Prisma.TransactionClient,
+  activityId: string,
+  expectedUpdatedAt: Date,
+): Promise<ActivityWriteFailure> {
+  const current = await transaction.programmingActivity.findUnique({
+    where: { id: activityId },
+    select: {
+      status: true,
+      updatedAt: true,
+      class: { select: { status: true } },
+    },
+  })
+  if (!current) return { kind: 'not_found' }
+  if (current.class.status === 'ARCHIVED') return { kind: 'class_archived' }
+  if (current.updatedAt.getTime() !== expectedUpdatedAt.getTime()) {
+    return { kind: 'stale' }
+  }
+  if (current.status !== 'CLOSED') return { kind: 'invalid_state' }
   return { kind: 'stale' }
 }
 
@@ -430,6 +457,35 @@ export function createPrismaActivityRepository(
             input.activityId,
             input.expectedUpdatedAt,
             ['PUBLISHED'],
+          )
+        }
+        return {
+          kind: 'updated',
+          activity: await loadActivity(transaction, input.activityId),
+        } as const
+      })
+    },
+    reopen(input) {
+      return prisma.$transaction(async (transaction) => {
+        const versionTimestamp = nextUpdatedAt(input.expectedUpdatedAt, input.now)
+        const result = await transaction.programmingActivity.updateMany({
+          where: {
+            id: input.activityId,
+            status: 'CLOSED',
+            updatedAt: input.expectedUpdatedAt,
+            class: { status: 'ACTIVE' },
+          },
+          data: {
+            status: 'PUBLISHED',
+            closedAt: null,
+            updatedAt: versionTimestamp,
+          },
+        })
+        if (result.count === 0) {
+          return diagnoseReopenFailure(
+            transaction,
+            input.activityId,
+            input.expectedUpdatedAt,
           )
         }
         return {
