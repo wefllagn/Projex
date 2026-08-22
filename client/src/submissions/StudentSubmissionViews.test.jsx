@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
 import { ClassContext } from '../classes/class-context.js'
 import {
@@ -87,6 +87,30 @@ function submissionRecord(overrides = {}) {
   }
 }
 
+function mockWorkspaceViewport(matches) {
+  let current = matches
+  const listeners = new Set()
+  const query = {
+    media: '(min-width: 1181px)',
+    get matches() { return current },
+    addEventListener: (_event, listener) => listeners.add(listener),
+    removeEventListener: (_event, listener) => listeners.delete(listener),
+    addListener: (listener) => listeners.add(listener),
+    removeListener: (listener) => listeners.delete(listener),
+  }
+  vi.stubGlobal('matchMedia', vi.fn(() => query))
+  return {
+    setMatches(next) {
+      current = next
+      listeners.forEach((listener) => listener({ matches: next, media: query.media }))
+    },
+  }
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
 function attemptState(overrides = {}) {
   return {
     activityId,
@@ -161,6 +185,82 @@ describe('student programming workspace', () => {
     expect(screen.queryByText(/Auto-save/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Custom Input/i)).not.toBeInTheDocument()
     expect(screen.getByText('Visible sample')).toBeInTheDocument()
+  })
+
+  it('resizes desktop panes with pointer input while preserving editor and activity state', async () => {
+    mockWorkspaceViewport(true)
+    const submissions = submissionTransport()
+    const { container } = renderWithClass(
+      <StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />,
+    )
+
+    const editor = await screen.findByLabelText('Java source code')
+    const shell = container.querySelector('.student-coding-shell')
+    vi.spyOn(shell, 'getBoundingClientRect').mockReturnValue({ width: 1300 })
+    fireEvent.change(editor, { target: { value: changedCode } })
+
+    const instructions = screen.getByRole('separator', { name: 'Resize instructions and code panes' })
+    fireEvent.pointerDown(instructions, { pointerId: 1, button: 0, clientX: 320 })
+    fireEvent.pointerMove(instructions, { pointerId: 1, clientX: 440 })
+    fireEvent.pointerUp(instructions, { pointerId: 1, clientX: 440 })
+    expect(instructions).toHaveAttribute('aria-valuenow', '440')
+    expect(shell.style.getPropertyValue('--instruction-pane-width')).toBe('440px')
+
+    const diagnostics = screen.getByRole('separator', { name: 'Resize code and diagnostics panes' })
+    fireEvent.pointerDown(diagnostics, { pointerId: 2, button: 0, clientX: 700 })
+    fireEvent.pointerMove(diagnostics, { pointerId: 2, clientX: 620 })
+    fireEvent.pointerUp(diagnostics, { pointerId: 2, clientX: 620 })
+    expect(diagnostics).toHaveAttribute('aria-valuenow', '440')
+    expect(shell.style.getPropertyValue('--output-pane-width')).toBe('440px')
+
+    fireEvent.pointerDown(instructions, { pointerId: 3, button: 0, clientX: 440 })
+    fireEvent.pointerMove(instructions, { pointerId: 3, clientX: -1000 })
+    fireEvent.pointerUp(instructions, { pointerId: 3, clientX: -1000 })
+    expect(instructions).toHaveAttribute('aria-valuenow', '240')
+    expect(editor).toHaveValue(changedCode)
+    expect(screen.getByRole('button', { name: 'Run Visible Tests' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeInTheDocument()
+    expect(screen.getByText(/Run visible tests to check the current source/)).toBeInTheDocument()
+    expect(submissions.createVisibleTestRun).not.toHaveBeenCalled()
+    expect(submissions.createSubmission).not.toHaveBeenCalled()
+  })
+
+  it('supports focused keyboard resizing and enforces desktop pane boundaries', async () => {
+    mockWorkspaceViewport(true)
+    const { container } = renderWithClass(
+      <StudentProgrammingWorkspace api={activityTransport()} submissions={submissionTransport()} />,
+    )
+    await screen.findByLabelText('Java source code')
+    const shell = container.querySelector('.student-coding-shell')
+    vi.spyOn(shell, 'getBoundingClientRect').mockReturnValue({ width: 1600 })
+    const instructions = screen.getByRole('separator', { name: 'Resize instructions and code panes' })
+
+    instructions.focus()
+    expect(instructions).toHaveFocus()
+    fireEvent.keyDown(instructions, { key: 'ArrowRight' })
+    expect(instructions).toHaveAttribute('aria-valuenow', '344')
+    for (let index = 0; index < 20; index += 1) fireEvent.keyDown(instructions, { key: 'ArrowRight' })
+    expect(instructions).toHaveAttribute('aria-valuenow', '520')
+    for (let index = 0; index < 30; index += 1) fireEvent.keyDown(instructions, { key: 'ArrowLeft' })
+    expect(instructions).toHaveAttribute('aria-valuenow', '240')
+  })
+
+  it('removes desktop sizing and separators when the workspace becomes narrow', async () => {
+    const viewport = mockWorkspaceViewport(true)
+    const { container } = renderWithClass(
+      <StudentProgrammingWorkspace api={activityTransport()} submissions={submissionTransport()} />,
+    )
+    await screen.findByLabelText('Java source code')
+    expect(screen.getAllByRole('separator')).toHaveLength(2)
+
+    act(() => viewport.setMatches(false))
+    const shell = container.querySelector('.student-coding-shell')
+    expect(screen.queryByRole('separator')).not.toBeInTheDocument()
+    expect(shell.style.getPropertyValue('--instruction-pane-width')).toBe('')
+    expect(shell.style.getPropertyValue('--output-pane-width')).toBe('')
+    expect(screen.getByLabelText('Java source code')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Run Visible Tests' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeInTheDocument()
   })
 
   it('starts and polls a real visible-test run without implying an attempt or score', async () => {

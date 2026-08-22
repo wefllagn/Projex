@@ -29,6 +29,187 @@ import {
 import useBoundedPolling from './use-bounded-polling.js'
 
 const FIRST_PAGE = { page: 1, pageSize: 20, status: '' }
+const DESKTOP_WORKSPACE_QUERY = '(min-width: 1181px)'
+const WORKSPACE_PANE_DEFAULTS = { instructions: 320, output: 360 }
+const WORKSPACE_PANE_LIMITS = {
+  instructions: { min: 240, max: 520 },
+  output: { min: 260, max: 560 },
+  editorMin: 400,
+  separatorSpace: 16,
+  keyboardStep: 24,
+}
+
+function clamp(value, minimum, maximum) {
+  return Math.min(Math.max(value, minimum), Math.max(minimum, maximum))
+}
+
+function constrainWorkspacePanes(contentWidth, requested, priority) {
+  const minimumTotal = WORKSPACE_PANE_LIMITS.instructions.min
+    + WORKSPACE_PANE_LIMITS.output.min
+    + WORKSPACE_PANE_LIMITS.editorMin
+    + WORKSPACE_PANE_LIMITS.separatorSpace
+  const width = Math.max(contentWidth || 0, minimumTotal)
+  const sideBudget = width - WORKSPACE_PANE_LIMITS.separatorSpace - WORKSPACE_PANE_LIMITS.editorMin
+  let instructions = clamp(
+    requested.instructions,
+    WORKSPACE_PANE_LIMITS.instructions.min,
+    WORKSPACE_PANE_LIMITS.instructions.max,
+  )
+  let output = clamp(
+    requested.output,
+    WORKSPACE_PANE_LIMITS.output.min,
+    WORKSPACE_PANE_LIMITS.output.max,
+  )
+
+  if (instructions + output > sideBudget) {
+    if (priority === 'instructions') {
+      instructions = Math.max(WORKSPACE_PANE_LIMITS.instructions.min, sideBudget - output)
+    } else {
+      output = Math.max(WORKSPACE_PANE_LIMITS.output.min, sideBudget - instructions)
+      if (instructions + output > sideBudget) {
+        instructions = Math.max(WORKSPACE_PANE_LIMITS.instructions.min, sideBudget - output)
+      }
+    }
+  }
+
+  return {
+    instructions: Math.round(instructions),
+    output: Math.round(output),
+  }
+}
+
+function useDesktopWorkspace() {
+  const readMatch = () => typeof window.matchMedia !== 'function'
+    || window.matchMedia(DESKTOP_WORKSPACE_QUERY).matches
+  const [matches, setMatches] = useState(readMatch)
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined
+    const query = window.matchMedia(DESKTOP_WORKSPACE_QUERY)
+    const update = (event) => setMatches(event.matches)
+    if (query.addEventListener) {
+      query.addEventListener('change', update)
+      return () => query.removeEventListener('change', update)
+    }
+    query.addListener(update)
+    return () => query.removeListener(update)
+  }, [])
+
+  return matches
+}
+
+function useWorkspacePaneSizing() {
+  const shellRef = useRef(null)
+  const [paneSizes, setPaneSizes] = useState(WORKSPACE_PANE_DEFAULTS)
+  const [drag, setDrag] = useState(null)
+  const isDesktop = useDesktopWorkspace()
+
+  const getContentWidth = useCallback(() => {
+    const shell = shellRef.current
+    if (!shell) return 0
+    const styles = window.getComputedStyle(shell)
+    const horizontalPadding = Number.parseFloat(styles.paddingLeft || '0')
+      + Number.parseFloat(styles.paddingRight || '0')
+    return (shell.getBoundingClientRect().width || shell.clientWidth) - horizontalPadding
+  }, [])
+
+  const updatePane = useCallback((pane, requestedSize) => {
+    setPaneSizes((current) => constrainWorkspacePanes(
+      getContentWidth(),
+      { ...current, [pane]: requestedSize },
+      pane,
+    ))
+  }, [getContentWidth])
+
+  useEffect(() => {
+    if (!isDesktop) return undefined
+    const fitPanes = () => {
+      const contentWidth = getContentWidth()
+      if (contentWidth <= 0) return
+      setPaneSizes((current) => constrainWorkspacePanes(contentWidth, current))
+    }
+    fitPanes()
+    window.addEventListener('resize', fitPanes)
+    return () => window.removeEventListener('resize', fitPanes)
+  }, [getContentWidth, isDesktop])
+
+  const beginResize = useCallback((pane, event) => {
+    if (!isDesktop || (event.button !== undefined && event.button !== 0)) return
+    event.preventDefault()
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    setDrag({
+      pane,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startSize: paneSizes[pane],
+    })
+  }, [isDesktop, paneSizes])
+
+  const moveResize = useCallback((event) => {
+    if (!drag || (drag.pointerId !== undefined && event.pointerId !== drag.pointerId)) return
+    event.preventDefault()
+    const delta = event.clientX - drag.startX
+    updatePane(
+      drag.pane,
+      drag.startSize + (drag.pane === 'instructions' ? delta : -delta),
+    )
+  }, [drag, updatePane])
+
+  const endResize = useCallback((event) => {
+    if (!drag || (drag.pointerId !== undefined && event.pointerId !== drag.pointerId)) return
+    event.currentTarget.releasePointerCapture?.(event.pointerId)
+    setDrag(null)
+  }, [drag])
+
+  const resizeWithKeyboard = useCallback((pane, event) => {
+    if (!isDesktop || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return
+    event.preventDefault()
+    const direction = event.key === 'ArrowRight' ? 1 : -1
+    const paneDirection = pane === 'instructions' ? direction : -direction
+    const step = event.shiftKey
+      ? WORKSPACE_PANE_LIMITS.keyboardStep * 2
+      : WORKSPACE_PANE_LIMITS.keyboardStep
+    updatePane(pane, paneSizes[pane] + paneDirection * step)
+  }, [isDesktop, paneSizes, updatePane])
+
+  const separatorProps = (pane, label, controls) => ({
+    role: 'separator',
+    'aria-label': label,
+    'aria-controls': controls,
+    'aria-orientation': 'vertical',
+    'aria-valuemin': WORKSPACE_PANE_LIMITS[pane].min,
+    'aria-valuemax': WORKSPACE_PANE_LIMITS[pane].max,
+    'aria-valuenow': paneSizes[pane],
+    'aria-valuetext': `${paneSizes[pane]} pixels`,
+    tabIndex: 0,
+    onKeyDown: (event) => resizeWithKeyboard(pane, event),
+    onPointerDown: (event) => beginResize(pane, event),
+    onPointerMove: moveResize,
+    onPointerUp: endResize,
+    onPointerCancel: endResize,
+    onLostPointerCapture: () => setDrag(null),
+  })
+
+  return {
+    isResizing: Boolean(drag),
+    isDesktop,
+    shellRef,
+    paneStyle: isDesktop ? {
+      '--instruction-pane-width': `${paneSizes.instructions}px`,
+      '--output-pane-width': `${paneSizes.output}px`,
+    } : undefined,
+    instructionSeparatorProps: separatorProps(
+      'instructions',
+      'Resize instructions and code panes',
+      'student-workspace-instructions student-workspace-editor',
+    ),
+    outputSeparatorProps: separatorProps(
+      'output',
+      'Resize code and diagnostics panes',
+      'student-workspace-editor student-workspace-diagnostics',
+    ),
+  }
+}
 
 function contextMismatchError(message = 'The requested record is not available in the selected class.') {
   return new ApiError({ status: 404, code: 'RESOURCE_NOT_FOUND', message })
@@ -179,6 +360,7 @@ export function StudentProgrammingWorkspace({
   const [submission, setSubmission] = useState({ status: 'idle', intent: null, error: null })
   const [confirmMode, setConfirmMode] = useState(null)
   const mounted = useRef(true)
+  const paneSizing = useWorkspacePaneSizing()
 
   useEffect(() => {
     mounted.current = true
@@ -383,8 +565,12 @@ export function StudentProgrammingWorkspace({
         <NavLink className="student-outline-action" to={classHref(`/student/activity/${activity.id}/submissions`, selectedClass.id)}>Attempt history</NavLink>
       </header>
 
-      <main className="student-coding-shell">
-        <aside className="student-coding-instructions">
+      <main
+        className={`student-coding-shell${paneSizing.isResizing ? ' is-pane-resizing' : ''}`}
+        ref={paneSizing.shellRef}
+        style={paneSizing.paneStyle}
+      >
+        <aside className="student-coding-instructions" id="student-workspace-instructions">
           <div className="student-coding-activity-title">
             <span>Programming activity</span>
             <h1>{activity.title}</h1>
@@ -416,7 +602,14 @@ export function StudentProgrammingWorkspace({
           </div>
         </aside>
 
-        <section className="student-editor-area">
+        {paneSizing.isDesktop && (
+          <div
+            className="student-pane-resizer student-pane-resizer--instructions"
+            {...paneSizing.instructionSeparatorProps}
+          />
+        )}
+
+        <section className="student-editor-area" id="student-workspace-editor">
           <div className="student-editor-tabs"><button type="button" className="is-active">{activity.entryClassName}.java</button></div>
           <div className="student-editor-workbench student-editor-workbench--single-file">
             <aside className="student-editor-explorer" aria-label="Source file">
@@ -434,7 +627,14 @@ export function StudentProgrammingWorkspace({
           <footer className="student-editor-status"><span>Unsaved browser source</span><span>Java</span></footer>
         </section>
 
-        <section className="student-output-area">
+        {paneSizing.isDesktop && (
+          <div
+            className="student-pane-resizer student-pane-resizer--output"
+            {...paneSizing.outputSeparatorProps}
+          />
+        )}
+
+        <section className="student-output-area" id="student-workspace-diagnostics">
           <div className="student-output-header"><strong>Visible-test diagnostics</strong><button type="button" onClick={() => setPractice({ record: null, error: null, requesting: false, bounded: false })}>Clear</button></div>
           <div className="student-output-panel student-output-panel--live" role="status">
             <p>{practiceStatus}</p>
