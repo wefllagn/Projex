@@ -176,6 +176,7 @@ function publishedFieldViolation(input: UpdateActivityInput): string | null {
     'entryClassName',
     'starterCode',
     'totalPoints',
+    'creditPolicy',
   ]
   return frozenFields.find((field) => input[field] !== undefined) ?? null
 }

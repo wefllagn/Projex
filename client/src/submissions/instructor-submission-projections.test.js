@@ -13,6 +13,8 @@ describe('instructor submission projection', () => {
     const projected = projectInstructorSubmissionSummary({
       id: 'submission-1',
       activityId: 'activity-1',
+      creditPolicy: 'HIGHEST',
+      isCreditedResult: true,
       student: { id: 'student-1', fullName: 'Safe Student', email: 'safe@example.edu' },
       sourceCode: 'PRIVATE-SOURCE',
       assessment: { testResults: [{ input: 'HIDDEN-INPUT' }] },
@@ -20,7 +22,7 @@ describe('instructor submission projection', () => {
       feedback: { text: 'PRIVATE-FEEDBACK' },
     })
 
-    expect(projected).toMatchObject({ id: 'submission-1', activityId: 'activity-1' })
+    expect(projected).toMatchObject({ id: 'submission-1', activityId: 'activity-1', creditPolicy: 'HIGHEST', isCreditedResult: true })
     expect(projected).not.toHaveProperty('sourceCode')
     expect(projected).not.toHaveProperty('assessment')
     expect(projected).not.toHaveProperty('corrections')

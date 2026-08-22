@@ -46,6 +46,7 @@ function activityInput(title = 'Loop Patterns') {
     entryClassName: 'Main',
     starterCode: 'public class Main { public static void main(String[] args) {} }',
     maxAttempts: 1,
+    creditPolicy: 'LATEST' as const,
     totalPoints: 100,
   }
 }
@@ -92,6 +93,7 @@ describe('PostgreSQL programming activity lifecycle', () => {
       dueState: 'DRAFT',
       totalPoints: 100,
       maxAttempts: 1,
+      creditPolicy: 'LATEST',
       entryClassName: 'Main',
     })
     expect(await prisma.programmingActivity.count()).toBe(1)
@@ -120,8 +122,13 @@ describe('PostgreSQL programming activity lifecycle', () => {
       statusCode: 404,
     })
 
-    const replaced = await testCaseService.replace(instructor, draft.id, {
+    const configured = await activityService.update(instructor, draft.id, {
       expectedUpdatedAt: draft.updatedAt,
+      creditPolicy: 'HIGHEST',
+    })
+    expect(configured.creditPolicy).toBe('HIGHEST')
+    const replaced = await testCaseService.replace(instructor, draft.id, {
+      expectedUpdatedAt: configured.updatedAt,
       testCases: publishableTestCases(),
     })
     const published = await activityService.publish(instructor, draft.id, {
@@ -164,6 +171,12 @@ describe('PostgreSQL programming activity lifecycle', () => {
       activityService.update(instructor, draft.id, {
         expectedUpdatedAt: published.updatedAt,
         totalPoints: 120,
+      }),
+    ).rejects.toMatchObject({ code: 'PUBLISHED_ACTIVITY_FIELD_IMMUTABLE' })
+    await expect(
+      activityService.update(instructor, draft.id, {
+        expectedUpdatedAt: published.updatedAt,
+        creditPolicy: 'LATEST',
       }),
     ).rejects.toMatchObject({ code: 'PUBLISHED_ACTIVITY_FIELD_IMMUTABLE' })
     await expect(

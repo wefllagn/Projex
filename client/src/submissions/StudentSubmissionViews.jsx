@@ -23,12 +23,12 @@ import {
   isPracticePending,
   isSubmissionPending,
   projectPracticeRun,
+  projectStudentAttemptState,
   projectStudentSubmission,
 } from './submission-projections.js'
 import useBoundedPolling from './use-bounded-polling.js'
 
 const FIRST_PAGE = { page: 1, pageSize: 20, status: '' }
-const REPLACEMENT_QUERY = { page: 1, pageSize: 100 }
 
 function contextMismatchError(message = 'The requested record is not available in the selected class.') {
   return new ApiError({ status: 404, code: 'RESOURCE_NOT_FOUND', message })
@@ -174,6 +174,7 @@ export function StudentProgrammingWorkspace({
   const [workspace, reloadWorkspace] = useWorkspaceActivity(api, activityId, selectedClass, selectionStatus)
   const [source, setSource] = useState({ key: null, initial: '', value: '' })
   const [practice, setPractice] = useState({ record: null, error: null, requesting: false, bounded: false })
+  const [attemptState, setAttemptState] = useState({ key: null, status: 'idle', record: null, error: null })
   const [history, setHistory] = useState({ key: null, status: 'idle', items: [], error: null, reviewedAfterAmbiguity: false })
   const [submission, setSubmission] = useState({ status: 'idle', intent: null, error: null })
   const [confirmMode, setConfirmMode] = useState(null)
@@ -192,14 +193,32 @@ export function StudentProgrammingWorkspace({
       : { key, initial: workspace.activity.starterCode ?? '', value: workspace.activity.starterCode ?? '' })
     setPractice({ record: null, error: null, requesting: false, bounded: false })
     setSubmission({ status: 'idle', intent: null, error: null })
-    setHistory({ key: workspace.activity.id, status: 'loading', items: [], error: null, reviewedAfterAmbiguity: false })
+    setAttemptState({ key: workspace.activity.id, status: 'loading', record: null, error: null })
+    setHistory({ key: workspace.activity.id, status: 'idle', items: [], error: null, reviewedAfterAmbiguity: false })
   }, [selectedClass?.id, workspace.activity])
+
+  const refreshAttemptState = useCallback(async ({ signal } = {}) => {
+    if (!activityId) return null
+    setAttemptState((current) => ({ ...current, key: activityId, status: 'loading', error: null }))
+    try {
+      const response = await submissions.getAttemptState(activityId, { signal })
+      const record = projectStudentAttemptState(response.data)
+      if (record.activityId !== activityId) throw contextMismatchError('Attempt state does not match this activity.')
+      setAttemptState({ key: activityId, status: 'ready', record, error: null })
+      return record
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        setAttemptState({ key: activityId, status: 'error', record: null, error })
+      }
+      return null
+    }
+  }, [activityId, submissions])
 
   const refreshHistory = useCallback(async ({ signal, ambiguityReview = false } = {}) => {
     if (!activityId) return
     setHistory((current) => ({ ...current, key: activityId, status: 'loading', error: null }))
     try {
-      const response = await submissions.listSubmissions(activityId, REPLACEMENT_QUERY, { signal })
+      const response = await submissions.listSubmissions(activityId, FIRST_PAGE, { signal })
       const items = response.data.map(projectStudentSubmission)
       if (items.some((item) => item.activityId !== activityId)) throw contextMismatchError('Submission history does not match this activity.')
       setHistory({ key: activityId, status: 'ready', items, error: null, reviewedAfterAmbiguity: ambiguityReview })
@@ -213,9 +232,9 @@ export function StudentProgrammingWorkspace({
   useEffect(() => {
     if (workspace.status !== 'ready') return undefined
     const controller = new AbortController()
-    Promise.resolve().then(() => refreshHistory({ signal: controller.signal }))
+    Promise.resolve().then(() => refreshAttemptState({ signal: controller.signal }))
     return () => controller.abort()
-  }, [refreshHistory, workspace.status])
+  }, [refreshAttemptState, workspace.status])
 
   const practiceLoad = useCallback(
     (runId, options) => submissions.getVisibleTestRun(runId, options),
@@ -290,6 +309,7 @@ export function StudentProgrammingWorkspace({
       if (!record.id || record.activityId !== activityId) throw contextMismatchError('The accepted submission does not match this activity.')
       setConfirmMode(null)
       setSubmission({ status: 'accepted', intent: null, error: null })
+      await refreshAttemptState()
       navigate(
         classHref(`/student/activity/${activityId}/submissions/${record.id}`, selectedClass.id),
         { state: { idempotentReplay: response.meta?.idempotentReplay === true } },
@@ -302,6 +322,9 @@ export function StudentProgrammingWorkspace({
         intent: error?.code === 'NETWORK_ERROR' ? intent : null,
         error,
       })
+      if (['ATTEMPT_LIMIT_REACHED', 'ACTIVITY_NOT_ACCEPTING_SUBMISSIONS', 'EXECUTION_UNAVAILABLE', 'FORBIDDEN', 'ACTIVITY_NOT_FOUND'].includes(error?.code)) {
+        await refreshAttemptState()
+      }
     }
   }
 
@@ -328,11 +351,19 @@ export function StudentProgrammingWorkspace({
   const currentHistory = history.key === activityId
     ? history
     : { status: 'loading', items: [], error: null, reviewedAfterAmbiguity: false }
-  const replacement = currentHistory.items.find((item) => item.failureResolution?.replacementAvailable)
+  const currentAttemptState = attemptState.key === activityId
+    ? attemptState
+    : { status: 'loading', record: null, error: null }
+  const attempt = currentAttemptState.record
+  const replacement = attempt?.replacementAvailable ? attempt.replacement : null
   const archived = selectedClass.status === 'ARCHIVED' || activity.status === 'ARCHIVED'
-  const ordinaryOpen = activity.status === 'PUBLISHED' && activity.dueState === 'OPEN'
+  const ordinaryOpen = attempt?.dueState === 'OPEN'
   const canRun = ordinaryOpen && !archived
-  const canSubmit = !archived && (ordinaryOpen || Boolean(replacement))
+  const canSubmit = Boolean(
+    !archived &&
+      attempt &&
+      attempt.nextAllowedSubmissionKind !== 'NONE',
+  )
   const sourceChangedAfterAmbiguity = submission.status === 'ambiguous'
     && submission.intent?.sourceSnapshot !== source.value
   const practiceStatus = practice.requesting
@@ -429,15 +460,17 @@ export function StudentProgrammingWorkspace({
 
       <footer className="student-coding-actions">
         <div className="workspace-action-message">
-          {replacement && <strong>Replacement available until {formatDate(replacement.failureResolution.replacementExpiresAt)}.</strong>}
-          {!canSubmit && <span>This activity is not accepting an ordinary submission.</span>}
+          {replacement && <strong>Replacement available until {formatDate(replacement.expiresAt)}.</strong>}
+          {currentAttemptState.status === 'loading' && <span>Checking attempt availability...</span>}
+          {currentAttemptState.status === 'error' && <span className="student-coding-failure">Attempt availability could not be loaded. Submission remains disabled.</span>}
+          {currentAttemptState.status === 'ready' && !canSubmit && <span>Another submission is not currently available.</span>}
           {submission.status === 'error' && <span className="student-coding-failure">{submissionErrorMessage(submission.error)}</span>}
         </div>
         <button type="button" className="student-run-tests" disabled={!capabilities.java.execution || !canRun || practice.requesting || isPracticePending(practice.record)} onClick={runVisibleTests}>
           {practice.requesting || isPracticePending(practice.record) ? 'Running visible tests...' : 'Run Visible Tests'}
         </button>
         <button type="button" className="student-submit-code" disabled={!capabilities.java.execution || !canSubmit || !source.value.trim() || submission.status === 'submitting' || submission.status === 'ambiguous'} onClick={() => setConfirmMode('new')}>
-          {submission.status === 'submitting' ? 'Submitting...' : replacement ? 'Submit replacement' : 'Submit'}
+          {submission.status === 'submitting' ? 'Submitting...' : attempt?.nextAllowedSubmissionKind === 'REPLACEMENT' ? 'Submit replacement' : 'Submit'}
         </button>
       </footer>
       {!capabilities.java.execution && <RequestState kind="unavailable" compact title="Java execution unavailable" message="This environment preserves activity and submission records but cannot run or assess Java code." />}
@@ -449,7 +482,7 @@ export function StudentProgrammingWorkspace({
           {sourceChangedAfterAmbiguity && <p><strong>The editor now contains changed source.</strong> Submitting it could consume another attempt.</p>}
           <div>
             <button type="button" className="student-primary-action" onClick={() => setConfirmMode('retry')}>Retry exact original request</button>
-            <button type="button" className="student-outline-action" onClick={() => refreshHistory({ ambiguityReview: true })}>Refresh attempt history</button>
+            <button type="button" className="student-outline-action" onClick={() => Promise.all([refreshHistory({ ambiguityReview: true }), refreshAttemptState()])}>Refresh attempt history</button>
             {sourceChangedAfterAmbiguity && currentHistory.reviewedAfterAmbiguity && (
               <button type="button" className="student-outline-action" onClick={() => setSubmission({ status: 'idle', intent: null, error: null })}>I reviewed history; start a new intent</button>
             )}
@@ -482,6 +515,8 @@ function SubmissionCard({ record, classId }) {
       </div>
       <div>
         <strong>{record.gradeStatus === 'released' ? 'Result released' : 'Result not released'}</strong>
+        {record.gradeStatus === 'released' && <small>{record.finalScore ?? 'Not available'} / {record.totalPoints ?? 'Not available'} points</small>}
+        {record.isCreditedResult && <span className="submission-status submission-status--released">Credited result</span>}
         {record.failureResolution?.replacementGranted && (
           <small>
             Replacement {record.failureResolution.replacementAvailable ? 'available' : 'no longer available'}; expiration {formatDate(record.failureResolution.replacementExpiresAt)}
@@ -536,6 +571,7 @@ export function StudentSubmissionHistory({ api = activityApi, submissions = subm
           <p className="student-feedback-eyebrow">Official submissions</p>
           <h1>{current.activity.title}</h1>
           <p>Attempts are immutable records. Practice runs do not appear here.</p>
+          <small>Credited result policy: {current.activity.creditPolicy === 'HIGHEST' ? 'Highest released attempt' : 'Latest released attempt'}.</small>
         </div>
         <NavLink className="student-primary-action" to={classHref(`/student/activity/${activityId}/workspace`, selectedClass.id)}>Open workspace</NavLink>
       </header>
@@ -671,7 +707,7 @@ export function StudentSubmissionDetail({ api = activityApi, submissions = submi
           </section>
           {record.gradeStatus === 'released' ? (
             <section className="submission-released-result">
-              <p className="student-feedback-eyebrow">Released result</p>
+              <p className="student-feedback-eyebrow">{record.isCreditedResult ? 'Credited result' : 'Released result'}</p>
               <h2>{record.finalScore ?? 'Not available'} / {record.totalPoints ?? 'Not available'} points</h2>
               <p>{record.feedback || 'No textual feedback was released.'}</p>
             </section>

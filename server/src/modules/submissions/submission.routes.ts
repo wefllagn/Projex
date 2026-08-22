@@ -34,6 +34,12 @@ export function createSubmissionRouter(dependencies: {
     dependencies.requireAuthentication,
     controller.list,
   )
+  router.get(
+    '/activities/:activityId/attempt-state',
+    dependencies.requireAuthentication,
+    requireAnyRole(['STUDENT']),
+    controller.getAttemptState,
+  )
   router.post(
     '/activities/:activityId/visible-test-runs',
     ...studentMutation,

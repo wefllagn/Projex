@@ -65,6 +65,8 @@ export function projectInstructorSubmissionSummary(value = {}) {
     status: string(value.status, 'queued'),
     isLate: value.isLate === true,
     updatedAt: string(value.updatedAt),
+    creditPolicy: value.creditPolicy === 'HIGHEST' ? 'HIGHEST' : 'LATEST',
+    isCreditedResult: value.isCreditedResult === true,
     student: {
       id: string(student.id),
       fullName: string(student.fullName, 'Student'),

@@ -21,6 +21,7 @@ export const activityRecordSelect = {
   entryClassName: true,
   starterCode: true,
   maxAttempts: true,
+  creditPolicy: true,
   totalPoints: true,
   status: true,
   createdAt: true,
@@ -81,6 +82,7 @@ export interface ActivityMutableFields {
   entryClassName?: string
   starterCode?: string
   maxAttempts?: number
+  creditPolicy?: 'LATEST' | 'HIGHEST'
   totalPoints?: number
 }
 
@@ -191,6 +193,7 @@ export function createPrismaActivityRepository(
             entryClassName: input.activity.entryClassName,
             starterCode: input.activity.starterCode,
             maxAttempts: input.activity.maxAttempts,
+            creditPolicy: input.activity.creditPolicy,
             totalPoints: input.activity.totalPoints,
             status: 'DRAFT',
             createdAt: input.now,

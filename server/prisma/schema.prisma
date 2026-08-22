@@ -81,6 +81,13 @@ enum ActivityStatus {
   @@map("activity_status")
 }
 
+enum AttemptCreditPolicy {
+  LATEST
+  HIGHEST
+
+  @@map("attempt_credit_policy")
+}
+
 enum ProjectTaskStatus {
   DRAFT
   PUBLISHED
@@ -447,6 +454,7 @@ model ProgrammingActivity {
   entryClassName          String                  @default("Main") @map("entry_class_name")
   starterCode             String                  @map("starter_code") @db.Text
   maxAttempts             Int                     @default(3) @map("max_attempts")
+  creditPolicy            AttemptCreditPolicy     @default(LATEST) @map("credit_policy")
   totalPoints             Decimal                 @map("total_points") @db.Decimal(8, 2)
   status                  ActivityStatus          @default(DRAFT)
   createdAt               DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)

@@ -9,6 +9,11 @@ import type {
   ScoreCorrectionInput,
   SubmissionListQuery,
 } from './submission.schemas.js'
+import { isOrdinarySubmissionOpen } from '../activities/activity.types.js'
+import {
+  selectCreditedReleasedAttempt,
+  type AttemptCreditPolicyValue,
+} from './submission-credit.js'
 
 export const submissionInclude = {
   activity: {
@@ -18,6 +23,7 @@ export const submissionInclude = {
       title: true,
       status: true,
       totalPoints: true,
+      creditPolicy: true,
       class: { select: { id: true, instructorId: true, status: true } },
     },
   },
@@ -60,6 +66,41 @@ export type PracticeRecord = Prisma.PracticeExecutionGetPayload<{
   include: typeof practiceInclude
 }>
 
+const releasedAttemptSelect = {
+  id: true,
+  attemptNumber: true,
+  submittedAt: true,
+  releasedAt: true,
+  releasedFinalScore: true,
+  totalPointsSnapshot: true,
+  replacementResolutionUsed: {
+    select: {
+      failedSubmission: { select: { attemptNumber: true } },
+    },
+  },
+} as const
+
+export type ReleasedAttemptRecord = Prisma.ActivitySubmissionGetPayload<{
+  select: typeof releasedAttemptSelect
+}>
+
+export interface StudentAttemptStateRecord {
+  activity: {
+    id: string
+    status: 'PUBLISHED' | 'CLOSED'
+    dueDate: Date
+    maxAttempts: number
+    creditPolicy: AttemptCreditPolicyValue
+    classStatus: 'ACTIVE' | 'ARCHIVED'
+  }
+  countingAttemptsUsed: number
+  availableReplacement: {
+    replacementExpiresAt: Date
+    failedAttemptNumber: number
+  } | null
+  releasedAttempts: ReleasedAttemptRecord[]
+}
+
 export type CreateSubmissionResult =
   | { kind: 'created'; submission: SubmissionRecord }
   | { kind: 'replayed'; submission: SubmissionRecord }
@@ -101,8 +142,21 @@ export interface SubmissionRepository {
     callerId: string
     callerRole: UserRole
     query: SubmissionListQuery
-  }): Promise<{ submissions: SubmissionRecord[]; totalItems: number } | null>
+  }): Promise<{
+    submissions: SubmissionRecord[]
+    totalItems: number
+    creditedSubmissionIds: Set<string>
+  } | null>
   findById(submissionId: string): Promise<SubmissionRecord | null>
+  findCreditedSubmissionId(
+    activityId: string,
+    studentId: string,
+  ): Promise<string | null>
+  getStudentAttemptState(input: {
+    activityId: string
+    studentId: string
+    now: Date
+  }): Promise<StudentAttemptStateRecord | null>
   createCorrection(input: {
     submissionId: string
     instructorId: string
@@ -177,6 +231,31 @@ function effectiveScore(record: SubmissionRecord): number | null {
   return record.originalAutomatedScore === null
     ? null
     : Number(record.originalAutomatedScore)
+}
+
+function creditedIdsByStudent(
+  policy: AttemptCreditPolicyValue,
+  candidates: Array<ReleasedAttemptRecord & { studentId: string }>,
+): Set<string> {
+  const byStudent = new Map<string, Array<ReleasedAttemptRecord & { studentId: string }>>()
+  for (const candidate of candidates) {
+    const current = byStudent.get(candidate.studentId) ?? []
+    current.push(candidate)
+    byStudent.set(candidate.studentId, current)
+  }
+  return new Set(
+    [...byStudent.values()]
+      .map((records) =>
+        selectCreditedReleasedAttempt(
+          policy,
+          records.map((record) => ({
+            ...record,
+            releasedFinalScore: Number(record.releasedFinalScore),
+          })),
+        )?.id,
+      )
+      .filter((id): id is string => Boolean(id)),
+  )
 }
 
 function canInstructorMutate(
@@ -290,10 +369,7 @@ export function createPrismaSubmissionRepository(
             })
 
           if (!availableReplacement) {
-            if (
-              activity.status !== 'PUBLISHED' ||
-              input.now.getTime() > activity.dueDate.getTime()
-            ) {
+            if (!isOrdinarySubmissionOpen(activity.status, activity.dueDate, input.now)) {
               return { kind: 'activity_not_accepting' } as const
             }
           } else if (
@@ -346,7 +422,7 @@ export function createPrismaSubmissionRepository(
               submittedAt: input.now,
               updatedAt: input.now,
               submissionStatus: 'QUEUED',
-              isLate: input.now.getTime() > activity.dueDate.getTime(),
+              isLate: input.now.getTime() >= activity.dueDate.getTime(),
               countsTowardAttemptLimit: true,
               execution: {
                 create: {
@@ -401,6 +477,7 @@ export function createPrismaSubmissionRepository(
       const activity = await prisma.programmingActivity.findUnique({
         where: { id: input.activityId },
         select: {
+          creditPolicy: true,
           class: {
             select: {
               instructorId: true,
@@ -430,17 +507,43 @@ export function createPrismaSubmissionRepository(
           ? { submissionStatus: input.query.status }
           : {}),
       }
-      const [submissions, totalItems] = await prisma.$transaction([
-        prisma.activitySubmission.findMany({
-          where,
-          include: submissionInclude,
-          orderBy: [{ submittedAt: 'desc' }, { id: 'asc' }],
-          skip: (input.query.page - 1) * input.query.pageSize,
-          take: input.query.pageSize,
-        }),
-        prisma.activitySubmission.count({ where }),
-      ])
-      return { submissions, totalItems }
+      return prisma.$transaction(
+        async (transaction) => {
+          const [submissions, totalItems] = await Promise.all([
+            transaction.activitySubmission.findMany({
+              where,
+              include: submissionInclude,
+              orderBy: [{ submittedAt: 'desc' }, { id: 'asc' }],
+              skip: (input.query.page - 1) * input.query.pageSize,
+              take: input.query.pageSize,
+            }),
+            transaction.activitySubmission.count({ where }),
+          ])
+          const studentIds = [
+            ...new Set(submissions.map((record) => record.studentId)),
+          ]
+          const releasedCandidates = studentIds.length
+            ? await transaction.activitySubmission.findMany({
+                where: {
+                  activityId: input.activityId,
+                  studentId: { in: studentIds },
+                  submissionStatus: 'RELEASED',
+                  releasedFinalScore: { not: null },
+                },
+                select: { ...releasedAttemptSelect, studentId: true },
+              })
+            : []
+          return {
+            submissions,
+            totalItems,
+            creditedSubmissionIds: creditedIdsByStudent(
+              activity.creditPolicy,
+              releasedCandidates,
+            ),
+          }
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+      )
     },
 
     findById(submissionId) {
@@ -448,6 +551,134 @@ export function createPrismaSubmissionRepository(
         where: { id: submissionId },
         include: submissionInclude,
       })
+    },
+
+    async findCreditedSubmissionId(activityId, studentId) {
+      const activity = await prisma.programmingActivity.findUnique({
+        where: { id: activityId },
+        select: { creditPolicy: true },
+      })
+      if (!activity) return null
+      const candidates = await prisma.activitySubmission.findMany({
+        where: {
+          activityId,
+          studentId,
+          submissionStatus: 'RELEASED',
+          releasedFinalScore: { not: null },
+        },
+        select: releasedAttemptSelect,
+      })
+      return (
+        selectCreditedReleasedAttempt(
+          activity.creditPolicy,
+          candidates.map((record) => ({
+            ...record,
+            releasedFinalScore: Number(record.releasedFinalScore),
+          })),
+        )?.id ?? null
+      )
+    },
+
+    getStudentAttemptState(input) {
+      return prisma.$transaction(
+        async (transaction) => {
+          const [student, activity] = await Promise.all([
+            transaction.user.findUnique({
+              where: { id: input.studentId },
+              select: { role: true, status: true },
+            }),
+            transaction.programmingActivity.findUnique({
+              where: { id: input.activityId },
+              select: {
+                id: true,
+                status: true,
+                dueDate: true,
+                maxAttempts: true,
+                creditPolicy: true,
+                class: {
+                  select: {
+                    status: true,
+                    members: {
+                      where: { studentId: input.studentId },
+                      take: 1,
+                      select: { status: true },
+                    },
+                  },
+                },
+              },
+            }),
+          ])
+          if (
+            !student ||
+            student.role !== 'STUDENT' ||
+            student.status !== 'ACTIVE' ||
+            !activity ||
+            (activity.status !== 'PUBLISHED' && activity.status !== 'CLOSED') ||
+            activity.class.members[0]?.status !== 'ACTIVE'
+          ) {
+            return null
+          }
+
+          const [countingAttemptsUsed, replacement, releasedAttempts] =
+            await Promise.all([
+              transaction.activitySubmission.count({
+                where: {
+                  activityId: input.activityId,
+                  studentId: input.studentId,
+                  countsTowardAttemptLimit: true,
+                },
+              }),
+              transaction.submissionFailureResolution.findFirst({
+                where: {
+                  resolutionType: 'REPLACEMENT_GRANTED',
+                  replacementSubmissionId: null,
+                  replacementExpiresAt: { gt: input.now },
+                  failedSubmission: {
+                    activityId: input.activityId,
+                    studentId: input.studentId,
+                  },
+                },
+                orderBy: [{ resolvedAt: 'asc' }, { id: 'asc' }],
+                select: {
+                  replacementExpiresAt: true,
+                  failedSubmission: { select: { attemptNumber: true } },
+                },
+              }),
+              transaction.activitySubmission.findMany({
+                where: {
+                  activityId: input.activityId,
+                  studentId: input.studentId,
+                  submissionStatus: 'RELEASED',
+                  releasedFinalScore: { not: null },
+                },
+                select: releasedAttemptSelect,
+                orderBy: [{ attemptNumber: 'asc' }],
+              }),
+            ])
+
+          return {
+            activity: {
+              id: activity.id,
+              status: activity.status,
+              dueDate: activity.dueDate,
+              maxAttempts: activity.maxAttempts,
+              creditPolicy: activity.creditPolicy,
+              classStatus: activity.class.status,
+            },
+            countingAttemptsUsed,
+            availableReplacement:
+              replacement?.replacementExpiresAt
+                ? {
+                    replacementExpiresAt: replacement.replacementExpiresAt,
+                    failedAttemptNumber:
+                      replacement.failedSubmission.attemptNumber,
+                  }
+                : null,
+            releasedAttempts,
+          }
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+      )
     },
 
     createCorrection(input) {
@@ -776,8 +1007,7 @@ export function createPrismaSubmissionRepository(
           }
           if (
             activity.class.status !== 'ACTIVE' ||
-            activity.status !== 'PUBLISHED' ||
-            input.now.getTime() > activity.dueDate.getTime()
+            !isOrdinarySubmissionOpen(activity.status, activity.dueDate, input.now)
           ) {
             return { kind: 'activity_not_accepting' } as const
           }

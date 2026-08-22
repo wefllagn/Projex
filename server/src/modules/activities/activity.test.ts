@@ -11,7 +11,7 @@ import type {
   PublishActivityResult,
 } from './activity.repository.js'
 import { createActivityService } from './activity.service.js'
-import type { ActivityAccessRecord, ActivityRecord } from './activity.types.js'
+import { activityDueState, isOrdinarySubmissionOpen, type ActivityAccessRecord, type ActivityRecord } from './activity.types.js'
 
 const now = new Date('2026-08-04T02:00:00.000Z')
 const instructor: SafeUserProfile = {
@@ -55,6 +55,7 @@ const activityRecord: ActivityRecord = {
   entryClassName: 'Main',
   starterCode: 'public class Main {}',
   maxAttempts: 1,
+  creditPolicy: 'LATEST',
   totalPoints: new Prisma.Decimal(100),
   status: 'DRAFT',
   createdAt: now,
@@ -154,6 +155,13 @@ function createHarness() {
 }
 
 describe('programming activity service policy', () => {
+  it('treats the exact deadline as past due and closed to ordinary submissions', () => {
+    const dueDate = new Date('2026-08-10T09:00:00.000Z')
+    expect(activityDueState('PUBLISHED', dueDate, dueDate)).toBe('PAST_DUE')
+    expect(isOrdinarySubmissionOpen('PUBLISHED', dueDate, dueDate)).toBe(false)
+    expect(isOrdinarySubmissionOpen('PUBLISHED', dueDate, new Date(dueDate.getTime() - 1))).toBe(true)
+  })
+
   it('creates only instructor-owned draft activities', async () => {
     const { service } = createHarness()
     const created = await service.create(instructor, classRecord.id, {
@@ -164,6 +172,7 @@ describe('programming activity service policy', () => {
       entryClassName: 'Main',
       starterCode: activityRecord.starterCode,
       maxAttempts: 1,
+      creditPolicy: 'LATEST',
       totalPoints: 100,
     })
     expect(created.status).toBe('DRAFT')
@@ -176,6 +185,7 @@ describe('programming activity service policy', () => {
         entryClassName: 'Main',
         starterCode: activityRecord.starterCode,
         maxAttempts: 1,
+        creditPolicy: 'LATEST',
         totalPoints: 100,
       }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' })
@@ -239,6 +249,23 @@ describe('programming activity service policy', () => {
         starterCode: 'public class Changed {}',
       }),
     ).rejects.toMatchObject({ code: 'PUBLISHED_ACTIVITY_FIELD_IMMUTABLE' })
+    await expect(
+      service.update(instructor, activityRecord.id, {
+        expectedUpdatedAt: now,
+        creditPolicy: 'HIGHEST',
+      }),
+    ).rejects.toMatchObject({ code: 'PUBLISHED_ACTIVITY_FIELD_IMMUTABLE' })
+  })
+
+  it('allows the owning instructor to change credit policy while draft', async () => {
+    const { repository, service } = createHarness()
+    await service.update(instructor, activityRecord.id, {
+      expectedUpdatedAt: now,
+      creditPolicy: 'HIGHEST',
+    })
+    expect(repository.lastUpdate?.fields).toMatchObject({
+      creditPolicy: 'HIGHEST',
+    })
   })
 
   it('permits only deadline extensions and attempt-limit increases after publication', async () => {

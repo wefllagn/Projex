@@ -60,6 +60,7 @@ export function projectStudentSubmission(value = {}) {
     sourceCode: nullableString(value.sourceCode) ?? '',
     visibleTestOutcomes: visibleOutcomes(value.visibleTestOutcomes),
     gradeStatus: released ? 'released' : 'pending',
+    isCreditedResult: released && value.isCreditedResult === true,
     failureResolution: failure && typeof failure === 'object'
       ? {
           status: nullableString(failure.status),
@@ -75,6 +76,57 @@ export function projectStudentSubmission(value = {}) {
           feedback: nullableString(value.feedback),
         }
       : {}),
+  }
+}
+
+export function projectStudentAttemptState(value = {}) {
+  const credited = value.creditedResult && typeof value.creditedResult === 'object'
+    ? value.creditedResult
+    : null
+  const replacement = value.replacement && typeof value.replacement === 'object'
+    ? value.replacement
+    : null
+  return {
+    activityId: nullableString(value.activityId),
+    activityStatus: nullableString(value.activityStatus),
+    dueState: nullableString(value.dueState),
+    maxAttempts: nullableNumber(value.maxAttempts) ?? 0,
+    creditPolicy: value.creditPolicy === 'HIGHEST' ? 'HIGHEST' : 'LATEST',
+    countingAttemptsUsed: nullableNumber(value.countingAttemptsUsed) ?? 0,
+    remainingOrdinaryAttempts: nullableNumber(value.remainingOrdinaryAttempts) ?? 0,
+    ordinarySubmissionAllowed: value.ordinarySubmissionAllowed === true,
+    replacementAvailable: value.replacementAvailable === true,
+    replacement: replacement
+      ? {
+          expiresAt: nullableString(replacement.expiresAt),
+          forAttemptLabel: nullableString(replacement.forAttemptLabel),
+        }
+      : null,
+    nextAllowedSubmissionKind: ['ORDINARY', 'REPLACEMENT'].includes(value.nextAllowedSubmissionKind)
+      ? value.nextAllowedSubmissionKind
+      : 'NONE',
+    submissionBlockedReason: nullableString(value.submissionBlockedReason),
+    releasedAttempts: Array.isArray(value.releasedAttempts)
+      ? value.releasedAttempts.map((attempt) => ({
+          submissionId: nullableString(attempt.submissionId),
+          attemptLabel: nullableString(attempt.attemptLabel) ?? 'Submission attempt',
+          replacementForAttemptNumber: nullableNumber(attempt.replacementForAttemptNumber),
+          submittedAt: nullableString(attempt.submittedAt),
+          releasedAt: nullableString(attempt.releasedAt),
+          score: nullableNumber(attempt.score),
+          totalPoints: nullableNumber(attempt.totalPoints),
+          credited: attempt.credited === true,
+        }))
+      : [],
+    creditedResult: credited
+      ? {
+          submissionId: nullableString(credited.submissionId),
+          attemptLabel: nullableString(credited.attemptLabel) ?? 'Submission attempt',
+          score: nullableNumber(credited.score),
+          totalPoints: nullableNumber(credited.totalPoints),
+        }
+      : null,
+    observedAt: nullableString(value.observedAt),
   }
 }
 

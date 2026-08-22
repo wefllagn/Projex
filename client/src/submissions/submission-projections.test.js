@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   projectPracticeRun,
+  projectStudentAttemptState,
   projectStudentSubmission,
 } from './submission-projections.js'
 
@@ -94,5 +95,49 @@ describe('student-safe submission projections', () => {
       feedback: 'Released feedback',
     })
     expect(projected).not.toHaveProperty('scoreCorrections')
+  })
+
+  it('allowlists attempt-state summaries without admitting source or assessment evidence', () => {
+    const projected = projectStudentAttemptState({
+      activityId: 'activity-1',
+      activityStatus: 'PUBLISHED',
+      dueState: 'OPEN',
+      maxAttempts: 3,
+      creditPolicy: 'HIGHEST',
+      countingAttemptsUsed: 2,
+      remainingOrdinaryAttempts: 1,
+      ordinarySubmissionAllowed: true,
+      nextAllowedSubmissionKind: 'ORDINARY',
+      releasedAttempts: [{
+        submissionId: 'submission-1',
+        attemptLabel: 'Attempt 1',
+        score: 75,
+        totalPoints: 100,
+        credited: true,
+        sourceCode: 'PRIVATE-SOURCE',
+        hiddenTests: ['PRIVATE-HIDDEN-TEST'],
+      }],
+      creditedResult: {
+        submissionId: 'submission-1',
+        attemptLabel: 'Attempt 1',
+        score: 75,
+        totalPoints: 100,
+        correctionReason: 'PRIVATE-CORRECTION',
+      },
+      sourceCode: 'PRIVATE-SOURCE',
+      assessment: { compilerOutput: 'PRIVATE-COMPILER-OUTPUT' },
+    })
+
+    expect(projected).toMatchObject({
+      creditPolicy: 'HIGHEST',
+      countingAttemptsUsed: 2,
+      remainingOrdinaryAttempts: 1,
+      creditedResult: { submissionId: 'submission-1', score: 75 },
+    })
+    const serialized = JSON.stringify(projected)
+    expect(serialized).not.toContain('PRIVATE-SOURCE')
+    expect(serialized).not.toContain('PRIVATE-HIDDEN-TEST')
+    expect(serialized).not.toContain('PRIVATE-CORRECTION')
+    expect(serialized).not.toContain('PRIVATE-COMPILER-OUTPUT')
   })
 })

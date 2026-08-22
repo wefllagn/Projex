@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -36,6 +36,7 @@ const activity = {
   entryClassName: 'Main',
   starterCode,
   maxAttempts: 2,
+  creditPolicy: 'LATEST',
   totalPoints: 100,
   status: 'PUBLISHED',
   createdBy: { userId: 'instructor-1', fullName: 'Synthetic Instructor' },
@@ -80,13 +81,36 @@ function submissionRecord(overrides = {}) {
     sourceCode: changedCode,
     visibleTestOutcomes: [],
     gradeStatus: 'pending',
+    isCreditedResult: false,
     failureResolution: null,
+    ...overrides,
+  }
+}
+
+function attemptState(overrides = {}) {
+  return {
+    activityId,
+    activityStatus: activity.status,
+    dueState: activity.dueState,
+    maxAttempts: activity.maxAttempts,
+    creditPolicy: 'LATEST',
+    countingAttemptsUsed: 0,
+    remainingOrdinaryAttempts: activity.maxAttempts,
+    ordinarySubmissionAllowed: true,
+    replacementAvailable: false,
+    replacement: null,
+    nextAllowedSubmissionKind: 'ORDINARY',
+    submissionBlockedReason: null,
+    releasedAttempts: [],
+    creditedResult: null,
+    observedAt: '2026-08-10T00:00:00.000Z',
     ...overrides,
   }
 }
 
 function submissionTransport(overrides = {}) {
   return {
+    getAttemptState: vi.fn().mockResolvedValue({ data: attemptState() }),
     listSubmissions: vi.fn().mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } }),
     createVisibleTestRun: vi.fn(),
     getVisibleTestRun: vi.fn(),
@@ -275,8 +299,28 @@ describe('student programming workspace', () => {
 
   it('allows only a backend-reported replacement when the ordinary activity window is closed', async () => {
     const closedActivity = { ...activity, status: 'CLOSED', dueState: 'CLOSED' }
-    const replacement = submissionRecord({
-      status: 'failed_resolved',
+    const submissions = submissionTransport({
+      getAttemptState: vi.fn().mockResolvedValue({ data: attemptState({
+        activityStatus: 'CLOSED',
+        dueState: 'CLOSED',
+        ordinarySubmissionAllowed: false,
+        replacementAvailable: true,
+        replacement: {
+          expiresAt: '2099-09-04T09:00:00.000Z',
+          forAttemptLabel: 'Attempt 1',
+        },
+        nextAllowedSubmissionKind: 'REPLACEMENT',
+      }) }),
+    })
+    renderWithClass(<StudentProgrammingWorkspace api={activityTransport({ getActivity: vi.fn().mockResolvedValue({ data: closedActivity }) })} submissions={submissions} />)
+
+    expect(await screen.findByRole('button', { name: 'Submit replacement' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Run Visible Tests' })).toBeDisabled()
+    expect(screen.getByText(/Replacement available until/)).toBeInTheDocument()
+  })
+
+  it('fails closed when attempt state is unavailable instead of inferring eligibility from history', async () => {
+    const historyReplacement = submissionRecord({
       failureResolution: {
         status: 'resolved',
         replacementGranted: true,
@@ -285,13 +329,58 @@ describe('student programming workspace', () => {
       },
     })
     const submissions = submissionTransport({
-      listSubmissions: vi.fn().mockResolvedValue({ data: [replacement], pagination }),
+      getAttemptState: vi.fn().mockRejectedValue(new ApiError({ status: 503, code: 'SERVICE_UNAVAILABLE' })),
+      listSubmissions: vi.fn().mockResolvedValue({ data: [historyReplacement], pagination }),
     })
-    renderWithClass(<StudentProgrammingWorkspace api={activityTransport({ getActivity: vi.fn().mockResolvedValue({ data: closedActivity }) })} submissions={submissions} />)
+    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />)
 
-    expect(await screen.findByRole('button', { name: 'Submit replacement' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Run Visible Tests' })).toBeDisabled()
-    expect(screen.getByText(/Replacement available until/)).toBeInTheDocument()
+    expect(await screen.findByText('Attempt availability could not be loaded. Submission remains disabled.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled()
+    expect(submissions.listSubmissions).not.toHaveBeenCalled()
+  })
+
+  it('uses the authoritative exhausted-attempt state to disable submission', async () => {
+    const submissions = submissionTransport({
+      getAttemptState: vi.fn().mockResolvedValue({ data: attemptState({
+        countingAttemptsUsed: 2,
+        remainingOrdinaryAttempts: 0,
+        ordinarySubmissionAllowed: false,
+        nextAllowedSubmissionKind: 'NONE',
+        submissionBlockedReason: 'ATTEMPT_LIMIT_REACHED',
+      }) }),
+    })
+    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />)
+
+    expect(await screen.findByText('Another submission is not currently available.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled()
+  })
+
+  it('refreshes authoritative attempt state after an eligibility conflict', async () => {
+    const submissions = submissionTransport({
+      getAttemptState: vi.fn()
+        .mockResolvedValueOnce({ data: attemptState() })
+        .mockResolvedValueOnce({ data: attemptState({
+          countingAttemptsUsed: 2,
+          remainingOrdinaryAttempts: 0,
+          ordinarySubmissionAllowed: false,
+          nextAllowedSubmissionKind: 'NONE',
+          submissionBlockedReason: 'ATTEMPT_LIMIT_REACHED',
+        }) }),
+      createSubmission: vi.fn().mockRejectedValue(new ApiError({
+        status: 409,
+        code: 'ATTEMPT_LIMIT_REACHED',
+        message: 'Attempt limit reached.',
+      })),
+    })
+    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />)
+
+    const submit = await screen.findByRole('button', { name: 'Submit' })
+    await waitFor(() => expect(submit).toBeEnabled())
+    await userEvent.click(submit)
+    await userEvent.click(screen.getByRole('button', { name: 'Submit source' }))
+    expect(await screen.findByText('Another submission is not currently available.')).toBeInTheDocument()
+    expect(submissions.getAttemptState).toHaveBeenCalledTimes(2)
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled()
   })
 })
 
@@ -310,6 +399,11 @@ describe('student submission records', () => {
     const record = submissionRecord({
       attemptLabel: 'Replacement attempt for Attempt 2',
       isLate: true,
+      status: 'released',
+      gradeStatus: 'released',
+      finalScore: 90,
+      totalPoints: 100,
+      isCreditedResult: true,
       failureResolution: {
         status: 'resolved',
         replacementGranted: true,
@@ -326,6 +420,8 @@ describe('student submission records', () => {
     expect(await screen.findByText('Replacement attempt for Attempt 2')).toBeInTheDocument()
     expect(screen.queryByText(/Attempt 3 of 2/)).not.toBeInTheDocument()
     expect(screen.getByText('Accepted after the ordinary deadline')).toBeInTheDocument()
+    expect(screen.getByText('90 / 100 points')).toBeInTheDocument()
+    expect(screen.getByText('Credited result')).toBeInTheDocument()
     expect(submissions.listSubmissions).toHaveBeenCalledWith(activityId, { page: 1, pageSize: 20, status: '' }, expect.objectContaining({ signal: expect.any(AbortSignal) }))
   })
 

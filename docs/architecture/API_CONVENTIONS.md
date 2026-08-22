@@ -57,6 +57,7 @@ GET    /api/v1/activities/:activityId/test-cases
 PUT    /api/v1/activities/:activityId/test-cases
 POST   /api/v1/activities/:activityId/submissions
 GET    /api/v1/activities/:activityId/submissions
+GET    /api/v1/activities/:activityId/attempt-state
 POST   /api/v1/activities/:activityId/visible-test-runs
 GET    /api/v1/visible-test-runs/:runId
 GET    /api/v1/submissions/:submissionId
@@ -152,7 +153,7 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - Activity mutations require `expectedUpdatedAt`. A successful mutation advances the timestamp by at least one millisecond, and stale writes return `STALE_ACTIVITY_VERSION`.
 - Draft test cases are replaced as one ordered transactional set. Array position defines the authoritative one-based order.
 - Publishing requires a future due date, at least one visible test case, positive combined test points, and test points no greater than the activity total.
-- After publication, starter code, Java language/entry-class configuration, total points, and all test-case content/visibility/points are immutable.
+- After publication, starter code, Java language/entry-class configuration, total points, credited-result policy, and all test-case content/visibility/points are immutable.
 - A published due date may only be extended and `maxAttempts` may only increase. Closed and archived activities are read-only.
 - Student activity access requires ACTIVE class membership and a `PUBLISHED` or `CLOSED` activity.
 - Student test-case lists contain only visible cases. Hidden records do not contribute to the returned list, count, pagination, or error details.
@@ -170,6 +171,10 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - Owning ACTIVE instructors may read detailed assessment evidence, append score corrections, save review/feedback drafts, release results, retry exhausted infrastructure failures, and resolve failures. Administrators have safe read-only submission access and cannot grade, correct, release, retry, or resolve failures.
 - `expectedUpdatedAt` protects correction, review, release, retry, and failure-resolution transitions. Released submissions are immutable during Phase 6.
 - An infrastructure-failure replacement requires a mandatory reason and future `replacementExpiresAt`. The response labels the new record as `Replacement attempt for Attempt N`; the internal chronological `attemptNumber` is not presented as “Attempt N of maxAttempts.”
+- `GET /activities/:activityId/attempt-state` is an authenticated ACTIVE-student projection requiring ACTIVE class membership. It returns authoritative allowance, replacement, next-submission, released-attempt, and credited-result summaries; instructors and administrators are denied.
+- `creditPolicy=LATEST` selects the RELEASED record with greatest `attemptNumber`. `creditPolicy=HIGHEST` selects the greatest `releasedFinalScore`, breaking ties by greater `attemptNumber`. Unreleased records never participate.
+- The attempt-state projection omits source, hidden-test evidence/counts, unreleased scores, corrections/reasons, draft feedback, and execution infrastructure. It is observational; submission creation performs all authoritative transactional checks again.
+- Ordinary submission and due-state calculations both treat `now >= dueDate` as closed. A still-valid replacement remains the only documented deadline/CLOSED exception.
 
 ### Phase 7 project and repository collaboration rules
 

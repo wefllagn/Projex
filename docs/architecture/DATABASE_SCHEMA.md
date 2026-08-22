@@ -13,6 +13,7 @@ The authoritative sources are:
 - `server/prisma/migrations/20260804000000_phase5_programming_activities_test_cases/migration.sql` for Phase 5 activity/test-case lifecycle fields, constraints, and safe backfills.
 - `server/prisma/migrations/20260804010000_phase6_submissions_automated_assessment/migration.sql` for Phase 6 immutable submission snapshots, execution jobs/results, review/release fields, replacement grants, and visible-test practice records.
 - `server/prisma/migrations/20260805000000_phase7_project_repository_collaboration/migration.sql` for Phase 7 project-task lifecycle, teams, synchronized memberships, repository metadata/review state, invitations, feedback release, constraints, indexes, and deferred invariant triggers.
+- `server/prisma/migrations/20260822000000_attempt_credit_policy/migration.sql` for the additive activity credited-result policy and non-destructive `LATEST` default/backfill.
 
 ## Core models
 
@@ -23,7 +24,7 @@ The authoritative sources are:
 | `RefreshSession` | `refresh_sessions` | Rotatable, revocable browser/device session state. |
 | `Class` | `classes` | Instructor-owned class, section, and term workspace. |
 | `ClassMember` | `class_members` | Student enrollment and membership lifecycle. |
-| `ProgrammingActivity` | `programming_activities` | Programming workspace definition and attempt limit. |
+| `ProgrammingActivity` | `programming_activities` | Programming workspace definition, attempt limit, and credited-result policy. |
 | `AdminAuditEvent` | `admin_audit_events` | Allowlisted successful administrative mutation record with actor, target, bounded reason, request ID, safe metadata, and timestamp. Phase 9C includes transactional Git-credential revocation and provisioning-retry actions; no credential secret, storage path, worker identity, or raw failure output is stored. |
 | `TestCase` | `test_cases` | Ordered visible or hidden activity test. |
 | `ActivitySubmission` | `activity_submissions` | Immutable numbered student attempt and score snapshot. |
@@ -75,6 +76,8 @@ Phase 6 adds:
 - Short-lived practice execution and visible-only case snapshot tables, with a durable job but no submission, attempt, or score relationship.
 - SQL checks for source hashes, scoring component bounds, release state, execution chronology, correction/resolution state, practice chronology, and execution-job target/claim consistency.
 
+The attempt-credit stabilization migration adds the PostgreSQL `attempt_credit_policy` enum and non-null `ProgrammingActivity.creditPolicy`, mapped to `credit_policy`. Existing rows receive `LATEST` through the additive column default; the migration does not rewrite submissions, scores, attempts, or release history.
+
 Phase 7 adds:
 
 - `ProjectTask.maxTeamSize`, `updatedAt`, and publish/close/archive timestamps, with the dedicated `ProjectTaskStatus` enum retaining the existing database enum name.
@@ -88,6 +91,7 @@ Phase 7 adds:
 ## Database-enforced invariants
 
 - Activity `maxAttempts` remains limited to 1 through 3. Submission `attemptNumber` is a positive chronological record sequence and may exceed three only when preserved infrastructure failures and replacements require it.
+- Activity `creditPolicy` is always `LATEST` or `HIGHEST` and defaults to `LATEST`.
 - Activity total points are greater than zero and no more than 1000; Java entry-class names and starter code satisfy minimum database safety checks.
 - Test-case order is positive and unique per activity, and test-case names are non-empty.
 - Test-case points, automated scores, final scores, automated points, instructor points, correction values, execution time, and optional repository grades cannot be negative where specified.
@@ -112,13 +116,13 @@ The following rules require transactional application services because they depe
 3. The backend assigns `attemptNumber` atomically; clients never choose the authoritative value.
 4. Ordinary attempt eligibility uses the count of submissions with `countsTowardAttemptLimit = true`, not the chronological `attemptNumber`. The service allocates the next number and enforces the usable allowance in the same serializable transaction.
 5. After submission, `activityId`, `studentId`, `attemptNumber`, `sourceCode`, and `submittedAt` are immutable.
-6. Activity test cases, starter code, language/entry-class settings, and scoring configuration are locked at publication, before submissions exist.
+6. Activity test cases, starter code, language/entry-class settings, total points, and credited-result policy are locked at publication, before submissions exist.
 7. `originalAutomatedScore` and original per-test automated results are immutable assessment evidence.
 8. A professor-facing `Edit Automated Score` action appends a correction preserving the original score, previous effective score, new effective score, mandatory reason, instructor identity, and timestamp. Earlier corrections remain immutable.
 9. `automatedMaximum` equals the snapshotted test-point sum; `instructorMaximum = totalPointsSnapshot - automatedMaximum`; the effective automated score and instructor points stay within their respective maxima, and the released final score stays within the total.
 10. Infrastructure retries reuse the original submission/job. A replacement grant changes the failed row to non-counting only through immutable resolution, then atomically links one new counting replacement submission before expiration.
 11. Active unconsumed replacement grants and nonterminal accepted work block activity/class archive. An expired unused grant does not block archive and remains preserved.
-12. Scores are stored assessment snapshots and must not be silently recalculated after feedback is released.
+12. Scores are stored assessment snapshots and must not be silently recalculated after feedback is released. The credited result is derived without mutation: `LATEST` uses the greatest RELEASED `attemptNumber`; `HIGHEST` uses the greatest RELEASED `releasedFinalScore` and breaks ties by greater `attemptNumber`.
 13. Similarity comparisons must involve two different submissions, normally from the same programming activity, and use a consistent source/compared ordering to prevent reverse duplicate pairs.
 14. A `CLASS_PROJECT` repository requires `projectTaskId`.
 15. A `PERSONAL` repository must not have `projectTaskId`.

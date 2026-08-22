@@ -184,6 +184,21 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
       .expect(200)
     const studentCsrf = csrfFrom(studentLogin)
 
+    const initialAttemptState = await studentAgent
+      .get(`/api/v1/activities/${activity.id}/attempt-state`)
+      .expect(200)
+    expect(initialAttemptState.body.data).toMatchObject({
+      activityId: activity.id,
+      creditPolicy: 'LATEST',
+      countingAttemptsUsed: 0,
+      remainingOrdinaryAttempts: 2,
+      ordinarySubmissionAllowed: true,
+      nextAllowedSubmissionKind: 'ORDINARY',
+      releasedAttempts: [],
+      creditedResult: null,
+    })
+    expect(JSON.stringify(initialAttemptState.body)).not.toContain(source)
+
     await jsonMutation(
       studentAgent.post(`/api/v1/activities/${activity.id}/submissions`),
       studentCsrf,
@@ -261,6 +276,9 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
       .send({ email: admin.email, password })
       .expect(200)
     const adminCsrf = csrfFrom(adminLogin)
+    await adminAgent
+      .get(`/api/v1/activities/${activity.id}/attempt-state`)
+      .expect(403)
     const current = await prisma.activitySubmission.findUniqueOrThrow({
       where: { id: submissionId },
     })
@@ -282,6 +300,9 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
       .send({ email: instructor.email, password })
       .expect(200)
     const instructorCsrf = csrfFrom(instructorLogin)
+    await instructorAgent
+      .get(`/api/v1/activities/${activity.id}/attempt-state`)
+      .expect(403)
     let instructorView = await instructorAgent
       .get(`/api/v1/submissions/${submissionId}`)
       .expect(200)
@@ -328,9 +349,31 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
     expect(studentReleased.body.data).toMatchObject({
       finalScore: 55,
       totalPoints: 100,
+      isCreditedResult: true,
       feedback: 'Released feedback for the API integration workflow.',
     })
     expect(JSON.stringify(studentReleased.body)).not.toContain('Hidden negative')
+
+    const releasedAttemptState = await studentAgent
+      .get(`/api/v1/activities/${activity.id}/attempt-state`)
+      .expect(200)
+    expect(releasedAttemptState.body.data).toMatchObject({
+      countingAttemptsUsed: 1,
+      remainingOrdinaryAttempts: 1,
+      releasedAttempts: [
+        {
+          submissionId,
+          attemptLabel: 'Attempt 1',
+          score: 55,
+          credited: true,
+        },
+      ],
+      creditedResult: { submissionId, score: 55 },
+    })
+    const serializedAttemptState = JSON.stringify(releasedAttemptState.body)
+    expect(serializedAttemptState).not.toContain(source)
+    expect(serializedAttemptState).not.toContain('Visible double')
+    expect(serializedAttemptState).not.toContain('Hidden negative')
 
     await jsonMutation(
       studentAgent.post(`/api/v1/activities/${activity.id}/visible-test-runs`),

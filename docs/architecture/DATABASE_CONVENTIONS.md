@@ -182,6 +182,14 @@ For the initial pilot, the execution queue is implemented with PostgreSQL-backed
 - Hosted test data is separate from local data and uses clearly non-production academic records.
 - Database reset scripts are restricted to local/test environments and must refuse an ambiguous or hosted production-like target.
 
+## Attempt credit derivation
+
+`ProgrammingActivity.creditPolicy` is persisted as the PostgreSQL enum `attempt_credit_policy` with `LATEST` as the non-null default. It may change only while the activity is `DRAFT` and is immutable after publication.
+
+Credited-result selection is a read-time derivation, not a mutable foreign-key pointer or cached score. Candidate queries select only RELEASED submissions with non-null `releasedFinalScore`. `LATEST` orders by greatest chronological `attemptNumber`; `HIGHEST` orders by greatest score and then greatest `attemptNumber`. Release timestamp is not a selection key. A RELEASED replacement participates through its normal submission row, while unreleased or merely failed/resolved records do not.
+
+Attempt allowance remains independent: it counts `countsTowardAttemptLimit=true`, not `attemptNumber` and not credited-result status. Student attempt-state queries use an internally consistent read transaction, while creation remains the serializable authority for allocation, idempotency, replacement consumption, and eligibility.
+
 ## Backup and restoration
 
 For controlled hosted testing, establish a simple PostgreSQL backup plus persistent Git/storage backup before defense-critical sessions. Restoration must be tested at least once. This is demonstration resilience, not a claim of university-grade disaster recovery or 24/7 availability.

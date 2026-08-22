@@ -15,6 +15,7 @@ const form = {
   entryClassName: 'Main',
   starterCode: 'public class Main {}',
   maxAttempts: '2',
+  creditPolicy: 'LATEST',
   totalPoints: '100',
 }
 
@@ -22,7 +23,7 @@ describe('activity form contracts', () => {
   it('validates backend bounds and creates the supported draft payload', () => {
     expect(validateActivityForm(form)).toEqual({})
     expect(activityPayload(form, 'DRAFT')).toEqual(expect.objectContaining({
-      title: 'Loops', language: 'JAVA', entryClassName: 'Main', maxAttempts: 2, totalPoints: 100,
+      title: 'Loops', language: 'JAVA', entryClassName: 'Main', maxAttempts: 2, creditPolicy: 'LATEST', totalPoints: 100,
     }))
     expect(validateActivityForm({ ...form, entryClassName: 'not valid', maxAttempts: '4' })).toEqual(expect.objectContaining({
       entryClassName: expect.any(String), maxAttempts: expect.any(String),
@@ -35,6 +36,7 @@ describe('activity form contracts', () => {
     expect(payload).toEqual({ title: 'Updated loops' })
     expect(payload).not.toHaveProperty('starterCode')
     expect(payload).not.toHaveProperty('totalPoints')
+    expect(payload).not.toHaveProperty('creditPolicy')
   })
 
   it('validates test-case limits and publication requirements', () => {

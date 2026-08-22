@@ -7,6 +7,7 @@ import { createPrismaClassRepository } from '../../src/modules/classes/class.rep
 import { createClassService } from '../../src/modules/classes/class.service.js'
 import { createPrismaSubmissionRepository } from '../../src/modules/submissions/submission.repository.js'
 import { createSubmissionService } from '../../src/modules/submissions/submission.service.js'
+import type { SafeUserProfile } from '../../src/modules/auth/auth.types.js'
 import {
   cleanIntegrationDatabase,
   createActiveClass,
@@ -39,6 +40,7 @@ async function publishedActivity(input: {
   classId: string
   maxAttempts?: number
   dueDate?: Date
+  creditPolicy?: 'LATEST' | 'HIGHEST'
 }) {
   return prisma.programmingActivity.create({
     data: {
@@ -50,6 +52,7 @@ async function publishedActivity(input: {
       entryClassName: 'Main',
       starterCode: 'public class Main { public static void main(String[] args) {} }',
       maxAttempts: input.maxAttempts ?? 2,
+      creditPolicy: input.creditPolicy ?? 'LATEST',
       totalPoints: 100,
       status: 'PUBLISHED',
       publishedAt: currentNow,
@@ -81,6 +84,51 @@ async function publishedActivity(input: {
 const source =
   'public class Main { public static void main(String[] args) { java.util.Scanner s = new java.util.Scanner(System.in); System.out.println(s.nextInt() * 2); } }'
 
+async function createReleasedAttempt(input: {
+  submissions: ReturnType<typeof service>
+  student: SafeUserProfile
+  activityId: string
+  key: string
+  score: number
+  releasedAt: Date
+}) {
+  const created = await input.submissions.create(
+    input.student,
+    input.activityId,
+    source,
+    input.key,
+  )
+  const submissionId = (created.submission as { id: string }).id
+  await prisma.$transaction([
+    prisma.executionJob.update({
+      where: { submissionId },
+      data: { status: 'SUCCEEDED', completedAt: input.releasedAt },
+    }),
+    prisma.submissionExecution.update({
+      where: { submissionId },
+      data: {
+        compileStatus: 'SUCCESS',
+        runtimeStatus: 'PASSED',
+        startedAt: input.releasedAt,
+        completedAt: input.releasedAt,
+      },
+    }),
+    prisma.activitySubmission.update({
+      where: { id: submissionId },
+      data: {
+        submissionStatus: 'RELEASED',
+        originalAutomatedScore: input.score,
+        instructorPoints: 0,
+        releasedFinalScore: input.score,
+        reviewedAt: input.releasedAt,
+        releasedAt: input.releasedAt,
+        updatedAt: input.releasedAt,
+      },
+    }),
+  ])
+  return submissionId
+}
+
 beforeEach(async () => {
   currentNow = new Date('2031-01-10T08:00:00.000Z')
   await cleanIntegrationDatabase(prisma)
@@ -88,6 +136,167 @@ beforeEach(async () => {
 afterAll(async () => prisma.$disconnect())
 
 describe('Phase 6 PostgreSQL submissions and assessment', () => {
+  it('derives attempt availability at the deadline and fails closed when execution is disabled', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, classRecord.id, student.id)
+    const activity = await publishedActivity({
+      instructorId: instructor.id,
+      classId: classRecord.id,
+      maxAttempts: 2,
+      dueDate: currentNow,
+    })
+
+    const state = (await service().getAttemptState(student, activity.id)) as Record<string, unknown>
+    expect(state).toMatchObject({
+      dueState: 'PAST_DUE',
+      countingAttemptsUsed: 0,
+      remainingOrdinaryAttempts: 2,
+      ordinarySubmissionAllowed: false,
+      replacementAvailable: false,
+      nextAllowedSubmissionKind: 'NONE',
+      submissionBlockedReason: 'DEADLINE_PASSED',
+      releasedAttempts: [],
+      creditedResult: null,
+    })
+    expect(JSON.stringify(state)).not.toContain(source)
+    await expect(
+      service().create(student, activity.id, source, 'submission-at-exact-deadline'),
+    ).rejects.toMatchObject({ code: 'ACTIVITY_NOT_ACCEPTING_SUBMISSIONS' })
+
+    await prisma.programmingActivity.update({
+      where: { id: activity.id },
+      data: { dueDate: new Date(currentNow.getTime() + 60_000) },
+    })
+    await expect(service('disabled').getAttemptState(student, activity.id)).resolves.toMatchObject({
+      ordinarySubmissionAllowed: false,
+      nextAllowedSubmissionKind: 'NONE',
+      submissionBlockedReason: 'EXECUTION_UNAVAILABLE',
+    })
+  })
+
+  it('credits only released attempts under latest and highest policies', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, classRecord.id, student.id)
+    const submissions = service()
+    const highestActivity = await publishedActivity({
+      instructorId: instructor.id,
+      classId: classRecord.id,
+      maxAttempts: 3,
+      creditPolicy: 'HIGHEST',
+    })
+    const firstHighest = await createReleasedAttempt({
+      submissions,
+      student,
+      activityId: highestActivity.id,
+      key: 'highest-attempt-one',
+      score: 60,
+      releasedAt: new Date(currentNow.getTime() + 2_000),
+    })
+    const secondHighest = await createReleasedAttempt({
+      submissions,
+      student,
+      activityId: highestActivity.id,
+      key: 'highest-attempt-two',
+      score: 60,
+      releasedAt: new Date(currentNow.getTime() + 1_000),
+    })
+    await submissions.create(student, highestActivity.id, source, 'highest-unreleased-attempt')
+
+    const highestState = (await submissions.getAttemptState(student, highestActivity.id)) as {
+      releasedAttempts: Array<{ submissionId: string; credited: boolean }>
+      creditedResult: { submissionId: string }
+      countingAttemptsUsed: number
+      remainingOrdinaryAttempts: number
+      nextAllowedSubmissionKind: string
+      submissionBlockedReason: string
+    }
+    expect(highestState.creditedResult.submissionId).toBe(secondHighest)
+    expect(highestState.releasedAttempts).toHaveLength(2)
+    expect(highestState.releasedAttempts.find((attempt) => attempt.submissionId === firstHighest)?.credited).toBe(false)
+    expect(highestState.releasedAttempts.find((attempt) => attempt.submissionId === secondHighest)?.credited).toBe(true)
+    expect(highestState).toMatchObject({
+      countingAttemptsUsed: 3,
+      remainingOrdinaryAttempts: 0,
+      nextAllowedSubmissionKind: 'NONE',
+      submissionBlockedReason: 'ATTEMPT_LIMIT_REACHED',
+    })
+    expect(JSON.stringify(highestState)).not.toContain('sourceCode')
+
+    const latestActivity = await publishedActivity({
+      instructorId: instructor.id,
+      classId: classRecord.id,
+      maxAttempts: 2,
+      creditPolicy: 'LATEST',
+    })
+    const firstLatest = await createReleasedAttempt({
+      submissions,
+      student,
+      activityId: latestActivity.id,
+      key: 'latest-attempt-one',
+      score: 65,
+      releasedAt: new Date(currentNow.getTime() + 3_000),
+    })
+    const secondLatest = await createReleasedAttempt({
+      submissions,
+      student,
+      activityId: latestActivity.id,
+      key: 'latest-attempt-two',
+      score: 60,
+      releasedAt: new Date(currentNow.getTime() + 1_000),
+    })
+    const latestState = (await submissions.getAttemptState(student, latestActivity.id)) as {
+      creditedResult: { submissionId: string }
+    }
+    expect(latestState.creditedResult.submissionId).toBe(secondLatest)
+    expect((await submissions.get(student, firstLatest)) as Record<string, unknown>).toMatchObject({
+      isCreditedResult: false,
+    })
+    expect((await submissions.get(student, secondLatest)) as Record<string, unknown>).toMatchObject({
+      isCreditedResult: true,
+    })
+  })
+
+  it('fails closed for removed, inactive, and cross-class students', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const otherStudent = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    const otherClass = await createActiveClass(prisma, instructor.id)
+    const membership = await createActiveMembership(prisma, classRecord.id, student.id)
+    await createActiveMembership(prisma, otherClass.id, otherStudent.id)
+    const activity = await publishedActivity({
+      instructorId: instructor.id,
+      classId: classRecord.id,
+    })
+    const submissions = service()
+
+    await expect(submissions.getAttemptState(otherStudent, activity.id)).rejects.toMatchObject({
+      code: 'ACTIVITY_NOT_FOUND',
+    })
+    await prisma.classMember.update({
+      where: { id: membership.id },
+      data: { status: 'REMOVED', removedAt: currentNow },
+    })
+    await expect(submissions.getAttemptState(student, activity.id)).rejects.toMatchObject({
+      code: 'ACTIVITY_NOT_FOUND',
+    })
+    await prisma.classMember.update({
+      where: { id: membership.id },
+      data: { status: 'ACTIVE', removedAt: null },
+    })
+    await prisma.user.update({
+      where: { id: student.id },
+      data: { status: 'SUSPENDED' },
+    })
+    await expect(submissions.getAttemptState(student, activity.id)).rejects.toMatchObject({
+      code: 'ACTIVITY_NOT_FOUND',
+    })
+  })
+
   it('scopes idempotency by student and activity without consuming duplicate attempts', async () => {
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const firstStudent = await createActiveUser(prisma, 'STUDENT')
@@ -194,6 +403,12 @@ describe('Phase 6 PostgreSQL submissions and assessment', () => {
     })
     currentNow = new Date('2031-02-10T00:00:00.000Z')
 
+    await expect(submissions.getAttemptState(student, activity.id)).resolves.toMatchObject({
+      replacementAvailable: true,
+      nextAllowedSubmissionKind: 'REPLACEMENT',
+      replacement: { forAttemptLabel: 'Attempt 1' },
+    })
+
     const results = await Promise.allSettled([
       submissions.create(
         student,
@@ -225,6 +440,51 @@ describe('Phase 6 PostgreSQL submissions and assessment', () => {
     })
     expect(resolution.replacementSubmissionId).toBe(records[1]!.id)
     expect(resolution.replacementConsumedAt).not.toBeNull()
+
+    await prisma.$transaction([
+      prisma.executionJob.update({
+        where: { submissionId: records[1]!.id },
+        data: { status: 'SUCCEEDED', completedAt: currentNow },
+      }),
+      prisma.submissionExecution.update({
+        where: { submissionId: records[1]!.id },
+        data: {
+          compileStatus: 'SUCCESS',
+          runtimeStatus: 'PASSED',
+          startedAt: currentNow,
+          completedAt: currentNow,
+        },
+      }),
+      prisma.activitySubmission.update({
+        where: { id: records[1]!.id },
+        data: {
+          submissionStatus: 'RELEASED',
+          originalAutomatedScore: 70,
+          instructorPoints: 0,
+          releasedFinalScore: 70,
+          reviewedAt: currentNow,
+          releasedAt: currentNow,
+          updatedAt: currentNow,
+        },
+      }),
+    ])
+    await expect(submissions.getAttemptState(student, activity.id)).resolves.toMatchObject({
+      countingAttemptsUsed: 1,
+      remainingOrdinaryAttempts: 0,
+      replacementAvailable: false,
+      releasedAttempts: [
+        {
+          submissionId: records[1]!.id,
+          attemptLabel: 'Replacement attempt for Attempt 1',
+          replacementForAttemptNumber: 1,
+          credited: true,
+        },
+      ],
+      creditedResult: {
+        submissionId: records[1]!.id,
+        attemptLabel: 'Replacement attempt for Attempt 1',
+      },
+    })
   })
 
   it('preserves hidden results, applies bounded corrections, and releases only the final projection', async () => {
@@ -465,6 +725,12 @@ describe('Phase 6 PostgreSQL submissions and assessment', () => {
       attemptNumber: 1,
     })
     expect(await prisma.submissionFailureResolution.count()).toBe(1)
+    await expect(submissions.getAttemptState(student, activity.id)).resolves.toMatchObject({
+      countingAttemptsUsed: 0,
+      remainingOrdinaryAttempts: 2,
+      replacementAvailable: true,
+      nextAllowedSubmissionKind: 'REPLACEMENT',
+    })
   })
 
   it('expires unused replacement grants without losing immutable failure history', async () => {
@@ -518,6 +784,11 @@ describe('Phase 6 PostgreSQL submissions and assessment', () => {
       replacementExpiresAt: expiresAt,
       expectedUpdatedAt: failed.updatedAt,
     })
+    await expect(submissions.getAttemptState(student, activity.id)).resolves.toMatchObject({
+      countingAttemptsUsed: 0,
+      replacementAvailable: true,
+      nextAllowedSubmissionKind: 'REPLACEMENT',
+    })
     const closedActivity = await prisma.programmingActivity.update({
       where: { id: activity.id },
       data: { status: 'CLOSED', closedAt: currentNow },
@@ -544,6 +815,12 @@ describe('Phase 6 PostgreSQL submissions and assessment', () => {
     ).rejects.toMatchObject({ code: 'CLASS_HAS_UNFINISHED_SUBMISSION_WORK' })
 
     currentNow = new Date(expiresAt.getTime() + 1)
+    await expect(submissions.getAttemptState(student, activity.id)).resolves.toMatchObject({
+      countingAttemptsUsed: 0,
+      replacementAvailable: false,
+      nextAllowedSubmissionKind: 'NONE',
+      submissionBlockedReason: 'ACTIVITY_CLOSED',
+    })
     await expect(
       submissions.create(
         student,

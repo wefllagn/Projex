@@ -28,6 +28,7 @@ const EMPTY_FORM = {
   entryClassName: 'Main',
   starterCode: 'public class Main {\n    public static void main(String[] args) {\n        \n    }\n}\n',
   maxAttempts: '1',
+  creditPolicy: 'LATEST',
   totalPoints: '100',
 }
 
@@ -43,6 +44,7 @@ function formFromActivity(activity) {
     entryClassName: activity.entryClassName,
     starterCode: activity.starterCode,
     maxAttempts: String(activity.maxAttempts),
+    creditPolicy: activity.creditPolicy ?? 'LATEST',
     totalPoints: String(activity.totalPoints),
   }
 }
@@ -89,6 +91,15 @@ function ActivityFormFields({ form, errors, onChange, readOnly, status }) {
           {errors.maxAttempts && <small className="activity-field-error">{errors.maxAttempts}</small>}
         </label>
         <label>
+          Credited result
+          <select aria-invalid={Boolean(errors.creditPolicy)} value={form.creditPolicy} onChange={(event) => onChange('creditPolicy', event.target.value)} disabled={readOnly || published}>
+            <option value="LATEST">Latest attempt</option>
+            <option value="HIGHEST">Highest attempt</option>
+          </select>
+          {errors.creditPolicy && <small className="activity-field-error">{errors.creditPolicy}</small>}
+          {form.maxAttempts === '1' && <small>Both policies produce the same result when only one attempt is allowed.</small>}
+        </label>
+        <label>
           Java entry class
           <input aria-invalid={Boolean(errors.entryClassName)} value={form.entryClassName} onChange={(event) => onChange('entryClassName', event.target.value)} disabled={readOnly || published} />
           {errors.entryClassName && <small className="activity-field-error">{errors.entryClassName}</small>}
@@ -109,7 +120,7 @@ function ActivityFormFields({ form, errors, onChange, readOnly, status }) {
         <textarea className="activity-source-input" aria-invalid={Boolean(errors.starterCode)} value={form.starterCode} onChange={(event) => onChange('starterCode', event.target.value)} disabled={readOnly || published} />
         {errors.starterCode && <small className="activity-field-error">{errors.starterCode}</small>}
       </label>
-      {published && <p className="activity-lifecycle-note">Published scoring, starter source, language, entry class, and test cases are immutable. The deadline may only be extended and the attempt limit may only increase.</p>}
+      {published && <p className="activity-lifecycle-note">Published scoring, credited-result policy, starter source, language, entry class, and test cases are immutable. The deadline may only be extended and the attempt limit may only increase.</p>}
     </>
   )
 }
@@ -327,6 +338,8 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
   const current = creating || state.key === currentKey ? state : { ...state, status: 'loading', activity: null }
   const readOnly = Boolean(current.activity && (current.activity.status === 'CLOSED' || current.activity.status === 'ARCHIVED' || selectedClass?.status === 'ARCHIVED'))
   const publishReasons = useMemo(() => current.activity ? publicationRequirements(current.activity, testCases) : [], [current.activity, testCases])
+  const noticeIsConflict = notice.includes('changed while')
+  const noticeIsSuccess = /saved|succeeded|already match/i.test(notice)
 
   if (!creating && current.status === 'loading') return <RequestState kind="loading" message="Loading activity settings." />
   if (!creating && current.status === 'error') return <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />
@@ -335,7 +348,7 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
     <div className="student-assignment-panel instructor-assignment-panel instructor-form-panel">
       <div className="instructor-assignment-toolbar"><NavLink to={classHref('/instructor/activity', selectedClass?.id)} className="student-outline-action">Back to activities</NavLink>{current.activity && <span className="class-status-chip">{formatActivityStatus(current.activity.status)}</span>}</div>
       <section className="instructor-page-heading"><p>{creating ? 'Create Activity' : 'Activity Settings'}</p><h2>{creating ? 'Programming activity setup' : current.activity?.title}</h2><span>{creating ? 'Create a server-backed draft before configuring its test cases.' : 'Manage only the fields and lifecycle transitions supported by Projex.'}</span></section>
-      {notice && <RequestState kind={notice.includes('changed while') ? 'conflict' : 'unavailable'} compact title={notice.includes('changed while') ? 'Latest server version loaded' : 'Action not completed'} message={notice} />}
+      {notice && <RequestState kind={noticeIsConflict ? 'conflict' : noticeIsSuccess ? 'empty' : 'unavailable'} compact title={noticeIsConflict ? 'Latest server version loaded' : noticeIsSuccess ? 'Changes saved' : 'Action not completed'} message={notice} />}
       <form onSubmit={create}>
         <ActivityFormFields form={form} errors={errors} onChange={changeForm} readOnly={readOnly || Boolean(busy)} status={current.activity?.status || 'DRAFT'} />
         <div className="instructor-form-actions">

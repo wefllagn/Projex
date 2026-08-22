@@ -28,6 +28,9 @@ export function createSubmissionApi(client = apiClient) {
         options,
       )
     },
+    getAttemptState(activityId, options) {
+      return client.get(`/activities/${activityId}/attempt-state`, options)
+    },
     getSubmission(submissionId, options) {
       return client.get(`/submissions/${submissionId}`, options)
     },

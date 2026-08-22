@@ -67,6 +67,28 @@ export function createSubmissionController(service: SubmissionService) {
         next(error)
       }
     },
+    getAttemptState: async (
+      request: Request,
+      response: Response,
+      next: NextFunction,
+    ) => {
+      try {
+        const { activityId } = parseRequest(
+          activitySubmissionParamsSchema,
+          request.params,
+        )
+        response
+          .status(200)
+          .json(
+            successResponse(
+              await service.getAttemptState(request.auth!.user, activityId),
+              request.requestId,
+            ),
+          )
+      } catch (error) {
+        next(error)
+      }
+    },
     get: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const { submissionId } = parseRequest(

@@ -91,6 +91,25 @@ stateDiagram-v2
 
 Every score correction is append-only and preserves correction order, original automated score, previous effective score, new effective score, mandatory reason, instructor identity, and timestamp.
 
+### Credited released result
+
+The activity's immutable `creditPolicy` selects one credited result from RELEASED submissions only:
+
+- `LATEST` selects the greatest chronological `attemptNumber`; release timestamp ordering is irrelevant.
+- `HIGHEST` selects the greatest `releasedFinalScore`; an equal-score tie selects the greater `attemptNumber`.
+- A RELEASED replacement participates normally and keeps the label `Replacement attempt for Attempt N`. Its failed predecessor does not participate unless it is independently RELEASED.
+- An unreleased attempt never affects the current credited result and no unreleased score is implied to a student.
+
+The selection is derived from authoritative records rather than stored as a mutable pointer. Submission detail/list projections carry the backend-calculated `isCreditedResult`; clients must not recalculate it from a page of results.
+
+### Student attempt state
+
+`GET /api/v1/activities/:activityId/attempt-state` is a student-only, read-only submissions projection. It reports lifecycle/due state, `maxAttempts`, counting attempts used, remaining ordinary attempts, credit policy, ordinary eligibility, replacement availability, next allowed submission kind, a safe blocked reason, released-attempt summaries, and the credited-result summary.
+
+Allowance uses `countsTowardAttemptLimit`, never chronological `attemptNumber`. An active replacement has priority over an ordinary attempt. Execution-disabled mode reports no next allowed submission while preserving truthful replacement availability. The endpoint uses explicit safe selects and omits source, hidden-test data/counts, unreleased scores, correction history/reasons, draft feedback, and worker/job information.
+
+The projection is observational. Official submission creation remains the concurrency-safe authority and rechecks account, membership, class, activity, exact deadline (`now >= dueDate` is closed), allowance, replacement, execution availability, idempotency, and chronological allocation inside its established transaction.
+
 ## Visibility and authorization
 
 | Capability | Student | Owning instructor | Admin |
@@ -133,6 +152,7 @@ An expired unused replacement no longer blocks archive. Archived activities/clas
 ```text
 POST /api/v1/activities/:activityId/submissions
 GET  /api/v1/activities/:activityId/submissions
+GET  /api/v1/activities/:activityId/attempt-state
 POST /api/v1/activities/:activityId/visible-test-runs
 GET  /api/v1/visible-test-runs/:runId
 GET  /api/v1/submissions/:submissionId

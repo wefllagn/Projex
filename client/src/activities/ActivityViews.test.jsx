@@ -27,6 +27,7 @@ const activity = {
   entryClassName: 'Main',
   starterCode: 'public class Main {}',
   maxAttempts: 2,
+  creditPolicy: 'LATEST',
   totalPoints: 100,
   status: 'DRAFT',
   createdAt: '2026-08-10T00:00:00.000Z',
@@ -100,12 +101,32 @@ describe('student activity integration', () => {
       getActivity: vi.fn().mockResolvedValue({ data: { ...activity, status: 'PUBLISHED' } }),
       listTestCases: vi.fn().mockResolvedValue({ data: [testCase, { ...testCase, id: 'hidden', name: 'Private edge case', inputData: hiddenSecret, isHidden: true }], pagination }),
     }
-    renderView(<StudentActivityDetail api={api} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
+    const submissions = {
+      getAttemptState: vi.fn().mockResolvedValue({ data: {
+        activityId,
+        activityStatus: 'PUBLISHED',
+        dueState: 'OPEN',
+        maxAttempts: 2,
+        creditPolicy: 'LATEST',
+        countingAttemptsUsed: 0,
+        remainingOrdinaryAttempts: 2,
+        ordinarySubmissionAllowed: true,
+        replacementAvailable: false,
+        replacement: null,
+        nextAllowedSubmissionKind: 'ORDINARY',
+        submissionBlockedReason: null,
+        releasedAttempts: [],
+        creditedResult: null,
+      } }),
+    }
+    renderView(<StudentActivityDetail api={api} submissions={submissions} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
 
     expect(await screen.findByText('Visible sample')).toBeInTheDocument()
     expect(screen.queryByText('Private edge case')).not.toBeInTheDocument()
     expect(screen.queryByText(hiddenSecret)).not.toBeInTheDocument()
     expect(screen.getByText(/Hidden tests and their count remain private/)).toBeInTheDocument()
+    expect(screen.getByText('0 of 2 used')).toBeInTheDocument()
+    expect(screen.getByText('Latest attempt')).toBeInTheDocument()
   })
 
   it('renders loading and empty states without falling back to activity mocks', async () => {
@@ -150,6 +171,9 @@ describe('instructor activity integration', () => {
 
     await user.type(screen.getByLabelText('Activity title'), 'Loop practice')
     await user.type(screen.getByLabelText('Instructions'), 'Solve the loop exercise.')
+    const creditedResult = screen.getByRole('combobox', { name: /^Credited result/ })
+    expect(creditedResult).toHaveValue('LATEST')
+    await user.selectOptions(creditedResult, 'HIGHEST')
     await user.clear(screen.getByLabelText('Deadline'))
     await user.type(screen.getByLabelText('Deadline'), '2099-09-03T17:00')
     await user.click(screen.getByRole('button', { name: 'Create draft' }))
@@ -157,7 +181,7 @@ describe('instructor activity integration', () => {
     await waitFor(() => expect(api.createActivity).toHaveBeenCalled())
     expect(api.createActivity.mock.calls[0][0]).toBe(classId)
     expect(api.createActivity.mock.calls[0][1]).toEqual(expect.objectContaining({
-      title: 'Loop practice', instructions: 'Solve the loop exercise.', language: 'JAVA', entryClassName: 'Main', maxAttempts: 1, totalPoints: 100,
+      title: 'Loop practice', instructions: 'Solve the loop exercise.', language: 'JAVA', entryClassName: 'Main', maxAttempts: 1, creditPolicy: 'HIGHEST', totalPoints: 100,
     }))
     expect(api.createActivity.mock.calls[0][1]).not.toHaveProperty('attachments')
     expect(screen.queryByText(/rubric/i)).not.toBeInTheDocument()
@@ -227,10 +251,13 @@ describe('instructor activity integration', () => {
     const title = await screen.findByLabelText('Activity title')
     expect(screen.getByLabelText('Java entry class')).toBeDisabled()
     expect(screen.getByLabelText('Starter source')).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: /^Credited result/ })).toBeDisabled()
     await user.clear(title)
     await user.type(title, 'Updated published title')
     await user.click(screen.getByRole('button', { name: 'Save activity' }))
     expect(await screen.findByText('Activity saved.')).toBeInTheDocument()
+    expect(screen.getByText('Changes saved')).toBeInTheDocument()
+    expect(screen.queryByText('Action not completed')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Close' }))
 
     const updateBody = api.updateActivity.mock.calls[0][1]
@@ -238,6 +265,7 @@ describe('instructor activity integration', () => {
     expect(updateBody).not.toHaveProperty('starterCode')
     expect(updateBody).not.toHaveProperty('entryClassName')
     expect(updateBody).not.toHaveProperty('totalPoints')
+    expect(updateBody).not.toHaveProperty('creditPolicy')
     expect(api.transition).toHaveBeenCalledWith(activityId, 'close', { expectedUpdatedAt: saved.updatedAt })
   })
 

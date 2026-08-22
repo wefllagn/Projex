@@ -1,5 +1,6 @@
 import type {
   ActivityStatus,
+  AttemptCreditPolicy,
   ClassMemberStatus,
   ClassStatus,
   Prisma,
@@ -17,6 +18,7 @@ export interface ActivityRecord {
   entryClassName: string
   starterCode: string
   maxAttempts: number
+  creditPolicy: AttemptCreditPolicy
   totalPoints: Prisma.Decimal
   status: ActivityStatus
   createdAt: Date
@@ -61,6 +63,7 @@ export interface ActivityProjection {
   entryClassName: string
   starterCode: string
   maxAttempts: number
+  creditPolicy: AttemptCreditPolicy
   totalPoints: number
   status: ActivityStatus
   createdAt: Date
@@ -83,6 +86,7 @@ export interface AdminActivityProjection {
   language: ProgrammingLanguage
   entryClassName: string
   maxAttempts: number
+  creditPolicy: AttemptCreditPolicy
   totalPoints: number
   status: ActivityStatus
   createdAt: Date
@@ -97,7 +101,17 @@ export function activityDueState(record: ActivityRecord, now: Date): ActivityDue
   if (record.status === 'DRAFT') return 'DRAFT'
   if (record.status === 'ARCHIVED') return 'ARCHIVED'
   if (record.status === 'CLOSED') return 'CLOSED'
-  return record.dueDate.getTime() <= now.getTime() ? 'PAST_DUE' : 'OPEN'
+  return isOrdinarySubmissionOpen(record.status, record.dueDate, now)
+    ? 'OPEN'
+    : 'PAST_DUE'
+}
+
+export function isOrdinarySubmissionOpen(
+  status: ActivityStatus,
+  dueDate: Date,
+  now: Date,
+): boolean {
+  return status === 'PUBLISHED' && now.getTime() < dueDate.getTime()
 }
 
 export function toActivityProjection(
@@ -115,6 +129,7 @@ export function toActivityProjection(
     entryClassName: record.entryClassName,
     starterCode: record.starterCode,
     maxAttempts: record.maxAttempts,
+    creditPolicy: record.creditPolicy,
     totalPoints: Number(record.totalPoints),
     status: record.status,
     createdAt: record.createdAt,
@@ -142,6 +157,7 @@ export function toAdminActivityProjection(
     language: record.language,
     entryClassName: record.entryClassName,
     maxAttempts: record.maxAttempts,
+    creditPolicy: record.creditPolicy,
     totalPoints: Number(record.totalPoints),
     status: record.status,
     createdAt: record.createdAt,

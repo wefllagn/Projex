@@ -12,10 +12,16 @@ import type {
 } from './submission.schemas.js'
 import type {
   PracticeRecord,
+  StudentAttemptStateRecord,
   SubmissionMutationResult,
   SubmissionRecord,
   SubmissionRepository,
 } from './submission.repository.js'
+import {
+  selectCreditedReleasedAttempt,
+  submissionAttemptLabel,
+} from './submission-credit.js'
+import { isOrdinarySubmissionOpen } from '../activities/activity.types.js'
 
 export interface ExecutionFeatureConfig {
   mode: 'disabled' | 'local_process'
@@ -38,6 +44,10 @@ export interface SubmissionService {
     query: SubmissionListQuery,
   ): Promise<{ submissions: unknown[]; pagination: PaginationMeta }>
   get(caller: SafeUserProfile, submissionId: string): Promise<unknown>
+  getAttemptState(
+    caller: SafeUserProfile,
+    activityId: string,
+  ): Promise<unknown>
   correctScore(
     caller: SafeUserProfile,
     submissionId: string,
@@ -129,21 +139,19 @@ function effectiveAutomatedScore(record: SubmissionRecord): number | null {
     : Number(record.originalAutomatedScore)
 }
 
-function attemptLabel(record: SubmissionRecord): string {
-  const replaced = record.replacementResolutionUsed?.failedSubmission.attemptNumber
-  return replaced
-    ? `Replacement attempt for Attempt ${replaced}`
-    : `Attempt ${record.attemptNumber}`
-}
-
 function baseProjection(record: SubmissionRecord) {
+  const replacementForAttemptNumber =
+    record.replacementResolutionUsed?.failedSubmission.attemptNumber ?? null
   return {
     id: record.id,
     activityId: record.activityId,
     activityTitle: record.activityTitleSnapshot,
-    attemptLabel: attemptLabel(record),
-    replacementForAttemptNumber:
-      record.replacementResolutionUsed?.failedSubmission.attemptNumber ?? null,
+    attemptLabel: submissionAttemptLabel({
+      attemptNumber: record.attemptNumber,
+      replacementForAttemptNumber,
+    }),
+    replacementForAttemptNumber,
+    creditPolicy: record.activity.creditPolicy,
     submittedAt: record.submittedAt,
     status: record.submissionStatus.toLowerCase(),
     isLate: record.isLate,
@@ -151,7 +159,7 @@ function baseProjection(record: SubmissionRecord) {
   }
 }
 
-function studentProjection(record: SubmissionRecord) {
+function studentProjection(record: SubmissionRecord, isCreditedResult = false) {
   const visibleResults =
     record.execution?.testCaseResults
       .filter((result) => !result.isHiddenSnapshot)
@@ -170,6 +178,7 @@ function studentProjection(record: SubmissionRecord) {
     sourceCode: record.sourceCode,
     visibleTestOutcomes: visibleResults,
     gradeStatus: released ? 'released' : 'pending',
+    isCreditedResult: released && isCreditedResult,
     ...(released
       ? {
           finalScore: Number(record.releasedFinalScore),
@@ -194,11 +203,13 @@ function studentProjection(record: SubmissionRecord) {
   }
 }
 
-function instructorProjection(record: SubmissionRecord) {
+function instructorProjection(record: SubmissionRecord, isCreditedResult = false) {
   return {
     ...baseProjection(record),
     attemptNumber: record.attemptNumber,
     countsTowardAttemptLimit: record.countsTowardAttemptLimit,
+    isCreditedResult:
+      record.submissionStatus === 'RELEASED' && isCreditedResult,
     student: record.student,
     sourceCode: record.sourceCode,
     assessment: record.execution
@@ -262,11 +273,13 @@ function instructorProjection(record: SubmissionRecord) {
   }
 }
 
-function adminProjection(record: SubmissionRecord) {
+function adminProjection(record: SubmissionRecord, isCreditedResult = false) {
   return {
     ...baseProjection(record),
     attemptNumber: record.attemptNumber,
     countsTowardAttemptLimit: record.countsTowardAttemptLimit,
+    isCreditedResult:
+      record.submissionStatus === 'RELEASED' && isCreditedResult,
     student: { id: record.student.id, fullName: record.student.fullName },
     assessmentStatus: record.submissionStatus.toLowerCase(),
     releasedFinalScore:
@@ -281,27 +294,141 @@ async function project(
   repository: SubmissionRepository,
   caller: SafeUserProfile,
   record: SubmissionRecord,
+  isCreditedResult: boolean,
+  accessVerified = false,
 ): Promise<unknown> {
-  if (caller.role === 'ADMIN') return adminProjection(record)
+  if (caller.role === 'ADMIN') return adminProjection(record, isCreditedResult)
   if (
     caller.role === 'INSTRUCTOR' &&
     record.activity.class.instructorId === caller.id
   ) {
-    return instructorProjection(record)
+    return instructorProjection(record, isCreditedResult)
   }
   if (
     caller.role === 'STUDENT' &&
     record.studentId === caller.id &&
-    (await repository.list({
-      activityId: record.activityId,
-      callerId: caller.id,
-      callerRole: caller.role,
-      query: { page: 1, pageSize: 1 },
-    })) !== null
+    (accessVerified ||
+      (await repository.list({
+        activityId: record.activityId,
+        callerId: caller.id,
+        callerRole: caller.role,
+        query: { page: 1, pageSize: 1 },
+      })) !== null)
   ) {
-    return studentProjection(record)
+    return studentProjection(record, isCreditedResult)
   }
   throw error(404, 'SUBMISSION_NOT_FOUND', 'Submission not found.')
+}
+
+function attemptStateProjection(
+  record: StudentAttemptStateRecord,
+  executionAvailable: boolean,
+  observedAt: Date,
+) {
+  const releasedCandidates = record.releasedAttempts.map((attempt) => ({
+    ...attempt,
+    releasedFinalScore: Number(attempt.releasedFinalScore),
+  }))
+  const credited = selectCreditedReleasedAttempt(
+    record.activity.creditPolicy,
+    releasedCandidates,
+  )
+  const remainingOrdinaryAttempts = Math.max(
+    0,
+    record.activity.maxAttempts - record.countingAttemptsUsed,
+  )
+  const replacementAllowed =
+    record.activity.classStatus === 'ACTIVE' &&
+    (record.activity.status === 'PUBLISHED' ||
+      record.activity.status === 'CLOSED') &&
+    record.availableReplacement !== null
+  const ordinaryDomainAllowed =
+    record.activity.classStatus === 'ACTIVE' &&
+    isOrdinarySubmissionOpen(
+      record.activity.status,
+      record.activity.dueDate,
+      observedAt,
+    ) &&
+    remainingOrdinaryAttempts > 0
+  const nextAllowedSubmissionKind = !executionAvailable
+    ? 'NONE'
+    : replacementAllowed
+      ? 'REPLACEMENT'
+      : ordinaryDomainAllowed
+        ? 'ORDINARY'
+        : 'NONE'
+  const blockedReason =
+    nextAllowedSubmissionKind !== 'NONE'
+      ? null
+      : !executionAvailable
+        ? 'EXECUTION_UNAVAILABLE'
+        : record.activity.classStatus !== 'ACTIVE'
+          ? 'CLASS_ARCHIVED'
+          : record.activity.status === 'CLOSED'
+            ? 'ACTIVITY_CLOSED'
+            : observedAt.getTime() >= record.activity.dueDate.getTime()
+              ? 'DEADLINE_PASSED'
+              : remainingOrdinaryAttempts === 0
+                ? 'ATTEMPT_LIMIT_REACHED'
+                : 'ACTIVITY_NOT_ACCEPTING_SUBMISSIONS'
+
+  const releasedAttempts = releasedCandidates.map((attempt) => {
+    const replacementForAttemptNumber =
+      attempt.replacementResolutionUsed?.failedSubmission.attemptNumber ?? null
+    return {
+      submissionId: attempt.id,
+      attemptLabel: submissionAttemptLabel({
+        attemptNumber: attempt.attemptNumber,
+        replacementForAttemptNumber,
+      }),
+      replacementForAttemptNumber,
+      submittedAt: attempt.submittedAt,
+      releasedAt: attempt.releasedAt,
+      score: attempt.releasedFinalScore,
+      totalPoints: Number(attempt.totalPointsSnapshot),
+      credited: attempt.id === credited?.id,
+    }
+  })
+  const creditedSummary = releasedAttempts.find((attempt) => attempt.credited)
+
+  return {
+    activityId: record.activity.id,
+    activityStatus: record.activity.status,
+    dueState:
+      record.activity.status === 'CLOSED'
+        ? 'CLOSED'
+        : isOrdinarySubmissionOpen(
+              record.activity.status,
+              record.activity.dueDate,
+              observedAt,
+            )
+          ? 'OPEN'
+          : 'PAST_DUE',
+    maxAttempts: record.activity.maxAttempts,
+    creditPolicy: record.activity.creditPolicy,
+    countingAttemptsUsed: record.countingAttemptsUsed,
+    remainingOrdinaryAttempts,
+    ordinarySubmissionAllowed: nextAllowedSubmissionKind === 'ORDINARY',
+    replacementAvailable: record.availableReplacement !== null,
+    replacement: record.availableReplacement
+      ? {
+          expiresAt: record.availableReplacement.replacementExpiresAt,
+          forAttemptLabel: `Attempt ${record.availableReplacement.failedAttemptNumber}`,
+        }
+      : null,
+    nextAllowedSubmissionKind,
+    submissionBlockedReason: blockedReason,
+    releasedAttempts,
+    creditedResult: creditedSummary
+      ? {
+          submissionId: creditedSummary.submissionId,
+          attemptLabel: creditedSummary.attemptLabel,
+          score: creditedSummary.score,
+          totalPoints: creditedSummary.totalPoints,
+        }
+      : null,
+    observedAt,
+  }
 }
 
 function practiceProjection(record: PracticeRecord) {
@@ -377,8 +504,15 @@ export function createSubmissionService(dependencies: {
           'submission created',
         )
       }
+      const creditedSubmissionId = await repository.findCreditedSubmissionId(
+        result.submission.activityId,
+        result.submission.studentId,
+      )
       return {
-        submission: studentProjection(result.submission),
+        submission: studentProjection(
+          result.submission,
+          creditedSubmissionId === result.submission.id,
+        ),
         idempotentReplay: result.kind === 'replayed',
       }
     },
@@ -394,7 +528,15 @@ export function createSubmissionService(dependencies: {
       const totalPages = Math.ceil(result.totalItems / query.pageSize)
       return {
         submissions: await Promise.all(
-          result.submissions.map((record) => project(repository, caller, record)),
+          result.submissions.map((record) =>
+            project(
+              repository,
+              caller,
+              record,
+              result.creditedSubmissionIds.has(record.id),
+              true,
+            ),
+          ),
         ),
         pagination: {
           page: query.page,
@@ -410,7 +552,36 @@ export function createSubmissionService(dependencies: {
     async get(caller, submissionId) {
       const record = await repository.findById(submissionId)
       if (!record) throw error(404, 'SUBMISSION_NOT_FOUND', 'Submission not found.')
-      return project(repository, caller, record)
+      const creditedSubmissionId = await repository.findCreditedSubmissionId(
+        record.activityId,
+        record.studentId,
+      )
+      return project(
+        repository,
+        caller,
+        record,
+        creditedSubmissionId === record.id,
+      )
+    },
+
+    async getAttemptState(caller, activityId) {
+      if (caller.role !== 'STUDENT' || caller.status !== 'ACTIVE') {
+        throw error(403, 'FORBIDDEN', 'You are not authorized to view this attempt state.')
+      }
+      const observedAt = now()
+      const record = await repository.getStudentAttemptState({
+        activityId,
+        studentId: caller.id,
+        now: observedAt,
+      })
+      if (!record) {
+        throw error(404, 'ACTIVITY_NOT_FOUND', 'Programming activity not found.')
+      }
+      return attemptStateProjection(
+        record,
+        config.mode !== 'disabled',
+        observedAt,
+      )
     },
 
     async correctScore(caller, submissionId, input) {
@@ -427,7 +598,11 @@ export function createSubmissionService(dependencies: {
         { event: 'submission.score_corrected', actorId: caller.id, submissionId },
         'submission automated score corrected',
       )
-      return instructorProjection(record)
+      const creditedSubmissionId = await repository.findCreditedSubmissionId(
+        record.activityId,
+        record.studentId,
+      )
+      return instructorProjection(record, creditedSubmissionId === record.id)
     },
 
     async review(caller, submissionId, input) {
@@ -444,7 +619,11 @@ export function createSubmissionService(dependencies: {
         { event: 'submission.review_saved', actorId: caller.id, submissionId },
         'submission review saved',
       )
-      return instructorProjection(record)
+      const creditedSubmissionId = await repository.findCreditedSubmissionId(
+        record.activityId,
+        record.studentId,
+      )
+      return instructorProjection(record, creditedSubmissionId === record.id)
     },
 
     async release(caller, submissionId, input) {
@@ -461,7 +640,11 @@ export function createSubmissionService(dependencies: {
         { event: 'submission.released', actorId: caller.id, submissionId },
         'submission released',
       )
-      return instructorProjection(record)
+      const creditedSubmissionId = await repository.findCreditedSubmissionId(
+        record.activityId,
+        record.studentId,
+      )
+      return instructorProjection(record, creditedSubmissionId === record.id)
     },
 
     async retry(caller, submissionId, input) {
@@ -479,7 +662,11 @@ export function createSubmissionService(dependencies: {
         { event: 'submission.assessment_retried', actorId: caller.id, submissionId },
         'submission assessment retried',
       )
-      return instructorProjection(record)
+      const creditedSubmissionId = await repository.findCreditedSubmissionId(
+        record.activityId,
+        record.studentId,
+      )
+      return instructorProjection(record, creditedSubmissionId === record.id)
     },
 
     async resolveFailure(caller, submissionId, input) {
@@ -501,7 +688,11 @@ export function createSubmissionService(dependencies: {
         },
         'submission infrastructure failure resolved',
       )
-      return instructorProjection(record)
+      const creditedSubmissionId = await repository.findCreditedSubmissionId(
+        record.activityId,
+        record.studentId,
+      )
+      return instructorProjection(record, creditedSubmissionId === record.id)
     },
 
     async createPracticeRun(caller, activityId, sourceCode) {

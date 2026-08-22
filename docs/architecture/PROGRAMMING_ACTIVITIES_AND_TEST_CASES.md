@@ -9,7 +9,7 @@ Included:
 - Draft activity creation and role-scoped listing/detail.
 - Publication, manual close, archive, and safe restore.
 - Java-only starter code and entry-class metadata.
-- Due date, total points, and one-to-three attempt configuration.
+- Due date, total points, one-to-three attempt configuration, and a draft-configurable `LATEST` or `HIGHEST` credited-result policy.
 - Ordered visible and hidden test cases.
 - Optimistic concurrency and structured lifecycle logging.
 
@@ -39,12 +39,16 @@ stateDiagram-v2
 - Publishing requires a future due date, non-empty starter code, at least one test case, at least one visible test case, positive combined test points, and combined test points no greater than `totalPoints`.
 - `PUBLISHED` is student-visible to ACTIVE class members. Due state is derived from server time as `OPEN` or `PAST_DUE`; passing the deadline does not silently rewrite lifecycle state.
 - Published title and instructions may be corrected. The due date may only be extended and `maxAttempts` may only increase.
-- Published starter code, language, entry class, total points, and test cases are immutable.
+- Published starter code, language, entry class, total points, credited-result policy, and test cases are immutable.
 - `CLOSED` and `ARCHIVED` activities are read-only.
 - Restoring a never-published activity returns it to `DRAFT`. Restoring any previously published activity returns it to `CLOSED`; restore never silently republishes or reopens work.
 - An archived class rejects every activity or test-case mutation. Existing ACTIVE membership may still read published/closed activities in an archived class, consistent with the class archive policy.
 
 ## Activity fields and validation
+
+`ProgrammingActivity.creditPolicy` is server-authoritative. New and migrated activities default to `LATEST`; an owning instructor may select `LATEST` or `HIGHEST` while the activity is `DRAFT`. Publication freezes the choice. For a one-attempt activity both policies produce the same outcome, but the stored policy remains explicit and stable.
+
+`LATEST` credits the RELEASED submission with the greatest chronological `attemptNumber`, regardless of release timestamp. `HIGHEST` credits the RELEASED submission with the greatest `releasedFinalScore`, with the later `attemptNumber` winning an equal-score tie. Unreleased submissions never participate.
 
 | Field | Rule |
 | --- | --- |
@@ -170,4 +174,4 @@ Phase 5 implemented none of those behaviors; Phase 6 implements them while leavi
 
 The isolated suite covers activity authorization, projection, lifecycle policy, publication failures, immutable published fields, monotonic versions, and hidden-test-safe logging. The guarded serial PostgreSQL suite covers persistence, filtering, ownership/membership boundaries, publication validation, role-specific test projections, concurrent stale-write rejection, transactional replacement rollback, lifecycle restoration, and SQL constraints.
 
-`npm run test:integration` accepts only exactly `projex_test`, applies committed migrations with `prisma migrate deploy`, runs serially, and removes fixture application rows while preserving migration history. It never falls back to the normal development database and never uses `prisma db push` or `prisma migrate reset`.
+`npm run test:integration` accepts only exactly `projex_test`, applies committed migrations with `prisma migrate deploy`, runs serially, and removes fixture application rows while preserving migration history. It covers the persisted policy default/selection, draft mutability, publication immutability, exact-deadline boundary, and credited-attempt selection. It never falls back to the normal development database and never uses `prisma db push` or `prisma migrate reset`.

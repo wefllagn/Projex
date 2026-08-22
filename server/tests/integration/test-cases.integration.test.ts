@@ -46,6 +46,7 @@ function activityInput(totalPoints = 100) {
     entryClassName: 'Main',
     starterCode: 'public class Main { public static void main(String[] args) {} }',
     maxAttempts: 1,
+    creditPolicy: 'LATEST' as const,
     totalPoints,
   }
 }
@@ -257,6 +258,7 @@ describe('PostgreSQL test-case authoring', () => {
     const valid = await prisma.programmingActivity.create({
       data: { ...base, maxAttempts: 1, totalPoints: 100 },
     })
+    expect(valid.creditPolicy).toBe('LATEST')
     await expect(
       prisma.testCase.create({
         data: {

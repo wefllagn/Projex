@@ -198,6 +198,7 @@ GET   /activities/:activityId/test-cases
 PUT   /activities/:activityId/test-cases
 POST  /activities/:activityId/submissions
 GET   /activities/:activityId/submissions
+GET   /activities/:activityId/attempt-state
 POST  /activities/:activityId/visible-test-runs
 GET   /visible-test-runs/:runId
 GET   /submissions/:submissionId
@@ -298,7 +299,9 @@ Phase 9B adds ACTIVE-admin-only read-only oversight. Academic lists expose lifec
 
 Phase 9C adds two narrow ACTIVE-admin operations. Credential revocation is monotonic and returns safe metadata only; Smart HTTP denies a revoked credential on its next request. Provisioning retry requires a current version and an eligible exhausted FAILED job, preserves diagnostics, grants one additional claim, and writes its audit event atomically. The API never executes Git or touches storage; only the separate Git worker performs the later claim. Quarantine recovery, generic/Java retry, repository repair, and admin Git/source authority remain unavailable.
 
-Official submissions require Java execution to be enabled, Java source, and an `Idempotency-Key`. Ordinary attempts are limited by the activity's one-to-three usable-attempt setting. Infrastructure retries reuse the original record; an owning instructor may formally grant one future-expiring replacement, which may cross a deadline/CLOSED state but cannot bypass archive, inactive account, removed membership, expiration, or single-use rules.
+Official submissions require Java execution to be enabled, Java source, and an `Idempotency-Key`. Ordinary attempts are limited by the activity's one-to-three usable-attempt setting, and the exact due timestamp is already closed. Infrastructure retries reuse the original record; an owning instructor may formally grant one future-expiring replacement, which may cross a deadline/CLOSED state but cannot bypass archive, inactive account, removed membership, expiration, or single-use rules.
+
+Each activity stores an immutable-after-publication credited-result policy. `LATEST` selects the RELEASED record with greatest chronological attempt number; `HIGHEST` selects the greatest released score and breaks ties in favor of the later attempt. The student-only attempt-state endpoint reports authoritative allowance, replacement, next-submission, released-attempt, and credited-result summaries without source, hidden-test evidence, unreleased scores, correction reasons, feedback drafts, or worker data.
 
 Run Visible Tests uses only visible server-owned cases, accepts no custom stdin, and creates no official attempt or score. Students see visible outcomes immediately but see numeric scores, instructor points, released final score, and feedback only after release. Hidden-test definitions, IDs, names, outcomes, points, and counts are never returned to students. Administrators have safe read-only submission visibility and cannot grade or resolve failures.
 

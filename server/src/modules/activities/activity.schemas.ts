@@ -21,6 +21,7 @@ const pointsSchema = z
     (value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-8,
     'Points may have at most two decimal places.',
   )
+const creditPolicySchema = z.enum(['LATEST', 'HIGHEST'])
 
 export const classActivityParamsSchema = z.object({ classId: z.uuid() }).strict()
 export const activityIdParamsSchema = z.object({ activityId: z.uuid() }).strict()
@@ -34,6 +35,7 @@ export const createActivitySchema = z
     entryClassName: entryClassNameSchema.default('Main'),
     starterCode: starterCodeSchema,
     maxAttempts: z.number().int().min(1).max(3),
+    creditPolicy: creditPolicySchema.default('LATEST'),
     totalPoints: pointsSchema,
   })
   .strict()
@@ -48,6 +50,7 @@ export const updateActivitySchema = z
     entryClassName: entryClassNameSchema.optional(),
     starterCode: starterCodeSchema.optional(),
     maxAttempts: z.number().int().min(1).max(3).optional(),
+    creditPolicy: creditPolicySchema.optional(),
     totalPoints: pointsSchema.optional(),
   })
   .strict()

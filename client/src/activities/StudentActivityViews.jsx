@@ -5,6 +5,8 @@ import { useClasses } from '../classes/class-context.js'
 import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
 import { activityApi } from './activity-api.js'
+import { submissionApi } from '../submissions/submission-api.js'
+import { projectStudentAttemptState } from '../submissions/submission-projections.js'
 import {
   activityClassMatches,
   formatActivityDate,
@@ -128,31 +130,35 @@ export function StudentActivityList({ api = activityApi }) {
   )
 }
 
-export function StudentActivityDetail({ api = activityApi }) {
+export function StudentActivityDetail({ api = activityApi, submissions = submissionApi }) {
   const { activityId } = useParams()
   const { selectedClass, selectionStatus } = useClasses()
-  const [state, setState] = useState({ key: null, status: 'idle', activity: null, testCases: [], error: null })
+  const [state, setState] = useState({ key: null, status: 'idle', activity: null, testCases: [], attemptState: null, error: null })
 
   const load = useCallback(async ({ signal } = {}) => {
     if (!selectedClass || !activityId) return
     const key = `${selectedClass.id}:${activityId}`
     try {
-      const [activityResponse, testCaseResponse] = await Promise.all([
+      const [activityResponse, testCaseResponse, attemptStateResponse] = await Promise.all([
         api.getActivity(activityId, { signal }),
         api.listTestCases(activityId, { page: 1, pageSize: 50 }, { signal }),
+        submissions.getAttemptState(activityId, { signal }),
       ])
       if (!activityClassMatches(activityResponse.data, selectedClass)) throw contextMismatchError()
+      const attemptState = projectStudentAttemptState(attemptStateResponse.data)
+      if (attemptState.activityId !== activityId) throw contextMismatchError()
       setState({
         key,
         status: 'ready',
         activity: activityResponse.data,
         testCases: testCaseResponse.data.filter((testCase) => testCase.isHidden !== true),
+        attemptState,
         error: null,
       })
     } catch (error) {
-      if (error?.name !== 'AbortError') setState({ key, status: 'error', activity: null, testCases: [], error })
+      if (error?.name !== 'AbortError') setState({ key, status: 'error', activity: null, testCases: [], attemptState: null, error })
     }
-  }, [activityId, api, selectedClass])
+  }, [activityId, api, selectedClass, submissions])
 
   useEffect(() => {
     if (selectionStatus !== 'ready') return undefined
@@ -162,13 +168,14 @@ export function StudentActivityDetail({ api = activityApi }) {
   }, [load, selectionStatus])
 
   const key = `${selectedClass?.id}:${activityId}`
-  const current = state.key === key ? state : { ...state, status: 'loading', activity: null, testCases: [] }
+  const current = state.key === key ? state : { ...state, status: 'loading', activity: null, testCases: [], attemptState: null }
 
   if (current.status === 'loading') return <RequestState kind="loading" message="Loading the selected activity." />
   if (current.status === 'error') return <RequestState kind={current.error?.status === 404 ? 'notFound' : current.error?.status === 403 ? 'forbidden' : 'unavailable'} error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />
   if (!current.activity) return null
 
   const activity = current.activity
+  const attemptState = current.attemptState
   return (
     <div className="student-detail-layout student-project-detail-layout">
       <main className="student-activity-detail-card">
@@ -209,8 +216,19 @@ export function StudentActivityDetail({ api = activityApi }) {
             <div><dt>Language</dt><dd>Java</dd></div>
             <div><dt>Entry class</dt><dd>{activity.entryClassName}</dd></div>
             <div><dt>Maximum attempts</dt><dd>{activity.maxAttempts}</dd></div>
+            <div><dt>Attempts</dt><dd>{attemptState.countingAttemptsUsed} of {attemptState.maxAttempts} used</dd></div>
+            <div><dt>Ordinary attempts remaining</dt><dd>{attemptState.remainingOrdinaryAttempts}</dd></div>
+            <div><dt>Credited result policy</dt><dd>{attemptState.creditPolicy === 'HIGHEST' ? 'Highest attempt' : 'Latest attempt'}</dd></div>
             <div><dt>Total points</dt><dd>{activity.totalPoints}</dd></div>
           </dl>
+          <div className="submission-released-result">
+            <strong>Credited result</strong>
+            {attemptState.creditedResult
+              ? <><p>{attemptState.creditedResult.attemptLabel}</p><h3>{attemptState.creditedResult.score} / {attemptState.creditedResult.totalPoints}</h3></>
+              : <p>No result has been released yet.</p>}
+          </div>
+          {attemptState.replacementAvailable && <p className="submission-notice">A replacement attempt is available until {formatActivityDate(attemptState.replacement?.expiresAt)}.</p>}
+          <small>{attemptState.nextAllowedSubmissionKind === 'REPLACEMENT' ? 'A replacement attempt is the next allowed submission.' : attemptState.nextAllowedSubmissionKind === 'ORDINARY' ? 'Another ordinary submission is currently allowed.' : 'Another submission is not currently available.'}</small>
           <NavLink to={classHref(`/student/activity/${activity.id}/workspace`, selectedClass.id)} className="student-primary-action">
             Open workspace
           </NavLink>

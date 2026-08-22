@@ -37,6 +37,7 @@ export function validateActivityForm(form) {
   if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(form.entryClassName.trim())) errors.entryClassName = 'Enter a valid Java class name.'
   if (!starterCode.trim() || starterCode.length > 100_000) errors.starterCode = 'Enter starter source of no more than 100,000 characters.'
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 3) errors.maxAttempts = 'Choose between one and three attempts.'
+  if (!['LATEST', 'HIGHEST'].includes(form.creditPolicy)) errors.creditPolicy = 'Choose how the credited result is selected.'
   if (!Number.isFinite(totalPoints) || totalPoints <= 0 || totalPoints > 1_000 || Math.round(totalPoints * 100) !== totalPoints * 100) errors.totalPoints = 'Enter 0.01 to 1,000 points with at most two decimals.'
   if (!form.dueDate || Number.isNaN(dueDate.getTime())) errors.dueDate = 'Choose a valid deadline.'
 
@@ -53,6 +54,7 @@ export function activityPayload(form, status = 'DRAFT') {
   if (status === 'PUBLISHED') return common
   return {
     ...common,
+    creditPolicy: form.creditPolicy,
     language: 'JAVA',
     entryClassName: form.entryClassName.trim(),
     starterCode: form.starterCode,
