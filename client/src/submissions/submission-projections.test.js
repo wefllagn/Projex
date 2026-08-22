@@ -18,6 +18,7 @@ describe('student-safe submission projections', () => {
         name: 'Visible sample',
         order: 1,
         outcome: 'passed',
+        expectedOutput: 'ok',
         actualOutput: 'ok',
         hiddenInput: 'HIDDEN-INPUT',
         points: 50,
@@ -30,6 +31,21 @@ describe('student-safe submission projections', () => {
     expect(projected).not.toHaveProperty('sourceCode')
     expect(projected.visibleTestOutcomes[0]).not.toHaveProperty('hiddenInput')
     expect(projected.visibleTestOutcomes[0]).not.toHaveProperty('points')
+    expect(projected.visibleTestOutcomes[0].expectedOutput).toBe('ok')
+  })
+
+  it('drops outcomes explicitly identified as hidden before projecting diagnostics', () => {
+    const projected = projectPracticeRun({
+      visibleTestOutcomes: [
+        { name: 'Visible sample', expectedOutput: 'VISIBLE', actualOutput: 'ACTUAL' },
+        { name: 'Hidden sample', isHidden: true, expectedOutput: 'HIDDEN-EXPECTED', actualOutput: 'HIDDEN-ACTUAL' },
+      ],
+    })
+
+    expect(projected.visibleTestOutcomes).toHaveLength(1)
+    expect(projected.visibleTestOutcomes[0]).toMatchObject({ expectedOutput: 'VISIBLE' })
+    expect(JSON.stringify(projected)).not.toContain('HIDDEN-EXPECTED')
+    expect(JSON.stringify(projected)).not.toContain('HIDDEN-ACTUAL')
   })
 
   it('withholds every score and feedback field until the backend reports released', () => {

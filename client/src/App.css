@@ -13845,6 +13845,23 @@ textarea:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.submission-output-comparison {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f5f8fc;
+}
+
+.submission-output-comparison > small {
+  color: #53657a;
+}
+
+.submission-output-comparison > div {
+  display: grid;
+  gap: 4px;
+}
+
 .submission-status {
   display: inline-flex;
   align-items: center;

@@ -38,7 +38,7 @@ describe('controlled local Java runner', () => {
       sourceCode:
         'public class Main { public static void main(String[] args) { java.util.Scanner s = new java.util.Scanner(System.in); System.out.println(s.nextInt() * 2); } }',
       cases: [
-        { id: 'visible', input: '2\n', expectedOutput: '4\n', maximumPoints: 30 },
+        { id: 'visible', input: '2\n', expectedOutput: '4', maximumPoints: 30 },
         { id: 'hidden', input: '-2\n', expectedOutput: '-4\n', maximumPoints: 40 },
       ],
     })

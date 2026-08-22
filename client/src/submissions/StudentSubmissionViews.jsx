@@ -18,6 +18,7 @@ import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
 import { useCapabilities } from '../capabilities/capability-context.js'
 import { submissionApi } from './submission-api.js'
+import { formatOutputWhitespace } from './output-diagnostics.js'
 import {
   isPracticePending,
   isSubmissionPending,
@@ -79,19 +80,28 @@ function VisibleOutcomeList({ outcomes, emptyMessage = 'No visible-test outcomes
   if (!outcomes.length) return <p className="submission-muted-copy">{emptyMessage}</p>
   return (
     <div className="submission-outcome-list">
-      {outcomes.map((outcome) => (
-        <article className="submission-outcome" key={`${outcome.order}:${outcome.name}`}>
-          <div>
-            <strong>{outcome.name}</strong>
-            <span className={`submission-status submission-status--${outcome.outcome}`}>
-              {formatStatus(outcome.outcome)}
-            </span>
-          </div>
-          {outcome.actualOutput !== null && <><span>Actual output</span><pre>{outcome.actualOutput || '(no output)'}</pre></>}
-          {outcome.errorMessage && <p>{outcome.errorMessage}</p>}
-          {outcome.executionTimeMs !== null && <small>{outcome.executionTimeMs} ms</small>}
-        </article>
-      ))}
+      {outcomes.map((outcome) => {
+        const showComparison = outcome.outcome === 'failed' && outcome.expectedOutput !== null && outcome.actualOutput !== null
+        return (
+          <article className="submission-outcome" key={`${outcome.order}:${outcome.name}`}>
+            <div>
+              <strong>{outcome.name}</strong>
+              <span className={`submission-status submission-status--${outcome.outcome}`}>
+                {formatStatus(outcome.outcome)}
+              </span>
+            </div>
+            {showComparison ? (
+              <section className="submission-output-comparison" aria-label={`${outcome.name} output comparison`}>
+                <small>Whitespace markers: · space, → tab, ↵ line ending.</small>
+                <div><span>Expected output</span><pre>{formatOutputWhitespace(outcome.expectedOutput)}</pre></div>
+                <div><span>Actual output</span><pre>{formatOutputWhitespace(outcome.actualOutput)}</pre></div>
+              </section>
+            ) : outcome.actualOutput !== null ? <><span>Actual output</span><pre>{outcome.actualOutput || '(no output)'}</pre></> : null}
+            {outcome.errorMessage && <p>{outcome.errorMessage}</p>}
+            {outcome.executionTimeMs !== null && <small>{outcome.executionTimeMs} ms</small>}
+          </article>
+        )
+      })}
     </div>
   )
 }

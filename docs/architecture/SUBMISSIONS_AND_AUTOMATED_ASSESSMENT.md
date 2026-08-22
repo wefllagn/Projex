@@ -106,6 +106,8 @@ Every score correction is append-only and preserves correction order, original a
 
 Before release, students receive visible-test outcomes but no numeric scores, corrections, instructor points, final score, or feedback. After release they may receive the released final score, total points, and released feedback. Students never receive hidden-test inputs, expected outputs, identifiers, names, individual outcomes, points, or counts.
 
+Java output comparison first normalizes CRLF and CR line endings to LF. Exact normalized output passes. For non-empty output, the server also accepts a single terminal LF on exactly one side, covering the ordinary `println` newline without trimming any other whitespace. Empty output remains different from a blank line; leading and trailing spaces, per-line trailing spaces, internal spacing and blank lines, and multiple terminal newlines remain significant. Failed visible-test outcomes may include their already student-visible expected-output snapshot and use explicit space, tab, and line-ending markers in the client. Hidden-test expected output and breakdown remain omitted.
+
 ## Run Visible Tests
 
 `POST /api/v1/activities/:activityId/visible-test-runs` accepts Java source only. It rejects arbitrary stdin and requires the normal student/account/membership/class/activity/deadline checks.

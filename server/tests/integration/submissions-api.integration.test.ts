@@ -246,6 +246,11 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
       .get(`/api/v1/submissions/${submissionId}`)
       .expect(200)
     expect(studentBeforeRelease.body.data.visibleTestOutcomes).toHaveLength(1)
+    expect(studentBeforeRelease.body.data.visibleTestOutcomes[0]).toMatchObject({
+      name: 'Visible double',
+      expectedOutput: '4\n',
+      actualOutput: '4\n',
+    })
     expect(studentBeforeRelease.body.data).not.toHaveProperty('finalScore')
     expect(JSON.stringify(studentBeforeRelease.body)).not.toContain('Hidden negative')
 
@@ -369,6 +374,11 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
       .get(`/api/v1/visible-test-runs/${practiceId}`)
       .expect(200)
     expect(practiceResult.body.data.visibleTestOutcomes).toHaveLength(1)
+    expect(practiceResult.body.data.visibleTestOutcomes[0]).toMatchObject({
+      name: 'Visible double',
+      expectedOutput: '4\n',
+      actualOutput: '4\n',
+    })
     expect(JSON.stringify(practiceResult.body)).not.toContain('Hidden negative')
   })
 })

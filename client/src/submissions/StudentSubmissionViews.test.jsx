@@ -173,6 +173,49 @@ describe('student programming workspace', () => {
     expect(submissions.getVisibleTestRun).toHaveBeenCalledTimes(2)
   })
 
+  it('explains whitespace differences for failed visible tests without rendering hidden evidence', async () => {
+    const submissions = submissionTransport({
+      createVisibleTestRun: vi.fn().mockResolvedValue({ data: {
+        id: runId,
+        activityId,
+        status: 'queued',
+        visibleTestOutcomes: [],
+      } }),
+      getVisibleTestRun: vi.fn().mockResolvedValue({ data: {
+        id: runId,
+        activityId,
+        status: 'succeeded',
+        compileStatus: 'succeeded',
+        runtimeStatus: 'failed',
+        visibleTestOutcomes: [{
+          name: 'Visible sample',
+          order: 1,
+          outcome: 'failed',
+          expectedOutput: '5',
+          actualOutput: '5\n\n',
+          executionTimeMs: 8,
+        }],
+        hiddenTestResults: [{
+          name: 'HIDDEN-NAME',
+          expectedOutput: 'HIDDEN-EXPECTED',
+          actualOutput: 'HIDDEN-ACTUAL',
+        }],
+      } }),
+    })
+    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 1, maximumDelayMs: 1, maximumDurationMs: 1000 }} />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Run Visible Tests' }))
+    const comparison = await screen.findByLabelText('Visible sample output comparison')
+    expect(Array.from(comparison.querySelectorAll('pre'), (element) => element.textContent)).toEqual([
+      '5',
+      '5↵\n↵\n',
+    ])
+    expect(screen.getByText('Whitespace markers: · space, → tab, ↵ line ending.')).toBeInTheDocument()
+    expect(screen.queryByText('HIDDEN-NAME')).not.toBeInTheDocument()
+    expect(screen.queryByText('HIDDEN-EXPECTED')).not.toBeInTheDocument()
+    expect(screen.queryByText('HIDDEN-ACTUAL')).not.toBeInTheDocument()
+  })
+
   it('uses one in-memory idempotency key and blocks duplicate official mutations', async () => {
     let accept
     const submissions = submissionTransport({

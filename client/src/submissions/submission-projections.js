@@ -14,10 +14,17 @@ function visibleOutcome(value = {}) {
     name: nullableString(value.name) ?? 'Visible test',
     order: nullableNumber(value.order) ?? 0,
     outcome: nullableString(value.outcome) ?? 'pending',
+    expectedOutput: nullableString(value.expectedOutput),
     actualOutput: nullableString(value.actualOutput),
     errorMessage: nullableString(value.errorMessage),
     executionTimeMs: nullableNumber(value.executionTimeMs),
   }
+}
+
+function visibleOutcomes(value) {
+  return Array.isArray(value)
+    ? value.filter((outcome) => outcome?.isHidden !== true).map(visibleOutcome)
+    : []
 }
 
 export function projectPracticeRun(value = {}) {
@@ -32,9 +39,7 @@ export function projectPracticeRun(value = {}) {
     createdAt: nullableString(value.createdAt),
     completedAt: nullableString(value.completedAt),
     expiresAt: nullableString(value.expiresAt),
-    visibleTestOutcomes: Array.isArray(value.visibleTestOutcomes)
-      ? value.visibleTestOutcomes.map(visibleOutcome)
-      : [],
+    visibleTestOutcomes: visibleOutcomes(value.visibleTestOutcomes),
   }
 }
 
@@ -53,9 +58,7 @@ export function projectStudentSubmission(value = {}) {
     isLate: value.isLate === true,
     updatedAt: nullableString(value.updatedAt),
     sourceCode: nullableString(value.sourceCode) ?? '',
-    visibleTestOutcomes: Array.isArray(value.visibleTestOutcomes)
-      ? value.visibleTestOutcomes.map(visibleOutcome)
-      : [],
+    visibleTestOutcomes: visibleOutcomes(value.visibleTestOutcomes),
     gradeStatus: released ? 'released' : 'pending',
     failureResolution: failure && typeof failure === 'object'
       ? {

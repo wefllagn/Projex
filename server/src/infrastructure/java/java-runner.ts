@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { areJavaOutputsEquivalent, normalizeJavaOutput } from './java-output-comparison.js'
 
 export interface JavaCaseInput {
   id: string
@@ -50,10 +51,6 @@ interface ProcessResult {
   timedOut: boolean
   outputLimited: boolean
   durationMs: number
-}
-
-function normalizedOutput(value: string): string {
-  return value.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 }
 
 function boundedText(value: string, limit: number): string {
@@ -259,8 +256,7 @@ export function createJavaRunner(config: JavaRunnerConfig) {
             timeoutMs: config.testTimeoutMs,
             outputLimitBytes: config.outputLimitBytes,
           })
-          const actualOutput = normalizedOutput(execution.stdout)
-          const expectedOutput = normalizedOutput(testCase.expectedOutput)
+          const actualOutput = normalizeJavaOutput(execution.stdout)
           let status: JavaCaseResult['status']
           let errorMessage: string | null = null
           if (execution.timedOut) {
@@ -275,7 +271,7 @@ export function createJavaRunner(config: JavaRunnerConfig) {
               execution.stderr || 'Execution failed.',
               config.outputLimitBytes,
             )
-          } else if (actualOutput === expectedOutput) {
+          } else if (areJavaOutputsEquivalent(testCase.expectedOutput, actualOutput)) {
             status = 'PASSED'
           } else {
             status = 'FAILED'
