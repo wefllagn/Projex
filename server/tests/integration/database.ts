@@ -33,6 +33,7 @@ export async function cleanIntegrationDatabase(
     await transaction.team.deleteMany()
   })
   await prisma.projectTask.deleteMany()
+  await prisma.classInvitation.deleteMany()
   await prisma.classMember.deleteMany()
   await prisma.class.deleteMany()
   await prisma.accountSetupToken.deleteMany()

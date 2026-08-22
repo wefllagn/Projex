@@ -45,6 +45,12 @@ POST   /api/v1/classes/:classId/join-code/revoke
 POST   /api/v1/classes/join
 GET    /api/v1/classes/:classId/members
 PATCH  /api/v1/classes/:classId/members/:memberId
+POST   /api/v1/class-invitations/lookup
+POST   /api/v1/classes/:classId/invitations
+GET    /api/v1/classes/:classId/invitations
+GET    /api/v1/class-invitations
+POST   /api/v1/class-invitations/:invitationId/accept
+POST   /api/v1/class-invitations/:invitationId/decline
 POST   /api/v1/classes/:classId/activities
 GET    /api/v1/classes/:classId/activities
 GET    /api/v1/activities/:activityId
@@ -119,6 +125,16 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - Instructor/admin roster entries may additionally contain `memberId`, email, user status, membership status, `joinedAt`, `updatedAt`, `removedAt`, and `lastActivatedAt`. The `updatedAt` value is the authoritative membership version used by version-aware administrative transitions.
 - A successful new class-code join returns `201`; an idempotent existing ACTIVE membership returns `200` with the same membership ID.
 - Class-code errors never echo the submitted code or reveal the target class.
+
+### Registered-email class invitation contracts
+
+- `POST /class-invitations/lookup` is a narrow ACTIVE-instructor operation. It accepts one normalized university email and an optional owned class ID, and returns only `ELIGIBLE`, `NOT_FOUND`, `ALREADY_MEMBER`, or `ALREADY_PENDING` plus the minimum safe student confirmation when one exists.
+- `POST /classes/:classId/invitations` and its pending list require the owning ACTIVE instructor and an ACTIVE class. Students and administrators do not inherit this authority.
+- `GET /class-invitations` is student-scoped, newest-first, and paginated with `pageSize <= 100`. It returns only the authenticated student's pending invitations for ACTIVE classes and omits class codes and student email.
+- Accept and decline are invitee-only, authenticated, CSRF-protected mutations. Acceptance and membership creation/reactivation are atomic; decline creates no membership.
+- An existing ACTIVE member and a duplicate pending invitation are rejected with stable machine-readable errors. A declined invitation does not block a later invitation.
+- `POST /classes` may include up to 50 distinct normalized `invitationEmails` for instructor-created classes. All targets must be existing ACTIVE students; validation, class creation, and invitation creation are atomic.
+- Registered-email invitation endpoints neither send SMTP mail nor create external or pre-registration invitations.
 
 ### Phase 9A administrator contracts
 

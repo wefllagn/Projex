@@ -5,6 +5,7 @@ import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref, classInitial, firstName } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { StudentClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
 import { StudentActivityDetail, StudentActivityList } from '../activities/StudentActivityViews.jsx'
 import {
   LegacySubmissionRoute,
@@ -215,6 +216,8 @@ function HomeDashboardPage() {
             </article>
           ))}
         </section>
+
+        <StudentClassInvitationPanel preview />
 
         <section className="student-home-classes student-home-classes-panel">
           <div className="student-home-section-heading">
@@ -621,7 +624,11 @@ export function StudentRoutePage({ pagePath }) {
     classes: <StudentClassesPage />,
     todo: <StudentTodoPage />,
     'join-class': <StudentJoinClassPage />,
-    invitations: <DeferredStudentPage title="Class Invitations" message="Class invitation acceptance is not part of the current backend. Join an active class with an instructor-provided code instead." />,
+    invitations: (
+      <StudentGlobalPage title="Class Invitations" eyebrow="Class Membership">
+        <StudentClassInvitationPanel />
+      </StudentGlobalPage>
+    ),
     activity: <ActivitiesPage />,
     submissions: <DeferredStudentPage title="My Submissions" message="A global cross-class submission list still needs a bounded backend read contract. Open a real activity to view its official attempts." />,
     'activity/:activityId': <ActivityDetailPage />,

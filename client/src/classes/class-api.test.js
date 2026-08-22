@@ -51,4 +51,30 @@ describe('class API adapter', () => {
     expect(transport.post).toHaveBeenCalledWith('/classes/class-1/join-code/revoke', {}, undefined)
     expect(transport.patch).toHaveBeenCalledWith('/classes/class-1/members/member-1', { status: 'REMOVED' }, undefined)
   })
+
+  it('keeps registered university emails in invitation request bodies', async () => {
+    const transport = client()
+    const api = createClassApi(transport)
+    const universityEmail = 'student@slu.edu.ph'
+
+    await api.lookupInvitationStudent(universityEmail, 'class-1')
+    await api.createClassInvitation('class-1', universityEmail)
+    await api.listClassInvitations('class-1', { page: 1, pageSize: 100 })
+    await api.listMyClassInvitations({ page: 1, pageSize: 3 })
+    await api.acceptClassInvitation('invite-1')
+    await api.declineClassInvitation('invite-2')
+
+    expect(transport.post).toHaveBeenCalledWith('/class-invitations/lookup', {
+      universityEmail,
+      classId: 'class-1',
+    }, undefined)
+    expect(transport.post).toHaveBeenCalledWith('/classes/class-1/invitations', {
+      universityEmail,
+    }, undefined)
+    expect(transport.get).toHaveBeenCalledWith('/classes/class-1/invitations?page=1&pageSize=100', undefined)
+    expect(transport.get).toHaveBeenCalledWith('/class-invitations?page=1&pageSize=3', undefined)
+    expect(transport.post).toHaveBeenCalledWith('/class-invitations/invite-1/accept', {}, undefined)
+    expect(transport.post).toHaveBeenCalledWith('/class-invitations/invite-2/decline', {}, undefined)
+    expect(transport.post.mock.calls.map(([path]) => path).join(' ')).not.toContain(universityEmail)
+  })
 })

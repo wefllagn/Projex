@@ -29,6 +29,7 @@ export interface AppDependencies {
     admin?: Router
     users: Router
     classes: Router
+    classInvitations?: Router
     activities: Router
     submissions: Router
     projectTasks?: Router
@@ -84,6 +85,9 @@ export function createApp({
     }
     app.use('/api/v1/users', featureRouters.users)
     app.use('/api/v1/classes', featureRouters.classes)
+    if (featureRouters.classInvitations) {
+      app.use('/api/v1', featureRouters.classInvitations)
+    }
     app.use('/api/v1/activities', featureRouters.activities)
     app.use('/api/v1', featureRouters.submissions)
     if (featureRouters.projectTasks) {

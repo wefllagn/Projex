@@ -127,6 +127,52 @@ describe('instructor class workflows', () => {
     expect(onCreated).toHaveBeenCalledWith(classRecord)
   })
 
+  it('optionally validates registered students and creates the class with invitation emails atomically', async () => {
+    const invitedStudent = {
+      fullName: 'Synthetic Invitee',
+      universityEmail: 'invitee@slu.edu.ph',
+    }
+    const client = {
+      get: vi.fn().mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } }),
+      post: vi.fn((path) => {
+        if (path === '/class-invitations/lookup') {
+          return Promise.resolve({ data: { eligibility: 'ELIGIBLE', student: invitedStudent } })
+        }
+        if (path === '/classes') return Promise.resolve({ data: { ...classRecord, invitationsCreated: 1 } })
+        throw new Error(`Unexpected path ${path}`)
+      }),
+      patch: vi.fn(),
+    }
+    const user = userEvent.setup()
+    renderWorkflow({
+      client,
+      entry: '/instructor',
+      page: <CreateClassModal onClose={vi.fn()} onCreated={vi.fn()} />,
+      role: 'INSTRUCTOR',
+    })
+
+    expect(screen.getByText(/the class and all invitations will not be created/i)).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Course name'), 'Programming Fundamentals')
+    await user.type(screen.getByLabelText('Section'), 'BSIT 1A')
+    await user.type(screen.getByLabelText('Semester'), 'First Semester')
+    await user.type(screen.getByLabelText('School year'), '2026-2027')
+    await user.type(screen.getByLabelText('University email'), 'INVITEE@SLU.EDU.PH')
+    await user.click(screen.getByRole('button', { name: '+ Add Student' }))
+    expect(await screen.findByText('Synthetic Invitee added.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Create Class' }))
+
+    expect(client.post).toHaveBeenCalledWith('/class-invitations/lookup', {
+      universityEmail: 'invitee@slu.edu.ph',
+    }, undefined)
+    expect(client.post).toHaveBeenCalledWith('/classes', {
+      className: 'Programming Fundamentals',
+      section: 'BSIT 1A',
+      semester: 'First Semester',
+      schoolYear: '2026-2027',
+      invitationEmails: ['invitee@slu.edu.ph'],
+    }, undefined)
+  })
+
   it('loads and rotates a server-owned join code', async () => {
     const client = {
       get: vi.fn((path) => {
@@ -179,9 +225,16 @@ describe('instructor class workflows', () => {
       lastActivatedAt: '2026-08-01T00:00:00.000Z',
     }
     const client = {
-      get: vi.fn((path) => path.startsWith('/classes?')
-        ? Promise.resolve({ data: [classRecord], pagination })
-        : Promise.resolve({ data: [activeMember], pagination: { ...pagination, pageSize: 50 } })),
+      get: vi.fn((path) => {
+        if (path.startsWith('/classes?')) return Promise.resolve({ data: [classRecord], pagination })
+        if (path.includes('/members')) {
+          return Promise.resolve({ data: [activeMember], pagination: { ...pagination, pageSize: 50 } })
+        }
+        if (path.includes('/invitations')) {
+          return Promise.resolve({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } })
+        }
+        throw new Error(`Unexpected path ${path}`)
+      }),
       post: vi.fn(),
       patch: vi.fn().mockResolvedValue({ data: { ...activeMember, membershipStatus: 'REMOVED', removedAt: '2026-08-02T00:00:00.000Z' } }),
     }

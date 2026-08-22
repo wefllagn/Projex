@@ -5,6 +5,7 @@ import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref, classInitial, firstName } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { InstructorClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
 import { InstructorActivityEditor, InstructorActivityList } from '../activities/InstructorActivityViews.jsx'
 import {
   InstructorActivityMonitorRedirect,
@@ -422,6 +423,7 @@ function InstructorPeoplePage() {
         </section>
 
         {selectedClass?.status === 'ARCHIVED' && <p className="instructor-people-action-status">Archived classes are read-only.</p>}
+        <InstructorClassInvitationPanel />
         {actionError && <p className="class-form-error" role="alert">{describeApiError(actionError)}</p>}
         {selectionStatus === 'ready' && roster.status === 'loading' && <RequestState kind="loading" compact message="Loading the detailed roster." />}
         {roster.status === 'error' && <RequestState kind="unavailable" compact error={roster.error} />}
@@ -622,6 +624,14 @@ function InstructorClassCodePage() {
   )
 }
 
+function InstructorInviteStudentsPage() {
+  return (
+    <InstructorClassPage activeTab="people">
+      <InstructorClassInvitationPanel />
+    </InstructorClassPage>
+  )
+}
+
 function DeferredInstructorPage({ title, message }) {
   return (
     <div className="student-global-page">
@@ -667,7 +677,7 @@ export function InstructorRoutePage({ pagePath }) {
     roster: <InstructorPeoplePage />,
     'class-info': <InstructorClassInfoPage />,
     'class-code': <InstructorClassCodePage />,
-    'invite-students': <DeferredInstructorPage title="Invite Students" message="Invite-by-email is not part of the current backend. Share the active server-owned join code through an appropriate external channel." />,
+    'invite-students': <InstructorInviteStudentsPage />,
     analytics: <DeferredInstructorPage title="Analytics" message="Canonical instructor analytics remain recognized but are not available in the core iteration." />,
     'students/stu-alyssa': <DeferredInstructorPage title="Student Profile" message="A consolidated cross-class student profile is not available in the current backend." />,
   }

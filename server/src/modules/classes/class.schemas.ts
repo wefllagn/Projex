@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { isValidClassCode, normalizeClassCode } from './class-code.js'
 import { adminReasonSchema } from '../admin/admin.schemas.js'
+import { normalizedEmailSchema } from '../auth/auth.schemas.js'
 
 const classNameSchema = z.string().trim().min(1).max(200)
 const sectionSchema = z.string().trim().min(1).max(100)
@@ -16,8 +17,18 @@ export const createClassSchema = z
     semester: semesterSchema,
     schoolYear: schoolYearSchema,
     instructorId: z.uuid().optional(),
+    invitationEmails: z.array(normalizedEmailSchema).max(50).optional(),
   })
   .strict()
+  .refine(
+    (value) =>
+      !value.invitationEmails ||
+      new Set(value.invitationEmails).size === value.invitationEmails.length,
+    {
+      path: ['invitationEmails'],
+      message: 'Invitation emails must be unique.',
+    },
+  )
 
 export const updateClassSchema = z
   .object({

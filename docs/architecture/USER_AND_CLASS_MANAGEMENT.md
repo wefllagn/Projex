@@ -2,13 +2,13 @@
 
 ## Scope
 
-Phase 4 implements backend-only user directory, class lifecycle, class join-code, roster, and membership APIs. The React frontend remains unchanged and continues to use its existing mocks until the approved frontend integration phase.
+Phase 4 established the backend user directory, class lifecycle, class join-code, roster, and membership APIs. Phase 10 integrated those contracts into the React frontend, and Phase 11 stabilization adds registered-email class invitations without replacing class-code joining.
 
-Out of scope are public registration, password reset, MFA, Google Sign-In, ownership transfer, CSV enrollment, invitation email, student self-leave, activities, submissions, Java execution, Git, repository collaboration, Admin UI integration, and persistent audit-event storage.
+Out of scope for the class-invitation addition are public registration, pre-registration or external-email invitations, password reset, MFA, Google Sign-In, ownership transfer, CSV enrollment, SMTP delivery, student self-leave, and a generic notification subsystem.
 
 ## Frontend integration status
 
-The original Phase 4 delivery was backend-only. Phase 10A.2 connects the protected student and instructor class catalogs, explicit URL-based class selection, class metadata/lifecycle actions, student class-code join, role-specific rosters, membership transitions, and server-owned join-code controls. Phase 10D.2 connects administrator class governance and the bounded Phase 9 academic oversight projections. Unsupported invitation, stream/comment, schedule/room, instructor-reassignment, and class-rule concepts remain documented in `FRONTEND_INTEGRATION.md` and are not simulated as successful local behavior.
+The original Phase 4 delivery was backend-only. Phase 10A.2 connects the protected student and instructor class catalogs, explicit URL-based class selection, class metadata/lifecycle actions, student class-code join, role-specific rosters, membership transitions, and server-owned join-code controls. Phase 10D.2 connects administrator class governance and the bounded Phase 9 academic oversight projections. Phase 11 stabilization connects registered-email invitation creation during instructor class creation and from the selected-class People area, plus the student Home preview and dedicated invitation view. Stream/comment, schedule/room, instructor-reassignment, and class-rule concepts remain deferred and are not simulated as successful local behavior.
 
 ## User directory
 
@@ -51,7 +51,7 @@ The minimal design keeps one unique `Class.classCode` plus `classCodeActive` and
 
 ## Membership lifecycle
 
-Phase 4 creates only ACTIVE memberships. `PENDING` remains reserved for a later invitation workflow.
+Class-code joins and accepted registered-email invitations create only ACTIVE memberships. The `PENDING` membership status remains unused; invitation pending state is stored separately so both enrollment paths converge on the same unique membership row.
 
 ```mermaid
 stateDiagram-v2
@@ -67,6 +67,29 @@ stateDiagram-v2
 - Archived classes reject removal/reactivation.
 - `joinedAt` preserves original enrollment, `removedAt` records removal, and `lastActivatedAt` records the latest activation.
 
+## Registered-email invitation lifecycle
+
+An owning ACTIVE instructor may invite an existing ACTIVE `STUDENT` by the account's exact normalized university email. This is an internal Projex workflow: it does not create accounts, send email, use Google authentication, or expose a general student directory.
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING: Owning instructor invites
+    PENDING --> ACCEPTED: Invitee joins class
+    PENDING --> ACCEPTED: Invitee joins by class code first
+    PENDING --> DECLINED: Invitee declines
+    DECLINED --> PENDING: Instructor creates a later invitation
+```
+
+- A partial unique index permits at most one `PENDING` invitation for a class/invitee pair while preserving accepted and declined history.
+- Only the invitee may list or respond to an invitation. Student projections contain class name, section, term, and instructor display name; they omit class code and email.
+- Acceptance creates a new ACTIVE membership or reactivates the existing REMOVED row, then resolves the invitation in one serializable transaction. The original `joinedAt` remains preserved on reactivation.
+- A removed student still cannot rejoin using a class code. A later invitation requires an explicit instructor action and the student's acceptance before reactivation.
+- Decline creates no membership and remains durable. A later invitation is allowed.
+- Joining by class code atomically resolves a matching pending invitation as accepted, so it cannot remain misleadingly actionable.
+- Concurrent accept requests are serialized and return the same authoritative ACTIVE membership without duplication.
+- Archived classes hide pending invitations from student lists and reject creation, acceptance, and decline.
+- Optional class-creation invitations are validated in full before the class and all invitation rows are created atomically. Any invalid target rejects the complete request; creating a class with no invitations remains unchanged.
+
 Student roster entries expose only `userId` and `fullName`. Owner/admin roster entries additionally expose `memberId`, email, user status, membership status, `joinedAt`, `updatedAt`, `removedAt`, and `lastActivatedAt`. Administrative membership changes send the latest detailed-roster `updatedAt` as `expectedUpdatedAt`; a stale value returns `409 STALE_CLASS_MEMBER_VERSION`, after which the frontend refetches and requires a deliberate retry.
 
 ## Authorization matrix
@@ -79,6 +102,8 @@ Student roster entries expose only `userId` and `fullName`. Owner/admin roster e
 | Update/archive/restore | Denied | Owner | Allowed |
 | View/rotate/revoke code | Denied | Owner | Allowed |
 | Join by code | Authenticated ACTIVE student | Denied | Denied |
+| Lookup/invite by registered email | Denied | Owner of ACTIVE class | Denied |
+| List/respond to received invitations | Own pending invitations | Denied | Denied |
 | View roster | ACTIVE member, minimal fields | Owner, detailed fields | Detailed fields |
 | Remove/reactivate member | Denied | Owner of active class | Active class |
 

@@ -8449,6 +8449,115 @@ textarea:focus-visible {
   padding: 0 14px;
 }
 
+.class-invitation-panel,
+.instructor-invitation-panel,
+.class-create-invitations {
+  display: grid;
+  gap: 14px;
+}
+
+.class-invitation-panel .student-home-section-heading > span,
+.instructor-invitation-panel .student-panel-heading > span {
+  color: #53647d;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.class-invitation-view-all {
+  justify-self: start;
+  color: #0b63ff;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.class-invitation-lookup,
+.class-invitation-create-row {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.class-invitation-lookup label,
+.class-invitation-create-row label {
+  display: grid;
+  gap: 7px;
+  color: #263b5c;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.class-invitation-lookup input,
+.class-invitation-create-row input {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #cfd9e7;
+  border-radius: 8px;
+  color: #10233f;
+  background: #ffffff;
+}
+
+.class-create-invitations {
+  padding: 14px;
+  border: 1px solid #e2e8f1;
+  border-radius: 10px;
+  background: #f8faff;
+}
+
+.class-create-invitations > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.class-create-invitations > div:first-child span,
+.class-create-invitation-list small {
+  color: #53647d;
+  font-size: 12px;
+}
+
+.class-create-invitation-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.class-create-invitation-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.class-create-invitation-list li span {
+  display: grid;
+  gap: 2px;
+}
+
+.class-create-invitation-list button {
+  border: 0;
+  color: #b12d3c;
+  background: transparent;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.instructor-invitation-panel {
+  padding: 20px;
+  border: 1px solid #e2e8f1;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.instructor-invitation-table .instructor-table-row {
+  grid-template-columns: 1.2fr 1.5fr 0.8fr 0.6fr;
+}
+
 .student-joined-state {
   display: grid;
   gap: 4px;
@@ -8483,6 +8592,12 @@ textarea:focus-visible {
   .student-repository-index-row,
   .student-invitation-card,
   .student-action-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .class-invitation-lookup,
+  .class-invitation-create-row,
+  .instructor-invitation-table .instructor-table-row {
     grid-template-columns: 1fr;
   }
 }

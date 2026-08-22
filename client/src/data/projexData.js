@@ -110,9 +110,9 @@ export const routeCatalog = [
         path: 'invitations',
         label: 'Class Invitations',
         group: 'Class Membership',
-        status: 'Deferred',
+        status: 'Backend connected',
         summary:
-          'Class invitations remain a recognized feature without an approved backend workflow.',
+          'Pending registered-email class invitations can be reviewed, accepted, or declined in Projex.',
       },
       {
         path: 'people',
@@ -301,8 +301,8 @@ export const routeCatalog = [
         path: 'invite-students',
         label: 'Invite Students',
         group: 'Class Management',
-        status: 'Deferred',
-        summary: 'Invite-by-email is not implemented; instructors may share an active server-owned join code externally.',
+        status: 'Backend connected',
+        summary: 'Invite an existing registered Student by university email; class-code joining remains available.',
       },
       {
         path: 'class-code',

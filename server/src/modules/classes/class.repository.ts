@@ -50,8 +50,9 @@ export type ClassCodeWriteResult =
   | { kind: 'not_found' }
 
 export type CreateClassResult =
-  | { kind: 'created'; classRecord: ClassRecord }
+  | { kind: 'created'; classRecord: ClassRecord; invitationsCreated?: number }
   | { kind: 'instructor_not_active' }
+  | { kind: 'invitation_target_not_active_student'; universityEmail: string }
   | { kind: 'collision' }
 
 export interface ClassRepository {
@@ -62,6 +63,7 @@ export interface ClassRepository {
     semester: string
     schoolYear: string
     classCode: string
+    invitationEmails?: string[]
     now: Date
     adminAudit?: ClassAdminAuditContext
   }): Promise<CreateClassResult>
@@ -113,6 +115,27 @@ export function createPrismaClassRepository(
           ) {
             return { kind: 'instructor_not_active' } as const
           }
+          const invitationEmails = input.invitationEmails ?? []
+          const invitees = invitationEmails.length > 0
+            ? await transaction.user.findMany({
+                where: { email: { in: invitationEmails } },
+                select: { id: true, email: true, role: true, status: true },
+              })
+            : []
+          const inviteesByEmail = new Map(invitees.map((user) => [user.email, user]))
+          for (const universityEmail of invitationEmails) {
+            const invitee = inviteesByEmail.get(universityEmail)
+            if (
+              !invitee ||
+              invitee.role !== 'STUDENT' ||
+              invitee.status !== 'ACTIVE'
+            ) {
+              return {
+                kind: 'invitation_target_not_active_student',
+                universityEmail,
+              } as const
+            }
+          }
           const classRecord = await transaction.class.create({
             data: {
               instructorId: input.instructorId,
@@ -126,6 +149,17 @@ export function createPrismaClassRepository(
             },
             select: classRecordSelect,
           })
+          if (invitees.length > 0) {
+            await transaction.classInvitation.createMany({
+              data: invitees.map((invitee) => ({
+                classId: classRecord.id,
+                inviteeId: invitee.id,
+                invitedById: input.instructorId,
+                status: 'PENDING' as const,
+                createdAt: input.now,
+              })),
+            })
+          }
           if (input.adminAudit) {
             await auditWriter(transaction, {
               ...input.adminAudit,
@@ -136,7 +170,11 @@ export function createPrismaClassRepository(
               createdAt: input.now,
             })
           }
-          return { kind: 'created', classRecord } as const
+          return {
+            kind: 'created',
+            classRecord,
+            invitationsCreated: invitees.length,
+          } as const
         })
       } catch (error) {
         if (isUniqueFailure(error)) return { kind: 'collision' }

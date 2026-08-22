@@ -32,6 +32,9 @@ import { createClassService } from './modules/classes/class.service.js'
 import { createClassesRouter } from './modules/classes/classes.routes.js'
 import { createPrismaClassMemberRepository } from './modules/class-members/class-member.repository.js'
 import { createClassMemberService } from './modules/class-members/class-member.service.js'
+import { createPrismaClassInvitationRepository } from './modules/class-invitations/class-invitation.repository.js'
+import { createClassInvitationService } from './modules/class-invitations/class-invitation.service.js'
+import { createClassInvitationRouter } from './modules/class-invitations/class-invitation.routes.js'
 import { createPrismaActivityRepository } from './modules/activities/activity.repository.js'
 import { createActivityService } from './modules/activities/activity.service.js'
 import { createActivitiesRouter } from './modules/activities/activities.routes.js'
@@ -144,6 +147,11 @@ async function bootstrap(): Promise<void> {
   })
   const classMemberService = createClassMemberService({
     repository: createPrismaClassMemberRepository(prisma),
+    classRepository,
+    logger,
+  })
+  const classInvitationService = createClassInvitationService({
+    repository: createPrismaClassInvitationRepository(prisma),
     classRepository,
     logger,
   })
@@ -277,6 +285,11 @@ async function bootstrap(): Promise<void> {
         classMemberService,
         activityService,
         projectTaskService,
+        requireAuthentication,
+        requireCsrf,
+      }),
+      classInvitations: createClassInvitationRouter({
+        service: classInvitationService,
         requireAuthentication,
         requireCsrf,
       }),

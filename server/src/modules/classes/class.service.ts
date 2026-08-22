@@ -198,6 +198,13 @@ export function createClassService(dependencies: {
           message: 'An active instructor is required.',
         })
       }
+      if (caller.role === 'ADMIN' && (input.invitationEmails?.length ?? 0) > 0) {
+        throw new AppError({
+          statusCode: 403,
+          code: 'CLASS_INVITATIONS_INSTRUCTOR_ONLY',
+          message: 'Only the owning instructor may invite students to a class.',
+        })
+      }
       const instructorId =
         caller.role === 'INSTRUCTOR' ? caller.id : input.instructorId!
 
@@ -209,6 +216,7 @@ export function createClassService(dependencies: {
           semester: input.semester,
           schoolYear: input.schoolYear,
           classCode: normalizeClassCode(generateCode()),
+          invitationEmails: input.invitationEmails,
           now: now(),
           adminAudit: adminAudit(caller, requestId, undefined, false),
         })
@@ -217,6 +225,13 @@ export function createClassService(dependencies: {
             statusCode: 400,
             code: 'INSTRUCTOR_NOT_ACTIVE',
             message: 'The assigned instructor is not active.',
+          })
+        }
+        if (result.kind === 'invitation_target_not_active_student') {
+          throw new AppError({
+            statusCode: 422,
+            code: 'CLASS_INVITATION_TARGET_INVALID',
+            message: 'Every invitation must target an existing active student account.',
           })
         }
         if (result.kind === 'created') {
@@ -229,7 +244,10 @@ export function createClassService(dependencies: {
             },
             'class created',
           )
-          return toClassProjection(result.classRecord)
+          return {
+            ...toClassProjection(result.classRecord),
+            invitationsCreated: result.invitationsCreated ?? 0,
+          }
         }
       }
       throw new AppError({

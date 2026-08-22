@@ -49,5 +49,26 @@ export function createClassApi(client = apiClient) {
     updateMember(classId, memberId, input, options) {
       return client.patch(`/classes/${classId}/members/${memberId}`, input, options)
     },
+    lookupInvitationStudent(universityEmail, classId, options) {
+      return client.post('/class-invitations/lookup', {
+        universityEmail,
+        ...(classId ? { classId } : {}),
+      }, options)
+    },
+    createClassInvitation(classId, universityEmail, options) {
+      return client.post(`/classes/${classId}/invitations`, { universityEmail }, options)
+    },
+    listClassInvitations(classId, query, options) {
+      return client.get(`/classes/${classId}/invitations${queryString(query)}`, options)
+    },
+    listMyClassInvitations(query, options) {
+      return client.get(`/class-invitations${queryString(query)}`, options)
+    },
+    acceptClassInvitation(invitationId, options) {
+      return client.post(`/class-invitations/${invitationId}/accept`, {}, options)
+    },
+    declineClassInvitation(invitationId, options) {
+      return client.post(`/class-invitations/${invitationId}/decline`, {}, options)
+    },
   }
 }

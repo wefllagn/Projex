@@ -14,6 +14,7 @@ The authoritative sources are:
 - `server/prisma/migrations/20260804010000_phase6_submissions_automated_assessment/migration.sql` for Phase 6 immutable submission snapshots, execution jobs/results, review/release fields, replacement grants, and visible-test practice records.
 - `server/prisma/migrations/20260805000000_phase7_project_repository_collaboration/migration.sql` for Phase 7 project-task lifecycle, teams, synchronized memberships, repository metadata/review state, invitations, feedback release, constraints, indexes, and deferred invariant triggers.
 - `server/prisma/migrations/20260822000000_attempt_credit_policy/migration.sql` for the additive activity credited-result policy and non-destructive `LATEST` default/backfill.
+- `server/prisma/migrations/20260823000000_class_invitations_by_registered_email/migration.sql` for the additive internal class-invitation lifecycle and one-pending-invitation constraint.
 
 ## Core models
 
@@ -24,6 +25,7 @@ The authoritative sources are:
 | `RefreshSession` | `refresh_sessions` | Rotatable, revocable browser/device session state. |
 | `Class` | `classes` | Instructor-owned class, section, and term workspace. |
 | `ClassMember` | `class_members` | Student enrollment and membership lifecycle. |
+| `ClassInvitation` | `class_invitations` | Durable internal invitation from an owning instructor to an existing registered student. |
 | `ProgrammingActivity` | `programming_activities` | Programming workspace definition, attempt limit, and credited-result policy. |
 | `AdminAuditEvent` | `admin_audit_events` | Allowlisted successful administrative mutation record with actor, target, bounded reason, request ID, safe metadata, and timestamp. Phase 9C includes transactional Git-credential revocation and provisioning-retry actions; no credential secret, storage path, worker identity, or raw failure output is stored. |
 | `TestCase` | `test_cases` | Ordered visible or hidden activity test. |
@@ -100,6 +102,7 @@ Phase 7 adds:
 - A `CLASS_PROJECT` repository requires `projectTaskId`; a `PERSONAL` repository forbids it.
 - A partial unique index permits multiple personal repositories while allowing only one repository per non-null `(projectTaskId, ownerId)` pair.
 - Compound unique constraints protect class membership, submission attempt numbering, test ordering/results, similarity pairs, and repository membership.
+- A partial unique index permits only one PENDING class invitation per `(classId, inviteeId)` while retaining ACCEPTED and DECLINED history; a check requires `respondedAt` only for resolved invitations.
 - Every `CLASS_PROJECT` repository has one team and project task, uses `CLASS_ONLY`, and has an owner matching the ACTIVE team lead and ACTIVE repository owner member.
 - Every `PERSONAL` repository has no team/project task and uses `PRIVATE`; `PUBLIC` is rejected in Phase 7.
 - Partial unique indexes allow only one ACTIVE team per student/project task, one ACTIVE lead per team, one ACTIVE repository owner, and one PENDING invitation per invitee/project task.
@@ -134,7 +137,7 @@ The following rules require transactional application services because they depe
 21. Only an ACTIVE instructor may own a newly created class; instructor ownership cannot be transferred in Phase 4.
 22. Class codes are server-generated, normalized, unique, bounded-retry capabilities. Archive disables the code atomically and restore leaves it disabled.
 23. Joining with an existing ACTIVE membership is idempotent. A REMOVED membership cannot be replaced or rejoined; the existing unique row requires explicit owner/admin reactivation.
-24. PENDING class membership remains reserved and is not created by Phase 4 services.
+24. PENDING class membership remains unused. Pending registered-email enrollment intent is represented by `ClassInvitation`, and acceptance or class-code joining resolves it into the existing ACTIVE membership lifecycle.
 25. Only ACTIVE membership grants student access to active or archived class records.
 26. Draft activities and all hidden test cases are inaccessible to students. Student test-case queries include only visible rows and visible-row pagination totals.
 27. Draft test-case replacement assigns one-based order from the request array and updates the parent activity version in the same transaction.
@@ -148,10 +151,12 @@ The following rules require transactional application services because they depe
 35. `REQUEST_CHANGES` requires PUBLISHED, pre-deadline `READY_FOR_REVIEW` state and atomically releases non-empty feedback. `APPROVE` may complete previously submitted work after deadline or while CLOSED.
 36. Project-task/class archive rejects unexpired PENDING invitations, nonterminal class-project repositories, and broken membership invariants. A task archives only when every class-project repository is APPROVED or already ARCHIVED.
 37. `RepositoryActivity` is unchanged and receives no Phase 7 writes.
+38. Class invitation creation requires an exact normalized email for an existing ACTIVE STUDENT, an owning ACTIVE instructor, and an ACTIVE class. Acceptance creates or reactivates the unique membership row and resolves the invitation atomically; decline creates no membership.
+39. Optional class-creation invitation targets are validated as a complete set before the class and invitation rows are committed. Invalid targets roll back the entire creation request.
 
 ## Transaction boundaries
 
-Activity publication, complete draft test-case replacement, lifecycle transitions, submission/idempotency/job allocation, replacement-grant consumption/linkage, score correction, review/release, failure resolution/retry, team/repository/owner creation, invitation acceptance/resolution, synchronized member transitions, repository review/feedback release, class archive/code deactivation, join-by-code, and membership transitions must be atomic. Optimistically locked mutations use `expectedUpdatedAt`; every successful write advances the parent timestamp by at least one millisecond so concurrent writes cannot both consume the same version. Role and membership checks occur inside or immediately adjacent to the authoritative transaction so concurrent requests cannot bypass them.
+Activity publication, complete draft test-case replacement, lifecycle transitions, submission/idempotency/job allocation, replacement-grant consumption/linkage, score correction, review/release, failure resolution/retry, team/repository/owner creation, repository-invitation acceptance/resolution, synchronized member transitions, repository review/feedback release, class creation with optional invitations, class-invitation acceptance, class archive/code deactivation, join-by-code with pending-invitation resolution, and membership transitions must be atomic. Optimistically locked mutations use `expectedUpdatedAt`; every successful write advances the parent timestamp by at least one millisecond so concurrent writes cannot both consume the same version. Role and membership checks occur inside or immediately adjacent to the authoritative transaction so concurrent requests cannot bypass them.
 
 External Git, Java, filesystem, or network work must not execute inside database transactions. Phase 6 commits durable execution work before the separate Java worker runs. Phase 7 creates metadata only and performs no Git or filesystem work.
 

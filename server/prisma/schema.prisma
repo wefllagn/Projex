@@ -66,6 +66,14 @@ enum ClassMemberStatus {
   @@map("class_member_status")
 }
 
+enum ClassInvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+
+  @@map("class_invitation_status")
+}
+
 enum ProgrammingLanguage {
   JAVA
 
@@ -319,6 +327,8 @@ model User {
   refreshSessions               RefreshSession[]              @relation("RefreshSessionUser")
   classesTaught                 Class[]                       @relation("ClassInstructor")
   classMemberships              ClassMember[]                 @relation("ClassMemberStudent")
+  classInvitationsReceived      ClassInvitation[]             @relation("ClassInvitationInvitee")
+  classInvitationsSent          ClassInvitation[]             @relation("ClassInvitationInviter")
   programmingActivitiesCreated  ProgrammingActivity[]         @relation("ProgrammingActivityCreator")
   activitySubmissions           ActivitySubmission[]          @relation("ActivitySubmissionStudent")
   submissionFeedbackAuthored    SubmissionFeedback[]          @relation("SubmissionFeedbackInstructor")
@@ -416,6 +426,7 @@ model Class {
   archivedAt            DateTime?             @map("archived_at") @db.Timestamptz(3)
   instructor            User                  @relation("ClassInstructor", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   members               ClassMember[]
+  invitations           ClassInvitation[]
   programmingActivities ProgrammingActivity[]
   projectTasks          ProjectTask[]
 
@@ -441,6 +452,23 @@ model ClassMember {
   @@index([studentId])
   @@index([classId, status])
   @@map("class_members")
+}
+
+model ClassInvitation {
+  id          String                @id @default(uuid()) @map("class_invitation_id") @db.Uuid
+  classId     String                @map("class_id") @db.Uuid
+  inviteeId   String                @map("invitee_id") @db.Uuid
+  invitedById String                @map("invited_by_id") @db.Uuid
+  status      ClassInvitationStatus @default(PENDING)
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  respondedAt DateTime?             @map("responded_at") @db.Timestamptz(3)
+  class       Class                 @relation(fields: [classId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  invitee     User                  @relation("ClassInvitationInvitee", fields: [inviteeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  invitedBy   User                  @relation("ClassInvitationInviter", fields: [invitedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([inviteeId, status, createdAt])
+  @@index([classId, status, createdAt])
+  @@map("class_invitations")
 }
 
 model ProgrammingActivity {

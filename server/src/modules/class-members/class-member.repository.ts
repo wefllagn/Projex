@@ -127,6 +127,14 @@ export function createPrismaClassMemberRepository(
                 select: classMemberSelect,
               })
               if (existing?.status === 'ACTIVE') {
+                await transaction.classInvitation.updateMany({
+                  where: {
+                    classId: classRecord.id,
+                    inviteeId: input.studentId,
+                    status: 'PENDING',
+                  },
+                  data: { status: 'ACCEPTED', respondedAt: input.now },
+                })
                 return {
                   kind: 'already_active',
                   member: existing,
@@ -147,6 +155,14 @@ export function createPrismaClassMemberRepository(
                   lastActivatedAt: input.now,
                 },
                 select: classMemberSelect,
+              })
+              await transaction.classInvitation.updateMany({
+                where: {
+                  classId: classRecord.id,
+                  inviteeId: input.studentId,
+                  status: 'PENDING',
+                },
+                data: { status: 'ACCEPTED', respondedAt: input.now },
               })
               return { kind: 'joined', member, classRecord } as const
             },

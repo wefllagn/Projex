@@ -186,6 +186,12 @@ POST  /classes/:classId/join-code/revoke
 POST  /classes/join
 GET   /classes/:classId/members
 PATCH /classes/:classId/members/:memberId
+POST  /class-invitations/lookup
+POST  /classes/:classId/invitations
+GET   /classes/:classId/invitations
+GET   /class-invitations
+POST  /class-invitations/:invitationId/accept
+POST  /class-invitations/:invitationId/decline
 POST  /classes/:classId/activities
 GET   /classes/:classId/activities
 GET   /activities/:activityId
@@ -251,6 +257,8 @@ POST  /git/repositories/:repositoryId/git-receive-pack
 There is no public registration endpoint. Cookie-authenticated mutations require `Content-Type: application/json`, the readable `projex_csrf` cookie, and the same value in `X-CSRF-Token`.
 
 Global user listing/detail is admin-only. Class APIs are scoped to admins, owning instructors, and students with ACTIVE membership. Student roster responses contain only user ID and full name. Join codes are available only to the owning instructor or admin and are never logged.
+
+Owning ACTIVE instructors may create internal class invitations for existing ACTIVE student accounts using an exact normalized university email. Students list and respond only to their own pending invitations. Acceptance creates or reactivates the existing unique membership row atomically; joining by class code also resolves a matching pending invitation. This workflow does not create accounts, use Google authentication, send SMTP email, expose class codes, or add a generic notification system.
 
 Repository visibility remains server-owned: class-project repositories are `CLASS_ONLY`, personal repositories are `PRIVATE`, and `PUBLIC` is unavailable. The Phase 7 baseline stored metadata only; Phase 8A adds separate-worker provisioning without changing the Phase 7 lifecycle, authorization, invitation, review, or archive rules documented in `docs/architecture/PROJECT_REPOSITORY_COLLABORATION.md`.
 

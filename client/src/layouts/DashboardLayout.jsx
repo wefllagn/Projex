@@ -62,6 +62,9 @@ export function CreateClassModal({ onClose, onCreated }) {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [invitationEmail, setInvitationEmail] = useState('')
+  const [invitationTargets, setInvitationTargets] = useState([])
+  const [invitationLookup, setInvitationLookup] = useState({ status: 'idle', message: '' })
 
   const updateField = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }))
@@ -72,12 +75,41 @@ export function CreateClassModal({ onClose, onCreated }) {
     setSaving(true)
     setError(null)
     try {
-      const response = await api.createClass(form)
+      const response = await api.createClass({
+        ...form,
+        ...(invitationTargets.length > 0
+          ? { invitationEmails: invitationTargets.map((target) => target.universityEmail) }
+          : {}),
+      })
       upsertClass(response.data)
       onCreated(response.data)
     } catch (requestError) {
       setError(requestError)
       setSaving(false)
+    }
+  }
+
+  const addInvitation = async () => {
+    const normalized = invitationEmail.trim().toLowerCase()
+    if (!normalized || invitationTargets.some((target) => target.universityEmail === normalized)) {
+      setInvitationLookup({
+        status: 'error',
+        message: normalized ? 'That Student is already in the invitation list.' : 'Enter a university email.',
+      })
+      return
+    }
+    setInvitationLookup({ status: 'loading', message: '' })
+    try {
+      const response = await api.lookupInvitationStudent(normalized)
+      if (response.data.eligibility !== 'ELIGIBLE') {
+        setInvitationLookup({ status: 'error', message: 'No registered active Student found.' })
+        return
+      }
+      setInvitationTargets((current) => [...current, response.data.student])
+      setInvitationEmail('')
+      setInvitationLookup({ status: 'ready', message: `${response.data.student.fullName} added.` })
+    } catch (lookupError) {
+      setInvitationLookup({ status: 'error', message: describeApiError(lookupError) })
     }
   }
 
@@ -105,6 +137,58 @@ export function CreateClassModal({ onClose, onCreated }) {
             <input value={form.schoolYear} onChange={updateField('schoolYear')} maxLength={20} placeholder="2026-2027" required />
           </label>
         </div>
+        <section className="class-create-invitations">
+          <div>
+            <strong>Invite Students (optional)</strong>
+            <span>Only existing registered Projex Students can be invited.</span>
+            <span>If any listed Student is no longer eligible, the class and all invitations will not be created.</span>
+          </div>
+          <div className="class-invitation-create-row">
+            <label>
+              University email
+              <input
+                type="email"
+                value={invitationEmail}
+                onChange={(event) => {
+                  setInvitationEmail(event.target.value)
+                  setInvitationLookup({ status: 'idle', message: '' })
+                }}
+                placeholder="2216146@slu.edu.ph"
+                autoComplete="off"
+                disabled={saving}
+              />
+            </label>
+            <button
+              type="button"
+              className="student-outline-action"
+              onClick={addInvitation}
+              disabled={saving || invitationLookup.status === 'loading' || !invitationEmail.trim()}
+            >
+              {invitationLookup.status === 'loading' ? 'Checking…' : '+ Add Student'}
+            </button>
+          </div>
+          {invitationLookup.message && (
+            <p className={invitationLookup.status === 'error' ? 'class-form-error' : 'class-form-note'} role="status">
+              {invitationLookup.message}
+            </p>
+          )}
+          {invitationTargets.length > 0 && (
+            <ul className="class-create-invitation-list">
+              {invitationTargets.map((target) => (
+                <li key={target.universityEmail}>
+                  <span><strong>{target.fullName}</strong><small>{target.universityEmail}</small></span>
+                  <button
+                    type="button"
+                    onClick={() => setInvitationTargets((current) => current.filter((item) => item.universityEmail !== target.universityEmail))}
+                    disabled={saving}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
         <p className="class-form-note">Projex creates the join code securely on the server. Manage it after the class is created.</p>
         {error && <p className="class-form-error" role="alert">{describeApiError(error)}</p>}
         <div className="student-submit-modal-actions">

@@ -28,6 +28,7 @@ server/
       users/
       classes/
       class-members/
+      class-invitations/
       activities/
       test-cases/
       submissions/
@@ -136,7 +137,8 @@ Names may be singular when the feature represents a process rather than a collec
 | `auth` | Login, logout, session creation/rotation/revocation, current principal, password verification. |
 | `users` | User profiles, account status, and `STUDENT`, `INSTRUCTOR`, `ADMIN` role assignments. |
 | `classes` | Class workspace identity, course/section/term context, instructor assignment, and unique class-code generation/rotation/revocation. |
-| `class-members` | Code-based student join, duplicate prevention, active/deactivated membership state, historical membership preservation, and authorization queries. Full class invitation lifecycle is a later enhancement. |
+| `class-members` | Code-based student join, duplicate prevention, active/deactivated membership state, historical membership preservation, and authorization queries. A successful code join also resolves a matching pending class invitation. |
+| `class-invitations` | Narrow registered-email lookup, instructor-owned invitation creation/listing, student-scoped pending lists, and atomic accept/decline lifecycle. It creates no account, sends no email, and does not replace class-code joining. |
 | `activities` | Title/instructions, publication state, due date, visibility, `maxAttempts` (1-3), starter code, total points, programming-language setting, and activity lifecycle. |
 | `test-cases` | Visible/hidden test authoring, ordering, points, secure retrieval for workers. |
 | `submissions` | Immutable official attempts and visible-only practice runs, server-owned chronological numbering, counting-attempt enforcement, scoped idempotency, snapshots, durable job creation, instructor review/corrections, infrastructure-failure resolution/replacement, release, and role-safe history retrieval. |
