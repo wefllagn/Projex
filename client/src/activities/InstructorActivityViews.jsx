@@ -18,6 +18,7 @@ import {
   validateActivityForm,
   validateTestCases,
 } from './activity-utils.js'
+import { createTemporaryTestCaseId } from './temporary-test-case-id.js'
 
 const FIRST_PAGE = { page: 1, pageSize: 20 }
 const EMPTY_FORM = {
@@ -58,7 +59,7 @@ function rowsFromResponse(testCases) {
 }
 
 function emptyTestCase() {
-  return { id: crypto.randomUUID(), name: '', inputData: '', expectedOutput: '', isHidden: false, points: '0' }
+  return { id: createTemporaryTestCaseId(), name: '', inputData: '', expectedOutput: '', isHidden: false, points: '0' }
 }
 
 function ActivityFormFields({ form, errors, onChange, readOnly, status }) {

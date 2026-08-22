@@ -163,6 +163,31 @@ describe('instructor activity integration', () => {
     expect(screen.queryByText(/rubric/i)).not.toBeInTheDocument()
   })
 
+  it('adds temporary test-case rows when crypto.randomUUID is unavailable', async () => {
+    const nativeCrypto = globalThis.crypto
+    vi.stubGlobal('crypto', {
+      getRandomValues: nativeCrypto.getRandomValues.bind(nativeCrypto),
+    })
+    const api = {
+      getActivity: vi.fn().mockResolvedValue({ data: activity }),
+      listTestCases: vi.fn().mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } }),
+    }
+    const user = userEvent.setup()
+
+    try {
+      renderView(<InstructorActivityEditor api={api} mode="edit" />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
+
+      await user.click(await screen.findByRole('button', { name: 'Add test case' }))
+      await user.click(screen.getByRole('button', { name: 'Add test case' }))
+
+      expect(screen.getByRole('group', { name: 'Test case 1' })).toBeInTheDocument()
+      expect(screen.getByRole('group', { name: 'Test case 2' })).toBeInTheDocument()
+      expect(screen.getByText('2 of 50 · 0 of 100 activity points')).toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('adopts activityUpdatedAt after atomic test replacement before publishing', async () => {
     const updatedVersion = '2026-08-10T01:00:00.000Z'
     const api = {
