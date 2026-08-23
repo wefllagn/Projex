@@ -256,7 +256,7 @@ export function RepositoryFoundationDetail({ role = 'student', api = repositoryA
             {current.project && <section className="student-repo-card"><h2>Linked Project Requirement</h2><h3>{current.project.title}</h3><p>{current.project.instructions}</p><p>Due {formatProjectDate(current.project.dueDate)} · {formatProjectStatus(current.project.status)}</p></section>}
             {current.projectUnavailable && <RequestState kind="unavailable" compact title="Archived project detail unavailable" message="The archived repository record remains authorized, but the related archived project-task detail is not exposed to students by the current backend." />}
             <RepositoryCollaborationPanel role={role} owner={owner} repository={repository} project={current.project} api={api} classApi={classApi} onRepositoryChange={applyRepository} onReloadRepository={load} />
-            <RepositoryGitPanel key={repository.id} repository={repository} role={role} project={current.project} />
+            <RepositoryGitPanel key={repository.id} repository={repository} role={role} project={current.project} owner={owner} />
           </section>
           <aside className="student-repo-side-column">
             <StorageState status={repository.storageStatus} />

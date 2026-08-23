@@ -45,6 +45,13 @@
   margin: 0;
 }
 
+.repository-git-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .repository-git-heading dl div {
   min-width: 70px;
   padding: 8px 12px;
@@ -87,6 +94,36 @@
 .repository-git-tabs button[aria-selected="true"] {
   border-bottom-color: #2563eb;
   color: #1d4ed8;
+}
+
+.repository-empty-guidance {
+  margin: 20px 24px 24px;
+  padding: 20px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
+}
+
+.repository-empty-guidance > span {
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.repository-empty-guidance h3 {
+  margin: 7px 0;
+}
+
+.repository-empty-guidance p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.repository-empty-guidance button {
+  margin-top: 16px;
 }
 
 .repository-git-files,
@@ -369,6 +406,11 @@
     width: 100%;
   }
 
+  .repository-git-heading-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .repository-git-heading dl div {
     flex: 1;
   }
@@ -382,6 +424,10 @@
 
   .repository-git-tabs {
     padding: 0 12px;
+  }
+
+  .repository-empty-guidance {
+    margin: 16px;
   }
 
   .repository-copy-row {

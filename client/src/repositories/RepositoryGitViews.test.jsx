@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
+import { CapabilityContext } from '../capabilities/capability-context.js'
 import { RepositoryGitPanel } from './RepositoryGitViews.jsx'
 
 const commitA = 'a'.repeat(40)
@@ -32,6 +33,14 @@ function apiMock(overrides = {}) {
   }
 }
 
+function renderWithCapabilities(ui, git) {
+  return render(
+    <CapabilityContext.Provider value={{ status: 'ready', profile: 'LOCAL_FULL', java: { execution: true }, git, refresh: vi.fn() }}>
+      {ui}
+    </CapabilityContext.Provider>,
+  )
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.useRealTimers()
@@ -48,12 +57,85 @@ describe('repository Git panel', () => {
     expect(screen.queryByText(/campus navigation/i)).not.toBeInTheDocument()
   })
 
-  it('shows truthful empty repository state without branch, tree, or commit requests', async () => {
-    const api = apiMock({ getSummary: vi.fn().mockResolvedValue({ data: { ...summary, empty: true, branchCount: 0, commitCount: 0, latestCommit: null } }) })
-    render(<RepositoryGitPanel repository={repository} api={api} />)
+  it('guides a Personal repository owner into the native Git initial-main workflow', async () => {
+    const emptySummary = { ...summary, empty: true, branchCount: 0, commitCount: 0, latestCommit: null }
+    const api = apiMock({
+      getSummary: vi.fn().mockResolvedValue({ data: emptySummary }),
+      issueCredential: vi.fn().mockResolvedValue({ data: {
+        credentialId: 'credential-write', repositoryId: 'repo-1', operations: ['READ', 'WRITE'],
+        createdAt: '2026-08-01T00:00:00.000Z', expiresAt: '2099-08-01T00:15:00.000Z',
+        lastUsedAt: null, revokedAt: null, username: 'credential-write', secret: 'synthetic-write-secret',
+      } }),
+    })
+    render(<RepositoryGitPanel repository={repository} owner api={api} />)
     expect(await screen.findByText('Empty Git repository')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Initialize your repository' })).toBeInTheDocument()
+    expect(screen.getByText(/does not edit or commit files in the browser/i)).toBeInTheDocument()
     expect(api.listBranches).not.toHaveBeenCalled()
     expect(api.getTree).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Open Local Git' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Issue Read + Write Credential' }))
+    expect(await screen.findByRole('heading', { name: 'Initialize main from your computer' })).toBeInTheDocument()
+    expect(screen.getByText(/git checkout -b main/)).toBeInTheDocument()
+    expect(screen.getByText(/Projex never creates this commit for you/i)).toBeInTheDocument()
+  })
+
+  it('identifies a Class Project owner as the team lead responsible for initial main', async () => {
+    const api = apiMock({ getSummary: vi.fn().mockResolvedValue({ data: { ...summary, empty: true, branchCount: 0, commitCount: 0, latestCommit: null } }) })
+    const classRepository = { ...repository, repositoryType: 'CLASS_PROJECT', projectTaskId: 'task-1' }
+    render(<RepositoryGitPanel repository={classRepository} project={{ status: 'PUBLISHED', dueState: 'OPEN' }} owner api={api} />)
+    expect(await screen.findByRole('heading', { name: 'Initialize main as the team lead' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open Local Git' })).toBeInTheDocument()
+  })
+
+  it('tells an ordinary Class Project member to wait for the team lead before feature work', async () => {
+    const api = apiMock({ getSummary: vi.fn().mockResolvedValue({ data: { ...summary, empty: true, branchCount: 0, commitCount: 0, latestCommit: null } }) })
+    const classRepository = { ...repository, repositoryType: 'CLASS_PROJECT', projectTaskId: 'task-1' }
+    render(<RepositoryGitPanel repository={classRepository} project={{ status: 'PUBLISHED', dueState: 'OPEN' }} api={api} />)
+    expect(await screen.findByRole('heading', { name: 'Waiting for the team lead' })).toBeInTheDocument()
+    expect(screen.getByText(/Do not create an unrelated first branch/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Open Local Git' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Local Git' }))
+    expect(await screen.findByText(/team lead must establish main first/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Issue Read + Write Credential' })).not.toBeInTheDocument()
+  })
+
+  it('explains an empty repository without offering Local Git when Smart HTTP is disabled', async () => {
+    const api = apiMock({ getSummary: vi.fn().mockResolvedValue({ data: { ...summary, empty: true, branchCount: 0, commitCount: 0, latestCommit: null } }) })
+    renderWithCapabilities(<RepositoryGitPanel repository={repository} owner api={api} />, { provisioning: true, inspection: true, smartHttp: false })
+    expect(await screen.findByText(/Native Git access is unavailable in this environment/i)).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Local Git' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Open Local Git' })).not.toBeInTheDocument()
+    expect(api.listCredentials).not.toHaveBeenCalled()
+  })
+
+  it('does not offer initial authoring when the current repository lifecycle is read-only', async () => {
+    const api = apiMock({ getSummary: vi.fn().mockResolvedValue({ data: { ...summary, repositoryStatus: 'ARCHIVED', empty: true, branchCount: 0, commitCount: 0, latestCommit: null } }) })
+    render(<RepositoryGitPanel repository={{ ...repository, status: 'ARCHIVED' }} owner api={api} />)
+    expect(await screen.findByRole('heading', { name: 'Repository authoring is currently unavailable' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Open Local Git' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Local Git' }))
+    expect(await screen.findByText(/lifecycle rules do not allow the initial push/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Issue Read + Write Credential' })).not.toBeInTheDocument()
+  })
+
+  it('refreshes an empty repository into current Files, History, Branches, and summary state', async () => {
+    const emptySummary = { ...summary, empty: true, branchCount: 0, commitCount: 0, latestCommit: null }
+    const api = apiMock({ getSummary: vi.fn()
+      .mockResolvedValueOnce({ data: emptySummary })
+      .mockResolvedValueOnce({ data: summary }) })
+    render(<RepositoryGitPanel repository={repository} owner api={api} />)
+    expect(await screen.findByText('Empty Git repository')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Git status' }))
+    expect(await screen.findByRole('button', { name: /README.md/i })).toBeInTheDocument()
+    expect(api.getSummary).toHaveBeenCalledTimes(2)
+    expect(api.getTree).toHaveBeenCalledWith('repo-1', { branchName: 'main', path: '' }, expect.any(Object))
+
+    fireEvent.click(screen.getByRole('tab', { name: 'History' }))
+    expect(await screen.findByRole('button', { name: /Latest/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Branches' }))
+    expect(await screen.findByText('main')).toBeInTheDocument()
+    expect(screen.queryByText('Empty Git repository')).not.toBeInTheDocument()
   })
 
   it('loads commit detail and an explicit parent diff while explaining Git author identity', async () => {
