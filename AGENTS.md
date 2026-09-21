@@ -6,7 +6,7 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Boundary
 
-Phase 0 (architecture and planning) and implementation Phases 1 through 10 are complete, accepted, and integrated into `development/fullstack`. Phase 11A hosted-safety prerequisites and dependency remediation are complete on `phase/11-hardening-deployment-evaluation`. Phase 11B.1 operational tooling and runbook work is current; real backup/restore proof, deployment, public exposure, and integration remain separate approval boundaries.
+Phase 0 through the accepted pre-tunnel Phase 11 baseline are historical. Iteration 2 is current on `iteration-2/julius-i2-1-academic-workspace`: the I2.1 core is verified and committed on that task branch, branch integration remains separate, and bounded Instructor rerun implementation is authorized but stops at pre-commit review. I2.2 has not started. `docs/team/ITERATION_2_ROADMAP.md` owns current scope and dependency order; `docs/team/ITERATION_2_CHECKLIST.md` owns current execution status. Recovery proof, Java isolation, laboratory Git networking, deployment, public exposure, and branch integration remain separate approval boundaries.
 
 ## Live-State Authority
 

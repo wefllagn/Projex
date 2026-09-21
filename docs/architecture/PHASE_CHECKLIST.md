@@ -2,11 +2,11 @@
 
 ## Purpose and authority
 
-This checklist gates the transition from the hardcoded UI to a functional full-stack system. It does not authorize implementation beyond the phase explicitly requested and accepted.
+This checklist records the historical transition from the hardcoded UI to the accepted pre-tunnel full-stack baseline. It does not authorize new implementation.
 
-The earlier UI implementation checklist under `docs/PROJEX_IMPLEMENTATION_CHECKLIST.md` uses a separate historical phase numbering scheme. It remains an accurate record of the UI build, but this file is authoritative for the current full-stack roadmap.
+The earlier UI implementation checklist under `docs/PROJEX_IMPLEMENTATION_CHECKLIST.md` uses a separate historical phase numbering scheme. It remains an accurate record of the UI build. Current Iteration 2 scope and dependency order are owned by `docs/team/ITERATION_2_ROADMAP.md`; current execution status is owned by `docs/team/ITERATION_2_CHECKLIST.md`.
 
-This file tracks accepted milestones and remaining roadmap gates. It does not own the live branch, HEAD, worktree, migration status, database contents, runtime configuration, or current test result; verify those facts from Git, Prisma, the environment, and checks that were actually run.
+This file tracks the accepted Phase 0–11 milestones and their historical gates. It does not own the live branch, HEAD, worktree, migration status, database contents, runtime configuration, or current test result; verify those facts from Git, Prisma, the environment, and checks that were actually run.
 
 Status markers:
 
@@ -30,6 +30,8 @@ Status markers:
 | 9 | Admin backend capabilities | Complete | `8df8215` |
 | 10 | Frontend integration | Complete | `c6635b6` |
 | 11 | Hardening, deployment, and evaluation | In progress: 11A complete; 11B.1 current | Pending |
+
+The Phase 11 row preserves the status recorded by this historical checklist. The accepted pre-tunnel baseline and all resumed work are now tracked under Iteration 2; do not use this row as the current task status.
 
 ## Phase 0: architecture and planning — complete
 
