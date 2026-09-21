@@ -45,6 +45,14 @@ Phase 10A completed shared infrastructure, authentication, classes, and membersh
 
 ## State ownership
 
+### I2.1 programming source entry
+
+The existing student workspace accepts one UTF-8 Java file into component memory. Import performs a bounded byte read (100,003 bytes including optional UTF-8 BOM), enforces 100,000 UTF-16 code units, normalizes CRLF/CR to LF, and checks that normalized source fits the standard backend's 100,000-byte UTF-8 budget. The backend remains authoritative if its private configured limit differs. The selected basename must exactly match the activity's `entryClassName.java`. A conservative declaration precheck rejects package declarations and requires one ordinary public top-level entry class with the expected name; comments/literals and nested classes do not satisfy that check. This is not a Java parser or a security boundary: javac remains authoritative, and unusual declaration syntax may need ordinary spelling or direct editor entry.
+
+Valid imports require confirmation before replacing any non-empty source, including starter code. Invalid/cancelled reads preserve source; a read completing after editor unmount is ignored. The file input is reset, and neither local paths nor source are persisted or transmitted by import. Existing Run Visible Tests and Submit APIs remain the only execution/submission paths.
+
+The textarea displays synchronized line numbers and four-column indentation guides, keeps horizontal scrolling without soft wrap, and supports Tab/Shift+Tab and auto-indent after Enter. Escape followed by Tab exits keyboard indentation mode. Compiler output remains plain text; bounded, unqualified javac references for this activity can focus/select the relevant line only while the editor equals the last run's source. Source changes prompt a fresh run. Existing pane resizing and stacked narrow layout remain in place. This implementation does not add continuous compilation, a multi-file editor or an IDE dependency.
+
 | State | Owner |
 | --- | --- |
 | Current user and bootstrap | `AuthProvider` |
