@@ -126,9 +126,10 @@ export function projectExecutionJob(value, expectedId) {
   const base = jobBase(value, expectedId)
   return {
     jobId: base.jobId,
-    jobType: enumValue(base.source.jobType, ['OFFICIAL_ASSESSMENT', 'VISIBLE_TEST_RUN']),
+    jobType: enumValue(base.source.jobType, ['OFFICIAL_ASSESSMENT', 'VISIBLE_TEST_RUN', 'INSTRUCTOR_REVIEW_RUN']),
     submissionId: nullableText(base.source.submissionId),
     practiceExecutionId: nullableText(base.source.practiceExecutionId),
+    reviewExecutionId: nullableText(base.source.reviewExecutionId),
     status: enumValue(base.status, ['QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED']),
     claimAttempt: base.claimAttempt,
     maxClaimAttempts: base.maxClaimAttempts,

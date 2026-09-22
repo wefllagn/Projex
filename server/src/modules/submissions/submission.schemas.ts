@@ -6,6 +6,8 @@ const expectedUpdatedAt = z.iso.datetime({ offset: true }).transform((value) => 
 export const activitySubmissionParamsSchema = z.object({ activityId: uuid }).strict()
 export const submissionParamsSchema = z.object({ submissionId: uuid }).strict()
 export const practiceRunParamsSchema = z.object({ runId: uuid }).strict()
+export const reviewRunParamsSchema = z.object({ submissionId: uuid, runId: uuid }).strict()
+export const createReviewRunSchema = z.object({}).strict()
 
 export const idempotencyKeySchema = z
   .string()

@@ -128,6 +128,33 @@ export function projectInstructorSubmission(value = {}) {
   }
 }
 
+export function projectInstructorReviewRun(value = {}) {
+  return {
+    id: string(value.id),
+    submissionId: string(value.submissionId),
+    activityId: string(value.activityId),
+    status: string(value.status, 'queued'),
+    compileStatus: string(value.compileStatus, 'pending'),
+    runtimeStatus: string(value.runtimeStatus, 'not_run'),
+    compilerOutput: string(value.compilerOutput),
+    createdAt: string(value.createdAt),
+    completedAt: string(value.completedAt),
+    testOutcomes: Array.isArray(value.testOutcomes)
+      ? value.testOutcomes.map((item) => ({
+          name: string(item.name, 'Review case'),
+          order: number(item.order) ?? 0,
+          isHidden: item.isHidden === true,
+          input: string(item.input),
+          expectedOutput: string(item.expectedOutput, ''),
+          outcome: string(item.outcome, 'pending'),
+          actualOutput: string(item.actualOutput),
+          errorMessage: string(item.errorMessage),
+          executionTimeMs: number(item.executionTimeMs),
+        }))
+      : [],
+  }
+}
+
 export function isInstructorSubmissionPending(record) {
   return PENDING_STATUSES.has(record?.status)
 }

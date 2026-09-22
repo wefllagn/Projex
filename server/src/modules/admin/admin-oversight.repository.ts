@@ -280,7 +280,7 @@ export function createPrismaAdminOversightRepository(prisma: PrismaClient) {
         prisma.executionJob.findMany({
           where,
           select: {
-            id: true, jobType: true, submissionId: true, practiceExecutionId: true,
+            id: true, jobType: true, submissionId: true, practiceExecutionId: true, reviewExecutionId: true,
             status: true, claimAttempt: true, maxClaimAttempts: true, availableAt: true,
             claimedAt: true, leaseExpiresAt: true, completedAt: true, lastFailureCode: true,
             createdAt: true, updatedAt: true,

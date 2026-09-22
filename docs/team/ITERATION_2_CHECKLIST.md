@@ -26,7 +26,7 @@ This file is the status and execution tracker. It does not redefine roadmap scop
 | I2.1 core commit | VERIFIED ON TASK BRANCH | `448dc5843865ee669f60473bcdb0f543875f084d`; 16-file slice committed/pushed, integration pending |
 | I2.1 automated evidence | COMPLETED for current slice | Client 46/293, server 36/224, Java 3/24, PostgreSQL integration 18/86; lint/type-check/build recorded passing in `I2.1.md` |
 | I2.1 authenticated walkthrough | COMPLETED for selected deterministic demo | Student/Instructor activity, practice, submit, review, release and narrow layout recorded passing |
-| Instructor fresh rerun | IN PROGRESS | Bounded durable-queue/schema implementation approved 2026-09-22; test DB first, normal migration not approved, stop at pre-commit review |
+| Instructor fresh rerun | IN PROGRESS — WIP handoff review | Separate queue target, API and Instructor UI implemented; guarded `projex_test` migration and 19/89 integration tests passed; normal migration, authenticated walkthrough and final acceptance not approved |
 | Personalized Exercise 1 checking | PROPOSED / AWAITING APPROVAL | Nonempty-output comparator/grading contract unresolved |
 | I2.2–I2.9 | PENDING | No later Iteration 2 phase started |
 | Normal database migration for Iteration 2 | PENDING | No I2 migration approved or applied |
@@ -35,7 +35,7 @@ This file is the status and execution tracker. It does not redefine roadmap scop
 ## Critical path to October 30
 
 - [ ] **IN PROGRESS** I2.1 core committed/pushed on task branch; integrate only through a separate approval gate.
-- [ ] **IN PROGRESS** Implement approved Instructor rerun without changing submissions, attempts or scores; stop before commit.
+- [ ] **IN PROGRESS — UNACCEPTED WIP** Transfer the reviewed Instructor rerun checkpoint without changing submissions, attempts or scores; normal migration, authenticated walkthrough, retention decision, and final acceptance remain separate gates.
 - [ ] **PROPOSED / AWAITING APPROVAL** Approve the academic Course/class-offering and Admin roster-import model.
 - [ ] **PENDING** Complete essential I2.2 cross-class work views.
 - [ ] **PROPOSED / AWAITING APPROVAL** Add the smallest repository-to-submission slice inside I2.3.
@@ -117,7 +117,7 @@ Bounded adviser follow-ups:
 - [ ] **PROPOSED / AWAITING APPROVAL** Explain/progressively disclose Java entry class while preserving `Circle2` and other valid names.
 - [ ] **PROPOSED / AWAITING APPROVAL** Compact test-case editing and keep Add/Save/allocation controls reachable.
 - [ ] **PROPOSED / AWAITING APPROVAL** Show automated and Instructor maximums clearly before publication.
-- [ ] **IN PROGRESS — APPROVED** Add Instructor rerun through a dedicated durable review-execution target. Guarded test-database migration verification is required; normal-database migration and commit need separate approval.
+- [x] **IMPLEMENTED / UNACCEPTED WIP** Add Instructor rerun through a dedicated durable review-execution target. Two split migrations applied only to guarded `projex_test`; a WIP checkpoint is not final acceptance. Normal-database migration, authenticated walkthrough and final feature approval remain separate.
 - [ ] **PROPOSED / AWAITING APPROVAL** Decide whether Student custom stdin is required after native Git becomes usable; do not build a terminal emulator.
 - [ ] **PROPOSED / AWAITING APPROVAL** Decide personalized nonempty-output checking and ungraded activity semantics.
 
@@ -127,7 +127,7 @@ Required tests/evidence:
 - [x] Client/server unit, Java and guarded PostgreSQL integration suites recorded passing.
 - [x] Authenticated Student/Instructor walkthrough and narrow layout.
 - [x] Staged diff review, `git diff --cached --check`, dependency/schema/secret review for the 16-file core.
-- [ ] For rerun: immutable source, no attempt use, no score/evidence replacement, released-result preservation, input/output limits, authorization and hidden-test privacy.
+- [x] For rerun: immutable source, no attempt use, no score/evidence replacement, released-result preservation, existing Java input/output limits, authorization and hidden-test privacy verified by guarded integration and frontend tests; final diff/security review remains before acceptance.
 
 Acceptance criteria:
 

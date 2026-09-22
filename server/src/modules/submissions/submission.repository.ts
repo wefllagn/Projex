@@ -21,6 +21,7 @@ export const submissionInclude = {
       id: true,
       classId: true,
       title: true,
+      entryClassName: true,
       status: true,
       totalPoints: true,
       creditPolicy: true,
@@ -64,6 +65,21 @@ export const practiceInclude = {
 
 export type PracticeRecord = Prisma.PracticeExecutionGetPayload<{
   include: typeof practiceInclude
+}>
+
+export const reviewRunInclude = {
+  cases: { orderBy: { testOrderSnapshot: 'asc' as const } },
+  submission: {
+    select: {
+      id: true,
+      activityId: true,
+      activity: { select: { class: { select: { instructorId: true } } } },
+    },
+  },
+} as const
+
+export type ReviewRunRecord = Prisma.ReviewExecutionGetPayload<{
+  include: typeof reviewRunInclude
 }>
 
 const releasedAttemptSelect = {
@@ -115,6 +131,13 @@ export type CreatePracticeResult =
   | { kind: 'activity_not_found' }
   | { kind: 'forbidden' }
   | { kind: 'activity_not_accepting' }
+  | { kind: 'rate_limited' }
+  | { kind: 'capacity_unavailable' }
+
+export type CreateReviewRunResult =
+  | { kind: 'created'; reviewRun: ReviewRunRecord }
+  | { kind: 'not_found' }
+  | { kind: 'forbidden' }
   | { kind: 'rate_limited' }
   | { kind: 'capacity_unavailable' }
 
@@ -198,6 +221,12 @@ export interface SubmissionRepository {
     maxActivePerActivity: number
   }): Promise<CreatePracticeResult>
   findPracticeById(runId: string): Promise<PracticeRecord | null>
+  createReviewRun(input: {
+    submissionId: string
+    instructorId: string
+    now: Date
+  }): Promise<CreateReviewRunResult>
+  findReviewRunById(runId: string): Promise<ReviewRunRecord | null>
 }
 
 async function lockScope(
@@ -1074,6 +1103,62 @@ export function createPrismaSubmissionRepository(
       return prisma.practiceExecution.findUnique({
         where: { id: runId },
         include: practiceInclude,
+      })
+    },
+
+    createReviewRun(input) {
+      return prisma.$transaction(async (transaction) => {
+        await lockScope(transaction, `review-run:${input.instructorId}`)
+        await lockSubmission(transaction, input.submissionId)
+        const submission = await loadSubmission(transaction, input.submissionId)
+        if (!submission) return { kind: 'not_found' } as const
+        if (!canInstructorMutate(submission, input.instructorId)) {
+          return { kind: 'forbidden' } as const
+        }
+        const minuteAgo = new Date(input.now.getTime() - 60_000)
+        const [active, recent] = await Promise.all([
+          transaction.reviewExecution.count({
+            where: { instructorId: input.instructorId, status: { in: ['QUEUED', 'RUNNING'] } },
+          }),
+          transaction.reviewExecution.count({
+            where: { instructorId: input.instructorId, createdAt: { gte: minuteAgo } },
+          }),
+        ])
+        if (active > 0) return { kind: 'capacity_unavailable' } as const
+        if (recent >= 10) return { kind: 'rate_limited' } as const
+        const originalCases = submission.execution?.testCaseResults ?? []
+        if (originalCases.length === 0) return { kind: 'capacity_unavailable' } as const
+        const created = await transaction.reviewExecution.create({
+          data: {
+            submissionId: submission.id,
+            instructorId: input.instructorId,
+            entryClassName: submission.activity.entryClassName,
+            createdAt: input.now,
+            cases: {
+              create: originalCases.map((testCase) => ({
+                testNameSnapshot: testCase.testNameSnapshot,
+                testOrderSnapshot: testCase.testOrderSnapshot,
+                inputSnapshot: testCase.inputSnapshot,
+                expectedOutputSnapshot: testCase.expectedOutputSnapshot,
+                isHiddenSnapshot: testCase.isHiddenSnapshot,
+              })),
+            },
+            executionJob: { create: { jobType: 'INSTRUCTOR_REVIEW_RUN' } },
+          },
+          select: { id: true },
+        })
+        return {
+          kind: 'created',
+          reviewRun: await transaction.reviewExecution.findUniqueOrThrow({
+            where: { id: created.id }, include: reviewRunInclude,
+          }),
+        } as const
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+    },
+
+    findReviewRunById(runId) {
+      return prisma.reviewExecution.findUnique({
+        where: { id: runId }, include: reviewRunInclude,
       })
     },
   }

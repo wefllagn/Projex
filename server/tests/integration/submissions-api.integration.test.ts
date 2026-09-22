@@ -375,6 +375,32 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
     expect(serializedAttemptState).not.toContain('Visible double')
     expect(serializedAttemptState).not.toContain('Hidden negative')
 
+    await studentAgent.post(`/api/v1/submissions/${submissionId}/review-runs`).set('Content-Type', 'application/json').send({}).expect(403)
+    await adminAgent.post(`/api/v1/submissions/${submissionId}/review-runs`).set('Content-Type', 'application/json').send({}).expect(403)
+    await instructorAgent.post(`/api/v1/submissions/${submissionId}/review-runs`).set('Content-Type', 'application/json').send({}).expect(403)
+    await jsonMutation(instructorAgent.post(`/api/v1/submissions/${submissionId}/review-runs`), instructorCsrf)
+      .send({ sourceCode: source }).expect(400)
+    const rerunResponse = await jsonMutation(instructorAgent.post(`/api/v1/submissions/${submissionId}/review-runs`), instructorCsrf)
+      .send({}).expect(202)
+    const reviewRunId = rerunResponse.body.data.id as string
+    expect(rerunResponse.body.data).toMatchObject({ submissionId, activityId: activity.id, status: 'queued' })
+    await studentAgent.get(`/api/v1/submissions/${submissionId}/review-runs/${reviewRunId}`).expect(403)
+    await adminAgent.get(`/api/v1/submissions/${submissionId}/review-runs/${reviewRunId}`).expect(403)
+    await instructorAgent.get(`/api/v1/submissions/${activity.id}/review-runs/${reviewRunId}`).expect(404)
+    const reviewJob = await queue.claimNext({ workerId: 'review-http-worker', now: new Date(), leaseMs: 60_000 })
+    expect(reviewJob?.jobType).toBe('INSTRUCTOR_REVIEW_RUN')
+    expect(reviewJob?.cases.map((item) => item.input)).toEqual(['2\n', '-2\n'])
+    await queue.complete(reviewJob!, {
+      compileStatus: 'SUCCESS', runtimeStatus: 'PASSED', compilerOutput: null,
+      cases: reviewJob!.cases.map((item) => ({ id: item.id, status: 'PASSED', actualOutput: item.input === '2\n' ? '4\n' : '-4\n', errorMessage: null, executionTimeMs: 1, automatedPoints: 0 })),
+    }, new Date())
+    const reviewView = await instructorAgent.get(`/api/v1/submissions/${submissionId}/review-runs/${reviewRunId}`).expect(200)
+    expect(reviewView.body.data).toMatchObject({ status: 'succeeded', compileStatus: 'success', runtimeStatus: 'passed' })
+    expect(reviewView.body.data.testOutcomes).toHaveLength(2)
+    expect(reviewView.body.data.testOutcomes[1]).toMatchObject({ isHidden: true, input: '-2\n', actualOutput: '-4\n' })
+    expect((await studentAgent.get(`/api/v1/submissions/${submissionId}`).expect(200)).body.data.finalScore).toBe(55)
+    expect((await prisma.activitySubmission.findUniqueOrThrow({ where: { id: submissionId } })).attemptNumber).toBe(1)
+
     await jsonMutation(
       studentAgent.post(`/api/v1/activities/${activity.id}/visible-test-runs`),
       studentCsrf,

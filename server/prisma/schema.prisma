@@ -151,6 +151,7 @@ enum TestCasePassStatus {
 enum ExecutionJobType {
   OFFICIAL_ASSESSMENT
   VISIBLE_TEST_RUN
+  INSTRUCTOR_REVIEW_RUN
 
   @@map("execution_job_type")
 }
@@ -337,6 +338,7 @@ model User {
   scoreCorrectionsAuthored      SubmissionScoreCorrection[]
   failureResolutionsAuthored    SubmissionFailureResolution[]
   practiceExecutions            PracticeExecution[]
+  reviewExecutions               ReviewExecution[]             @relation("ReviewExecutionInstructor")
   projectTasksCreated           ProjectTask[]                 @relation("ProjectTaskCreator")
   teamsLed                      Team[]                        @relation("TeamLead")
   teamMemberships               TeamMember[]                  @relation("TeamMemberStudent")
@@ -547,6 +549,7 @@ model ActivitySubmission {
   student                     User                         @relation("ActivitySubmissionStudent", fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   execution                   SubmissionExecution?
   executionJob                ExecutionJob?
+  reviewExecutions            ReviewExecution[]
   idempotency                 SubmissionIdempotency?
   scoreCorrections            SubmissionScoreCorrection[]
   failureResolution           SubmissionFailureResolution? @relation("FailedSubmissionResolution")
@@ -689,6 +692,7 @@ model ExecutionJob {
   jobType             ExecutionJobType    @map("job_type")
   submissionId        String?             @unique @map("submission_id") @db.Uuid
   practiceExecutionId String?             @unique @map("practice_execution_id") @db.Uuid
+  reviewExecutionId   String?             @unique @map("review_execution_id") @db.Uuid
   status              ExecutionJobStatus  @default(QUEUED)
   claimAttempt        Int                 @default(0) @map("claim_attempt")
   maxClaimAttempts    Int                 @default(3) @map("max_claim_attempts")
@@ -702,10 +706,52 @@ model ExecutionJob {
   updatedAt           DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
   submission          ActivitySubmission? @relation(fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   practiceExecution   PracticeExecution?  @relation(fields: [practiceExecutionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reviewExecution     ReviewExecution?    @relation(fields: [reviewExecutionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([status, availableAt])
   @@index([leaseExpiresAt])
   @@map("execution_jobs")
+}
+
+model ReviewExecution {
+  id             String                  @id @default(uuid()) @map("review_execution_id") @db.Uuid
+  submissionId   String                  @map("submission_id") @db.Uuid
+  instructorId   String                  @map("instructor_id") @db.Uuid
+  entryClassName String                  @map("entry_class_name")
+  status         PracticeExecutionStatus @default(QUEUED)
+  compileStatus  CompileStatus           @default(PENDING) @map("compile_status")
+  runtimeStatus  RuntimeStatus           @default(NOT_RUN) @map("runtime_status")
+  compilerOutput String?                 @map("compiler_output") @db.Text
+  createdAt      DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  startedAt      DateTime?               @map("started_at") @db.Timestamptz(3)
+  completedAt    DateTime?               @map("completed_at") @db.Timestamptz(3)
+  submission     ActivitySubmission      @relation(fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  instructor     User                    @relation("ReviewExecutionInstructor", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  cases          ReviewExecutionCase[]
+  executionJob   ExecutionJob?
+
+  @@index([submissionId, createdAt])
+  @@index([instructorId, createdAt])
+  @@index([status, createdAt])
+  @@map("review_executions")
+}
+
+model ReviewExecutionCase {
+  id                     String             @id @default(uuid()) @map("review_execution_case_id") @db.Uuid
+  reviewExecutionId      String             @map("review_execution_id") @db.Uuid
+  testNameSnapshot       String             @map("test_name_snapshot")
+  testOrderSnapshot      Int                @map("test_order_snapshot")
+  inputSnapshot          String?            @map("input_snapshot") @db.Text
+  expectedOutputSnapshot String             @map("expected_output_snapshot") @db.Text
+  isHiddenSnapshot       Boolean            @map("is_hidden_snapshot")
+  passStatus             TestCasePassStatus @default(PENDING) @map("pass_status")
+  actualOutput           String?            @map("actual_output") @db.Text
+  errorMessage           String?            @map("error_message") @db.Text
+  executionTimeMs        Int?               @map("execution_time_ms")
+  reviewExecution        ReviewExecution    @relation(fields: [reviewExecutionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([reviewExecutionId, testOrderSnapshot])
+  @@map("review_execution_cases")
 }
 
 model PracticeExecution {

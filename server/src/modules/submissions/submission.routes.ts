@@ -56,6 +56,17 @@ export function createSubmissionRouter(dependencies: {
     controller.get,
   )
   router.post(
+    '/submissions/:submissionId/review-runs',
+    ...instructorMutation,
+    controller.createReviewRun,
+  )
+  router.get(
+    '/submissions/:submissionId/review-runs/:runId',
+    dependencies.requireAuthentication,
+    requireAnyRole(['INSTRUCTOR']),
+    controller.getReviewRun,
+  )
+  router.post(
     '/submissions/:submissionId/score-corrections',
     ...instructorMutation,
     controller.correctScore,

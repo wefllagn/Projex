@@ -60,7 +60,7 @@ const stuck = z.enum(['true', 'false']).transform((value) => value === 'true').o
 export const adminExecutionJobQuerySchema = z.object({
   ...pagination,
   status: z.enum(['QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED']).optional(),
-  jobType: z.enum(['OFFICIAL_ASSESSMENT', 'VISIBLE_TEST_RUN']).optional(),
+  jobType: z.enum(['OFFICIAL_ASSESSMENT', 'VISIBLE_TEST_RUN', 'INSTRUCTOR_REVIEW_RUN']).optional(),
   submissionId: uuid,
   practiceExecutionId: uuid,
   stuck,

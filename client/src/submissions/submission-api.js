@@ -34,6 +34,12 @@ export function createSubmissionApi(client = apiClient) {
     getSubmission(submissionId, options) {
       return client.get(`/submissions/${submissionId}`, options)
     },
+    createReviewRun(submissionId, options) {
+      return client.post(`/submissions/${submissionId}/review-runs`, {}, options)
+    },
+    getReviewRun(submissionId, runId, options) {
+      return client.get(`/submissions/${submissionId}/review-runs/${runId}`, options)
+    },
     correctAutomatedScore(submissionId, input, options) {
       return client.post(
         `/submissions/${submissionId}/score-corrections`,

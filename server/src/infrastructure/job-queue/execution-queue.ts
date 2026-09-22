@@ -6,9 +6,10 @@ import type {
 
 export interface ClaimedExecutionJob {
   id: string
-  jobType: 'OFFICIAL_ASSESSMENT' | 'VISIBLE_TEST_RUN'
+  jobType: 'OFFICIAL_ASSESSMENT' | 'VISIBLE_TEST_RUN' | 'INSTRUCTOR_REVIEW_RUN'
   submissionId: string | null
   practiceExecutionId: string | null
+  reviewExecutionId: string | null
   workerId: string
   sourceCode: string
   entryClassName: string
@@ -20,6 +21,7 @@ interface ClaimedRow {
   job_type: ClaimedExecutionJob['jobType']
   submission_id: string | null
   practice_execution_id: string | null
+  review_execution_id: string | null
 }
 
 export interface ExecutionQueue {
@@ -46,7 +48,7 @@ async function markExpiredExhausted(
   now: Date,
 ): Promise<void> {
   const exhausted = await transaction.$queryRaw<ClaimedRow[]>`
-    SELECT "execution_job_id", "job_type", "submission_id", "practice_execution_id"
+    SELECT "execution_job_id", "job_type", "submission_id", "practice_execution_id", "review_execution_id"
     FROM "execution_jobs"
     WHERE "status" = 'RUNNING'
       AND "lease_expires_at" <= ${now}
@@ -85,6 +87,11 @@ async function markExpiredExhausted(
           completedAt: now,
         },
       })
+    } else if (row.review_execution_id) {
+      await transaction.reviewExecution.update({
+        where: { id: row.review_execution_id },
+        data: { status: 'FAILED', compileStatus: 'INFRASTRUCTURE_ERROR', completedAt: now },
+      })
     }
   }
 }
@@ -118,7 +125,7 @@ export function createPostgresExecutionQueue(prisma: PrismaClient): ExecutionQue
           FROM candidate
           WHERE job."execution_job_id" = candidate."execution_job_id"
           RETURNING job."execution_job_id", job."job_type",
-                    job."submission_id", job."practice_execution_id"
+                    job."submission_id", job."practice_execution_id", job."review_execution_id"
         `
         const row = rows[0]
         if (!row) return null
@@ -147,6 +154,7 @@ export function createPostgresExecutionQueue(prisma: PrismaClient): ExecutionQue
             jobType: 'OFFICIAL_ASSESSMENT',
             submissionId: submission.id,
             practiceExecutionId: null,
+            reviewExecutionId: null,
             workerId: input.workerId,
             sourceCode: submission.sourceCode,
             entryClassName: submission.activity.entryClassName,
@@ -155,6 +163,32 @@ export function createPostgresExecutionQueue(prisma: PrismaClient): ExecutionQue
               input: testCase.inputSnapshot,
               expectedOutput: testCase.expectedOutputSnapshot,
               maximumPoints: Number(testCase.maximumPoints),
+            })),
+          }
+        }
+
+        if (row.review_execution_id) {
+          const review = await transaction.reviewExecution.update({
+            where: { id: row.review_execution_id },
+            data: { status: 'RUNNING', startedAt: input.now, completedAt: null },
+            include: {
+              submission: { select: { sourceCode: true } },
+              cases: { orderBy: { testOrderSnapshot: 'asc' } },
+            },
+          })
+          return {
+            id: row.execution_job_id,
+            jobType: 'INSTRUCTOR_REVIEW_RUN',
+            submissionId: null,
+            practiceExecutionId: null,
+            reviewExecutionId: review.id,
+            workerId: input.workerId,
+            sourceCode: review.submission.sourceCode,
+            entryClassName: review.entryClassName,
+            cases: review.cases.map((testCase) => ({
+              id: testCase.id,
+              input: testCase.inputSnapshot,
+              expectedOutput: testCase.expectedOutputSnapshot,
             })),
           }
         }
@@ -169,6 +203,7 @@ export function createPostgresExecutionQueue(prisma: PrismaClient): ExecutionQue
           jobType: 'VISIBLE_TEST_RUN',
           submissionId: null,
           practiceExecutionId: practice.id,
+          reviewExecutionId: null,
           workerId: input.workerId,
           sourceCode: practice.sourceCode,
           entryClassName: practice.entryClassName,
@@ -230,7 +265,7 @@ export function createPostgresExecutionQueue(prisma: PrismaClient): ExecutionQue
               updatedAt: now,
             },
           })
-        } else {
+        } else if (job.practiceExecutionId) {
           for (const testCase of result.cases) {
             await transaction.practiceExecutionCase.update({
               where: { id: testCase.id },
@@ -247,6 +282,28 @@ export function createPostgresExecutionQueue(prisma: PrismaClient): ExecutionQue
             data: {
               status:
                 result.runtimeStatus === 'TIMEOUT' ? 'TIMEOUT' : 'SUCCEEDED',
+              compileStatus: result.compileStatus,
+              runtimeStatus: result.runtimeStatus,
+              compilerOutput: result.compilerOutput,
+              completedAt: now,
+            },
+          })
+        } else if (job.reviewExecutionId) {
+          for (const testCase of result.cases) {
+            await transaction.reviewExecutionCase.update({
+              where: { id: testCase.id },
+              data: {
+                passStatus: testCase.status,
+                actualOutput: testCase.actualOutput,
+                errorMessage: testCase.errorMessage,
+                executionTimeMs: testCase.executionTimeMs,
+              },
+            })
+          }
+          await transaction.reviewExecution.update({
+            where: { id: job.reviewExecutionId },
+            data: {
+              status: result.runtimeStatus === 'TIMEOUT' ? 'TIMEOUT' : 'SUCCEEDED',
               compileStatus: result.compileStatus,
               runtimeStatus: result.runtimeStatus,
               compilerOutput: result.compilerOutput,
@@ -313,9 +370,19 @@ export function createPostgresExecutionQueue(prisma: PrismaClient): ExecutionQue
               completedAt: retry ? null : now,
             },
           })
-        } else {
+        } else if (job.practiceExecutionId) {
           await transaction.practiceExecution.update({
             where: { id: job.practiceExecutionId! },
+            data: {
+              status: retry ? 'QUEUED' : 'FAILED',
+              compileStatus: retry ? 'PENDING' : 'INFRASTRUCTURE_ERROR',
+              runtimeStatus: 'NOT_RUN',
+              completedAt: retry ? null : now,
+            },
+          })
+        } else if (job.reviewExecutionId) {
+          await transaction.reviewExecution.update({
+            where: { id: job.reviewExecutionId },
             data: {
               status: retry ? 'QUEUED' : 'FAILED',
               compileStatus: retry ? 'PENDING' : 'INFRASTRUCTURE_ERROR',

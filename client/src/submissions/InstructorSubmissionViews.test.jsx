@@ -66,6 +66,8 @@ function submissionTransport(overrides = {}) {
     saveReview: vi.fn(),
     releaseSubmission: vi.fn(),
     retryAssessment: vi.fn(),
+    createReviewRun: vi.fn(),
+    getReviewRun: vi.fn(),
     resolveAssessmentFailure: vi.fn(),
     ...overrides,
   }
@@ -132,7 +134,7 @@ describe('instructor submission queue', () => {
 })
 
 describe('instructor submission review', () => {
-  it('shows immutable source and authorized hidden evidence without prototype rerun or per-test edits', async () => {
+  it('shows immutable source and authorized hidden evidence without per-test edits', async () => {
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissionTransport()} />)
 
     expect(await screen.findByText('Immutable submitted source')).toBeInTheDocument()
@@ -143,6 +145,30 @@ describe('instructor submission review', () => {
     expect(screen.queryByText(/similarity/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/Hidden boundary points/i)).not.toBeInTheDocument()
     expect(screen.getByText('Projected final score')).toBeInTheDocument()
+  })
+
+  it('reruns the submitted source separately without changing the original review or score', async () => {
+    const runId = '00000000-0000-4000-8000-000000000030'
+    const queued = { id: runId, submissionId, activityId, status: 'queued', compileStatus: 'pending', runtimeStatus: 'not_run', testOutcomes: [] }
+    const done = { ...queued, status: 'succeeded', compileStatus: 'success', runtimeStatus: 'passed', testOutcomes: [
+      { name: 'Hidden rerun', order: 1, isHidden: true, input: '3', expectedOutput: '6', actualOutput: '6', outcome: 'passed' },
+    ] }
+    const submissions = submissionTransport({
+      createReviewRun: vi.fn().mockResolvedValue({ data: queued }),
+      getReviewRun: vi.fn().mockResolvedValue({ data: done }),
+    })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 10, maximumDurationMs: 500 }} />)
+    await screen.findByText('Immutable submitted source')
+    await userEvent.click(screen.getByRole('button', { name: 'Rerun submitted source' }))
+    expect(submissions.createReviewRun).toHaveBeenCalledWith(submissionId)
+    expect(await screen.findByText('Hidden rerun')).toBeInTheDocument()
+    expect(screen.getByText('Fresh actual output')).toBeInTheDocument()
+    expect(screen.getByText('Separate from the original assessment')).toBeInTheDocument()
+    expect(submissions.getReviewRun).toHaveBeenCalledWith(submissionId, runId, expect.any(Object))
+    expect(submissions.saveReview).not.toHaveBeenCalled()
+    expect(submissions.correctAutomatedScore).not.toHaveBeenCalled()
+    expect(submissions.releaseSubmission).not.toHaveBeenCalled()
   })
 
   it('adopts every returned version across correction, review, and release', async () => {

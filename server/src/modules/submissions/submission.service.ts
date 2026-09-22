@@ -12,6 +12,7 @@ import type {
 } from './submission.schemas.js'
 import type {
   PracticeRecord,
+  ReviewRunRecord,
   StudentAttemptStateRecord,
   SubmissionMutationResult,
   SubmissionRecord,
@@ -79,6 +80,8 @@ export interface SubmissionService {
     sourceCode: string,
   ): Promise<unknown>
   getPracticeRun(caller: SafeUserProfile, runId: string): Promise<unknown>
+  createReviewRun(caller: SafeUserProfile, submissionId: string): Promise<unknown>
+  getReviewRun(caller: SafeUserProfile, submissionId: string, runId: string): Promise<unknown>
 }
 
 function sha256(value: string): string {
@@ -455,6 +458,31 @@ function practiceProjection(record: PracticeRecord) {
   }
 }
 
+function reviewRunProjection(record: ReviewRunRecord) {
+  return {
+    id: record.id,
+    submissionId: record.submissionId,
+    activityId: record.submission.activityId,
+    status: record.status.toLowerCase(),
+    compileStatus: record.compileStatus.toLowerCase(),
+    runtimeStatus: record.runtimeStatus.toLowerCase(),
+    compilerOutput: record.compilerOutput,
+    createdAt: record.createdAt,
+    completedAt: record.completedAt,
+    testOutcomes: record.cases.map((testCase) => ({
+      name: testCase.testNameSnapshot,
+      order: testCase.testOrderSnapshot,
+      isHidden: testCase.isHiddenSnapshot,
+      input: testCase.inputSnapshot,
+      expectedOutput: testCase.expectedOutputSnapshot,
+      outcome: testCase.passStatus.toLowerCase(),
+      actualOutput: testCase.actualOutput,
+      errorMessage: testCase.errorMessage,
+      executionTimeMs: testCase.executionTimeMs,
+    })),
+  }
+}
+
 export function createSubmissionService(dependencies: {
   repository: SubmissionRepository
   logger: Logger
@@ -757,6 +785,38 @@ export function createSubmissionService(dependencies: {
         throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
       }
       return practiceProjection(record)
+    },
+
+    async createReviewRun(caller, submissionId) {
+      requireExecutionEnabled(config)
+      requireInstructor(caller)
+      const result = await repository.createReviewRun({
+        submissionId, instructorId: caller.id, now: now(),
+      })
+      if (result.kind === 'not_found' || result.kind === 'forbidden') {
+        throw error(404, 'SUBMISSION_NOT_FOUND', 'Submission not found.')
+      }
+      if (result.kind === 'rate_limited') {
+        throw error(429, 'RATE_LIMIT_EXCEEDED', 'Too many review reruns were requested.')
+      }
+      if (result.kind === 'capacity_unavailable') {
+        throw error(503, 'EXECUTION_CAPACITY_UNAVAILABLE', 'A review rerun is already processing or no test snapshots are available.')
+      }
+      logger.info({
+        event: 'submission.review_run_created', actorId: caller.id,
+        submissionId, reviewExecutionId: result.reviewRun.id,
+      }, 'instructor review rerun created')
+      return reviewRunProjection(result.reviewRun)
+    },
+
+    async getReviewRun(caller, submissionId, runId) {
+      requireInstructor(caller)
+      const record = await repository.findReviewRunById(runId)
+      if (!record || record.submissionId !== submissionId ||
+          record.submission.activity.class.instructorId !== caller.id) {
+        throw error(404, 'REVIEW_RUN_NOT_FOUND', 'Review rerun not found.')
+      }
+      return reviewRunProjection(record)
     },
   }
 }

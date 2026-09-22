@@ -4,11 +4,13 @@ import { parseRequest } from '../../shared/http/validation.js'
 import {
   activitySubmissionParamsSchema,
   createPracticeRunSchema,
+  createReviewRunSchema,
   createSubmissionSchema,
   failureResolutionSchema,
   idempotencyKeySchema,
   practiceRunParamsSchema,
   reviewSubmissionSchema,
+  reviewRunParamsSchema,
   scoreCorrectionSchema,
   submissionListQuerySchema,
   submissionParamsSchema,
@@ -263,6 +265,29 @@ export function createSubmissionController(service: SubmissionService) {
       } catch (error) {
         next(error)
       }
+    },
+    createReviewRun: async (
+      request: Request, response: Response, next: NextFunction,
+    ) => {
+      try {
+        const { submissionId } = parseRequest(submissionParamsSchema, request.params)
+        parseRequest(createReviewRunSchema, request.body)
+        response.status(202).json(successResponse(
+          await service.createReviewRun(request.auth!.user, submissionId),
+          request.requestId,
+        ))
+      } catch (error) { next(error) }
+    },
+    getReviewRun: async (
+      request: Request, response: Response, next: NextFunction,
+    ) => {
+      try {
+        const { submissionId, runId } = parseRequest(reviewRunParamsSchema, request.params)
+        response.status(200).json(successResponse(
+          await service.getReviewRun(request.auth!.user, submissionId, runId),
+          request.requestId,
+        ))
+      } catch (error) { next(error) }
     },
   }
 }

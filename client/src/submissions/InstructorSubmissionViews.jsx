@@ -13,6 +13,7 @@ import {
   canResolveAssessmentFailure,
   isInstructorSubmissionPending,
   projectInstructorSubmission,
+  projectInstructorReviewRun,
   projectInstructorSubmissionSummary,
 } from './instructor-submission-projections.js'
 import { submissionApi } from './submission-api.js'
@@ -178,6 +179,9 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
   const [state, setState] = useState({ key: null, status: 'idle', activity: null, record: null, error: null, notice: '', bounded: false })
   const [correction, setCorrection] = useState({ newEffectiveScore: '', reason: '' })
   const [review, setReview] = useState({ instructorPoints: '0', feedbackText: '' })
+  const [rerun, setRerun] = useState(null)
+  const [rerunError, setRerunError] = useState(null)
+  const [rerunBounded, setRerunBounded] = useState(false)
   const [resolution, setResolution] = useState({ resolutionType: 'CLOSED_WITHOUT_REPLACEMENT', reason: '', replacementExpiresAt: '' })
   const [busy, setBusy] = useState('')
   const key = `${selectedClass?.id}:${activityId}:${submissionId}`
@@ -234,6 +238,36 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
     onData: pollData,
     onError: pollError,
     onBoundedStop: pollBounded,
+    ...pollingOptions,
+  })
+
+  const currentRerun = rerun?.submissionId === submissionId && rerun.activityId === activityId ? rerun : null
+  const acceptRerun = useCallback((response, expectedId) => {
+    const projected = projectInstructorReviewRun(response.data)
+    if (!projected.id || (expectedId && projected.id !== expectedId) ||
+        projected.submissionId !== submissionId || projected.activityId !== activityId) {
+      throw contextMismatchError('The review rerun does not match this submission.')
+    }
+    setRerun(projected)
+    setRerunError(null)
+    return projected
+  }, [activityId, submissionId])
+  const refreshRerun = useCallback(async (runId, options) => {
+    try {
+      const response = await submissions.getReviewRun(submissionId, runId, options)
+      return acceptRerun(response, runId)
+    } catch (error) {
+      if (error?.name !== 'AbortError') setRerunError(error)
+      throw error
+    }
+  }, [acceptRerun, submissionId, submissions])
+  useBoundedPolling({
+    identity: currentRerun?.id,
+    active: Boolean(currentRerun && ['queued', 'running'].includes(currentRerun.status) && !rerunError && !rerunBounded),
+    load: (runId, options) => submissions.getReviewRun(submissionId, runId, options),
+    onData: (response) => ['queued', 'running'].includes(acceptRerun(response, currentRerun?.id).status),
+    onError: setRerunError,
+    onBoundedStop: () => setRerunBounded(true),
     ...pollingOptions,
   })
 
@@ -297,6 +331,17 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
     } catch (error) { await handleMutationError(error) } finally { setBusy('') }
   }
 
+  const startRerun = async () => {
+    if (!capabilities.java.execution || !window.confirm('Rerun this immutable submitted source against its saved test inputs? This will not change the score or consume an attempt.')) return
+    setBusy('rerun')
+    setRerunError(null)
+    setRerunBounded(false)
+    try {
+      const response = await submissions.createReviewRun(submissionId)
+      acceptRerun(response)
+    } catch (error) { setRerunError(error) } finally { setBusy('') }
+  }
+
   const resolveFailure = async (event) => {
     event.preventDefault()
     const reason = resolution.reason.trim()
@@ -341,6 +386,17 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
         <section className="instructor-code-card"><div className="instructor-section-title"><h3>Immutable submitted source</h3><span>Read-only</span></div><pre>{record.sourceCode || 'No source snapshot was returned.'}</pre></section>
         <aside className="instructor-review-side"><AssessmentEvidence record={record} /></aside>
       </div>
+
+      <section className="instructor-testcase-panel instructor-review-rerun">
+        <div className="instructor-section-title"><h3>Fresh Instructor rerun</h3><span>Separate from the original assessment</span></div>
+        <p className="instructor-evidence-note">Runs the unchanged submitted Java source with its saved test inputs. This diagnostic does not change attempts, assessment evidence, feedback, or scores.</p>
+        {!archived && <button type="button" className="student-outline-action" onClick={startRerun} disabled={Boolean(busy) || !capabilities.java.execution || isInstructorSubmissionPending(record) || Boolean(currentRerun && ['queued', 'running'].includes(currentRerun.status))}>{busy === 'rerun' ? 'Queueing rerun…' : 'Rerun submitted source'}</button>}
+        {!capabilities.java.execution && <p className="activity-lifecycle-note">Java execution is unavailable in this environment.</p>}
+        {archived && <p className="activity-lifecycle-note">Archived records cannot start a new rerun.</p>}
+        {rerunError && <RequestState kind={errorKind(rerunError)} compact error={rerunError} />}
+        {currentRerun && <><p role="status">Rerun {formatStatus(currentRerun.status)} · compile {formatStatus(currentRerun.compileStatus)} · runtime {formatStatus(currentRerun.runtimeStatus)}</p>{currentRerun.compilerOutput && <><strong>Fresh compiler output</strong><pre>{currentRerun.compilerOutput}</pre></>}{currentRerun.status === 'failed' && <p>Worker execution failed. The original assessment and score remain unchanged.</p>}{currentRerun.testOutcomes.map((item) => <details className="instructor-assessment-case" key={item.order}><summary><strong>{item.name}</strong><span>{item.isHidden ? 'Hidden' : 'Visible'}</span><em>{formatStatus(item.outcome)}</em></summary><dl><div><dt>Saved input</dt><dd><pre>{item.input ?? 'No input'}</pre></dd></div><div><dt>Expected output</dt><dd><pre>{item.expectedOutput}</pre></dd></div><div><dt>Fresh actual output</dt><dd><pre>{item.actualOutput ?? 'No output'}</pre></dd></div>{item.errorMessage && <div><dt>Runtime detail</dt><dd><pre>{item.errorMessage}</pre></dd></div>}</dl></details>)}</>}
+        {(rerunBounded || rerunError) && currentRerun && <><p>Automatic refresh stopped. The server-side job may still be processing.</p><button type="button" className="student-outline-action" onClick={() => { setRerunError(null); setRerunBounded(false); void refreshRerun(currentRerun.id).catch(() => {}) }}>Refresh rerun</button></>}
+      </section>
 
       <section className="instructor-score-panel">
         <div className="instructor-section-title"><h3>Score components</h3><span>Server-authorized values</span></div>
