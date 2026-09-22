@@ -1,6 +1,6 @@
 # Projex Current Project Status
 
-Last reconciled: September 3, 2026
+Last reconciled: September 22, 2026
 
 ## Read this first
 
@@ -14,7 +14,7 @@ This file is a teammate-friendly status summary. It does not override the code, 
 - Stable tag: `projex-lan-demo`
 - Historical implementation: Phases 0 through 11
 - Next work program: **Projex Iteration 2 — Classroom and Laboratory Readiness**
-- Iteration 2 status: planned, not yet implemented
+- Iteration 2 status: I2.1 core verified and pushed on Julius’s task branch; not integrated into `development/fullstack`. Instructor Rerun is implemented but remains an unaccepted WIP pending normal-local migration, authenticated walkthrough, and retention decision.
 
 The stable baseline passed controlled local and Home LAN multi-device testing. This means it is an accepted demonstration baseline. It does **not** mean production-ready, Internet-ready, university-wide, or safe for hostile Java execution.
 
@@ -59,8 +59,9 @@ The labels below deliberately distinguish implementation from proof.
 | Cross-class Student To-Do | Missing | Prototype concept only | Existing data can be derived | Missing | Pending | UI and API gap |
 | Global Student submission history | Existing records, no global product surface | Missing | Existing | Missing | Pending | UI/API gap |
 | Global Instructor review queue | Existing records, no global product surface | Missing | Existing | Missing | Pending | UI/API gap |
-| Java file import | Reuse Run/Submit APIs | Missing | No change expected | Missing | Pending | UI gap |
-| Improved textarea editor aids | Not needed | Missing | No change | Missing | Pending | UI gap |
+| Java file import | Reused Run/Submit APIs | Implemented on I2.1 task branch | No change | Passed | Passed for selected demo | Not yet integrated |
+| Improved textarea editor aids | Not needed | Implemented on I2.1 task branch | No change | Passed | Passed for selected demo | Not yet integrated |
+| Instructor fresh rerun | Separate durable queue/API in WIP | Instructor review UI in WIP | Test-only migration passed; normal pending | Guarded tests passed | Pending authenticated walkthrough | Unaccepted WIP |
 | Similarity indicators | Placeholder model only | Missing | Existing placeholder | Missing | Pending | Not implemented |
 | Announcements, notifications, comments | Missing | Historical prototype concepts | No approved models | Missing | Pending | Deferred |
 | Paired PostgreSQL and Git recovery proof | Tooling exists | Not applicable | No schema change expected | Partial | Not yet executed | Pending operational proof |
@@ -107,7 +108,7 @@ When documents or chat summaries disagree, check in this order:
 
 ## What the next teammate should do
 
-Start with `I2.1` in [ITERATION_2_ROADMAP.md](ITERATION_2_ROADMAP.md). Do not jump directly to deployment or laboratory Git exposure. Follow [TEAM_DEVELOPMENT_WORKFLOW.md](TEAM_DEVELOPMENT_WORKFLOW.md) and use [CODEX_PROMPT_PACK.md](CODEX_PROMPT_PACK.md) to orient a fresh Codex task.
+For the immediate continuation, Freiser starts with [INSTRUCTOR_RERUN_TEAM_HANDOFF.md](INSTRUCTOR_RERUN_TEAM_HANDOFF.md): verify Julius’s final reviewed, pushed checkpoint SHA before creating `iteration-2/freiser-work-01` from it. If the checkpoint is not yet pushed, stop. `development/fullstack` currently omits it. The sequential member handoff is separate from Julius’s later PR integration. Do not jump to I2.2, deployment, or laboratory Git exposure. Follow [TEAM_DEVELOPMENT_WORKFLOW.md](TEAM_DEVELOPMENT_WORKFLOW.md) and [CODEX_PROMPT_PACK.md](CODEX_PROMPT_PACK.md).
 
 ## Updating this file
 

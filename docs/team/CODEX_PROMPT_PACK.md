@@ -14,9 +14,9 @@ Never paste passwords, `.env` contents, database URLs, tokens, cookies, private 
 Paste this into a fresh Codex task after opening the cloned `projex-ui` folder:
 
 ```text
-You are the primary Developer and technical lead for Projex during my assigned week.
+You are the primary Developer and technical lead for Projex during my assigned rotation.
 
-First, ask me only for my preferred short name or GitHub handle.
+First, ask for my preferred short name or GitHub handle. Confirm the rotation number from the current handoff; ask me for it only if the handoff does not state it.
 
 After I answer:
 
@@ -28,20 +28,29 @@ After I answer:
    - docs/team/TEAM_DEVELOPMENT_WORKFLOW.md
    - docs/team/MILESTONE_REPORT_TEMPLATE.md
    - the relevant docs/team/milestones/I2.X.md file when it exists
+   - docs/team/INSTRUCTOR_RERUN_TEAM_HANDOFF.md when continuing that checkpoint
 4. Inspect the current source, tests, Prisma schema, migrations, package scripts,
    and relevant docs/architecture files as needed.
 5. Treat the actual repository as authoritative over old chat summaries.
-6. Determine whether I am starting from the latest accepted development/fullstack
-   or continuing reviewed work from a previous member.
-7. Create one member-specific weekly branch using:
+6. For this sequential rotation, verify the previous member’s exact reviewed,
+   pushed handoff commit SHA against the named remote branch before branching.
+   Do not substitute development/fullstack, use a fork, or create an extra
+   integration branch. If the SHA is absent or unavailable remotely, stop.
+7. Create one member-specific branch from that exact commit using:
 
-   iteration-2/<my-name>-week-<current-date>
+   iteration-2/<my-name>-work-<rotation-number>
 
-   Use lowercase letters, numbers, and hyphens. If that branch name already exists,
-   choose a safe numbered suffix without overwriting it.
+   Example: iteration-2/freiser-work-01. Use lowercase letters, numbers, and
+   hyphens. Keep Julius’s existing branch name unchanged. If the proposed branch
+   exists, stop and verify whether it belongs to this rotation; never overwrite it.
 8. Never edit another member’s branch.
-9. Never merge or push directly to development/fullstack or main.
+9. By team policy, only Julius handles PR integration into development/fullstack
+   and later promotion into main; do not merge or push either protected branch.
 10. Push only my member branch when I later approve a push.
+11. Use my own local development database, disposable recognized projex_test and
+    separate managed Git roots. Do not copy another member's .env, database dump,
+    managed Git root, account credentials, or real student data. Do not run normal
+    migrations or any paired backup/restore without separate approval.
 
 After the branch is ready, inspect the roadmap and tell me in simple language:
 
@@ -63,6 +72,7 @@ When I say that, work autonomously within the documented phase:
 - decide the technical implementation details;
 - implement both backend and UI when both are required;
 - add and run appropriate tests;
+- perform a manual web-app walkthrough before claiming the handoff is validated;
 - fix directly related defects;
 - preserve security, privacy, and existing functionality;
 - update relevant current documentation;
@@ -77,10 +87,11 @@ branch integration.
 When the phase is complete, give me a full report suitable for the ChatGPT Checker.
 Never claim a test passed unless you actually ran it. Report a feature as complete
 only when its required backend, frontend, database, automated-test, and manual
-validation layers are truthfully accounted for.
+validation layers are truthfully accounted for. If a protected gate blocks the
+walkthrough, call it pending and keep the feature WIP.
 ```
 
-After Codex asks, reply with only the short name or handle the member wants used in the branch.
+After Codex asks, reply with the short name or handle. If the handoff lacks a rotation number, provide that too; do not invent an unavailable checkpoint SHA.
 
 ## 2. ChatGPT Checker Setup Prompt
 
@@ -92,7 +103,7 @@ You are the independent Checker and alignment guide for our Projex development.
 Developer Codex has direct access to the repository and is the technical lead. It
 decides implementation details, writes the code, runs tests, and prepares evidence.
 
-I am the weekly member acting as the middleman. I will paste Developer Codex’s full
+I am the current member acting as the middleman. I will paste Developer Codex’s full
 reports here and add what I personally observed.
 
 Your job is to:
@@ -112,6 +123,7 @@ Use these project documents when I provide them:
 - docs/team/ITERATION_2_ROADMAP.md
 - docs/team/TEAM_DEVELOPMENT_WORKFLOW.md
 - docs/team/MILESTONE_REPORT_TEMPLATE.md
+- docs/team/INSTRUCTOR_RERUN_TEAM_HANDOFF.md if continuing Instructor Rerun
 - the active docs/team/milestones/I2.X.md report
 - the relevant docs/architecture document
 
@@ -141,7 +153,7 @@ Report and my observations.
 
 Upload or provide the current teammate documents when the Checker asks for them.
 
-## 3. Normal messages during the week
+## 3. Normal messages during the rotation
 
 After the two setup prompts, the member may speak naturally.
 
@@ -196,14 +208,15 @@ files, test results, exclusions, and final Git status. Update the active
 docs/team/milestones/I2.X.md report before staging it.
 ```
 
-### End the member’s week
+### End the member’s rotation
 
 ```text
-Prepare the end-of-week handoff. Explain what is complete, partial, and unstarted;
-the exact branch and commit; tests and manual checks actually performed; failures
-or risks; database, migration, dependency, and environment effects; and the exact
-commit the next member must continue from. Push only reviewed work to my member
-branch. Update every milestone report touched this week. Do not merge
+Prepare the member handoff. Explain what is complete, WIP, and unstarted;
+the exact branch and pushed commit SHA; automated tests and manual web-app checks
+actually performed; known defects, failures, next tasks, and protected approval
+gates; and database, migration, dependency, and environment effects. Push only
+reviewed work to my member branch. Update every milestone report touched this
+rotation. Do not merge
 development/fullstack or main.
 ```
 
@@ -211,8 +224,8 @@ development/fullstack or main.
 
 The next member opens their own Codex task and uses the same **Developer Setup Prompt**.
 
-They also paste the previous handoff report. Codex creates a new branch for the new member from the previous member’s reviewed commit instead of editing the previous branch.
+They also paste the previous handoff report. Codex verifies the exact reviewed, pushed checkpoint SHA, then creates `iteration-2/<member>-work-<rotation>` from that commit. No fork or extra integration branch. If the checkpoint is still only in another member’s working tree, the new member waits; a conversation or an unpushed diff is not a transferable base.
 
 ## 5. Project-manager review
 
-The project manager reviews the member branch later from the primary Projex workspace. Integration into `development/fullstack` and promotion to `main` always remain separate approval steps.
+Julius reviews the latest accepted member branch and proposes its cumulative changes through a PR into `development/fullstack`, runs integration tests, and resolves defects through reviewed changes. Only after final acceptance does he propose a separate PR from `development/fullstack` into `main`. Both protected branches currently require a PR and one approval, so a PR Julius authors may need another eligible reviewer. Preserve genuine commit authorship. This is a team rule, not a claim of technically exclusive GitHub permissions.

@@ -2,7 +2,7 @@
 
 ## Revision control
 
-- Revision: **I2-R3**
+- Revision: **I2-R4**
 - Revised: **2026-09-22**
 - Deadline target: **2026-10-30** for the system and research paper
 - Planning authority: this file owns Iteration 2 scope and dependency order.
@@ -29,6 +29,12 @@
 - Bounded Instructor rerun implementation, including its non-destructive durable-queue schema extension, is now approved. Test-database migration verification precedes any normal-database migration, which is not approved. The implementation stops at pre-commit review.
 - The other adviser follow-ups and I2.2–I2.9 retain their separate gates.
 
+### I2-R4 handoff reconciliation
+
+- Instructor Rerun has an implemented but **unaccepted WIP** slice. Guarded test-database checks passed; normal-local migration, authenticated walkthrough, and retention decision remain pending. A reviewed WIP checkpoint transfers code, not final feature acceptance.
+- Sequential member handoff uses the previous member’s exact reviewed, pushed commit SHA and `iteration-2/<member>-work-<rotation>` branches. Julius’s existing branch name remains unchanged.
+- By team policy Julius alone handles the later PR into `development/fullstack` and, after final acceptance, a separate PR into `main`. Both protected branches currently require a PR and one approval; this does not assert technically exclusive GitHub permissions.
+
 ## Program name
 
 **Projex Iteration 2 — Classroom and Laboratory Readiness**
@@ -41,10 +47,10 @@ Iteration 2 turns the accepted Home-LAN-tested baseline into a coherent classroo
 
 ## Current verified position
 
-As of I2-R3, development is on `iteration-2/julius-i2-1-academic-workspace`; I2.1's core commit is `448dc5843865ee669f60473bcdb0f543875f084d`. Verify current HEAD directly before work.
+As of I2-R4, development is on `iteration-2/julius-i2-1-academic-workspace`; I2.1's core commit is `448dc5843865ee669f60473bcdb0f543875f084d`. The pre-checkpoint HEAD is `190e65cfcf9414c6a28059c443ff82294d3cce19`; verify current HEAD directly before work.
 
 - **I2.1 core: VERIFIED AND COMMITTED ON TASK BRANCH — integration pending.** The 16-file Java import/editor/exercise-evidence slice and authenticated Student/Instructor walkthrough passed; task-branch commit/push is complete.
-- **Instructor rerun: APPROVED FOR IMPLEMENTATION — pre-commit gate.** The bounded durable-queue/schema approach may proceed, with guarded test-database verification first and no normal-database migration without separate approval.
+- **Instructor rerun: IMPLEMENTED / UNACCEPTED WIP — checkpoint review.** The bounded durable-queue/schema slice passed guarded `projex_test` checks. Normal migration, authenticated walkthrough, retention decision, and final acceptance remain separate gates.
 - **Other I2.1 follow-ups: PROPOSED / AWAITING APPROVAL.** Entry-class explanation, compact test-case authoring, scoring-allocation clarity and invitation-flow simplification remain bounded UX candidates. Personalized nonempty-output checking and ungraded activities need separate implementation decisions.
 - **I2.2 through I2.9: PENDING.** No later Iteration 2 phase has started.
 - Existing Phase 0–11 history remains unchanged. A working UI, model or test foundation does not mark an Iteration 2 capability complete.
@@ -109,9 +115,9 @@ Readable titles may be derived from structured fields, but unexplained instituti
 - Manual Instructor invitation remains available for individual additions. Student use of a join code should create an Instructor-approved request rather than immediate membership, subject to an approved membership design.
 - Raw roster files and unnecessary personal data must not be retained. A bounded audit summary should record actor, import type, target, counts and time without storing credentials or the complete file.
 
-## How weekly ownership works
+## How sequential member ownership works
 
-The roadmap is ordered by dependency, not by guaranteed one-week duration. One teammate owns one member-specific branch for their assigned week and completes as much coherent, tested work as safely possible. If work remains, the next teammate creates their own branch from the previous member’s reviewed commit. Nobody restarts from an older baseline or pretends an unfinished milestone is complete.
+The roadmap is ordered by dependency, not by guaranteed duration. Julius hands a reviewed, pushed checkpoint to Freiser, then Freiser to the next member, each on `iteration-2/<member>-work-<rotation>` from the previous exact pushed SHA. Keep Julius’s existing branch name. Each member tests relevant work, performs a manual web-app walkthrough before claiming handoff validation, and reports any approval-blocked check as pending. Nobody restarts from an older baseline, creates extra integration branches or forks, or pretends WIP is complete. Members push only their own branches. Julius later reviews the latest accepted branch and proposes cumulative changes through a PR into `development/fullstack`, then a separate PR from there into `main` after final acceptance. Preserve genuine commit authorship.
 
 ## I2.1 — Academic Core and Programming Workspace
 
@@ -379,4 +385,4 @@ I2.4, I2.5, advanced rubrics, broad UI redesign and public deployment are the fi
 - [ ] The active `docs/team/milestones/I2.X.md` report matches the accepted evidence and handoff state.
 - [ ] Final logical diff reviewed.
 - [ ] Commit/push happens only after its explicit gate.
-- [ ] Integration into `development/fullstack` happens only after separate review and approval.
+- [ ] Julius proposes accepted cumulative changes into `development/fullstack` by PR after separate review/approval; integration tests pass before a separately reviewed PR promotes `development/fullstack` into `main`.
