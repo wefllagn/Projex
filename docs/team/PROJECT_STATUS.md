@@ -1,6 +1,6 @@
 # Projex Current Project Status
 
-Last reconciled: September 22, 2026
+Last reconciled: September 24, 2026
 
 ## Read this first
 
@@ -14,7 +14,7 @@ This file is a teammate-friendly status summary. It does not override the code, 
 - Stable tag: `projex-lan-demo`
 - Historical implementation: Phases 0 through 11
 - Next work program: **Projex Iteration 2 — Classroom and Laboratory Readiness**
-- Iteration 2 status: I2.1 core verified and pushed on Julius’s task branch; not integrated into `development/fullstack`. Instructor Rerun is implemented but remains an unaccepted WIP pending normal-local migration, authenticated walkthrough, and retention decision.
+- Iteration 2 status: I2.1 core verified and pushed on Julius's task branch; not integrated into `development/fullstack`. Instructor Rerun is accepted for Freiser's checkpoint on `iteration-2/freiser-work-01` after the approved normal-local migration, authenticated desktop/narrow walkthrough, Checker review, and Julius's retention decision. Protected-branch integration remains separate; I2.2 has not started.
 
 The stable baseline passed controlled local and Home LAN multi-device testing. This means it is an accepted demonstration baseline. It does **not** mean production-ready, Internet-ready, university-wide, or safe for hostile Java execution.
 
@@ -61,7 +61,7 @@ The labels below deliberately distinguish implementation from proof.
 | Global Instructor review queue | Existing records, no global product surface | Missing | Existing | Missing | Pending | UI/API gap |
 | Java file import | Reused Run/Submit APIs | Implemented on I2.1 task branch | No change | Passed | Passed for selected demo | Not yet integrated |
 | Improved textarea editor aids | Not needed | Implemented on I2.1 task branch | No change | Passed | Passed for selected demo | Not yet integrated |
-| Instructor fresh rerun | Separate durable queue/API in WIP | Instructor review UI in WIP | Test-only migration passed; normal pending | Guarded tests passed | Pending authenticated walkthrough | Unaccepted WIP |
+| Instructor fresh rerun | Separate durable queue/API | Integrated on Freiser task branch | Two rerun migrations applied to Freiser's local `projex` | Guarded integration 19/90, client 46/296, Java 3/24; server isolated 221/224 with separate Windows failures | Authenticated Admin/Instructor/Student; Instructor 1280 px and 390 px passed | Accepted Freiser checkpoint; protected integration pending |
 | Similarity indicators | Placeholder model only | Missing | Existing placeholder | Missing | Pending | Not implemented |
 | Announcements, notifications, comments | Missing | Historical prototype concepts | No approved models | Missing | Pending | Deferred |
 | Paired PostgreSQL and Git recovery proof | Tooling exists | Not applicable | No schema change expected | Partial | Not yet executed | Pending operational proof |
@@ -78,6 +78,7 @@ The labels below deliberately distinguish implementation from proof.
 - Similarity detection, cross-class work queues, notifications, and complete contribution monitoring are not implemented.
 - Home LAN browser validation did not expose Smart HTTP and was not an Internet deployment test.
 - Backup and restore tooling exists, but a complete paired PostgreSQL plus Git-storage recovery proof remains pending.
+- Instructor Rerun diagnostic/history records remain durable for Iteration 2 without automatic expiration or cleanup, separate from official attempts, assessment evidence, feedback, corrections and released scores. Three inherited Windows repository-storage/restore-verifier failures remain separately tracked in the rerun milestone.
 
 ## Iteration 2 feature-reporting rule
 
@@ -108,7 +109,7 @@ When documents or chat summaries disagree, check in this order:
 
 ## What the next teammate should do
 
-For the immediate continuation, Freiser starts with [INSTRUCTOR_RERUN_TEAM_HANDOFF.md](INSTRUCTOR_RERUN_TEAM_HANDOFF.md): verify Julius’s final reviewed, pushed checkpoint SHA before creating `iteration-2/freiser-work-01` from it. If the checkpoint is not yet pushed, stop. `development/fullstack` currently omits it. The sequential member handoff is separate from Julius’s later PR integration. Do not jump to I2.2, deployment, or laboratory Git exposure. Follow [TEAM_DEVELOPMENT_WORKFLOW.md](TEAM_DEVELOPMENT_WORKFLOW.md) and [CODEX_PROMPT_PACK.md](CODEX_PROMPT_PACK.md).
+Freiser's accepted Instructor Rerun checkpoint is on `iteration-2/freiser-work-01`; [INSTRUCTOR_REVIEW_RERUN.md](milestones/INSTRUCTOR_REVIEW_RERUN.md) owns its detailed evidence and limitations. Verify the current branch and pushed SHA before any new work. Integration into `development/fullstack` requires separate approval. I2.2 still depends on I2.1 integration and stable academic class projections; the academic foundation remains awaiting product/schema decisions. Do not start deployment or laboratory Git exposure. Follow [TEAM_DEVELOPMENT_WORKFLOW.md](TEAM_DEVELOPMENT_WORKFLOW.md) and [CODEX_PROMPT_PACK.md](CODEX_PROMPT_PACK.md).
 
 ## Updating this file
 

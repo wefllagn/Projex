@@ -2,10 +2,10 @@
 
 ## Tracker identity
 
-- Revision: **I2-C2**
-- Updated: **2026-09-22**
+- Revision: **I2-C3**
+- Updated: **2026-09-24**
 - Deadline target: **2026-10-30**
-- Scope authority: `docs/team/ITERATION_2_ROADMAP.md` revision I2-R3
+- Scope authority: `docs/team/ITERATION_2_ROADMAP.md` revision I2-R4
 - Evidence authority: current Git/source/Prisma/test output, then the active `docs/team/milestones/I2.X.md` report
 
 This file is the status and execution tracker. It does not redefine roadmap scope. Update it only when repository evidence changes or an explicit approval changes a gate. Do not mark a feature complete because a screen exists.
@@ -22,20 +22,20 @@ This file is the status and execution tracker. It does not redefine roadmap scop
 
 | Item | Status | Evidence / next gate |
 | --- | --- | --- |
-| Active branch | IN PROGRESS | `iteration-2/julius-i2-1-academic-workspace` |
+| Active branch | IN PROGRESS | `iteration-2/freiser-work-01`, continued from Julius handoff `90d8c4a3864d2d9b8bc41ca9b1570c1f52d5b096`; protected-branch integration pending |
 | I2.1 core commit | VERIFIED ON TASK BRANCH | `448dc5843865ee669f60473bcdb0f543875f084d`; 16-file slice committed/pushed, integration pending |
 | I2.1 automated evidence | COMPLETED for current slice | Client 46/293, server 36/224, Java 3/24, PostgreSQL integration 18/86; lint/type-check/build recorded passing in `I2.1.md` |
 | I2.1 authenticated walkthrough | COMPLETED for selected deterministic demo | Student/Instructor activity, practice, submit, review, release and narrow layout recorded passing |
-| Instructor fresh rerun | IN PROGRESS — WIP handoff review | Separate queue target, API and Instructor UI implemented; guarded `projex_test` migration and 19/89 integration tests passed; normal migration, authenticated walkthrough and final acceptance not approved |
+| Instructor fresh rerun | COMPLETED — ACCEPTED FOR FREISER CHECKPOINT | Checker accepted the scoped rerun. Guarded `projex_test` integration 19/90, client 46/296, Java 3/24; server isolated 221/224 with three inherited Windows storage/restore failures tracked separately. Approved local migrations and authenticated 1280 px/390 px walkthrough passed. Julius set Iteration 2 diagnostic retention without automatic cleanup; protected integration remains pending. See `milestones/INSTRUCTOR_REVIEW_RERUN.md`. |
 | Personalized Exercise 1 checking | PROPOSED / AWAITING APPROVAL | Nonempty-output comparator/grading contract unresolved |
 | I2.2–I2.9 | PENDING | No later Iteration 2 phase started |
-| Normal database migration for Iteration 2 | PENDING | No I2 migration approved or applied |
+| Normal database migration for Iteration 2 | PARTIAL — APPROVED RERUN SLICE ONLY | The two committed Instructor Rerun migrations were applied to Freiser's local `projex`; other proposed Iteration 2 schema work remains unapproved. |
 | Network Git | PENDING | Smart HTTP remains loopback-only; browser Home-LAN testing is not Git transport evidence |
 
 ## Critical path to October 30
 
 - [ ] **IN PROGRESS** I2.1 core committed/pushed on task branch; integrate only through a separate approval gate.
-- [ ] **IN PROGRESS — UNACCEPTED WIP** Transfer the reviewed Instructor rerun checkpoint without changing submissions, attempts or scores; normal migration, authenticated walkthrough, retention decision, and final acceptance remain separate gates.
+- [x] **ACCEPTED FOR FREISER CHECKPOINT** Instructor rerun preserves original assessment, attempts, feedback and scores; guarded tests, approved normal-local migration, authenticated desktop/narrow walkthrough, retention decision and Checker acceptance are recorded in the rerun milestone. Protected integration remains separate.
 - [ ] **PROPOSED / AWAITING APPROVAL** Approve the academic Course/class-offering and Admin roster-import model.
 - [ ] **PENDING** Complete essential I2.2 cross-class work views.
 - [ ] **PROPOSED / AWAITING APPROVAL** Add the smallest repository-to-submission slice inside I2.3.
@@ -117,7 +117,7 @@ Bounded adviser follow-ups:
 - [ ] **PROPOSED / AWAITING APPROVAL** Explain/progressively disclose Java entry class while preserving `Circle2` and other valid names.
 - [ ] **PROPOSED / AWAITING APPROVAL** Compact test-case editing and keep Add/Save/allocation controls reachable.
 - [ ] **PROPOSED / AWAITING APPROVAL** Show automated and Instructor maximums clearly before publication.
-- [x] **IMPLEMENTED / UNACCEPTED WIP** Add Instructor rerun through a dedicated durable review-execution target. Two split migrations applied only to guarded `projex_test`; a WIP checkpoint is not final acceptance. Normal-database migration, authenticated walkthrough and final feature approval remain separate.
+- [x] **ACCEPTED FOR FREISER CHECKPOINT** Add Instructor rerun through a dedicated durable review-execution target. The two split migrations passed guarded `projex_test` verification and were applied, by separate approval, to Freiser's normal local `projex`. Authenticated validation passed; Julius approved durable Iteration 2 diagnostic history without automatic cleanup. Protected integration remains separate.
 - [ ] **PROPOSED / AWAITING APPROVAL** Decide whether Student custom stdin is required after native Git becomes usable; do not build a terminal emulator.
 - [ ] **PROPOSED / AWAITING APPROVAL** Decide personalized nonempty-output checking and ungraded activity semantics.
 
@@ -127,7 +127,7 @@ Required tests/evidence:
 - [x] Client/server unit, Java and guarded PostgreSQL integration suites recorded passing.
 - [x] Authenticated Student/Instructor walkthrough and narrow layout.
 - [x] Staged diff review, `git diff --cached --check`, dependency/schema/secret review for the 16-file core.
-- [x] For rerun: immutable source, no attempt use, no score/evidence replacement, released-result preservation, existing Java input/output limits, authorization and hidden-test privacy verified by guarded integration and frontend tests; final diff/security review remains before acceptance.
+- [x] For rerun: immutable source, no attempt use, no score/evidence replacement, released-result preservation, existing Java input/output limits, authorization and hidden-test privacy verified by guarded integration, frontend tests and authenticated walkthrough; final diff/security review and Checker acceptance completed for Freiser's checkpoint.
 
 Acceptance criteria:
 
