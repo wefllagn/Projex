@@ -70,6 +70,26 @@ afterAll(async () => {
 })
 
 describe('Instructor review rerun in guarded PostgreSQL and real Java', () => {
+  it('limits an Instructor to ten completed rerun starts per rolling minute', async () => {
+    const { instructor, submissionId, service } = await fixture()
+    for (let count = 0; count < 10; count += 1) {
+      const created = await service.createReviewRun(instructor, submissionId) as { id: string }
+      const job = await queue.claimNext({ workerId: 'rate-test-worker', now, leaseMs: 30_000 })
+      expect(job?.reviewExecutionId).toBe(created.id)
+      expect(await queue.complete(job!, {
+        compileStatus: 'SUCCESS', runtimeStatus: 'PASSED', compilerOutput: null,
+        cases: job!.cases.map((testCase) => ({
+          id: testCase.id, status: 'PASSED', actualOutput: testCase.expectedOutput,
+          errorMessage: null, executionTimeMs: 1, automatedPoints: 0,
+        })),
+      }, now)).toBe(true)
+    }
+    await expect(service.createReviewRun(instructor, submissionId)).rejects.toMatchObject({
+      statusCode: 429, code: 'RATE_LIMIT_EXCEEDED',
+    })
+    expect(await prisma.reviewExecution.count()).toBe(10)
+  }, 60_000)
+
   it('reruns immutable source and saved stdin without changing a released result', async () => {
     const { instructor, otherInstructor, student, admin, activity, submissionId, service } = await fixture()
     const before = await prisma.activitySubmission.findUniqueOrThrow({

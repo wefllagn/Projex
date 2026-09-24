@@ -13687,6 +13687,16 @@ textarea:focus-visible {
   margin: 0;
 }
 
+.instructor-live-review .instructor-review-side {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.instructor-live-review .instructor-assessment-case summary {
+  grid-template-columns: minmax(0, 1fr) 66px 80px 80px;
+  gap: 8px;
+}
+
 .instructor-live-review .instructor-output-card pre {
   min-height: 180px;
 }
@@ -13867,8 +13877,20 @@ textarea:focus-visible {
 }
 
 @media (max-width: 760px) {
-  .instructor-assessment-case summary {
+  .instructor-assessment-case summary,
+  .instructor-live-review .instructor-assessment-case summary {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .student-class-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .student-class-header__top,
+  .student-class-header__bottom,
+  .student-class-tabs {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .instructor-live-feedback {

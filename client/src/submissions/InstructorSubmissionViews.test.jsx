@@ -171,6 +171,51 @@ describe('instructor submission review', () => {
     expect(submissions.releaseSubmission).not.toHaveBeenCalled()
   })
 
+  it('does not restart automatic polling while a manual rerun refresh is pending', async () => {
+    const runId = '00000000-0000-4000-8000-000000000030'
+    const queued = { id: runId, submissionId, activityId, status: 'queued', compileStatus: 'pending', runtimeStatus: 'not_run', testOutcomes: [] }
+    const submissions = submissionTransport({
+      createReviewRun: vi.fn().mockResolvedValue({ data: queued }),
+      getReviewRun: vi.fn().mockResolvedValue({ data: queued }),
+    })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 10, maximumDelayMs: 10, maximumDurationMs: 30 }} />)
+    await screen.findByText('Immutable submitted source')
+    await userEvent.click(screen.getByRole('button', { name: 'Rerun submitted source' }))
+    await screen.findByRole('button', { name: 'Refresh rerun' })
+
+    submissions.getReviewRun.mockClear()
+    let resolveRefresh
+    submissions.getReviewRun.mockImplementationOnce(() => new Promise((resolve) => { resolveRefresh = resolve }))
+      .mockResolvedValue({ data: queued })
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh rerun' }))
+    expect(submissions.getReviewRun).toHaveBeenCalledTimes(1)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(submissions.getReviewRun).toHaveBeenCalledTimes(1)
+    resolveRefresh({ data: queued })
+    await waitFor(() => expect(submissions.getReviewRun).toHaveBeenCalledTimes(2))
+  })
+
+  it('ends the manual refresh state when the rerun has completed', async () => {
+    const runId = '00000000-0000-4000-8000-000000000030'
+    const queued = { id: runId, submissionId, activityId, status: 'queued', compileStatus: 'pending', runtimeStatus: 'not_run', testOutcomes: [] }
+    const submissions = submissionTransport({
+      createReviewRun: vi.fn().mockResolvedValue({ data: queued }),
+      getReviewRun: vi.fn().mockResolvedValue({ data: queued }),
+    })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 10, maximumDelayMs: 10, maximumDurationMs: 30 }} />)
+    await screen.findByText('Immutable submitted source')
+    await userEvent.click(screen.getByRole('button', { name: 'Rerun submitted source' }))
+    await screen.findByRole('button', { name: 'Refresh rerun' })
+
+    submissions.getReviewRun.mockResolvedValue({ data: { ...queued, status: 'succeeded', compileStatus: 'success', runtimeStatus: 'passed' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Refresh rerun' }))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/Rerun succeeded/i))
+    expect(screen.queryByRole('button', { name: 'Refresh rerun' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/server-side job may still be processing/i)).not.toBeInTheDocument()
+  })
+
   it('adopts every returned version across correction, review, and release', async () => {
     const versionA = '2026-08-10T01:00:00.000Z'
     const versionB = '2026-08-10T01:01:00.000Z'

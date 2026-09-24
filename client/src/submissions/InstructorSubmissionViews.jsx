@@ -182,6 +182,7 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
   const [rerun, setRerun] = useState(null)
   const [rerunError, setRerunError] = useState(null)
   const [rerunBounded, setRerunBounded] = useState(false)
+  const [rerunRefreshing, setRerunRefreshing] = useState(false)
   const [resolution, setResolution] = useState({ resolutionType: 'CLOSED_WITHOUT_REPLACEMENT', reason: '', replacementExpiresAt: '' })
   const [busy, setBusy] = useState('')
   const key = `${selectedClass?.id}:${activityId}:${submissionId}`
@@ -261,6 +262,20 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
       throw error
     }
   }, [acceptRerun, submissionId, submissions])
+  const refreshRerunManually = async () => {
+    if (!currentRerun || rerunRefreshing) return
+    setRerunBounded(true)
+    setRerunError(null)
+    setRerunRefreshing(true)
+    try {
+      await refreshRerun(currentRerun.id)
+      setRerunBounded(false)
+    } catch {
+      // refreshRerun records the error for the visible retry state.
+    } finally {
+      setRerunRefreshing(false)
+    }
+  }
   useBoundedPolling({
     identity: currentRerun?.id,
     active: Boolean(currentRerun && ['queued', 'running'].includes(currentRerun.status) && !rerunError && !rerunBounded),
@@ -395,7 +410,7 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
         {archived && <p className="activity-lifecycle-note">Archived records cannot start a new rerun.</p>}
         {rerunError && <RequestState kind={errorKind(rerunError)} compact error={rerunError} />}
         {currentRerun && <><p role="status">Rerun {formatStatus(currentRerun.status)} · compile {formatStatus(currentRerun.compileStatus)} · runtime {formatStatus(currentRerun.runtimeStatus)}</p>{currentRerun.compilerOutput && <><strong>Fresh compiler output</strong><pre>{currentRerun.compilerOutput}</pre></>}{currentRerun.status === 'failed' && <p>Worker execution failed. The original assessment and score remain unchanged.</p>}{currentRerun.testOutcomes.map((item) => <details className="instructor-assessment-case" key={item.order}><summary><strong>{item.name}</strong><span>{item.isHidden ? 'Hidden' : 'Visible'}</span><em>{formatStatus(item.outcome)}</em></summary><dl><div><dt>Saved input</dt><dd><pre>{item.input ?? 'No input'}</pre></dd></div><div><dt>Expected output</dt><dd><pre>{item.expectedOutput}</pre></dd></div><div><dt>Fresh actual output</dt><dd><pre>{item.actualOutput ?? 'No output'}</pre></dd></div>{item.errorMessage && <div><dt>Runtime detail</dt><dd><pre>{item.errorMessage}</pre></dd></div>}</dl></details>)}</>}
-        {(rerunBounded || rerunError) && currentRerun && <><p>Automatic refresh stopped. The server-side job may still be processing.</p><button type="button" className="student-outline-action" onClick={() => { setRerunError(null); setRerunBounded(false); void refreshRerun(currentRerun.id).catch(() => {}) }}>Refresh rerun</button></>}
+        {(rerunBounded || rerunError) && currentRerun && <><p>Automatic refresh stopped. The server-side job may still be processing.</p><button type="button" className="student-outline-action" disabled={rerunRefreshing} onClick={() => { void refreshRerunManually() }}>{rerunRefreshing ? 'Refreshing rerun…' : 'Refresh rerun'}</button></>}
       </section>
 
       <section className="instructor-score-panel">
