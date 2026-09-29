@@ -12,6 +12,8 @@ import type {
 } from './repository.schemas.js'
 import type {
   RepositoryAccessRecord,
+  RepositoryActivityProjection,
+  RepositoryContributionProjection,
   RepositoryFeedbackProjection,
   RepositoryInvitationProjection,
   RepositoryMemberProjection,
@@ -102,6 +104,11 @@ export interface RepositoryRepository {
     query: RepositoryListQuery
   }): Promise<{ repositories: RepositoryRecord[]; totalItems: number }>
   findAccess(repositoryId: string, callerId: string): Promise<RepositoryAccessRecord | null>
+  listRecordedActivity(input: { repositoryId: string; page: number; pageSize: number }): Promise<{
+    events: RepositoryActivityProjection[]
+    contributions: RepositoryContributionProjection[]
+    totalItems: number
+  }>
   updateMetadata(input: {
     repositoryId: string
     expectedUpdatedAt: Date
@@ -593,6 +600,51 @@ export function createPrismaRepositoryRepository(
         repository: { ...base, projectTask },
         classMembership,
         repositoryMembership,
+      }
+    },
+    async listRecordedActivity({ repositoryId, page, pageSize }) {
+      const where = {
+        repositoryId,
+        OR: [
+          { activityType: 'REPOSITORY_PROVISIONED' as const, actorType: 'SYSTEM' as const },
+          { activityType: 'PUSH' as const, actorType: 'USER' as const, userId: { not: null } },
+        ],
+      }
+      const [records, totalItems, pushCounts] = await prisma.$transaction([
+        prisma.repositoryActivity.findMany({
+          where,
+          select: {
+            id: true, activityType: true, activityAt: true, actorType: true,
+            user: { select: { id: true, fullName: true } },
+          },
+          orderBy: [{ activityAt: 'desc' }, { id: 'desc' }],
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        prisma.repositoryActivity.count({ where }),
+        prisma.repositoryActivity.groupBy({
+          by: ['userId'],
+          where: { repositoryId, activityType: 'PUSH', actorType: 'USER', userId: { not: null } },
+          _count: { _all: true },
+        }),
+      ])
+      const actorIds = pushCounts.flatMap((item) => item.userId ? [item.userId] : [])
+      const users = await prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, fullName: true } })
+      const names = new Map(users.map((user) => [user.id, user.fullName]))
+      return {
+        events: records.flatMap<RepositoryActivityProjection>((record) => {
+          if (record.activityType === 'PUSH' && record.actorType === 'USER' && record.user) {
+            return [{ id: record.id, activityType: 'PUSH' as const, activityAt: record.activityAt, actor: { userId: record.user.id, fullName: record.user.fullName } }]
+          }
+          if (record.activityType === 'REPOSITORY_PROVISIONED' && record.actorType === 'SYSTEM') {
+            return [{ id: record.id, activityType: 'REPOSITORY_PROVISIONED' as const, activityAt: record.activityAt, actor: null }]
+          }
+          return []
+        }),
+        contributions: pushCounts.flatMap((item) => item.userId && names.has(item.userId)
+          ? [{ userId: item.userId, fullName: names.get(item.userId)!, acceptedPushes: item._count._all }]
+          : []).sort((a, b) => b.acceptedPushes - a.acceptedPushes || a.userId.localeCompare(b.userId)),
+        totalItems,
       }
     },
     async updateMetadata(input) {

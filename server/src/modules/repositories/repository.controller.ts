@@ -13,6 +13,7 @@ import {
   repositoryFeedbackParamsSchema,
   repositoryInvitationParamsSchema,
   repositoryListQuerySchema,
+  repositoryActivityQuerySchema,
   repositoryMemberParamsSchema,
   repositoryParamsSchema,
   repositoryTransitionSchema,
@@ -50,6 +51,13 @@ export function createRepositoryController(service: RepositoryService) {
       try {
         const { repositoryId } = parseRequest(repositoryParamsSchema, request.params)
         response.status(200).json(successResponse(await service.get(request.auth!.user, repositoryId), request.requestId))
+      } catch (error) { next(error) }
+    },
+    listRecordedActivity: async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const { repositoryId } = parseRequest(repositoryParamsSchema, request.params)
+        const query = parseRequest(repositoryActivityQuerySchema, request.query)
+        response.status(200).json(successResponse(await service.listRecordedActivity(request.auth!.user, repositoryId, query), request.requestId))
       } catch (error) { next(error) }
     },
     update: async (request: Request, response: Response, next: NextFunction) => {

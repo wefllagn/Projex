@@ -16,6 +16,7 @@ export function createRepositoryRouter(dependencies: {
   router.post('/repositories/personal', ...mutation, controller.createPersonal)
   router.get('/repositories', dependencies.requireAuthentication, controller.list)
   router.get('/repositories/:repositoryId', dependencies.requireAuthentication, controller.get)
+  router.get('/repositories/:repositoryId/activity', dependencies.requireAuthentication, controller.listRecordedActivity)
   router.patch('/repositories/:repositoryId', ...mutation, controller.update)
   router.post('/repositories/:repositoryId/ready-for-review', ...mutation, controller.readyForReview)
   router.post('/repositories/:repositoryId/request-changes', ...mutation, controller.requestChanges)

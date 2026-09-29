@@ -54,6 +54,13 @@ export const repositoryListQuerySchema = z
   })
   .strict()
 
+export const repositoryActivityQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+}).strict()
+
+export type RepositoryActivityQuery = z.infer<typeof repositoryActivityQuerySchema>
+
 export const createInvitationSchema = z.object({ inviteeUserId: z.uuid() }).strict()
 export const invitationActionSchema = z.object({ reason: z.string().trim().min(1).max(2_000).optional() }).strict()
 

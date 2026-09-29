@@ -70,6 +70,46 @@ beforeEach(async () => {
 afterAll(async () => prisma.$disconnect())
 
 describe('PostgreSQL repository collaboration', () => {
+  it('shows only recorded operations and authenticated push counts to authorized repository participants', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const otherInstructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const owner = await createActiveUser(prisma, 'STUDENT', 'Team Lead')
+    const member = await createActiveUser(prisma, 'STUDENT', 'Team Member')
+    const classmate = await createActiveUser(prisma, 'STUDENT', 'Classmate')
+    const admin = await createActiveUser(prisma, 'ADMIN')
+    const { classRecord, projectTask } = await publishedTask(instructor.id)
+    for (const student of [owner, member, classmate]) await createActiveMembership(prisma, classRecord.id, student.id)
+    const { repositories } = services()
+    const created = await repositories.createClassProject(owner, projectTask.id, { teamName: 'Event Team', repositoryName: 'Event Repository' })
+    const invitation = await repositories.createInvitation(owner, created.id, { inviteeUserId: member.id })
+    await repositories.acceptInvitation(member, invitation.invitationId)
+    await prisma.repositoryActivity.createMany({ data: [
+      { repositoryId: created.id, actorType: 'SYSTEM', activityType: 'REPOSITORY_PROVISIONED', activityAt: new Date('2030-09-01T01:00:00Z') },
+      { repositoryId: created.id, userId: owner.id, actorType: 'USER', activityType: 'PUSH', activityAt: new Date('2030-09-01T02:00:00Z'), metadataJson: { privateMarker: 'never project' } },
+      { repositoryId: created.id, userId: member.id, actorType: 'USER', activityType: 'PUSH', activityAt: new Date('2030-09-01T03:00:00Z') },
+      { repositoryId: created.id, userId: member.id, actorType: 'USER', activityType: 'PUSH', activityAt: new Date('2030-09-01T04:00:00Z') },
+      { repositoryId: created.id, userId: owner.id, actorType: 'USER', activityType: 'COMMIT', activityAt: new Date('2030-09-01T05:00:00Z') },
+    ] })
+    const result = await repositories.listRecordedActivity(instructor, created.id, { page: 1, pageSize: 2 })
+    expect(result.repositoryId).toBe(created.id)
+    expect(result.pagination).toMatchObject({ totalItems: 4, totalPages: 2, hasNextPage: true })
+    expect(result.events).toMatchObject([{ activityType: 'PUSH', actor: { userId: member.id } }, { activityType: 'PUSH', actor: { userId: member.id } }])
+    expect(result.contributions).toEqual([
+      { userId: member.id, fullName: member.fullName, acceptedPushes: 2 },
+      { userId: owner.id, fullName: owner.fullName, acceptedPushes: 1 },
+    ])
+    expect(JSON.stringify(result)).not.toContain('privateMarker')
+    expect((await repositories.listRecordedActivity(owner, created.id, { page: 2, pageSize: 2 })).events.at(-1)).toMatchObject({ activityType: 'REPOSITORY_PROVISIONED', actor: null })
+    await expect(repositories.listRecordedActivity(member, created.id, { page: 1, pageSize: 20 })).resolves.toMatchObject({ pagination: { totalItems: 4 } })
+    await expect(repositories.listRecordedActivity(admin, created.id, { page: 1, pageSize: 20 })).resolves.toMatchObject({ pagination: { totalItems: 4 } })
+    for (const denied of [classmate, otherInstructor]) {
+      await expect(repositories.listRecordedActivity(denied, created.id, { page: 1, pageSize: 20 })).rejects.toMatchObject({ code: 'REPOSITORY_NOT_FOUND' })
+    }
+    const membership = await prisma.repositoryMember.findUniqueOrThrow({ where: { repositoryId_studentId: { repositoryId: created.id, studentId: member.id } } })
+    await repositories.transitionMember(owner, created.id, membership.id, { action: 'REMOVE', expectedUpdatedAt: membership.updatedAt })
+    await expect(repositories.listRecordedActivity(member, created.id, { page: 1, pageSize: 20 })).rejects.toMatchObject({ code: 'REPOSITORY_NOT_FOUND' })
+  })
+
   it('creates synchronized class-project metadata with server-controlled visibility', async () => {
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const owner = await createActiveUser(prisma, 'STUDENT', 'Team Lead')

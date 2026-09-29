@@ -39,6 +39,22 @@ export function repositoryProjection(value = {}) {
   }
 }
 
+export function repositoryActivityProjection(value = {}) {
+  if (!value.id || !['REPOSITORY_PROVISIONED', 'PUSH'].includes(value.activityType) || !safeDate(value.activityAt)) return null
+  if (value.activityType === 'PUSH' && (!value.actor?.userId || !value.actor?.fullName)) return null
+  return {
+    id: value.id,
+    activityType: value.activityType,
+    activityAt: value.activityAt,
+    actor: value.activityType === 'PUSH' ? { userId: value.actor.userId, fullName: value.actor.fullName } : null,
+  }
+}
+
+export function repositoryContributionProjection(value = {}) {
+  if (!value.userId || !value.fullName || !Number.isSafeInteger(value.acceptedPushes) || value.acceptedPushes < 1) return null
+  return { userId: value.userId, fullName: value.fullName, acceptedPushes: value.acceptedPushes }
+}
+
 export function repositoryMatchesProject(repository, projectTaskId) {
   return Boolean(repository?.id && projectTaskId && repository.projectTaskId === projectTaskId)
 }

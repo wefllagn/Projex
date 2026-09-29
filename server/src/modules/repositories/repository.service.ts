@@ -18,6 +18,7 @@ import type {
   CreatePersonalRepositoryInput,
   InvitationActionInput,
   MemberTransitionInput,
+  RepositoryActivityQuery,
   RepositoryListQuery,
   RepositoryTransitionInput,
   RequestChangesInput,
@@ -27,6 +28,8 @@ import type {
 import {
   toRepositoryProjection,
   type RepositoryAccessRecord,
+  type RepositoryActivityProjection,
+  type RepositoryContributionProjection,
   type RepositoryFeedbackProjection,
   type RepositoryInvitationProjection,
   type RepositoryMemberProjection,
@@ -48,6 +51,12 @@ export interface RepositoryService {
   createPersonal(caller: SafeUserProfile, input: CreatePersonalRepositoryInput): Promise<RepositoryProjection>
   list(caller: SafeUserProfile, query: RepositoryListQuery): Promise<RepositoryListResult>
   get(caller: SafeUserProfile, repositoryId: string): Promise<RepositoryProjection>
+  listRecordedActivity(caller: SafeUserProfile, repositoryId: string, query: RepositoryActivityQuery): Promise<{
+    repositoryId: string
+    events: RepositoryActivityProjection[]
+    contributions: RepositoryContributionProjection[]
+    pagination: PaginationMeta
+  }>
   update(caller: SafeUserProfile, repositoryId: string, input: UpdateRepositoryInput): Promise<RepositoryProjection>
   readyForReview(caller: SafeUserProfile, repositoryId: string, input: RepositoryTransitionInput): Promise<RepositoryProjection>
   requestChanges(caller: SafeUserProfile, repositoryId: string, input: RequestChangesInput): Promise<RepositoryProjection>
@@ -225,6 +234,23 @@ export function createRepositoryService(dependencies: {
     async get(caller, repositoryId) {
       const access = await loadAccess(caller, repositoryId)
       return toRepositoryProjection(access.repository)
+    },
+    async listRecordedActivity(caller, repositoryId, query) {
+      const access = await loadAccess(caller, repositoryId)
+      if (caller.role !== 'ADMIN' && !instructorOwns(access, caller) && !isOwner(access, caller) && access.repositoryMembership?.status !== 'ACTIVE') {
+        throw notFound()
+      }
+      const result = await repository.listRecordedActivity({ repositoryId, ...query })
+      const totalPages = Math.ceil(result.totalItems / query.pageSize)
+      return {
+        repositoryId,
+        events: result.events,
+        contributions: result.contributions,
+        pagination: {
+          page: query.page, pageSize: query.pageSize, totalItems: result.totalItems, totalPages,
+          hasNextPage: query.page < totalPages, hasPreviousPage: query.page > 1,
+        },
+      }
     },
     async update(caller, repositoryId, input) {
       const access = await loadAccess(caller, repositoryId)

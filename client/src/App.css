@@ -13,6 +13,28 @@
 }
 
 /* Phase 10C.3: real repository Git inspection and local-client access */
+.repository-activity-panel .student-side-card-heading {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.repository-activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: grid;
+  gap: 8px;
+}
+
+.repository-activity-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+  justify-content: space-between;
+  overflow-wrap: anywhere;
+}
+
 .repository-git-panel {
   padding: 0;
   overflow: hidden;

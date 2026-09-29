@@ -76,6 +76,19 @@ export interface RepositoryProjection {
   archivedAt: Date | null
 }
 
+export interface RepositoryActivityProjection {
+  id: string
+  activityType: 'REPOSITORY_PROVISIONED' | 'PUSH'
+  activityAt: Date
+  actor: { userId: string; fullName: string } | null
+}
+
+export interface RepositoryContributionProjection {
+  userId: string
+  fullName: string
+  acceptedPushes: number
+}
+
 export interface RepositoryMemberProjection {
   memberId: string
   userId: string

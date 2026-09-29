@@ -25,6 +25,9 @@ export function createRepositoryApi(client = apiClient) {
     getRepository(repositoryId, options) {
       return client.get(`/repositories/${repositoryId}`, options)
     },
+    listRecordedActivity(repositoryId, query, options) {
+      return client.get(`/repositories/${repositoryId}/activity${queryString(query)}`, options)
+    },
     updateRepository(repositoryId, input, options) {
       return client.patch(`/repositories/${repositoryId}`, input, options)
     },

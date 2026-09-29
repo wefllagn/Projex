@@ -2,8 +2,8 @@
 
 ## Tracker identity
 
-- Revision: **I2-C3**
-- Updated: **2026-09-24**
+- Revision: **I2-C4**
+- Updated: **2026-09-29**
 - Deadline target: **2026-10-30**
 - Scope authority: `docs/team/ITERATION_2_ROADMAP.md` revision I2-R4
 - Evidence authority: current Git/source/Prisma/test output, then the active `docs/team/milestones/I2.X.md` report
@@ -27,8 +27,9 @@ This file is the status and execution tracker. It does not redefine roadmap scop
 | I2.1 automated evidence | COMPLETED for current slice | Client 46/293, server 36/224, Java 3/24, PostgreSQL integration 18/86; lint/type-check/build recorded passing in `I2.1.md` |
 | I2.1 authenticated walkthrough | COMPLETED for selected deterministic demo | Student/Instructor activity, practice, submit, review, release and narrow layout recorded passing |
 | Instructor fresh rerun | COMPLETED — ACCEPTED FOR FREISER CHECKPOINT | Checker accepted the scoped rerun. Guarded `projex_test` integration 19/90, client 46/296, Java 3/24; server isolated 221/224 with three inherited Windows storage/restore failures tracked separately. Approved local migrations and authenticated 1280 px/390 px walkthrough passed. Julius set Iteration 2 diagnostic retention without automatic cleanup; protected integration remains pending. See `milestones/INSTRUCTOR_REVIEW_RERUN.md`. |
+| I2.3 existing repository workflow/activity slice | ACCEPTED FOR FREISER CHECKPOINT | Authenticated provisioning and accepted-push feed, per-user accepted-push counts, final guarded 19/91 integration and full client 47/299, plus controlled localhost Student/Instructor/Admin validation are recorded in `milestones/I2.3.md`. Invitation acceptance lacks a second controlled walkthrough account; automated coverage passed. |
 | Personalized Exercise 1 checking | PROPOSED / AWAITING APPROVAL | Nonempty-output comparator/grading contract unresolved |
-| I2.2–I2.9 | PENDING | No later Iteration 2 phase started |
+| I2.2 and I2.4–I2.9 | PENDING | The bounded I2.3 slice is accepted on Freiser's branch; the proposed I2.3 class-workspace extension remains gated. |
 | Normal database migration for Iteration 2 | PARTIAL — APPROVED RERUN SLICE ONLY | The two committed Instructor Rerun migrations were applied to Freiser's local `projex`; other proposed Iteration 2 schema work remains unapproved. |
 | Network Git | PENDING | Smart HTTP remains loopback-only; browser Home-LAN testing is not Git transport evidence |
 
@@ -172,22 +173,22 @@ Recommended owner: frontend/API integration member after academic projections st
 
 ## I2.3 — Repository Workflow and Monitoring
 
-Status: **PENDING; class-workspace extension PROPOSED / AWAITING APPROVAL**
+Status: **ACCEPTED FOR FREISER CHECKPOINT for the bounded existing-scope slice; class-workspace extension PROPOSED / AWAITING APPROVAL**
 
 Objective: prove existing project/team repository workflows, add truthful activity evidence, and—after approval—connect individual programming work to Git without replacing explicit academic submission.
 
 Prerequisites:
 
-- [ ] I2.1 integrated.
-- [ ] Existing project/repository walkthrough repeated on the accepted baseline.
+- [x] I2.1 accepted on the cumulative member branch; protected integration is a separate Julius gate.
+- [x] Existing project/repository walkthrough repeated with controlled local accounts and data.
 - [ ] Approve class-workspace repository model, submission provenance and commit-retention policy.
-- [ ] Academic class offering relationship stable.
+- [x] Existing class relationship is stable for this bounded repository slice; the proposed official Course/offering model remains gated.
 
 Existing-scope implementation:
 
-- [ ] Prove project task, team, repository, invitation, membership and review lifecycle.
+- [ ] Prove project task, team, repository, invitation, membership and review lifecycle. Project/task creation and publication, team/repository provisioning, review/request-changes/approval, archive/restore passed manually; invitation acceptance and member transition passed guarded integration but need a second controlled walkthrough account for manual proof.
 - [ ] Fix confirmed discoverability defects only.
-- [ ] Add authenticated repository event feed and non-percentage contribution evidence.
+- [x] **ACCEPTED FOR FREISER CHECKPOINT** Add authenticated repository event feed and non-percentage contribution evidence from supported recorded provisioning and accepted-push operations.
 
 Proposed class-workspace slice:
 
@@ -207,8 +208,8 @@ Tests/evidence:
 - [ ] Cross-repository, cross-class, removed-member and wrong-activity rejection.
 - [ ] Exact commit/file resolution, size/text validation and immutable snapshot tests.
 - [ ] Push after submission leaves the submission unchanged.
-- [ ] Existing project/team repository regressions and real-Git tests.
-- [ ] Authenticated browser/VS Code loopback walkthrough using disposable data.
+- [x] Existing project/team repository regressions and one controlled authenticated loopback native-Git push; the discovered root-tree 404 was fixed and guarded real-Git tests passed 2 files/10 tests.
+- [ ] Authenticated browser/VS Code loopback walkthrough using disposable data. Browser and native Git CLI passed with controlled local records; invitation acceptance, a VS Code-specific pass, and a fully disposable walkthrough remain unverified.
 
 Acceptance:
 

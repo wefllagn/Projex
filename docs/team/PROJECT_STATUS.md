@@ -1,6 +1,6 @@
 # Projex Current Project Status
 
-Last reconciled: September 24, 2026
+Last reconciled: September 29, 2026
 
 ## Read this first
 
@@ -14,7 +14,7 @@ This file is a teammate-friendly status summary. It does not override the code, 
 - Stable tag: `projex-lan-demo`
 - Historical implementation: Phases 0 through 11
 - Next work program: **Projex Iteration 2 — Classroom and Laboratory Readiness**
-- Iteration 2 status: I2.1 core verified and pushed on Julius's task branch; not integrated into `development/fullstack`. Instructor Rerun is accepted for Freiser's checkpoint on `iteration-2/freiser-work-01` after the approved normal-local migration, authenticated desktop/narrow walkthrough, Checker review, and Julius's retention decision. Protected-branch integration remains separate; I2.2 has not started.
+- Iteration 2 status: I2.1 core, Instructor Rerun, and the bounded I2.3 repository workflow/activity slice are accepted on the cumulative Freiser task branch; protected integration remains separate. The proposed I2.3 class-workspace extension remains gated. I2.2 has not started.
 
 The stable baseline passed controlled local and Home LAN multi-device testing. This means it is an accepted demonstration baseline. It does **not** mean production-ready, Internet-ready, university-wide, or safe for hostile Java execution.
 
@@ -53,9 +53,9 @@ The labels below deliberately distinguish implementation from proof.
 | Reopen a closed activity | Reused | Integrated | Existing | Passed | Passed | Complete |
 | Project tasks, teams, invitations, repository review | Reused | Integrated | Existing | Passed | Pending broader real-workflow proof | Complete, needs more testing |
 | Repository creation and provisioning | Reused | Integrated | Existing | Passed | Passed | Complete |
-| Files, branches, commits, history, and diff inspection | Reused | Integrated | Existing | Passed | Passed with pushed content | Complete, read-only browser |
+| Files, branches, commits, history, and diff inspection | Focused root-tree correction on Freiser branch | Integrated | Existing | Guarded real-Git 2 files/10 tests passed | Controlled push showed root file and authorized text preview after correction | Accepted bounded I2.3 correction; read-only browser |
 | Native Git clone/fetch/push | Reused | Integrated local guidance | Existing | Passed | Loopback only | Partial for lab use |
-| Repository activity/contribution monitoring | Missing | Missing | Existing foundations only | Missing | Pending | Partial foundation |
+| Repository activity/contribution monitoring | New bounded authenticated read endpoint | Integrated repository panel on Freiser branch | Existing event records; no migration | Final guarded integration 19/91 and full client 47/299; focused refresh test 2/4 | Controlled Student/Instructor/Admin loopback flow, real push, 1280 px and 390 px Student layout passed | Accepted bounded I2.3 slice; proposed class-workspace extension gated |
 | Cross-class Student To-Do | Missing | Prototype concept only | Existing data can be derived | Missing | Pending | UI and API gap |
 | Global Student submission history | Existing records, no global product surface | Missing | Existing | Missing | Pending | UI/API gap |
 | Global Instructor review queue | Existing records, no global product surface | Missing | Existing | Missing | Pending | UI/API gap |
@@ -74,8 +74,9 @@ The labels below deliberately distinguish implementation from proof.
 - The browser does not create files, commits, branches, or tags. Native Git is the authoring path.
 - Current Git Smart HTTP is loopback-only. A repository can be created in Projex, but approved laboratory computers cannot yet clone and push over the laboratory network.
 - The Java worker is separate from the API, with time/output/process controls, but it still runs `javac` and `java` on the host. It is not an OS-level hostile-code sandbox.
-- Project task and collaboration screens exist, but the full real-life instructor-to-team workflow needs additional manual testing with realistic exercises.
-- Similarity detection, cross-class work queues, notifications, and complete contribution monitoring are not implemented.
+- The I2.3 controlled local walkthrough proved project publication, team/repository creation, provisioning, authenticated push, review transitions, and archive/restore. Invitation acceptance and member transition have guarded integration evidence but still need a second controlled walkthrough account for manual proof.
+- After the controlled push, the baseline root repository file-tree path returned 404. Freiser corrected its commit-to-tree lookup, passed guarded real-Git tests, and verified root listing and text preview locally; the bounded correction was accepted by Checker.
+- Similarity detection, cross-class work queues, notifications, and full code-contribution analytics are not implemented. I2.3 currently reports only authenticated accepted-push counts, never verified commit authorship or contribution percentages.
 - Home LAN browser validation did not expose Smart HTTP and was not an Internet deployment test.
 - Backup and restore tooling exists, but a complete paired PostgreSQL plus Git-storage recovery proof remains pending.
 - Instructor Rerun diagnostic/history records remain durable for Iteration 2 without automatic expiration or cleanup, separate from official attempts, assessment evidence, feedback, corrections and released scores. Three inherited Windows repository-storage/restore-verifier failures remain separately tracked in the rerun milestone.

@@ -11,6 +11,7 @@ import { formatProjectDate, formatProjectStatus, projectMatchesClass, projectTas
 import useBoundedPolling from '../submissions/use-bounded-polling.js'
 import { repositoryApi } from './repository-api.js'
 import { RepositoryGitPanel } from './RepositoryGitViews.jsx'
+import { RepositoryActivityPanel } from './RepositoryActivityPanel.jsx'
 import {
   RepositoryCollaborationPanel,
   RepositoryLifecyclePanel,
@@ -257,6 +258,7 @@ export function RepositoryFoundationDetail({ role = 'student', api = repositoryA
             {current.projectUnavailable && <RequestState kind="unavailable" compact title="Archived project detail unavailable" message="The archived repository record remains authorized, but the related archived project-task detail is not exposed to students by the current backend." />}
             <RepositoryCollaborationPanel role={role} owner={owner} repository={repository} project={current.project} api={api} classApi={classApi} onRepositoryChange={applyRepository} onReloadRepository={load} />
             <RepositoryGitPanel key={repository.id} repository={repository} role={role} project={current.project} owner={owner} />
+            <RepositoryActivityPanel key={`${repository.id}-activity`} repositoryId={repository.id} api={api} />
           </section>
           <aside className="student-repo-side-column">
             <StorageState status={repository.storageStatus} />
