@@ -2,8 +2,8 @@
 
 ## Revision control
 
-- Revision: **I2-R4**
-- Revised: **2026-09-22**
+- Revision: **I2-R6**
+- Revised: **2026-10-01**
 - Deadline target: **2026-10-30** for the system and research paper
 - Planning authority: this file owns Iteration 2 scope and dependency order.
 - Execution status: `docs/team/ITERATION_2_CHECKLIST.md` owns the maintained phase checklist.
@@ -35,6 +35,17 @@
 - Sequential member handoff uses the previous member’s exact reviewed, pushed commit SHA and `iteration-2/<member>-work-<rotation>` branches. Julius’s existing branch name remains unchanged.
 - By team policy Julius alone handles the later PR into `development/fullstack` and, after final acceptance, a separate PR into `main`. Both protected branches currently require a PR and one approval; this does not assert technically exclusive GitHub permissions.
 
+### I2-R5 academic-foundation approval
+
+- Julius approved an additive Course/Class Offering foundation and its implementation on Freiser's cumulative branch. The implementation is unaccepted WIP until regression, security and Checker review pass; normal `projex` migration requires separate approval.
+- The approved CSV work is Course-catalog import and bounded **student invitation** import. Direct roster enrollment, offering CSV import and join-request lifecycle remain outside this work package.
+- Instructor-created informal Classes remain usable and may be verified as official **in place** by Admin. Teaching staff may include a Primary and active Co-Instructors; Primary transfer explicitly chooses whether the former Primary remains a Co-Instructor or leaves. Admin may perform controlled recovery.
+
+### I2-R6 academic-foundation acceptance
+
+- ChatGPT Checker accepted Freiser's bounded Course/Class Offering foundation after targeted Primary/Co authorization evidence and CSV regression coverage. Final guarded `projex_test` integration passed 20 files/99 tests; the controlled desktop/narrow walkthrough and remaining evidence are in `milestones/ACADEMIC_FOUNDATION.md`.
+- This acceptance satisfies the internal foundation dependency for I2.2 on the cumulative member branch. Applying the foundation migrations to normal `projex`, deployment, and protected-branch integration remain separate gates.
+
 ## Program name
 
 **Projex Iteration 2 — Classroom and Laboratory Readiness**
@@ -47,12 +58,12 @@ Iteration 2 turns the accepted Home-LAN-tested baseline into a coherent classroo
 
 ## Current verified position
 
-As of I2-R4, development is on `iteration-2/julius-i2-1-academic-workspace`; I2.1's core commit is `448dc5843865ee669f60473bcdb0f543875f084d`. The pre-checkpoint HEAD is `190e65cfcf9414c6a28059c443ff82294d3cce19`; verify current HEAD directly before work.
+As of I2-R6, the cumulative member branch is `iteration-2/freiser-work-01`; verify HEAD and working-tree state directly before work.
 
-- **I2.1 core: VERIFIED AND COMMITTED ON TASK BRANCH — integration pending.** The 16-file Java import/editor/exercise-evidence slice and authenticated Student/Instructor walkthrough passed; task-branch commit/push is complete.
-- **Instructor rerun: IMPLEMENTED / UNACCEPTED WIP — checkpoint review.** The bounded durable-queue/schema slice passed guarded `projex_test` checks. Normal migration, authenticated walkthrough, retention decision, and final acceptance remain separate gates.
+- **I2.1 core, Instructor Rerun, bounded I2.3 repository workflow: ACCEPTED ON MEMBER BRANCH.** Protected integration remains a separate Julius gate. Instructor Rerun diagnostics remain durable for Iteration 2 without automatic cleanup.
+- **Academic Course/Class Offering foundation: ACCEPTED ON MEMBER BRANCH.** Additive migrations and the authenticated walkthrough were exercised only on disposable `projex_test`; normal `projex` migration needs separate approval. Final evidence and limitations are recorded in `milestones/ACADEMIC_FOUNDATION.md`.
 - **Other I2.1 follow-ups: PROPOSED / AWAITING APPROVAL.** Entry-class explanation, compact test-case authoring, scoring-allocation clarity and invitation-flow simplification remain bounded UX candidates. Personalized nonempty-output checking and ungraded activities need separate implementation decisions.
-- **I2.2 through I2.9: PENDING.** No later Iteration 2 phase has started.
+- **I2.2 and I2.4–I2.9: PENDING.** I2.2 has not started. The bounded I2.3 slice is accepted; its proposed class-workspace extension remains gated.
 - Existing Phase 0–11 history remains unchanged. A working UI, model or test foundation does not mark an Iteration 2 capability complete.
 
 ## Rules across every milestone
@@ -90,30 +101,28 @@ flowchart TD
 
 The academic-foundation and review-rerun nodes are bounded follow-ups inside the existing Iteration 2 program, not new numbered phases. Their architecture and migrations remain approval gates. I2.4 and I2.5 may move later when time is tight. I2.6–I2.9 are required before claiming laboratory pilot readiness.
 
-## Academic data direction awaiting implementation approval
+## Accepted academic foundation
 
 Projex must distinguish these concepts:
 
 1. `Class.id`: the permanent internal UUID and relationship key.
-2. Official SAMCIS class code: identifies one class offering within an academic period and may recur in another period.
+2. Official Class Code: offering data, not a database key; no unverified global uniqueness constraint.
 3. Course number: for example `IT 112` or `IT 112L`.
-4. Course description: for example `COMPUTER PROGRAMMING 1 (LEC)`.
+4. Course Name: for example `Programming 1`.
 5. Academic period: semester/term and school year.
 6. Projex join code: the existing generated, revocable enrollment secret; it is not the official class code.
-7. Optional offering metadata: units, schedule, days and room.
+7. Optional offering metadata: schedule, days and room. Units and curriculum relationships are deferred.
 
-The preferred design is a small reusable `Course` catalog while retaining the existing `Class` model and table as the class-offering record. This avoids rewiring every existing `Class` relationship while preventing course descriptions from being copied inconsistently across many offerings. The exact uniqueness rule for official class codes must be confirmed with SLU before adding a database constraint. No official class code may be invented, and the supplied course list does not expand Java or automated-checking scope.
+The approved design uses an Admin-managed reusable Course catalog and retains the existing Class table as the offering and all academic relationship identity. An Instructor may create an informal teaching Class, optionally selecting a Course. Admin may create an official offering with or without an initial Primary Instructor, or attach/correct official metadata on an existing informal Class without changing its UUID or dependent records. Course identity, period and school year corrections with history require an acknowledged, reasoned Admin operation with durable before/after audit. Course catalog edits do not rewrite the Course snapshot already attached to an offering. Schedule, days and room remain editable. The same Course can be offered in either semester across years, and Official Class Codes are not globally unique by assumption.
 
 Readable titles may be derived from structured fields, but unexplained institutional prefixes such as `CIS-1` must not be generated until their meaning is confirmed. A display title is not a database identity.
 
-### Proposed Admin import boundary
+### Approved import and staff boundary
 
-- Admin imports or confirms courses and class offerings, assigns an existing ACTIVE Instructor, and previews every normalized row before mutation.
-- Admin roster import targets one confirmed class offering and matches only existing ACTIVE Student accounts.
-- A confirmed official roster import may create or reactivate ACTIVE memberships directly because the Admin is asserting an authoritative enrollment source. Unknown accounts, ambiguous offerings, duplicate rows and malformed values remain errors; accounts are never auto-created.
-- Omission from a later file never removes an existing member automatically. Removal remains an explicit audited action.
-- Manual Instructor invitation remains available for individual additions. Student use of a join code should create an Instructor-approved request rather than immediate membership, subject to an approved membership design.
-- Raw roster files and unnecessary personal data must not be retained. A bounded audit summary should record actor, import type, target, counts and time without storing credentials or the complete file.
+- Admin creates/edits Courses manually and may preview/validate/confirm a bounded Course CSV import atomically. Offering CSV import is deferred.
+- Instructor/Admin student CSV input creates **pending registered-account invitations only** after preview and revalidation. It does not enroll or reactivate a Student until the Student accepts through the existing flow.
+- Existing join-code joining and individual invitations remain supported. A pending join-request model is not approved here.
+- The Primary may invite an eligible registered ACTIVE Instructor as Co-Instructor. Access starts only after acceptance. Primary transfer targets an active Co-Instructor and explicitly chooses the former Primary's resulting access. Admin assignment/recovery requires a reason and explicit former-access outcome. An ACTIVE Class always has a Primary.
 
 ## How sequential member ownership works
 
@@ -364,7 +373,7 @@ The pilot is not approval for university-wide deployment, 24/7 availability, hig
 1. Close the current I2.1 core changeset without mixing roadmap or adviser work into its commit.
 2. Implement the approved Instructor rerun as the next backend-sensitive academic slice; pair it with only directly related review UI and tests, verify the migration against `projex_test`, and stop before committing or applying it to the normal database.
 3. Implement the smaller I2.1 UX corrections that do not depend on that migration: entry-class explanation, test-case authoring density and scoring-allocation summary.
-4. Approve and implement the academic `Course`/class-offering model and Admin import workflow before building cross-class work projections on ambiguous class metadata.
+4. Validate and review the approved academic `Course`/Class Offering model, in-place official conversion, staff policy and bounded imports before building cross-class work projections on ambiguous class metadata. Apply its migration to normal data only after separate approval.
 5. Deliver I2.2 and the existing I2.3 workflow baseline. Add the class-workspace/repository-to-submission slice to I2.3 only after its migration and commit-retention decisions are approved.
 6. Prove Git locally on loopback with disposable data before I2.8 changes the network boundary.
 7. Complete I2.6 recovery, I2.7 Java isolation and I2.8 laboratory Git access before I2.9.

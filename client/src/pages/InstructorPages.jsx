@@ -3,9 +3,11 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
-import { classHref, classInitial, firstName } from '../classes/class-links.js'
+import { classHref, classInitial, classOfferingLabel, firstName } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
 import { InstructorClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
+import CsvInvitationPanel from '../classes/CsvInvitationPanel.jsx'
+import { ClassStaffPanel, StaffInvitationsPanel } from '../classes/ClassStaffPanel.jsx'
 import { InstructorActivityEditor, InstructorActivityList } from '../activities/InstructorActivityViews.jsx'
 import {
   InstructorActivityMonitorRedirect,
@@ -104,8 +106,7 @@ function InstructorClassHeader({ activeTab }) {
           <div>
             <h1>{selectedClass?.className || 'Select a class'}</h1>
             <div className="student-course-meta">
-              {selectedClass && <span>{selectedClass.section}</span>}
-              {selectedClass && <span>{selectedClass.semester} · {selectedClass.schoolYear}</span>}
+              {selectedClass && <span>{classOfferingLabel(selectedClass)}</span>}
               {selectedClass && <span>{selectedClass.status === 'ARCHIVED' ? 'Archived' : 'Active'}</span>}
             </div>
           </div>
@@ -214,8 +215,7 @@ function InstructorDashboard() {
                   </span>
                   <div>
                     <strong>{item.className}</strong>
-                    <span>{item.section}</span>
-                    <span>{item.semester} · {item.schoolYear}</span>
+                    <span>{classOfferingLabel(item)}</span>
                     <small>{item.status === 'ARCHIVED' ? 'Archived · read-only' : 'Active'}</small>
                   </div>
                   <span className="student-home-card-action" aria-hidden="true" />
@@ -243,6 +243,7 @@ function InstructorDashboard() {
 
 function InstructorClassesPage() {
   const { classes, error, loadMore, pagination, requestedClassId, selectedClass, status } = useClasses()
+  const { user } = useAuth()
 
   if (requestedClassId) {
     return (
@@ -252,12 +253,12 @@ function InstructorClassesPage() {
             <section className="student-global-panel class-overview-card">
               <span className="class-status-chip">{selectedClass.status}</span>
               <h2>{selectedClass.className}</h2>
-              <p>{selectedClass.section} · {selectedClass.semester} · {selectedClass.schoolYear}</p>
-              <p>Owner: {selectedClass.instructor.fullName}</p>
+              <p>{classOfferingLabel(selectedClass)}</p>
+              <p>Primary Instructor: {selectedClass.instructor?.fullName ?? 'Not assigned'}</p>
               <div className="class-overview-actions">
                 <NavLink className="student-primary-action" to={classHref('/instructor/class-info', selectedClass.id)}>Manage class</NavLink>
                 <NavLink className="student-outline-action" to={classHref('/instructor/people', selectedClass.id)}>View roster</NavLink>
-                <NavLink className="student-outline-action" to={classHref('/instructor/class-code', selectedClass.id)}>Join code</NavLink>
+                {selectedClass.instructor?.userId === user.id ? <NavLink className="student-outline-action" to={classHref('/instructor/class-code', selectedClass.id)}>Join code</NavLink> : null}
               </div>
             </section>
             <RequestState kind="unavailable" compact title="Class stream deferred" message="Announcements and comments remain recognized, but no approved backend contract exists yet." />
@@ -275,11 +276,12 @@ function InstructorClassesPage() {
         {status === 'loading' && <RequestState kind="loading" message="Loading your owned classes." />}
         {status === 'error' && <RequestState kind="unavailable" error={error} />}
         {status === 'ready' && classes.length === 0 && <RequestState kind="empty" message="Create a class from the sidebar to begin." />}
+        <StaffInvitationsPanel />
         <section className="instructor-home-class-list class-catalog-grid">
           {classes.map((item) => (
             <NavLink to={classHref('/instructor/classes', item.id)} className="instructor-home-class-card" key={item.id}>
               <span className={`instructor-class-avatar instructor-class-avatar--${classInitial(item).toLowerCase()}`}>{classInitial(item)}</span>
-              <div><strong>{item.className}</strong><span>{item.section}</span><span>{item.semester} · {item.schoolYear}</span><small>{item.status}</small></div>
+              <div><strong>{item.className}</strong><span>{classOfferingLabel(item)}</span><small>{item.status}</small></div>
               <span className="student-home-card-action" aria-hidden="true" />
             </NavLink>
           ))}
@@ -325,6 +327,7 @@ function CreateActivityPage({ mode = 'create' }) {
 
 function InstructorPeoplePage() {
   const { api, selectedClass, selectionStatus } = useClasses()
+  const { user } = useAuth()
   const [rosterState, setRosterState] = useState({ classId: null, status: 'loading', members: [], pagination: null, error: null })
   const [mutatingMemberId, setMutatingMemberId] = useState(null)
   const [actionError, setActionError] = useState(null)
@@ -418,12 +421,13 @@ function InstructorPeoplePage() {
           </div>
           <img src="/assets/brand/projex-login-mascot.png" alt="" aria-hidden="true" />
           <div className="instructor-people-actions">
-            {selectedClass && <NavLink className="student-primary-action" to={classHref('/instructor/class-code', selectedClass.id)}>Manage join code</NavLink>}
+            {selectedClass?.instructor?.userId === user.id && <NavLink className="student-primary-action" to={classHref('/instructor/class-code', selectedClass.id)}>Manage join code</NavLink>}
           </div>
         </section>
 
         {selectedClass?.status === 'ARCHIVED' && <p className="instructor-people-action-status">Archived classes are read-only.</p>}
         <InstructorClassInvitationPanel />
+        {selectedClass?.status === 'ACTIVE' ? <CsvInvitationPanel api={api} classId={selectedClass.id} /> : null}
         {actionError && <p className="class-form-error" role="alert">{describeApiError(actionError)}</p>}
         {selectionStatus === 'ready' && roster.status === 'loading' && <RequestState kind="loading" compact message="Loading the detailed roster." />}
         {roster.status === 'error' && <RequestState kind="unavailable" compact error={roster.error} />}
@@ -470,11 +474,17 @@ function InstructorPeoplePage() {
 
 function ClassInfoForm({ classRecord }) {
   const { api, upsertClass } = useClasses()
+  const { user } = useAuth()
+  const isPrimary = classRecord.instructor?.userId === user.id
+  const official = Boolean(classRecord.officialClassCode)
   const [form, setForm] = useState({
     className: classRecord.className,
-    section: classRecord.section,
-    semester: classRecord.semester,
-    schoolYear: classRecord.schoolYear,
+    section: classRecord.section ?? '',
+    semester: classRecord.semester ?? '',
+    schoolYear: classRecord.schoolYear ?? '',
+    schedule: classRecord.schedule ?? '',
+    days: classRecord.days ?? '',
+    room: classRecord.room ?? '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -487,7 +497,9 @@ function ClassInfoForm({ classRecord }) {
     setError(null)
     setMessage('')
     try {
-      const response = await api.updateClass(classRecord.id, form)
+      const response = await api.updateClass(classRecord.id, official
+        ? { schedule: form.schedule || null, days: form.days || null, room: form.room || null }
+        : { className: form.className, section: form.section || null, semester: form.semester || null, schoolYear: form.schoolYear || null, schedule: form.schedule || null, days: form.days || null, room: form.room || null })
       upsertClass(response.data)
       setMessage('Class information updated.')
     } catch (requestError) {
@@ -522,20 +534,25 @@ function ClassInfoForm({ classRecord }) {
     <div className="student-people-panel instructor-info-panel">
       <section>
         <h2>Class Info</h2>
-        <p>Manage the supported academic term metadata and lifecycle.</p>
+        <p>Official identity is corrected by Admin through the audited workflow. Teaching logistics remain editable.</p>
       </section>
       <form className="instructor-form-grid class-info-form" onSubmit={save}>
-        <label>Course name<input value={form.className} onChange={updateField('className')} maxLength={200} required disabled={classRecord.status === 'ARCHIVED'} /></label>
-        <label>Section<input value={form.section} onChange={updateField('section')} maxLength={100} required disabled={classRecord.status === 'ARCHIVED'} /></label>
-        <label>Semester<input value={form.semester} onChange={updateField('semester')} maxLength={100} required disabled={classRecord.status === 'ARCHIVED'} /></label>
-        <label>School year<input value={form.schoolYear} onChange={updateField('schoolYear')} maxLength={20} required disabled={classRecord.status === 'ARCHIVED'} /></label>
+        <label>Class Name<input value={form.className} onChange={updateField('className')} maxLength={200} required disabled={official || !isPrimary || classRecord.status !== 'ACTIVE'} /></label>
+        {official ? <p>Official: {classRecord.courseName} · {classOfferingLabel(classRecord)}</p> : <>
+          <label>Section<input value={form.section} onChange={updateField('section')} maxLength={100} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
+          <label>Semester<input value={form.semester} onChange={updateField('semester')} maxLength={100} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
+          <label>School year<input value={form.schoolYear} onChange={updateField('schoolYear')} maxLength={20} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
+        </>}
+        <label>Schedule<input value={form.schedule} onChange={updateField('schedule')} maxLength={200} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
+        <label>Days<input value={form.days} onChange={updateField('days')} maxLength={100} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
+        <label>Room<input value={form.room} onChange={updateField('room')} maxLength={100} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
         <div className="class-info-actions">
-          <button type="submit" className="student-primary-action" disabled={saving || classRecord.status === 'ARCHIVED'}>{saving ? 'Saving…' : 'Save changes'}</button>
-          <button type="button" className="student-outline-action" onClick={changeLifecycle} disabled={saving}>{classRecord.status === 'ACTIVE' ? 'Archive class' : 'Restore class'}</button>
+          {isPrimary ? <button type="submit" className="student-primary-action" disabled={saving || classRecord.status !== 'ACTIVE'}>{saving ? 'Saving…' : 'Save changes'}</button> : null}
+          {isPrimary ? <button type="button" className="student-outline-action" onClick={changeLifecycle} disabled={saving}>{classRecord.status === 'ACTIVE' ? 'Archive class' : 'Restore class'}</button> : null}
         </div>
       </form>
       <div className="instructor-info-list">
-        <article><span>Instructor</span><strong>{classRecord.instructor.fullName}</strong></article>
+        <article><span>Primary Instructor</span><strong>{classRecord.instructor?.fullName ?? 'Not assigned'}</strong></article>
         <article><span>Status</span><strong>{classRecord.status}</strong></article>
         <article><span>Created</span><strong>{new Date(classRecord.createdAt).toLocaleString()}</strong></article>
       </div>
@@ -550,6 +567,7 @@ function InstructorClassInfoPage() {
   return (
     <InstructorClassPage activeTab="info">
       {selectedClass && <ClassInfoForm key={selectedClass.id} classRecord={selectedClass} />}
+      {selectedClass && <ClassStaffPanel key={`${selectedClass.id}-staff`} classRecord={selectedClass} />}
     </InstructorClassPage>
   )
 }

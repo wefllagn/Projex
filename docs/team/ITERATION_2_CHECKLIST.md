@@ -2,10 +2,10 @@
 
 ## Tracker identity
 
-- Revision: **I2-C4**
-- Updated: **2026-09-29**
+- Revision: **I2-C6**
+- Updated: **2026-10-01**
 - Deadline target: **2026-10-30**
-- Scope authority: `docs/team/ITERATION_2_ROADMAP.md` revision I2-R4
+- Scope authority: `docs/team/ITERATION_2_ROADMAP.md` revision I2-R6
 - Evidence authority: current Git/source/Prisma/test output, then the active `docs/team/milestones/I2.X.md` report
 
 This file is the status and execution tracker. It does not redefine roadmap scope. Update it only when repository evidence changes or an explicit approval changes a gate. Do not mark a feature complete because a screen exists.
@@ -28,6 +28,7 @@ This file is the status and execution tracker. It does not redefine roadmap scop
 | I2.1 authenticated walkthrough | COMPLETED for selected deterministic demo | Student/Instructor activity, practice, submit, review, release and narrow layout recorded passing |
 | Instructor fresh rerun | COMPLETED — ACCEPTED FOR FREISER CHECKPOINT | Checker accepted the scoped rerun. Guarded `projex_test` integration 19/90, client 46/296, Java 3/24; server isolated 221/224 with three inherited Windows storage/restore failures tracked separately. Approved local migrations and authenticated 1280 px/390 px walkthrough passed. Julius set Iteration 2 diagnostic retention without automatic cleanup; protected integration remains pending. See `milestones/INSTRUCTOR_REVIEW_RERUN.md`. |
 | I2.3 existing repository workflow/activity slice | ACCEPTED FOR FREISER CHECKPOINT | Authenticated provisioning and accepted-push feed, per-user accepted-push counts, final guarded 19/91 integration and full client 47/299, plus controlled localhost Student/Instructor/Admin validation are recorded in `milestones/I2.3.md`. Invitation acceptance lacks a second controlled walkthrough account; automated coverage passed. |
+| Course/Class Offering foundation | COMPLETED — ACCEPTED FOR FREISER CHECKPOINT | Checker accepted the bounded foundation after targeted CSV and Primary/Co boundary corrections. Split migrations applied only to disposable `projex_test`; final guarded integration 20/99, client 49/301, lint/type/build and controlled authenticated walkthrough passed. Normal `projex` migration remains separately gated. See `milestones/ACADEMIC_FOUNDATION.md`. |
 | Personalized Exercise 1 checking | PROPOSED / AWAITING APPROVAL | Nonempty-output comparator/grading contract unresolved |
 | I2.2 and I2.4–I2.9 | PENDING | The bounded I2.3 slice is accepted on Freiser's branch; the proposed I2.3 class-workspace extension remains gated. |
 | Normal database migration for Iteration 2 | PARTIAL — APPROVED RERUN SLICE ONLY | The two committed Instructor Rerun migrations were applied to Freiser's local `projex`; other proposed Iteration 2 schema work remains unapproved. |
@@ -37,7 +38,7 @@ This file is the status and execution tracker. It does not redefine roadmap scop
 
 - [ ] **IN PROGRESS** I2.1 core committed/pushed on task branch; integrate only through a separate approval gate.
 - [x] **ACCEPTED FOR FREISER CHECKPOINT** Instructor rerun preserves original assessment, attempts, feedback and scores; guarded tests, approved normal-local migration, authenticated desktop/narrow walkthrough, retention decision and Checker acceptance are recorded in the rerun milestone. Protected integration remains separate.
-- [ ] **PROPOSED / AWAITING APPROVAL** Approve the academic Course/class-offering and Admin roster-import model.
+- [x] **ACCEPTED FOR FREISER CHECKPOINT** Course/Class Offering foundation, staff policy, in-place conversion and bounded Course/student-invitation CSV flows passed final Checker review; normal-database migration remains separately gated.
 - [ ] **PENDING** Complete essential I2.2 cross-class work views.
 - [ ] **PROPOSED / AWAITING APPROVAL** Add the smallest repository-to-submission slice inside I2.3.
 - [ ] **PENDING** Prove paired recovery in I2.6.
@@ -48,45 +49,42 @@ This file is the status and execution tracker. It does not redefine roadmap scop
 
 ## Cross-cutting academic foundation follow-up
 
-Status: **PROPOSED / AWAITING APPROVAL**
+Status: **COMPLETED — ACCEPTED FOR FREISER CHECKPOINT**; protected integration and normal-database migration remain separate.
 
-Objective: represent official SAMCIS course/class-offering data and reduce roster setup for 45–50 students without confusing the official class code with the Projex join code.
+Objective: represent reusable Courses and official Class Offerings without confusing Official Class Code, Class UUID or the generated Projex join code. Support controlled teaching staff and bounded invitation setup.
 
 Prerequisites:
 
-- [ ] Confirm official uniqueness rules for SAMCIS class codes within an academic period.
-- [ ] Confirm permitted semester labels and school-year format.
-- [ ] Approve `Course` catalog plus existing `Class`-as-offering design.
-- [ ] Approve Admin roster imports creating/reactivating ACTIVE memberships after preview.
-- [ ] Approve the pending join-request lifecycle for manual join-code use.
+- [x] Approve reusable Admin-managed Course Number and Course Name; retain Class UUID as offering identity.
+- [x] Permit 1st/2nd Semester offerings in any school year, without a global Official Class Code uniqueness assumption.
+- [x] Approve Instructor informal creation, Admin official creation and in-place official conversion of existing teaching Classes.
+- [x] Approve Primary/Co-Instructor staff policy, invitation acceptance, explicit transfer disposition and Admin recovery.
+- [x] Approve Course CSV import and bounded student **invitation** CSV; direct roster enrollment and join-request state are not approved in this slice.
 
 Implementation checklist:
 
-- [ ] Add reusable course number/description records without expanding programming-language scope.
-- [ ] Extend the existing class offering with official class code and optional units/schedule/days/room.
-- [ ] Keep the UUID as internal identity and rename/project the generated code clearly as a join code.
-- [ ] Add Admin-only offering import preview, validation, confirmation and bounded audit evidence.
-- [ ] Add Admin-only roster import for existing ACTIVE Students; never auto-create accounts.
-- [ ] Preserve omitted memberships; no destructive CSV synchronization.
-- [ ] Preserve manual Instructor invitations.
-- [ ] Add Student join request plus Instructor approve/reject only after its state model is approved.
+- [x] Add reusable Course records with Course Number and Course Name; no Units/curriculum.
+- [x] Extend existing Class with optional structured official metadata and nullable legacy-compatible fields; preserve UUID and separate generated join code.
+- [x] Add Admin official metadata impact/correction with reason, history acknowledgement, optimistic version and durable audit.
+- [x] Add pending/active/removed Co-Instructor relationships and explicit Primary transfer/recovery disposition.
+- [x] Add Admin Course manual create/edit and CSV preview/confirm; add bounded Student invitation CSV preview/confirm without direct enrollment.
+- [x] Complete affected UI, regression/security checks and controlled test-database walkthrough; review the full logical diff. Narrow Instructor staff/Class Info and Admin Course Catalog/official-creation layouts were checked.
+- [ ] Obtain separate normal-database migration approval before applying these migrations to Freiser's normal `projex`.
 
 Required tests:
 
-- [ ] Migration deploy against guarded `projex_test`, including compatibility with existing classes.
-- [ ] Repeated course across several offerings and repeated official class code across different school years.
-- [ ] Duplicate, malformed, unknown-account, inactive-account and wrong-role rows.
-- [ ] Atomic/explicit-confirmation behavior and safe retry/idempotency.
-- [ ] Admin-only authorization, Instructor ownership, Student isolation and audit redaction.
-- [ ] Frontend preview, error recovery, desktop and narrow layouts.
+- [x] Split migration deploy against guarded `projex_test`; legacy Class fields remain populated and linked records are untouched.
+- [x] Final guarded integration for repeated Course/Official Class Code, in-place conversion, staff transfer/Admin recovery, CSV edge cases/atomicity and authorization: 20 files/99 tests on verified `projex_test`; post-run relevant records empty.
+- [x] Affected server isolated/client regression and lint/type/build checks: server 221/224 with the same three inherited Windows storage/restore failures; client 49/301; server/client lint, server production/integration type-check and client build passed. Java code was not changed; existing Java evidence remains separate.
+- [x] Authenticated controlled-local UI walkthrough against disposable `projex_test`: Admin, Primary, Co-Instructor and Student flows at desktop; Instructor staff/Class Info and Admin catalog/offering creation at 390 px. The former-Primary leave navigation defect was fixed and regression-covered.
 
 Deliverables and acceptance:
 
 - Structured course/offering projections and clear display title.
-- Previewed Admin import with no raw-file retention or automatic account creation.
+- Previewed Course and Student invitation imports with no raw-file retention or automatic account creation.
 - Existing class/activity/submission/repository relationships preserved.
-- Manual invitation and join-request flows remain distinct.
-- Explicit migration and normal-database application gates completed separately.
+- Manual invitation and existing join-code flows remain distinct; no join-request lifecycle was added.
+- Guarded test-database migration completed; normal-database application remains a separate approval gate.
 
 Recommended owner: backend/database lead for schema and authorization; a frontend member may implement preview/UI only after the contract is accepted. Do not develop competing migrations in parallel.
 

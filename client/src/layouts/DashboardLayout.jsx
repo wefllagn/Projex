@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
-import { classHref, classInitial } from '../classes/class-links.js'
+import { classHref, classInitial, classOfferingLabel } from '../classes/class-links.js'
 import { courseOptions, sectionOptions } from '../data/projexData.js'
 
 function StudentSidebarLink({ to, children, end = false, count, icon }) {
@@ -46,7 +46,7 @@ function SidebarClassLink({ item, to, active }) {
       </span>
       <span className="student-class-link__text">
         <strong>{item.className}</strong>
-        <small>{item.section} · {item.status === 'ARCHIVED' ? 'Archived' : item.semester}</small>
+        <small>{classOfferingLabel(item)}{item.status === 'ARCHIVED' ? ' · Archived' : ''}</small>
       </span>
     </NavLink>
   )
@@ -59,7 +59,20 @@ export function CreateClassModal({ onClose, onCreated }) {
     section: '',
     semester: '',
     schoolYear: '',
+    courseId: '',
+    schedule: '',
+    days: '',
+    room: '',
   })
+  const [courses, setCourses] = useState([])
+  const [courseSearch, setCourseSearch] = useState('')
+  useEffect(() => {
+    const controller = new AbortController()
+    api.listCourses({ pageSize: 100, ...(courseSearch.trim() ? { search: courseSearch.trim() } : {}) }, { signal: controller.signal })
+      .then((response) => setCourses(response.data.items))
+      .catch((cause) => { if (cause?.name !== 'AbortError') setCourses([]) })
+    return () => controller.abort()
+  }, [api, courseSearch])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [invitationEmail, setInvitationEmail] = useState('')
@@ -76,7 +89,8 @@ export function CreateClassModal({ onClose, onCreated }) {
     setError(null)
     try {
       const response = await api.createClass({
-        ...form,
+        className: form.className,
+        ...Object.fromEntries(Object.entries(form).filter(([key, value]) => key !== 'className' && value.trim())),
         ...(invitationTargets.length > 0
           ? { invitationEmails: invitationTargets.map((target) => target.universityEmail) }
           : {}),
@@ -118,24 +132,29 @@ export function CreateClassModal({ onClose, onCreated }) {
       <form className="instructor-action-modal" onSubmit={submit}>
         <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close create class" />
         <p>Create Class</p>
-        <h2 id="create-class-title">New instructor class</h2>
+        <h2 id="create-class-title">New teaching class</h2>
         <div className="instructor-form-grid">
           <label>
-            Course name
+            Class Name
             <input value={form.className} onChange={updateField('className')} maxLength={200} required />
           </label>
+          <label>Find Course (optional)<input value={courseSearch} onChange={(event) => setCourseSearch(event.target.value)} placeholder="Search number or name" /></label>
+          <label>Course (optional)<select value={form.courseId} onChange={updateField('courseId')}><option value="">No catalog Course</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.courseNumber} — {course.courseName}</option>)}</select></label>
           <label>
-            Section
-            <input value={form.section} onChange={updateField('section')} maxLength={100} required />
+            Section (optional)
+            <input value={form.section} onChange={updateField('section')} maxLength={100} />
           </label>
           <label>
-            Semester
-            <input value={form.semester} onChange={updateField('semester')} maxLength={100} placeholder="First Semester" required />
+            Informal term label (optional)
+            <input value={form.semester} onChange={updateField('semester')} maxLength={100} placeholder="Practice term" />
           </label>
           <label>
-            School year
-            <input value={form.schoolYear} onChange={updateField('schoolYear')} maxLength={20} placeholder="2026-2027" required />
+            School year (optional)
+            <input value={form.schoolYear} onChange={updateField('schoolYear')} maxLength={20} placeholder="2026-2027" />
           </label>
+          <label>Schedule (optional)<input value={form.schedule} onChange={updateField('schedule')} maxLength={200} /></label>
+          <label>Days (optional)<input value={form.days} onChange={updateField('days')} maxLength={100} /></label>
+          <label>Room (optional)<input value={form.room} onChange={updateField('room')} maxLength={100} /></label>
         </div>
         <section className="class-create-invitations">
           <div>

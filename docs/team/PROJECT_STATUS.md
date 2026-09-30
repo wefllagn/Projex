@@ -1,6 +1,6 @@
 # Projex Current Project Status
 
-Last reconciled: September 29, 2026
+Last reconciled: October 1, 2026
 
 ## Read this first
 
@@ -14,7 +14,7 @@ This file is a teammate-friendly status summary. It does not override the code, 
 - Stable tag: `projex-lan-demo`
 - Historical implementation: Phases 0 through 11
 - Next work program: **Projex Iteration 2 — Classroom and Laboratory Readiness**
-- Iteration 2 status: I2.1 core, Instructor Rerun, and the bounded I2.3 repository workflow/activity slice are accepted on the cumulative Freiser task branch; protected integration remains separate. The proposed I2.3 class-workspace extension remains gated. I2.2 has not started.
+- Iteration 2 status: I2.1 core, Instructor Rerun, the bounded I2.3 repository workflow/activity slice, and the Course/Class Offering academic foundation are accepted on the cumulative Freiser task branch; protected integration remains separate. The foundation's additive migrations were applied only to disposable `projex_test`, not normal `projex`. Its final 20-file/99-test guarded result and controlled walkthrough are in [ACADEMIC_FOUNDATION.md](milestones/ACADEMIC_FOUNDATION.md). The proposed I2.3 class-workspace extension remains gated. I2.2 is the next authorized work package.
 
 The stable baseline passed controlled local and Home LAN multi-device testing. This means it is an accepted demonstration baseline. It does **not** mean production-ready, Internet-ready, university-wide, or safe for hostile Java execution.
 
@@ -110,7 +110,7 @@ When documents or chat summaries disagree, check in this order:
 
 ## What the next teammate should do
 
-Freiser's accepted Instructor Rerun checkpoint is on `iteration-2/freiser-work-01`; [INSTRUCTOR_REVIEW_RERUN.md](milestones/INSTRUCTOR_REVIEW_RERUN.md) owns its detailed evidence and limitations. Verify the current branch and pushed SHA before any new work. Integration into `development/fullstack` requires separate approval. I2.2 still depends on I2.1 integration and stable academic class projections; the academic foundation remains awaiting product/schema decisions. Do not start deployment or laboratory Git exposure. Follow [TEAM_DEVELOPMENT_WORKFLOW.md](TEAM_DEVELOPMENT_WORKFLOW.md) and [CODEX_PROMPT_PACK.md](CODEX_PROMPT_PACK.md).
+Freiser's accepted Instructor Rerun, bounded I2.3 and Academic Foundation checkpoints are on `iteration-2/freiser-work-01`; their milestone files own detailed evidence. The accepted foundation satisfies the internal I2.2 development dependency, while normal-database migration and integration into `development/fullstack` remain separate Julius gates. Proceed with the approved I2.2 Academic Work Hub on the member branch. Do not start deployment or laboratory Git exposure. Follow [TEAM_DEVELOPMENT_WORKFLOW.md](TEAM_DEVELOPMENT_WORKFLOW.md) and [CODEX_PROMPT_PACK.md](CODEX_PROMPT_PACK.md).
 
 ## Updating this file
 

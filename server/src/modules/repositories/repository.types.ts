@@ -40,7 +40,7 @@ export interface RepositoryRecord {
     classId: string
     dueDate: Date
     status: ProjectTaskStatus
-    class: { id: string; instructorId: string; status: ClassStatus }
+    class: { id: string; instructorId: string | null; status: ClassStatus; teachingStaff?: { instructorId: string; status: string }[] }
   } | null
   team: { id: string; leadStudentId: string } | null
 }

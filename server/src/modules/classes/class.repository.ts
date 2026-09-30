@@ -29,6 +29,14 @@ export const classRecordSelect = {
   section: true,
   semester: true,
   schoolYear: true,
+  courseId: true,
+  courseNumberSnapshot: true,
+  courseNameSnapshot: true,
+  officialClassCode: true,
+  academicPeriod: true,
+  schedule: true,
+  days: true,
+  room: true,
   status: true,
   createdAt: true,
   updatedAt: true,
@@ -36,6 +44,7 @@ export const classRecordSelect = {
   instructor: {
     select: { id: true, fullName: true },
   },
+  teachingStaff: { select: { instructorId: true, status: true } },
 } as const
 
 export type ClassWriteResult =
@@ -52,16 +61,23 @@ export type ClassCodeWriteResult =
 export type CreateClassResult =
   | { kind: 'created'; classRecord: ClassRecord; invitationsCreated?: number }
   | { kind: 'instructor_not_active' }
+  | { kind: 'course_not_found' }
   | { kind: 'invitation_target_not_active_student'; universityEmail: string }
   | { kind: 'collision' }
 
 export interface ClassRepository {
   create(input: {
-    instructorId: string
+    instructorId: string | null
     className: string
-    section: string
-    semester: string
-    schoolYear: string
+    section?: string
+    semester?: string
+    schoolYear?: string
+    courseId?: string
+    officialClassCode?: string
+    academicPeriod?: 'FIRST_SEMESTER' | 'SECOND_SEMESTER'
+    schedule?: string | null
+    days?: string | null
+    room?: string | null
     classCode: string
     invitationEmails?: string[]
     now: Date
@@ -104,17 +120,13 @@ export function createPrismaClassRepository(
     async create(input) {
       try {
         return await prisma.$transaction(async (transaction) => {
-          const instructor = await transaction.user.findUnique({
-            where: { id: input.instructorId },
-            select: { role: true, status: true },
-          })
-          if (
-            !instructor ||
-            instructor.role !== 'INSTRUCTOR' ||
-            instructor.status !== 'ACTIVE'
-          ) {
-            return { kind: 'instructor_not_active' } as const
+          if (input.instructorId) {
+            await transaction.$queryRaw`SELECT pg_advisory_xact_lock(1948293701) IS NULL AS acquired`
+            const instructor = await transaction.user.findUnique({ where: { id: input.instructorId }, select: { role: true, status: true } })
+            if (!instructor || instructor.role !== 'INSTRUCTOR' || instructor.status !== 'ACTIVE') return { kind: 'instructor_not_active' } as const
           }
+          const course = input.courseId ? await transaction.course.findUnique({ where: { id: input.courseId }, select: { courseNumber: true, courseName: true } }) : null
+          if (input.courseId && !course) return { kind: 'course_not_found' } as const
           const invitationEmails = input.invitationEmails ?? []
           const invitees = invitationEmails.length > 0
             ? await transaction.user.findMany({
@@ -140,21 +152,30 @@ export function createPrismaClassRepository(
             data: {
               instructorId: input.instructorId,
               className: input.className,
-              section: input.section,
-              semester: input.semester,
-              schoolYear: input.schoolYear,
+              section: input.section ?? null,
+              semester: input.semester ?? null,
+              schoolYear: input.schoolYear ?? null,
+              courseId: input.courseId ?? null,
+              courseNumberSnapshot: course?.courseNumber ?? null,
+              courseNameSnapshot: course?.courseName ?? null,
+              officialClassCode: input.officialClassCode ?? null,
+              academicPeriod: input.academicPeriod ?? null,
+              schedule: input.schedule ?? null,
+              days: input.days ?? null,
+              room: input.room ?? null,
+              status: input.instructorId ? 'ACTIVE' : 'PREPARED',
               classCode: input.classCode,
-              classCodeActive: true,
+              classCodeActive: Boolean(input.instructorId),
               classCodeChangedAt: input.now,
             },
             select: classRecordSelect,
           })
-          if (invitees.length > 0) {
+          if (invitees.length > 0 && input.instructorId) {
             await transaction.classInvitation.createMany({
               data: invitees.map((invitee) => ({
                 classId: classRecord.id,
                 inviteeId: invitee.id,
-                invitedById: input.instructorId,
+                invitedById: input.instructorId!,
                 status: 'PENDING' as const,
                 createdAt: input.now,
               })),
@@ -166,7 +187,7 @@ export function createPrismaClassRepository(
               action: 'CLASS_CREATED',
               targetType: 'CLASS',
               targetId: classRecord.id,
-              metadata: { instructorId: input.instructorId },
+              metadata: { instructorId: input.instructorId ?? '' },
               createdAt: input.now,
             })
           }
@@ -186,7 +207,7 @@ export function createPrismaClassRepository(
         input.callerRole === 'ADMIN'
           ? {}
           : input.callerRole === 'INSTRUCTOR'
-            ? { instructorId: input.callerId }
+            ? { OR: [{ instructorId: input.callerId }, { teachingStaff: { some: { instructorId: input.callerId, status: 'ACTIVE' } } }] }
             : {
                 members: {
                   some: {
@@ -247,8 +268,9 @@ export function createPrismaClassRepository(
     },
     updateMetadata(classId, input, adminAudit) {
       return prisma.$transaction(async (transaction) => {
+        const changesIdentity = input.className !== undefined || input.section !== undefined || input.semester !== undefined || input.schoolYear !== undefined
         const result = await transaction.class.updateMany({
-          where: { id: classId, status: 'ACTIVE' },
+          where: { id: classId, status: 'ACTIVE', ...(changesIdentity ? { officialClassCode: null } : {}) },
           data: input,
         })
         if (result.count === 0) return null
@@ -279,7 +301,7 @@ export function createPrismaClassRepository(
         `
         const existing = await transaction.class.findUnique({
           where: { id: classId },
-          select: { status: true },
+          select: { status: true, instructorId: true },
         })
         if (!existing) return { kind: 'not_found' } as const
         if (existing.status !== 'ARCHIVED') {
@@ -392,15 +414,16 @@ export function createPrismaClassRepository(
       return prisma.$transaction(async (transaction) => {
         const existing = await transaction.class.findUnique({
           where: { id: classId },
-          select: { status: true },
+          select: { status: true, instructorId: true },
         })
         if (!existing) return { kind: 'not_found' } as const
-        const changed = existing.status !== 'ACTIVE'
+        const targetStatus = existing.instructorId ? 'ACTIVE' : 'PREPARED'
+        const changed = existing.status !== targetStatus
         const classRecord = changed
           ? await transaction.class.update({
               where: { id: classId },
               data: {
-                status: 'ACTIVE',
+                status: targetStatus,
                 archivedAt: null,
                 classCodeActive: false,
               },

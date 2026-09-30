@@ -12,7 +12,7 @@ const uuid = z.uuid().optional()
 export const adminClassQuerySchema = z.object({
   ...pagination,
   search,
-  status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
+  status: z.enum(['PREPARED', 'ACTIVE', 'ARCHIVED']).optional(),
   instructorId: uuid,
   sortBy: z.enum(['createdAt', 'updatedAt', 'className']).default('createdAt'),
 }).strict()
@@ -92,7 +92,7 @@ export const adminAuditEventQuerySchema = z.object({
     'USER_STUDENT_PROVISIONED', 'USER_INSTRUCTOR_PROVISIONED', 'USER_SETUP_REISSUED',
     'USER_STATUS_CHANGED', 'USER_SESSIONS_REVOKED', 'CLASS_CREATED', 'CLASS_UPDATED',
     'CLASS_ARCHIVED', 'CLASS_RESTORED', 'CLASS_JOIN_CODE_ROTATED',
-    'CLASS_JOIN_CODE_REVOKED', 'CLASS_MEMBER_REMOVED', 'CLASS_MEMBER_REACTIVATED',
+    'CLASS_JOIN_CODE_REVOKED', 'CLASS_OFFICIAL_METADATA_CORRECTED', 'CLASS_MEMBER_REMOVED', 'CLASS_MEMBER_REACTIVATED',
     'GIT_CREDENTIAL_REVOKED', 'REPOSITORY_PROVISIONING_RETRY_QUEUED',
   ]).optional(),
   targetType: z.enum([

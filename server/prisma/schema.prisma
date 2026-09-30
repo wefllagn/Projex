@@ -37,6 +37,7 @@ enum AdminAuditAction {
   CLASS_RESTORED
   CLASS_JOIN_CODE_ROTATED
   CLASS_JOIN_CODE_REVOKED
+  CLASS_OFFICIAL_METADATA_CORRECTED
   CLASS_MEMBER_REMOVED
   CLASS_MEMBER_REACTIVATED
   GIT_CREDENTIAL_REVOKED
@@ -52,10 +53,26 @@ enum AdminAuditTargetType {
 }
 
 enum ClassStatus {
+  PREPARED
   ACTIVE
   ARCHIVED
 
   @@map("class_status")
+}
+
+enum AcademicPeriod {
+  FIRST_SEMESTER
+  SECOND_SEMESTER
+
+  @@map("academic_period")
+}
+
+enum ClassTeachingStaffStatus {
+  INVITED
+  ACTIVE
+  REMOVED
+
+  @@map("class_teaching_staff_status")
 }
 
 enum ClassMemberStatus {
@@ -327,6 +344,9 @@ model User {
   accountSetupTokens            AccountSetupToken[]
   refreshSessions               RefreshSession[]              @relation("RefreshSessionUser")
   classesTaught                 Class[]                       @relation("ClassInstructor")
+  teachingStaffMemberships      ClassTeachingStaff[]          @relation("ClassTeachingStaffInstructor")
+  teachingStaffInvitationsSent  ClassTeachingStaff[]          @relation("ClassTeachingStaffInviter")
+  classStaffEvents              ClassStaffEvent[]             @relation("ClassStaffEventActor")
   classMemberships              ClassMember[]                 @relation("ClassMemberStudent")
   classInvitationsReceived      ClassInvitation[]             @relation("ClassInvitationInvitee")
   classInvitationsSent          ClassInvitation[]             @relation("ClassInvitationInviter")
@@ -354,6 +374,17 @@ model User {
 
   @@index([role, status])
   @@map("users")
+}
+
+model Course {
+  id           String    @id @default(uuid()) @map("course_id") @db.Uuid
+  courseNumber String    @unique @map("course_number") @db.VarChar(40)
+  courseName   String    @map("course_name") @db.VarChar(200)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  classes      Class[]
+
+  @@map("courses")
 }
 
 model AdminAuditEvent {
@@ -414,19 +445,30 @@ model RefreshSession {
 
 model Class {
   id                    String                @id @default(uuid()) @map("class_id") @db.Uuid
-  instructorId          String                @map("instructor_id") @db.Uuid
+  instructorId          String?               @map("instructor_id") @db.Uuid
   className             String                @map("class_name")
   classCode             String                @unique @map("class_code")
-  section               String
-  semester              String
-  schoolYear            String                @map("school_year")
+  section               String?
+  semester              String?
+  schoolYear            String?               @map("school_year")
+  courseId              String?               @map("course_id") @db.Uuid
+  courseNumberSnapshot  String?               @map("course_number_snapshot") @db.VarChar(40)
+  courseNameSnapshot    String?               @map("course_name_snapshot") @db.VarChar(200)
+  officialClassCode     String?               @map("official_class_code") @db.VarChar(100)
+  academicPeriod        AcademicPeriod?       @map("academic_period")
+  schedule              String?               @db.VarChar(200)
+  days                  String?               @db.VarChar(100)
+  room                  String?               @db.VarChar(100)
   status                ClassStatus           @default(ACTIVE)
   classCodeActive       Boolean               @default(true) @map("class_code_active")
   classCodeChangedAt    DateTime              @default(now()) @map("class_code_changed_at") @db.Timestamptz(3)
   createdAt             DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
   archivedAt            DateTime?             @map("archived_at") @db.Timestamptz(3)
-  instructor            User                  @relation("ClassInstructor", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  instructor            User?                 @relation("ClassInstructor", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  course                Course?               @relation(fields: [courseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  teachingStaff         ClassTeachingStaff[]
+  staffEvents           ClassStaffEvent[]
   members               ClassMember[]
   invitations           ClassInvitation[]
   programmingActivities ProgrammingActivity[]
@@ -435,7 +477,43 @@ model Class {
   @@index([instructorId])
   @@index([status])
   @@index([semester, schoolYear])
+  @@index([courseId, academicPeriod, schoolYear])
+  @@index([officialClassCode])
   @@map("classes")
+}
+
+model ClassTeachingStaff {
+  id           String                   @id @default(uuid()) @map("class_teaching_staff_id") @db.Uuid
+  classId      String                   @map("class_id") @db.Uuid
+  instructorId String                   @map("instructor_id") @db.Uuid
+  invitedById  String                   @map("invited_by_id") @db.Uuid
+  status       ClassTeachingStaffStatus @default(INVITED)
+  createdAt    DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  acceptedAt   DateTime?                @map("accepted_at") @db.Timestamptz(3)
+  removedAt    DateTime?                @map("removed_at") @db.Timestamptz(3)
+  class        Class                    @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  instructor   User                     @relation("ClassTeachingStaffInstructor", fields: [instructorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  invitedBy    User                     @relation("ClassTeachingStaffInviter", fields: [invitedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([classId, instructorId])
+  @@index([instructorId, status])
+  @@map("class_teaching_staff")
+}
+
+model ClassStaffEvent {
+  id                  String   @id @default(uuid()) @map("class_staff_event_id") @db.Uuid
+  classId             String   @map("class_id") @db.Uuid
+  actorId             String   @map("actor_id") @db.Uuid
+  subjectInstructorId String   @map("subject_instructor_id") @db.Uuid
+  action              String   @db.VarChar(40)
+  detailsJson         Json?    @map("details_json")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  class               Class    @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  actor               User     @relation("ClassStaffEventActor", fields: [actorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([classId, createdAt])
+  @@map("class_staff_events")
 }
 
 model ClassMember {

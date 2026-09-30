@@ -110,14 +110,14 @@ function requireActiveCaller(caller: SafeUserProfile): void {
   if (caller.status !== 'ACTIVE') throw forbidden()
 }
 
-function isManager(caller: SafeUserProfile, instructorId: string): boolean {
-  return caller.role === 'INSTRUCTOR' && caller.id === instructorId
+function isManager(caller: SafeUserProfile, classRecord: { instructorId: string | null; teachingStaff?: { instructorId: string; status: string }[] }): boolean {
+  return caller.role === 'INSTRUCTOR' && (classRecord.instructorId === caller.id || Boolean(classRecord.teachingStaff?.some((staff) => staff.instructorId === caller.id && staff.status === 'ACTIVE')))
 }
 
 function canViewClass(caller: SafeUserProfile, access: ClassAccessRecord): boolean {
   return (
     caller.role === 'ADMIN' ||
-    isManager(caller, access.classRecord.instructorId) ||
+    isManager(caller, access.classRecord) ||
     (caller.role === 'STUDENT' && access.membership?.status === 'ACTIVE')
   )
 }
@@ -127,7 +127,7 @@ function canViewActivity(
   access: ActivityAccessRecord,
 ): boolean {
   if (caller.role === 'ADMIN') return true
-  if (isManager(caller, access.activity.class.instructorId)) return true
+  if (isManager(caller, access.activity.class)) return true
   return (
     caller.role === 'STUDENT' &&
     access.membership?.status === 'ACTIVE' &&
@@ -139,7 +139,7 @@ function requireManager(
   caller: SafeUserProfile,
   access: ActivityAccessRecord,
 ): void {
-  if (!isManager(caller, access.activity.class.instructorId)) {
+  if (!isManager(caller, access.activity.class)) {
     throw activityNotFound()
   }
 }
@@ -228,7 +228,7 @@ export function createActivityService(dependencies: {
         throw forbidden()
       }
       const classAccess = await classRepository.findAccess(classId, caller.id)
-      if (!classAccess || !isManager(caller, classAccess.classRecord.instructorId)) {
+      if (!classAccess || !isManager(caller, classAccess.classRecord)) {
         throw classNotFound()
       }
       if (classAccess.classRecord.status === 'ARCHIVED') throw classArchived()

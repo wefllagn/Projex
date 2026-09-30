@@ -29,6 +29,10 @@ export interface AppDependencies {
     admin?: Router
     users: Router
     classes: Router
+    courses?: Router
+    classStaff?: Router
+    officialMetadata?: Router
+    classInvitationImport?: Router
     classInvitations?: Router
     activities: Router
     submissions: Router
@@ -84,7 +88,11 @@ export function createApp({
       app.use('/api/v1/admin', featureRouters.admin)
     }
     app.use('/api/v1/users', featureRouters.users)
+    if (featureRouters.classStaff) app.use('/api/v1/classes', featureRouters.classStaff)
+    if (featureRouters.officialMetadata) app.use('/api/v1/classes', featureRouters.officialMetadata)
+    if (featureRouters.classInvitationImport) app.use('/api/v1/classes', featureRouters.classInvitationImport)
     app.use('/api/v1/classes', featureRouters.classes)
+    if (featureRouters.courses) app.use('/api/v1/courses', featureRouters.courses)
     if (featureRouters.classInvitations) {
       app.use('/api/v1', featureRouters.classInvitations)
     }

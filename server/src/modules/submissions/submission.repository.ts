@@ -25,7 +25,7 @@ export const submissionInclude = {
       status: true,
       totalPoints: true,
       creditPolicy: true,
-      class: { select: { id: true, instructorId: true, status: true } },
+      class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
     },
   },
   student: { select: { id: true, fullName: true, email: true } },
@@ -56,7 +56,7 @@ export const practiceInclude = {
       classId: true,
       title: true,
       status: true,
-      class: { select: { id: true, instructorId: true, status: true } },
+      class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
     },
   },
   cases: { orderBy: { testOrderSnapshot: 'asc' as const } },
@@ -73,7 +73,7 @@ export const reviewRunInclude = {
     select: {
       id: true,
       activityId: true,
-      activity: { select: { class: { select: { instructorId: true } } } },
+      activity: { select: { class: { select: { instructorId: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } } } },
     },
   },
 } as const
@@ -107,7 +107,7 @@ export interface StudentAttemptStateRecord {
     dueDate: Date
     maxAttempts: number
     creditPolicy: AttemptCreditPolicyValue
-    classStatus: 'ACTIVE' | 'ARCHIVED'
+    classStatus: 'PREPARED' | 'ACTIVE' | 'ARCHIVED'
   }
   countingAttemptsUsed: number
   availableReplacement: {
@@ -292,7 +292,7 @@ function canInstructorMutate(
   instructorId: string,
 ): boolean {
   return (
-    record.activity.class.instructorId === instructorId &&
+    (record.activity.class.instructorId === instructorId || record.activity.class.teachingStaff.some((staff) => staff.instructorId === instructorId)) &&
     record.activity.class.status === 'ACTIVE' &&
     record.activity.status !== 'ARCHIVED'
   )
@@ -510,6 +510,7 @@ export function createPrismaSubmissionRepository(
           class: {
             select: {
               instructorId: true,
+              teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } },
               members: {
                 where: { studentId: input.callerId },
                 take: 1,
@@ -523,7 +524,7 @@ export function createPrismaSubmissionRepository(
       const permitted =
         input.callerRole === 'ADMIN' ||
         (input.callerRole === 'INSTRUCTOR' &&
-          activity.class.instructorId === input.callerId) ||
+          (activity.class.instructorId === input.callerId || activity.class.teachingStaff.some((staff) => staff.instructorId === input.callerId))) ||
         (input.callerRole === 'STUDENT' &&
           activity.class.members[0]?.status === 'ACTIVE')
       if (!permitted) return null

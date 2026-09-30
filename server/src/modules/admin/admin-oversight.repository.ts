@@ -18,6 +18,14 @@ const safeClassSelect = {
   section: true,
   semester: true,
   schoolYear: true,
+  courseId: true,
+  courseNumberSnapshot: true,
+  courseNameSnapshot: true,
+  officialClassCode: true,
+  academicPeriod: true,
+  schedule: true,
+  days: true,
+  room: true,
   status: true,
 } as const
 

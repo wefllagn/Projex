@@ -11,7 +11,7 @@ export function evaluateGitPermission(access: GitTransportAccess, now: Date): Gi
     access.projectTask?.class.membership?.status === 'ACTIVE'
   const instructorOwnsClass =
     access.user.role === 'INSTRUCTOR' &&
-    access.projectTask?.class.instructorId === access.user.id
+    (access.projectTask?.class.instructorId === access.user.id || Boolean(access.projectTask?.class.teachingStaff.some((staff) => staff.instructorId === access.user.id)))
 
   let read = false
   if (access.repositoryType === 'PERSONAL') {

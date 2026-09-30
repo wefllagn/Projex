@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import AdminRoutePage from './AdminViews.jsx'
+import AdminCourseCatalog from './AdminCourseCatalog.jsx'
 import {
   AdminAcademicHomePage,
   AdminAcademicListPage,
@@ -19,6 +20,7 @@ export const adminChildren = [
   { path: 'users/:userId', element: <AdminRoutePage pagePath="user-detail" /> },
   { path: 'academic', element: <AdminAcademicHomePage /> },
   { path: 'academic/classes', element: <AdminClassListPage /> },
+  { path: 'academic/courses', element: <AdminCourseCatalog /> },
   { path: 'academic/classes/new', element: <AdminClassCreatePage /> },
   { path: 'academic/classes/:classId', element: <AdminClassDetailPage /> },
   { path: 'academic/activities', element: <AdminAcademicListPage kind="activities" /> },
@@ -30,8 +32,9 @@ export const adminChildren = [
   { path: 'operations/repository-provisioning-jobs', element: <AdminOperationalListPage kind="provisioning" /> },
   { path: 'operations/git-credentials', element: <AdminOperationalListPage kind="credentials" /> },
   { path: 'audit-events', element: <AdminAuditEventsPage /> },
-  ...['courses', 'sections', 'enrollments', 'instructor-assignments']
+  ...['sections', 'enrollments', 'instructor-assignments']
     .map((path) => ({ path, element: <Navigate to="/admin/academic/classes" replace /> })),
+  { path: 'courses', element: <Navigate to="/admin/academic/courses" replace /> },
   { path: 'repositories', element: <Navigate to="/admin/academic/repositories" replace /> },
   { path: 'archive', element: <Navigate to="/admin/academic" replace /> },
   ...['storage', 'system'].map((path) => ({ path, element: <Navigate to="/admin/operations" replace /> })),

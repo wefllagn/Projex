@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
-import { classHref, classInitial, firstName } from '../classes/class-links.js'
+import { classHref, classInitial, classOfferingLabel, firstName } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
 import { StudentClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
 import { StudentActivityDetail, StudentActivityList } from '../activities/StudentActivityViews.jsx'
@@ -100,9 +100,9 @@ function ClassHeader({ activeTab }) {
           <div>
             <h1>{selectedClass?.className || 'Select a class'}</h1>
             <div className="student-course-meta">
-              {selectedClass && <span>{selectedClass.section}</span>}
+              {selectedClass && <span>{classOfferingLabel(selectedClass)}</span>}
               {selectedClass && <span>{selectedClass.instructor.fullName}</span>}
-              {selectedClass && <span>{selectedClass.status === 'ARCHIVED' ? 'Archived' : `${selectedClass.semester} · ${selectedClass.schoolYear}`}</span>}
+              {selectedClass?.status === 'ARCHIVED' && <span>Archived</span>}
             </div>
           </div>
         </div>
@@ -236,7 +236,7 @@ function HomeDashboardPage() {
                 </span>
                 <div>
                   <strong>{item.className}</strong>
-                  <span>{item.section}</span>
+                  <span>{classOfferingLabel(item)}</span>
                   <span>{item.instructor.fullName}</span>
                 </div>
                 <div className="student-home-class-schedule">
@@ -272,7 +272,7 @@ function StudentClassesPage() {
             <section className="student-global-panel class-overview-card">
               <span className="class-status-chip">{selectedClass.status}</span>
               <h2>{selectedClass.className}</h2>
-              <p>{selectedClass.section} · {selectedClass.semester} · {selectedClass.schoolYear}</p>
+              <p>{classOfferingLabel(selectedClass)}</p>
               <p>Instructor: {selectedClass.instructor.fullName}</p>
               <small>{selectedClass.status === 'ARCHIVED' ? 'This class is read-only.' : 'Your membership grants access to this class.'}</small>
             </section>
@@ -302,11 +302,10 @@ function StudentClassesPage() {
                 <span className={`student-class-dot student-class-dot--${initial.toLowerCase()}`}>{initial}</span>
                 <div>
                   <strong>{item.className}</strong>
-                  <span>{item.section}</span>
+                  <span>{classOfferingLabel(item)}</span>
                   <span>{item.instructor.fullName}</span>
                 </div>
                 <div className="student-home-class-schedule">
-                  <span>{item.semester} · {item.schoolYear}</span>
                   <span>{item.status === 'ARCHIVED' ? 'Archived · read-only' : 'Active'}</span>
                 </div>
                 <span className="student-home-card-action" aria-hidden="true" />

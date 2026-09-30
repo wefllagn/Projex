@@ -11414,6 +11414,9 @@ textarea:focus-visible {
 /* Create class modal alignment with instructor board UI. */
 .instructor-action-modal {
   width: min(680px, calc(100vw - 44px));
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   gap: 22px;
   padding: 34px 36px 32px;
   border: 1px solid rgba(220, 231, 246, 0.9);

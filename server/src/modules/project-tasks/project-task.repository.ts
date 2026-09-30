@@ -29,7 +29,7 @@ export const projectTaskRecordSelect = {
   publishedAt: true,
   closedAt: true,
   archivedAt: true,
-  class: { select: { id: true, instructorId: true, status: true } },
+  class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
   createdBy: { select: { id: true, fullName: true } },
 } as const
 
@@ -248,6 +248,7 @@ export function createPrismaProjectTaskRepository(
             select: {
               id: true,
               instructorId: true,
+              teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } },
               status: true,
               members: {
                 where: { studentId: callerId },

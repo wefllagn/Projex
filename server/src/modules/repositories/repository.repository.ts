@@ -46,7 +46,7 @@ export const repositoryRecordSelect = {
       classId: true,
       dueDate: true,
       status: true,
-      class: { select: { id: true, instructorId: true, status: true } },
+      class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
     },
   },
   team: { select: { id: true, leadStudentId: true } },
@@ -511,7 +511,7 @@ export function createPrismaRepositoryRepository(
         input.callerRole === 'ADMIN'
           ? {}
           : input.callerRole === 'INSTRUCTOR'
-            ? { projectTask: { class: { instructorId: input.callerId } } }
+            ? { projectTask: { class: { OR: [{ instructorId: input.callerId }, { teachingStaff: { some: { instructorId: input.callerId, status: 'ACTIVE' } } }] } } }
             : {
                 OR: [
                   { ownerId: input.callerId },
@@ -570,6 +570,7 @@ export function createPrismaRepositoryRepository(
                 select: {
                   id: true,
                   instructorId: true,
+                  teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } },
                   status: true,
                   members: {
                     where: { studentId: callerId },
@@ -592,6 +593,7 @@ export function createPrismaRepositoryRepository(
             class: {
               id: repository.projectTask.class.id,
               instructorId: repository.projectTask.class.instructorId,
+              teachingStaff: repository.projectTask.class.teachingStaff,
               status: repository.projectTask.class.status,
             },
           }

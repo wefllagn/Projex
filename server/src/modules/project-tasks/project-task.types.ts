@@ -21,7 +21,7 @@ export interface ProjectTaskRecord {
   publishedAt: Date | null
   closedAt: Date | null
   archivedAt: Date | null
-  class: { id: string; instructorId: string; status: ClassStatus }
+  class: { id: string; instructorId: string | null; status: ClassStatus; teachingStaff?: { instructorId: string; status: string }[] }
   createdBy: { id: string; fullName: string }
 }
 

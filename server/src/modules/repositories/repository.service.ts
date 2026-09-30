@@ -100,7 +100,7 @@ function requireActive(caller: SafeUserProfile): void {
 }
 
 function instructorOwns(access: RepositoryAccessRecord, caller: SafeUserProfile): boolean {
-  return caller.role === 'INSTRUCTOR' && access.repository.projectTask?.class.instructorId === caller.id
+  return caller.role === 'INSTRUCTOR' && Boolean(access.repository.projectTask && (access.repository.projectTask.class.instructorId === caller.id || access.repository.projectTask.class.teachingStaff?.some((staff) => staff.instructorId === caller.id && staff.status === 'ACTIVE')))
 }
 
 function isOwner(access: RepositoryAccessRecord, caller: SafeUserProfile): boolean {

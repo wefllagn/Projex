@@ -303,7 +303,7 @@ async function project(
   if (caller.role === 'ADMIN') return adminProjection(record, isCreditedResult)
   if (
     caller.role === 'INSTRUCTOR' &&
-    record.activity.class.instructorId === caller.id
+    (record.activity.class.instructorId === caller.id || record.activity.class.teachingStaff.some((staff) => staff.instructorId === caller.id))
   ) {
     return instructorProjection(record, isCreditedResult)
   }
@@ -780,7 +780,7 @@ export function createSubmissionService(dependencies: {
       }
       if (
         caller.role === 'INSTRUCTOR' &&
-        record.activity.class.instructorId !== caller.id
+        record.activity.class.instructorId !== caller.id && !record.activity.class.teachingStaff.some((staff) => staff.instructorId === caller.id)
       ) {
         throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
       }
@@ -813,7 +813,7 @@ export function createSubmissionService(dependencies: {
       requireInstructor(caller)
       const record = await repository.findReviewRunById(runId)
       if (!record || record.submissionId !== submissionId ||
-          record.submission.activity.class.instructorId !== caller.id) {
+          (record.submission.activity.class.instructorId !== caller.id && !record.submission.activity.class.teachingStaff.some((staff) => staff.instructorId === caller.id))) {
         throw error(404, 'REVIEW_RUN_NOT_FOUND', 'Review rerun not found.')
       }
       return reviewRunProjection(record)
