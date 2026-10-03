@@ -2,10 +2,10 @@
 
 ## Tracker identity
 
-- Revision: **I2-C6**
-- Updated: **2026-10-01**
+- Revision: **I2-C9**
+- Updated: **2026-10-03**
 - Deadline target: **2026-10-30**
-- Scope authority: `docs/team/ITERATION_2_ROADMAP.md` revision I2-R6
+- Scope authority: `docs/team/ITERATION_2_ROADMAP.md` revision I2-R7
 - Evidence authority: current Git/source/Prisma/test output, then the active `docs/team/milestones/I2.X.md` report
 
 This file is the status and execution tracker. It does not redefine roadmap scope. Update it only when repository evidence changes or an explicit approval changes a gate. Do not mark a feature complete because a screen exists.
@@ -30,7 +30,8 @@ This file is the status and execution tracker. It does not redefine roadmap scop
 | I2.3 existing repository workflow/activity slice | ACCEPTED FOR FREISER CHECKPOINT | Authenticated provisioning and accepted-push feed, per-user accepted-push counts, final guarded 19/91 integration and full client 47/299, plus controlled localhost Student/Instructor/Admin validation are recorded in `milestones/I2.3.md`. Invitation acceptance lacks a second controlled walkthrough account; automated coverage passed. |
 | Course/Class Offering foundation | COMPLETED — ACCEPTED FOR FREISER CHECKPOINT | Checker accepted the bounded foundation after targeted CSV and Primary/Co boundary corrections. Split migrations applied only to disposable `projex_test`; final guarded integration 20/99, client 49/301, lint/type/build and controlled authenticated walkthrough passed. Normal `projex` migration remains separately gated. See `milestones/ACADEMIC_FOUNDATION.md`. |
 | Personalized Exercise 1 checking | PROPOSED / AWAITING APPROVAL | Nonempty-output comparator/grading contract unresolved |
-| I2.2 and I2.4–I2.9 | PENDING | The bounded I2.3 slice is accepted on Freiser's branch; the proposed I2.3 class-workspace extension remains gated. |
+| I2.2 | ACCEPTED FOR FREISER CHECKPOINT | Final guarded integration 21/102 and full client 51/311 passed; client/server lint, server type/build and client build passed. The isolated server suite remains 221/224 with three separately tracked unchanged Windows storage/restore failures. Freiser's detailed desktop walkthrough and final 390 × 844 Student and Instructor re-check passed; Checker accepted the corrected responsive shell and Class layout. Loading/error/retry were not separately reported as manually passed. See `milestones/I2.2.md`. |
+| I2.4–I2.9 | PENDING | The bounded I2.3 slice is accepted on Freiser's branch; the proposed I2.3 class-workspace extension remains gated. |
 | Normal database migration for Iteration 2 | PARTIAL — APPROVED RERUN SLICE ONLY | The two committed Instructor Rerun migrations were applied to Freiser's local `projex`; other proposed Iteration 2 schema work remains unapproved. |
 | Network Git | PENDING | Smart HTTP remains loopback-only; browser Home-LAN testing is not Git transport evidence |
 
@@ -39,7 +40,7 @@ This file is the status and execution tracker. It does not redefine roadmap scop
 - [ ] **IN PROGRESS** I2.1 core committed/pushed on task branch; integrate only through a separate approval gate.
 - [x] **ACCEPTED FOR FREISER CHECKPOINT** Instructor rerun preserves original assessment, attempts, feedback and scores; guarded tests, approved normal-local migration, authenticated desktop/narrow walkthrough, retention decision and Checker acceptance are recorded in the rerun milestone. Protected integration remains separate.
 - [x] **ACCEPTED FOR FREISER CHECKPOINT** Course/Class Offering foundation, staff policy, in-place conversion and bounded Course/student-invitation CSV flows passed final Checker review; normal-database migration remains separately gated.
-- [ ] **PENDING** Complete essential I2.2 cross-class work views.
+- [x] **ACCEPTED FOR FREISER CHECKPOINT** I2.2 cross-class work views and bounded responsive corrections passed final Checker review after Freiser's 390 × 844 Student and Instructor PASS. Protected integration remains separate.
 - [ ] **PROPOSED / AWAITING APPROVAL** Add the smallest repository-to-submission slice inside I2.3.
 - [ ] **PENDING** Prove paired recovery in I2.6.
 - [ ] **PENDING** Isolate Java execution in I2.7.
@@ -137,29 +138,31 @@ Recommended owner: Julius or the backend lead for rerun; editor/test-case UX is 
 
 ## I2.2 — Academic Work Hub
 
-Status: **PENDING**
+Status: **ACCEPTED FOR FREISER CHECKPOINT**; protected-branch integration remains separate.
 
 Objective: provide truthful cross-class Student work/submission views and an Instructor review queue.
 
 Prerequisites:
 
-- [ ] I2.1 core integrated.
-- [ ] Academic class identity/projections stable enough for cross-class display.
-- [ ] Instructor rerun contract known so queue actions do not need immediate redesign.
+- [x] I2.1 core accepted on the cumulative member branch, satisfying the internal development dependency; protected integration remains separate.
+- [x] Academic class identity/projections accepted on the cumulative member branch; normal `projex` migration remains separately gated.
+- [x] Instructor rerun contract accepted so queue actions do not need immediate redesign.
 
 Implementation:
 
-- [ ] Student upcoming/overdue activities and project tasks.
-- [ ] Global Student submission/attempt history with released-result rules.
-- [ ] Instructor queue for failed assessment recovery, review, feedback and release.
-- [ ] Remove the current dashboard Review Queue placeholder only when navigation remains truthful.
-- [ ] Server filtering, stable sorting, pagination and honest loading/empty/error states.
+- [x] Student upcoming/overdue activities and project tasks across ACTIVE memberships.
+- [x] Global Student submission/attempt history with released-result rules.
+- [x] Instructor queue for failed assessment recovery, review, feedback and release, including repositories ready for review.
+- [x] Replace the dashboard Review Queue placeholder with truthful navigation.
+- [x] Server filtering, stable sorting, pagination and honest loading/empty/error states.
 
 Tests/evidence:
 
-- [ ] Cross-class authorization and one-Student isolation.
-- [ ] Deadline ordering, archive behavior and no unreleased-score leakage.
-- [ ] API projection tests, frontend route tests, lint/build, desktop/narrow walkthrough.
+- [x] Cross-class authorization and one-Student isolation covered by guarded integration and authenticated API walkthrough.
+- [x] Deadline ordering, archive behavior and no unreleased-score leakage covered by guarded integration.
+- [x] API projection tests, frontend route/mobile-navigation tests, lint/type/build and final guarded 21-file/102-test integration and 51-file/311-test client suites passed.
+- [x] Freiser's authenticated desktop walkthrough of Student, Primary/Co-Instructor and Student/Admin authorization surfaces passed; see `milestones/I2.2.md`.
+- [x] Freiser's final 390 × 844 re-check passed for Student and Instructor after the bounded dashboard/Class correction; Checker accepted the milestone. Individual loading/error/retry scenarios were not separately reported as manually passed.
 
 Deliverables/acceptance:
 

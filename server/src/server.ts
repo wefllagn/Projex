@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { createServer, type Server } from 'node:http'
 import { fileURLToPath } from 'node:url'
 import { createApp } from './app.js'
+import { createWorkHubRouter } from './modules/work-hub/work-hub.routes.js'
 import { EnvironmentValidationError, loadEnv } from './config/env.js'
 import {
   createPrismaClient,
@@ -255,6 +256,7 @@ async function bootstrap(): Promise<void> {
     databaseHealth: createPrismaDatabaseHealth(prisma),
     logger,
     featureRouters: {
+      workHub: createWorkHubRouter({ prisma, requireAuthentication }),
       capabilities: createCapabilitiesRouter(createCapabilitiesService({
         profile: env.nodeEnv === 'production' ? 'HOSTED_SAFE' : 'LOCAL_FULL',
         java: { execution: env.javaExecutionMode === 'local_process' },

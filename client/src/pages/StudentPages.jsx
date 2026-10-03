@@ -5,6 +5,7 @@ import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref, classInitial, classOfferingLabel, firstName } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { WorkHubList } from '../work-hub/WorkHubViews.jsx'
 import { StudentClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
 import { StudentActivityDetail, StudentActivityList } from '../activities/StudentActivityViews.jsx'
 import {
@@ -43,7 +44,7 @@ function StudentProfileMenu() {
 
   return (
     <div className="student-profile-menu">
-      <button type="button" className="student-profile-trigger" onClick={() => setOpen(!open)}>
+      <button type="button" className="student-profile-trigger" aria-label="Account menu" onClick={() => setOpen(!open)}>
         <span className="student-user-avatar" aria-hidden="true" />
         <span className="student-user-name">
           <strong>{auth.user.fullName}</strong>
@@ -216,6 +217,11 @@ function HomeDashboardPage() {
             </article>
           ))}
         </section>
+
+        <nav className="work-hub-dashboard-links" aria-label="Academic work">
+          <NavLink to="/student/todo">View cross-class To-do</NavLink>
+          <NavLink to="/student/submissions">View My Submissions</NavLink>
+        </nav>
 
         <StudentClassInvitationPanel preview />
 
@@ -399,19 +405,13 @@ function StudentGlobalPage({ title, eyebrow, action, children }) {
 function StudentTodoPage() {
   return (
     <StudentGlobalPage eyebrow="Student To-do" title="To-do">
-      <section className="student-global-panel student-todo-board">
-        <RequestState
-          kind="unavailable"
-          title="Consolidated to-do is not available"
-          message="Projex does not currently provide an authoritative cross-class task list. Open a class to review its real activities and project requirements, or open your repository catalog for repository work."
-        />
-        <div className="student-submit-modal-actions">
-          <NavLink className="student-primary-action" to="/student/classes">View my classes</NavLink>
-          <NavLink className="student-outline-action" to="/student/repositories">View my repositories</NavLink>
-        </div>
-      </section>
+      <WorkHubList view="todo" />
     </StudentGlobalPage>
   )
+}
+
+function StudentGlobalSubmissionsPage() {
+  return <StudentGlobalPage eyebrow="Academic Work" title="My Submissions"><WorkHubList view="submissions" /></StudentGlobalPage>
 }
 
 function JoinClassModal({ onClose, onJoin }) {
@@ -629,7 +629,7 @@ export function StudentRoutePage({ pagePath }) {
       </StudentGlobalPage>
     ),
     activity: <ActivitiesPage />,
-    submissions: <DeferredStudentPage title="My Submissions" message="A global cross-class submission list still needs a bounded backend read contract. Open a real activity to view its official attempts." />,
+    submissions: <StudentGlobalSubmissionsPage />,
     'activity/:activityId': <ActivityDetailPage />,
     'activity/:activityId/workspace': <StudentProgrammingWorkspace />,
     'activity/:activityId/submissions': <SubmissionHistoryPage />,

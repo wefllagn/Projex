@@ -41,6 +41,7 @@ export interface AppDependencies {
     gitTransport?: Router
     repositoryContent?: Router
     capabilities?: Router
+    workHub?: Router
   }
 }
 
@@ -110,6 +111,7 @@ export function createApp({
     if (featureRouters.repositoryContent) {
       app.use('/api/v1', featureRouters.repositoryContent)
     }
+    if (featureRouters.workHub) app.use('/api/v1/work-hub', featureRouters.workHub)
   }
 
   app.use(notFoundMiddleware)

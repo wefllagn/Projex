@@ -5,6 +5,7 @@ import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref, classInitial, classOfferingLabel, firstName } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { WorkHubList } from '../work-hub/WorkHubViews.jsx'
 import { InstructorClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
 import CsvInvitationPanel from '../classes/CsvInvitationPanel.jsx'
 import { ClassStaffPanel, StaffInvitationsPanel } from '../classes/ClassStaffPanel.jsx'
@@ -31,7 +32,7 @@ function InstructorProfileMenu() {
 
   return (
     <div className="student-profile-menu">
-      <button type="button" className="student-profile-trigger" onClick={() => setOpen(!open)}>
+      <button type="button" className="student-profile-trigger" aria-label="Account menu" onClick={() => setOpen(!open)}>
         <span className="student-user-avatar" aria-hidden="true" />
         <span className="student-user-name">
           <strong>{auth.user.fullName}</strong>
@@ -165,7 +166,7 @@ function InstructorDashboard() {
   const auth = useAuth()
   const { classes, error, pagination, status } = useClasses()
   const stats = [
-    { label: 'Owned Classes', value: pagination?.totalItems ?? classes.length, detail: 'authorized classes', tone: 'blue', icon: 'book' },
+    { label: 'Teaching Classes', value: pagination?.totalItems ?? classes.length, detail: 'authorized classes', tone: 'blue', icon: 'book' },
     { label: 'Active Classes', value: classes.filter((item) => item.status === 'ACTIVE').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'classes', tone: 'green', icon: 'book' },
     { label: 'Archived Classes', value: classes.filter((item) => item.status === 'ARCHIVED').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'read-only classes', tone: 'purple', icon: 'students' },
   ]
@@ -233,7 +234,8 @@ function InstructorDashboard() {
               <NavLink to="/instructor/review-queues">View all</NavLink>
             </div>
 
-            <RequestState kind="unavailable" compact title="Cross-class review queue unavailable" message="A bounded backend contract for a consolidated activity and repository review queue is not currently available. Open a selected class workflow instead." />
+            <p>Open the current cross-class queue for submissions needing assessment follow-up or release and repositories ready for review.</p>
+            <NavLink to="/instructor/review-queues">Open review queue</NavLink>
           </section>
         </section>
       </main>
@@ -659,6 +661,10 @@ function DeferredInstructorPage({ title, message }) {
   )
 }
 
+function InstructorReviewQueuePage() {
+  return <div className="student-global-page"><header className="student-home-topbar"><InstructorUserArea /></header><main className="student-global-content"><div className="student-global-heading"><div><p>Academic Work</p><h1>Review Queues</h1></div></div><WorkHubList view="review" /></main></div>
+}
+
 function InstructorProjectListPage() {
   return <InstructorClassPage activeTab="assignments"><InstructorProjectList /></InstructorClassPage>
 }
@@ -675,7 +681,7 @@ export function InstructorRoutePage({ pagePath }) {
   const pages = {
     dashboard: <InstructorDashboard />,
     classes: <InstructorClassesPage />,
-    'review-queues': <DeferredInstructorPage title="Review Queues" message="A bounded cross-class activity and repository review-queue contract is not available. Open a selected class workflow instead." />,
+    'review-queues': <InstructorReviewQueuePage />,
     activity: <InstructorActivitiesPage />,
     'activity/new': <CreateActivityPage mode="create" />,
     'activity/:activityId/settings': <CreateActivityPage mode="edit" />,

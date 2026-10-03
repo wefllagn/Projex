@@ -1,6 +1,6 @@
 # Projex Current Project Status
 
-Last reconciled: October 1, 2026
+Last reconciled: October 3, 2026
 
 ## Read this first
 
@@ -14,7 +14,7 @@ This file is a teammate-friendly status summary. It does not override the code, 
 - Stable tag: `projex-lan-demo`
 - Historical implementation: Phases 0 through 11
 - Next work program: **Projex Iteration 2 — Classroom and Laboratory Readiness**
-- Iteration 2 status: I2.1 core, Instructor Rerun, the bounded I2.3 repository workflow/activity slice, and the Course/Class Offering academic foundation are accepted on the cumulative Freiser task branch; protected integration remains separate. The foundation's additive migrations were applied only to disposable `projex_test`, not normal `projex`. Its final 20-file/99-test guarded result and controlled walkthrough are in [ACADEMIC_FOUNDATION.md](milestones/ACADEMIC_FOUNDATION.md). The proposed I2.3 class-workspace extension remains gated. I2.2 is the next authorized work package.
+- Iteration 2 status: I2.1 core, Instructor Rerun, the bounded I2.3 repository workflow/activity slice, the Course/Class Offering academic foundation, and I2.2 Academic Work Hub are accepted for Freiser checkpoints on the cumulative task branch; protected integration remains separate. The foundation's additive migrations were applied only to disposable `projex_test`, not normal `projex`. Its final 20-file/99-test guarded result and controlled walkthrough are in [ACADEMIC_FOUNDATION.md](milestones/ACADEMIC_FOUNDATION.md). I2.2 passed guarded integration 21/102 and final full client 51/311, with lint/type/build passing and the same three separately tracked isolated-server Windows failures. Freiser's detailed desktop walkthrough and final 390 × 844 Student/Instructor re-check passed; Checker accepted the responsive correction. Loading/error/retry were not separately reported as manually passed. See [I2.2.md](milestones/I2.2.md). The proposed I2.3 class-workspace extension remains gated.
 
 The stable baseline passed controlled local and Home LAN multi-device testing. This means it is an accepted demonstration baseline. It does **not** mean production-ready, Internet-ready, university-wide, or safe for hostile Java execution.
 
@@ -56,9 +56,9 @@ The labels below deliberately distinguish implementation from proof.
 | Files, branches, commits, history, and diff inspection | Focused root-tree correction on Freiser branch | Integrated | Existing | Guarded real-Git 2 files/10 tests passed | Controlled push showed root file and authorized text preview after correction | Accepted bounded I2.3 correction; read-only browser |
 | Native Git clone/fetch/push | Reused | Integrated local guidance | Existing | Passed | Loopback only | Partial for lab use |
 | Repository activity/contribution monitoring | New bounded authenticated read endpoint | Integrated repository panel on Freiser branch | Existing event records; no migration | Final guarded integration 19/91 and full client 47/299; focused refresh test 2/4 | Controlled Student/Instructor/Admin loopback flow, real push, 1280 px and 390 px Student layout passed | Accepted bounded I2.3 slice; proposed class-workspace extension gated |
-| Cross-class Student To-Do | Missing | Prototype concept only | Existing data can be derived | Missing | Pending | UI and API gap |
-| Global Student submission history | Existing records, no global product surface | Missing | Existing | Missing | Pending | UI/API gap |
-| Global Instructor review queue | Existing records, no global product surface | Missing | Existing | Missing | Pending | UI/API gap |
+| Cross-class Student To-Do | New read-only ACTIVE-membership projection | Integrated on Freiser I2.2 checkpoint | Existing | Guarded 21/102 and full client 51/311; lint/type/build passed | Detailed desktop and final 390 × 844 Student re-check passed | Accepted Freiser checkpoint |
+| Global Student submission history | New read-only Student-isolated, released-score-gated projection | Integrated on Freiser I2.2 checkpoint | Existing | Guarded 21/102 and full client 51/311; lint/type/build passed | Detailed desktop and final 390 × 844 Student re-check passed | Accepted Freiser checkpoint |
+| Global Instructor review queue | New read-only Primary/ACTIVE Co projection | Integrated on Freiser I2.2 checkpoint | Existing | Guarded 21/102 and full client 51/311; lint/type/build passed | Detailed desktop and final 390 × 844 Instructor re-check passed | Accepted Freiser checkpoint |
 | Java file import | Reused Run/Submit APIs | Implemented on I2.1 task branch | No change | Passed | Passed for selected demo | Not yet integrated |
 | Improved textarea editor aids | Not needed | Implemented on I2.1 task branch | No change | Passed | Passed for selected demo | Not yet integrated |
 | Instructor fresh rerun | Separate durable queue/API | Integrated on Freiser task branch | Two rerun migrations applied to Freiser's local `projex` | Guarded integration 19/90, client 46/296, Java 3/24; server isolated 221/224 with separate Windows failures | Authenticated Admin/Instructor/Student; Instructor 1280 px and 390 px passed | Accepted Freiser checkpoint; protected integration pending |
@@ -76,7 +76,7 @@ The labels below deliberately distinguish implementation from proof.
 - The Java worker is separate from the API, with time/output/process controls, but it still runs `javac` and `java` on the host. It is not an OS-level hostile-code sandbox.
 - The I2.3 controlled local walkthrough proved project publication, team/repository creation, provisioning, authenticated push, review transitions, and archive/restore. Invitation acceptance and member transition have guarded integration evidence but still need a second controlled walkthrough account for manual proof.
 - After the controlled push, the baseline root repository file-tree path returned 404. Freiser corrected its commit-to-tree lookup, passed guarded real-Git tests, and verified root listing and text preview locally; the bounded correction was accepted by Checker.
-- Similarity detection, cross-class work queues, notifications, and full code-contribution analytics are not implemented. I2.3 currently reports only authenticated accepted-push counts, never verified commit authorship or contribution percentages.
+- Similarity detection, notifications, and full code-contribution analytics are not implemented. Cross-class work queues are accepted for Freiser's I2.2 checkpoint. I2.3 currently reports only authenticated accepted-push counts, never verified commit authorship or contribution percentages.
 - Home LAN browser validation did not expose Smart HTTP and was not an Internet deployment test.
 - Backup and restore tooling exists, but a complete paired PostgreSQL plus Git-storage recovery proof remains pending.
 - Instructor Rerun diagnostic/history records remain durable for Iteration 2 without automatic expiration or cleanup, separate from official attempts, assessment evidence, feedback, corrections and released scores. Three inherited Windows repository-storage/restore-verifier failures remain separately tracked in the rerun milestone.
@@ -110,7 +110,7 @@ When documents or chat summaries disagree, check in this order:
 
 ## What the next teammate should do
 
-Freiser's accepted Instructor Rerun, bounded I2.3 and Academic Foundation checkpoints are on `iteration-2/freiser-work-01`; their milestone files own detailed evidence. The accepted foundation satisfies the internal I2.2 development dependency, while normal-database migration and integration into `development/fullstack` remain separate Julius gates. Proceed with the approved I2.2 Academic Work Hub on the member branch. Do not start deployment or laboratory Git exposure. Follow [TEAM_DEVELOPMENT_WORKFLOW.md](TEAM_DEVELOPMENT_WORKFLOW.md) and [CODEX_PROMPT_PACK.md](CODEX_PROMPT_PACK.md).
+Freiser's accepted Instructor Rerun, bounded I2.3, Academic Foundation and I2.2 checkpoints are on `iteration-2/freiser-work-01`; their milestone files own detailed evidence. Normal-database migration for the foundation and integration into `development/fullstack` remain separate Julius gates. The I2.2 task-branch savepoint follows final Checker acceptance; do not infer authorization for the proposed I2.3 Student class-workspace extension, deployment or laboratory Git exposure. Follow [TEAM_DEVELOPMENT_WORKFLOW.md](TEAM_DEVELOPMENT_WORKFLOW.md) and [CODEX_PROMPT_PACK.md](CODEX_PROMPT_PACK.md).
 
 ## Updating this file
 
