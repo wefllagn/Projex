@@ -70,6 +70,36 @@ beforeEach(async () => {
 afterAll(async () => prisma.$disconnect())
 
 describe('PostgreSQL repository collaboration', () => {
+  it('provisions one private Student class workspace and limits discovery to its owner and current teaching staff', async () => {
+    const primary = await createActiveUser(prisma, 'INSTRUCTOR')
+    const co = await createActiveUser(prisma, 'INSTRUCTOR')
+    const pending = await createActiveUser(prisma, 'INSTRUCTOR')
+    const outsider = await createActiveUser(prisma, 'INSTRUCTOR')
+    const owner = await createActiveUser(prisma, 'STUDENT')
+    const classmate = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, primary.id)
+    await createActiveMembership(prisma, classRecord.id, owner.id)
+    await createActiveMembership(prisma, classRecord.id, classmate.id)
+    await prisma.classTeachingStaff.createMany({ data: [
+      { classId: classRecord.id, instructorId: co.id, invitedById: primary.id, status: 'ACTIVE', acceptedAt: currentTime },
+      { classId: classRecord.id, instructorId: pending.id, invitedById: primary.id, status: 'INVITED' },
+    ] })
+    const { repositories } = services()
+    const created = await repositories.createClassWorkspace(owner, classRecord.id)
+    expect(created).toMatchObject({ classId: classRecord.id, repositoryType: 'CLASS_WORKSPACE', projectTaskId: null, teamId: null, visibility: 'PRIVATE', owner: { userId: owner.id } })
+    expect(await prisma.repositoryProvisioningJob.count({ where: { repositoryId: created.id } })).toBe(1)
+    await expect(repositories.createClassWorkspace(owner, classRecord.id)).rejects.toMatchObject({ statusCode: 409 })
+    await expect(prisma.repository.create({ data: { classId: classRecord.id, ownerId: owner.id, repositoryType: 'CLASS_WORKSPACE', repositoryName: 'duplicate', slug: 'duplicate', visibility: 'PRIVATE' } })).rejects.toMatchObject({ code: 'P2002' })
+    for (const caller of [primary, co, owner]) expect((await repositories.get(caller, created.id)).id).toBe(created.id)
+    for (const caller of [pending, outsider, classmate]) await expect(repositories.get(caller, created.id)).rejects.toMatchObject({ statusCode: 404 })
+    for (const caller of [pending, outsider, classmate]) expect((await repositories.list(caller, { page: 1, pageSize: 20, search: 'Workspace' })).repositories).toEqual([])
+    await expect(repositories.createClassWorkspace(classmate, classRecord.id)).resolves.toMatchObject({ owner: { userId: classmate.id } })
+    await prisma.classMember.update({ where: { classId_studentId: { classId: classRecord.id, studentId: owner.id } }, data: { status: 'REMOVED' } })
+    await expect(repositories.get(owner, created.id)).rejects.toMatchObject({ statusCode: 404 })
+    expect((await repositories.list(owner, { page: 1, pageSize: 20 })).repositories.some((item) => item.id === created.id)).toBe(false)
+    expect(await prisma.activitySubmission.count()).toBe(0)
+  })
+
   it('shows only recorded operations and authenticated push counts to authorized repository participants', async () => {
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const otherInstructor = await createActiveUser(prisma, 'INSTRUCTOR')

@@ -19,6 +19,9 @@ export function createRepositoryApi(client = apiClient) {
     createPersonal(input, options) {
       return client.post('/repositories/personal', input, options)
     },
+    createClassWorkspace(classId, options) {
+      return client.post(`/classes/${classId}/workspace-repository`, {}, options)
+    },
     listRepositories(query, options) {
       return client.get(`/repositories${queryString(query)}`, options)
     },

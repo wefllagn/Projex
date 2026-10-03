@@ -2,8 +2,8 @@
 
 ## Tracker identity
 
-- Revision: **I2-C9**
-- Updated: **2026-10-03**
+- Revision: **I2-C10**
+- Updated: **2026-10-04**
 - Deadline target: **2026-10-30**
 - Scope authority: `docs/team/ITERATION_2_ROADMAP.md` revision I2-R7
 - Evidence authority: current Git/source/Prisma/test output, then the active `docs/team/milestones/I2.X.md` report
@@ -28,10 +28,11 @@ This file is the status and execution tracker. It does not redefine roadmap scop
 | I2.1 authenticated walkthrough | COMPLETED for selected deterministic demo | Student/Instructor activity, practice, submit, review, release and narrow layout recorded passing |
 | Instructor fresh rerun | COMPLETED — ACCEPTED FOR FREISER CHECKPOINT | Checker accepted the scoped rerun. Guarded `projex_test` integration 19/90, client 46/296, Java 3/24; server isolated 221/224 with three inherited Windows storage/restore failures tracked separately. Approved local migrations and authenticated 1280 px/390 px walkthrough passed. Julius set Iteration 2 diagnostic retention without automatic cleanup; protected integration remains pending. See `milestones/INSTRUCTOR_REVIEW_RERUN.md`. |
 | I2.3 existing repository workflow/activity slice | ACCEPTED FOR FREISER CHECKPOINT | Authenticated provisioning and accepted-push feed, per-user accepted-push counts, final guarded 19/91 integration and full client 47/299, plus controlled localhost Student/Instructor/Admin validation are recorded in `milestones/I2.3.md`. Invitation acceptance lacks a second controlled walkthrough account; automated coverage passed. |
+| I2.3 Student class-workspace foundation | ACCEPTED FOR FREISER CHECKPOINT — 2026-10-04 | Checker accepted the bounded one-Student/Class workspace. Two additive migrations applied only to `projex_test`; guarded integration 21/103, final post-correction standalone client 51/318, focused repository frontend 3/40, Smart HTTP 1/11 and real-Git 2/10 passed; isolated server 222/225 with the same three inherited Windows storage/restore failures. Normal `projex` was not migrated. See `milestones/I2.3.md`. |
 | Course/Class Offering foundation | COMPLETED — ACCEPTED FOR FREISER CHECKPOINT | Checker accepted the bounded foundation after targeted CSV and Primary/Co boundary corrections. Split migrations applied only to disposable `projex_test`; final guarded integration 20/99, client 49/301, lint/type/build and controlled authenticated walkthrough passed. Normal `projex` migration remains separately gated. See `milestones/ACADEMIC_FOUNDATION.md`. |
 | Personalized Exercise 1 checking | PROPOSED / AWAITING APPROVAL | Nonempty-output comparator/grading contract unresolved |
 | I2.2 | ACCEPTED FOR FREISER CHECKPOINT | Final guarded integration 21/102 and full client 51/311 passed; client/server lint, server type/build and client build passed. The isolated server suite remains 221/224 with three separately tracked unchanged Windows storage/restore failures. Freiser's detailed desktop walkthrough and final 390 × 844 Student and Instructor re-check passed; Checker accepted the corrected responsive shell and Class layout. Loading/error/retry were not separately reported as manually passed. See `milestones/I2.2.md`. |
-| I2.4–I2.9 | PENDING | The bounded I2.3 slice is accepted on Freiser's branch; the proposed I2.3 class-workspace extension remains gated. |
+| I2.4–I2.9 | PENDING | Both the bounded existing-scope I2.3 slice and the separate class-workspace foundation are accepted for Freiser's checkpoint. Later Submit/provenance and network Git remain separate gates. |
 | Normal database migration for Iteration 2 | PARTIAL — APPROVED RERUN SLICE ONLY | The two committed Instructor Rerun migrations were applied to Freiser's local `projex`; other proposed Iteration 2 schema work remains unapproved. |
 | Network Git | PENDING | Smart HTTP remains loopback-only; browser Home-LAN testing is not Git transport evidence |
 
@@ -174,7 +175,7 @@ Recommended owner: frontend/API integration member after academic projections st
 
 ## I2.3 — Repository Workflow and Monitoring
 
-Status: **ACCEPTED FOR FREISER CHECKPOINT for the bounded existing-scope slice; class-workspace extension PROPOSED / AWAITING APPROVAL**
+Status: **ACCEPTED FOR FREISER CHECKPOINT for the bounded existing-scope slice and the separate Student class-workspace foundation (2026-10-04)**
 
 Objective: prove existing project/team repository workflows, add truthful activity evidence, and—after approval—connect individual programming work to Git without replacing explicit academic submission.
 
@@ -182,8 +183,8 @@ Prerequisites:
 
 - [x] I2.1 accepted on the cumulative member branch; protected integration is a separate Julius gate.
 - [x] Existing project/repository walkthrough repeated with controlled local accounts and data.
-- [ ] Approve class-workspace repository model, submission provenance and commit-retention policy.
-- [x] Existing class relationship is stable for this bounded repository slice; the proposed official Course/offering model remains gated.
+- [x] Authorize the bounded class-workspace foundation; submission provenance and commit-retention policy remain separate gates.
+- [x] Accepted Course/Class Academic Foundation provides the stable `Class.id` and active membership/staff relationships used by this bounded repository slice.
 
 Existing-scope implementation:
 
@@ -191,21 +192,21 @@ Existing-scope implementation:
 - [ ] Fix confirmed discoverability defects only.
 - [x] **ACCEPTED FOR FREISER CHECKPOINT** Add authenticated repository event feed and non-percentage contribution evidence from supported recorded provisioning and accepted-push operations.
 
-Proposed class-workspace slice:
+Class-workspace foundation and deferred Submit slice:
 
-- [ ] Provision at most one Student-owned workspace repository per Student/class pair.
-- [ ] Keep existing collaborative `CLASS_PROJECT` repositories unchanged.
-- [ ] Allow browser editor/import submissions to continue.
+- [x] Implement at most one Student-owned workspace repository per Student/class pair; Checker accepted for Freiser's checkpoint on 2026-10-04.
+- [x] Preserve existing collaborative `CLASS_PROJECT` repositories; guarded regressions passed.
+- [x] Preserve browser editor/import submissions as a separate authoring path.
 - [ ] Let a Student select an authorized commit and bounded Java file, preview it, and explicitly Submit.
 - [ ] Save immutable source/source hash plus repository, full commit ID and path provenance.
 - [ ] Ensure later commits cannot alter the submitted snapshot.
-- [ ] Preserve Student ownership and class-scoped Instructor read/review access.
+- [x] Implement Student ownership and class-scoped Instructor read-only source/Git access; Checker accepted for Freiser's checkpoint on 2026-10-04.
 - [ ] Decide whether v1 restricts submission to protected `main` or supports selected feature branches with commit retention.
 - [ ] Do not auto-submit on push, create a special submission branch or expose a server shell.
 
 Tests/evidence:
 
-- [ ] Guarded migration/integration tests for one workspace per Student/class.
+- [x] Guarded additive migration/integration tests for one workspace per Student/class: `projex_test` 21 files/103 tests, final schema up to date.
 - [ ] Cross-repository, cross-class, removed-member and wrong-activity rejection.
 - [ ] Exact commit/file resolution, size/text validation and immutable snapshot tests.
 - [ ] Push after submission leaves the submission unchanged.

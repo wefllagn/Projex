@@ -13,6 +13,7 @@ export function createRepositoryRouter(dependencies: {
   const mutation = [requireJson, dependencies.requireAuthentication, dependencies.requireCsrf]
 
   router.post('/project-tasks/:projectTaskId/repositories', ...mutation, controller.createClassProject)
+  router.post('/classes/:classId/workspace-repository', ...mutation, controller.createClassWorkspace)
   router.post('/repositories/personal', ...mutation, controller.createPersonal)
   router.get('/repositories', dependencies.requireAuthentication, controller.list)
   router.get('/repositories/:repositoryId', dependencies.requireAuthentication, controller.get)

@@ -60,7 +60,7 @@ function state(status = 'idle', data = null, error = null) {
 
 function studentWriteLikely(repository, role, project) {
   if (role !== 'student' || repository.status !== 'ACTIVE') return false
-  if (repository.repositoryType === 'PERSONAL') return true
+  if (repository.repositoryType === 'PERSONAL' || repository.repositoryType === 'CLASS_WORKSPACE') return true
   return project?.status === 'PUBLISHED'
     && project?.dueState === 'OPEN'
     && ['WORKING', 'CHANGES_REQUESTED'].includes(repository.reviewStatus)
@@ -369,7 +369,7 @@ export function RepositoryGitPanel({ repository, role = 'student', project = nul
   }, [api, capabilities.git.inspection, inspectionVersion, repository, repository.defaultBranch, repository.id, repository.storageStatus])
 
   useEffect(() => {
-    if (summary.status !== 'ready' || summary.data.empty || !['files', 'history', 'branches'].includes(activeTab) || branches.status !== 'idle') return undefined
+    if (summary.status !== 'ready' || summary.data.empty || summary.data.repositoryId !== repository.id) return undefined
     const controller = new AbortController()
     Promise.resolve().then(() => { if (!controller.signal.aborted) setBranches(state('loading')) })
     Promise.resolve().then(() => api.listBranches(repository.id, { signal: controller.signal }))
@@ -377,11 +377,11 @@ export function RepositoryGitPanel({ repository, role = 'student', project = nul
         if (controller.signal.aborted) return
         const projected = Array.isArray(response.data) ? response.data.map(branchProjection) : []
         setBranches(state('ready', projected))
-        if (projected.length > 0 && !projected.some((branch) => branch.branchName === selectedBranch)) setSelectedBranch(projected.find((branch) => branch.isDefault)?.branchName ?? projected[0].branchName)
+        if (projected.length > 0) setSelectedBranch((current) => projected.some((branch) => branch.branchName === current) ? current : projected.find((branch) => branch.isDefault)?.branchName ?? projected[0].branchName)
       })
-      .catch((error) => { if (error?.name !== 'AbortError') setBranches(state('error', null, error)) })
+      .catch((error) => { if (!controller.signal.aborted) setBranches(state('error', null, error)) })
     return () => controller.abort()
-  }, [activeTab, api, branches.status, repository.id, selectedBranch, summary])
+  }, [api, repository.id, summary])
 
   const refreshInspection = () => {
     setSummary((current) => state('loading', current.data))

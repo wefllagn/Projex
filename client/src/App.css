@@ -160,6 +160,10 @@
   align-items: end;
 }
 
+.repository-git-history > .repository-git-branch-select {
+  margin-bottom: 16px;
+}
+
 .repository-git-branch-select,
 .repository-git-commit-detail label {
   display: grid;
@@ -357,7 +361,13 @@
 
 .repository-local-git {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
+  min-width: 0;
+}
+
+.repository-git-clone {
+  min-width: 0;
 }
 
 .repository-local-git h3 {
@@ -365,20 +375,25 @@
 }
 
 .repository-copy-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   margin: 10px 0;
+  min-width: 0;
 }
 
 .repository-copy-row code {
-  flex: 1;
+  display: block;
   min-width: 0;
+  max-width: 100%;
   padding: 9px 11px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background: #f8fafc;
-  overflow-wrap: anywhere;
+  overflow-x: auto;
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 .repository-git-actions {
@@ -389,12 +404,14 @@
 }
 
 .repository-issued-credential {
+  min-width: 0;
   border-color: #93c5fd;
   background: #eff6ff;
 }
 
 .repository-issued-credential label {
   display: block;
+  min-width: 0;
   margin-top: 12px;
   color: #334155;
   font-size: 0.8rem;
@@ -454,7 +471,7 @@
 
   .repository-copy-row {
     align-items: stretch;
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .repository-git-preview {
@@ -15844,4 +15861,165 @@ textarea:focus-visible {
   .student-repository-topbar { min-height: 54px; padding: 6px 16px; }
   .student-home-topbar .student-user-name,
   .student-repository-topbar .student-user-name { display: none; }
+}
+
+/* Repository catalog and activity presentation share the existing Student type scale. */
+.student-repository-board .student-assignment-toolbar--board > div:first-child {
+  min-width: 0;
+}
+
+.student-repository-board .repository-catalog-actions {
+  display: grid;
+  flex: 0 1 440px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.student-repository-board .repository-catalog-actions .student-sort-control {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-self: end;
+  align-items: center;
+}
+
+.student-repository-board .repository-catalog-actions .student-primary-action {
+  min-width: 0;
+  width: 100%;
+}
+
+.class-workspace-form label,
+.class-workspace-form select {
+  min-width: 0;
+  width: 100%;
+}
+
+.class-workspace-form select {
+  min-height: 44px;
+  max-width: none;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #d6e2f1;
+  border-radius: 10px;
+  color: #14233d;
+  background: #ffffff;
+  font: inherit;
+  font-size: 14px;
+}
+
+.student-repository-index-row.repository-catalog-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+}
+
+.repository-catalog-row__identity,
+.repository-catalog-row__metadata {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.repository-catalog-row__identity strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.repository-catalog-row__identity .student-repository-row-icon {
+  flex: 0 0 50px;
+}
+
+.repository-catalog-row__metadata {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.repository-catalog-row__metadata > span,
+.repository-catalog-row__metadata > small,
+.repository-catalog-row__metadata > em {
+  white-space: nowrap;
+}
+
+.student-repository-index-row .repository-catalog-row__metadata > small {
+  display: inline;
+}
+
+.repository-activity-panel h3 {
+  margin: 20px 0 10px;
+  color: #152542;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.repository-activity-panel .repository-activity-list li {
+  color: #66768d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.repository-activity-panel .repository-activity-list strong {
+  color: #152542;
+  font-size: inherit;
+  font-weight: 700;
+}
+
+.repository-activity-panel .repository-activity-list span,
+.repository-activity-panel .repository-activity-list time {
+  color: #66768d;
+  font-size: inherit;
+  font-weight: 400;
+}
+
+.repository-activity-panel .request-state p,
+.repository-activity-panel .request-state h1 {
+  font-size: 13px;
+  letter-spacing: normal;
+  line-height: 1.5;
+  text-transform: none;
+}
+
+.repository-activity-panel .request-state h1 {
+  color: #66768d;
+  font-weight: 400;
+}
+
+@media (max-width: 950px) {
+  .student-repository-board .student-assignment-toolbar--board {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .student-repository-board .repository-catalog-actions {
+    flex: none;
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .student-repository-board .repository-catalog-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .student-repository-board .repository-catalog-actions .student-sort-control {
+    justify-self: stretch;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .student-repository-board .repository-catalog-actions select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .student-repository-index-row.repository-catalog-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .repository-catalog-row__metadata {
+    justify-content: flex-start;
+  }
 }

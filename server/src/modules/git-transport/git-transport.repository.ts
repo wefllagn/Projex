@@ -99,6 +99,13 @@ export function createPrismaGitTransportRepository(prisma: PrismaClient): GitTra
                 },
               },
             },
+            class: {
+              select: {
+                status: true, instructorId: true,
+                teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } },
+                members: { where: { studentId: userId }, select: { status: true }, take: 1 },
+              },
+            },
           },
         }),
       ])
@@ -126,6 +133,9 @@ export function createPrismaGitTransportRepository(prisma: PrismaClient): GitTra
                 membership: repository.projectTask.class.members[0] ?? null,
               },
             }
+          : null,
+        classWorkspace: repository.repositoryType === 'CLASS_WORKSPACE' && repository.class
+          ? { status: repository.class.status, instructorId: repository.class.instructorId, teachingStaff: repository.class.teachingStaff, membership: repository.class.members[0] ?? null }
           : null,
         teamLeadStudentId: repository.team?.leadStudentId ?? null,
       }

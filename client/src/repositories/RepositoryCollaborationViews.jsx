@@ -265,7 +265,7 @@ export function RepositoryCollaborationPanel({ role, owner, repository, project,
   const load = useCallback(async ({ signal } = {}) => {
     try {
       const requests = [api.listMembers(repository.id, { signal }), api.listFeedback(repository.id, { signal })]
-      if (owner || role === 'instructor') requests.push(api.listRepositoryInvitations(repository.id, { signal }))
+      if (repository.repositoryType === 'CLASS_PROJECT' && (owner || role === 'instructor')) requests.push(api.listRepositoryInvitations(repository.id, { signal }))
       const [memberResponse, feedbackResponse, invitationResponse] = await Promise.all(requests)
       const members = memberResponse.data.map(role === 'instructor' ? instructorRepositoryMemberProjection : studentRepositoryMemberProjection)
       const feedback = feedbackResponse.data.map(role === 'instructor' ? instructorRepositoryFeedbackProjection : studentRepositoryFeedbackProjection).filter(Boolean)
@@ -275,7 +275,7 @@ export function RepositoryCollaborationPanel({ role, owner, repository, project,
     } catch (error) {
       if (error?.name !== 'AbortError') setState({ identity: repository.id, status: 'error', members: [], invitations: [], feedback: [], error })
     }
-  }, [api, owner, repository.id, role])
+  }, [api, owner, repository.id, repository.repositoryType, role])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -328,7 +328,7 @@ export function RepositoryCollaborationPanel({ role, owner, repository, project,
 export function RepositoryLifecyclePanel({ role, owner, repository, api, onRepositoryChange, onReloadRepository }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
-  const authorized = repository.repositoryType === 'PERSONAL' ? role === 'student' && owner : role === 'instructor'
+  const authorized = repository.repositoryType === 'CLASS_PROJECT' ? role === 'instructor' : role === 'student' && owner
   const action = repository.status === 'ARCHIVED' ? 'restoreRepository' : 'archiveRepository'
   const label = repository.status === 'ARCHIVED' ? 'Restore Repository' : 'Archive Repository'
   if (!authorized || !['ACTIVE', 'ARCHIVED'].includes(repository.status)) return null
@@ -344,5 +344,5 @@ export function RepositoryLifecyclePanel({ role, owner, repository, api, onRepos
       if (mutationError?.status === 409) await onReloadRepository()
     } finally { setBusy(false) }
   }
-  return <section className="student-repo-card repository-lifecycle-card"><h2>Repository Lifecycle</h2><p>{repository.repositoryType === 'CLASS_PROJECT' ? 'Class-project archives require approved review work, resolved invitations, and synchronized membership.' : 'Archived personal repositories remain preserved and read-only until restored.'}</p><button type="button" className="student-outline-action" disabled={busy} onClick={mutate}>{busy ? 'Saving…' : label}</button>{error && <p className="activity-action-error">{describeApiError(error)}</p>}</section>
+  return <section className="student-repo-card repository-lifecycle-card"><h2>Repository Lifecycle</h2><p>{repository.repositoryType === 'CLASS_PROJECT' ? 'Class-project archives require approved review work, resolved invitations, and synchronized membership.' : 'Archived repositories remain preserved and read-only until restored.'}</p><button type="button" className="student-outline-action" disabled={busy} onClick={mutate}>{busy ? 'Saving…' : label}</button>{error && <p className="activity-action-error">{describeApiError(error)}</p>}</section>
 }

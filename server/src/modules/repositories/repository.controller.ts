@@ -4,6 +4,7 @@ import { parseRequest } from '../../shared/http/validation.js'
 import {
   approveRepositorySchema,
   createClassProjectRepositorySchema,
+  classWorkspaceParamsSchema,
   createFeedbackDraftSchema,
   createInvitationSchema,
   createPersonalRepositorySchema,
@@ -25,6 +26,12 @@ import type { RepositoryService } from './repository.service.js'
 
 export function createRepositoryController(service: RepositoryService) {
   return {
+    createClassWorkspace: async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const { classId } = parseRequest(classWorkspaceParamsSchema, request.params)
+        response.status(201).json(successResponse(await service.createClassWorkspace(request.auth!.user, classId), request.requestId))
+      } catch (error) { next(error) }
+    },
     createClassProject: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const { projectTaskId } = parseRequest(projectRepositoryParamsSchema, request.params)

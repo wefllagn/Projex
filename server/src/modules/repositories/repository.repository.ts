@@ -23,6 +23,7 @@ import type {
 export const repositoryRecordSelect = {
   id: true,
   projectTaskId: true,
+  classId: true,
   teamId: true,
   ownerId: true,
   repositoryType: true,
@@ -40,6 +41,7 @@ export const repositoryRecordSelect = {
   approvedAt: true,
   archivedAt: true,
   owner: { select: { id: true, fullName: true } },
+  class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
   projectTask: {
     select: {
       id: true,
@@ -87,6 +89,7 @@ export type FeedbackWriteResult =
   | CollaborationFailure
 
 export interface RepositoryRepository {
+  createClassWorkspace(input: { classId: string; ownerId: string; now: Date }): Promise<RepositoryWriteResult>
   createClassProject(input: {
     projectTaskId: string
     ownerId: string
@@ -354,6 +357,36 @@ export function createPrismaRepositoryRepository(
   }
 
   return {
+    async createClassWorkspace(input) {
+      try {
+        return await runSerializable(async (transaction) => {
+          await transaction.$queryRaw`SELECT "class_id" FROM "classes" WHERE "class_id" = ${input.classId}::uuid FOR UPDATE`
+          const [classRecord, user, membership] = await Promise.all([
+            transaction.class.findUnique({ where: { id: input.classId }, select: { status: true, className: true } }),
+            transaction.user.findUnique({ where: { id: input.ownerId }, select: { role: true, status: true } }),
+            transaction.classMember.findUnique({ where: { classId_studentId: { classId: input.classId, studentId: input.ownerId } }, select: { status: true } }),
+          ])
+          if (!classRecord) return { kind: 'not_found' } as const
+          if (classRecord.status !== 'ACTIVE' || user?.role !== 'STUDENT' || user.status !== 'ACTIVE' || membership?.status !== 'ACTIVE') return { kind: 'student_ineligible' } as const
+          if (await transaction.repository.findUnique({ where: { classId_ownerId: { classId: input.classId, ownerId: input.ownerId } }, select: { id: true } })) return { kind: 'conflict' } as const
+          const repository = await transaction.repository.create({
+            data: {
+              classId: input.classId, ownerId: input.ownerId, repositoryType: 'CLASS_WORKSPACE',
+              repositoryName: `${classRecord.className} Workspace`, slug: `class-${input.classId}`,
+              storagePath: null, defaultBranch: 'main', visibility: 'PRIVATE', status: 'ACTIVE', reviewStatus: 'WORKING',
+              createdAt: input.now, updatedAt: input.now,
+              members: { create: { studentId: input.ownerId, memberRole: 'OWNER', status: 'ACTIVE', joinedAt: input.now, updatedAt: input.now, lastActivatedAt: input.now } },
+              provisioningJob: { create: { maxClaimAttempts: provisioningMaxAttempts, availableAt: input.now, createdAt: input.now, updatedAt: input.now } },
+            },
+            select: repositoryRecordSelect,
+          })
+          return { kind: 'ok', repository } as const
+        })
+      } catch (error) {
+        if ((error as { code?: string }).code === 'P2002' || (error as { code?: string }).code === 'P2034') return { kind: 'conflict' }
+        throw error
+      }
+    },
     async createClassProject(input) {
       try {
         return await runSerializable(async (transaction) => {
@@ -511,11 +544,15 @@ export function createPrismaRepositoryRepository(
         input.callerRole === 'ADMIN'
           ? {}
           : input.callerRole === 'INSTRUCTOR'
-            ? { projectTask: { class: { OR: [{ instructorId: input.callerId }, { teachingStaff: { some: { instructorId: input.callerId, status: 'ACTIVE' } } }] } } }
+            ? { OR: [
+                { projectTask: { class: { OR: [{ instructorId: input.callerId }, { teachingStaff: { some: { instructorId: input.callerId, status: 'ACTIVE' } } }] } } },
+                { repositoryType: 'CLASS_WORKSPACE', class: { status: 'ACTIVE', OR: [{ instructorId: input.callerId }, { teachingStaff: { some: { instructorId: input.callerId, status: 'ACTIVE' } } }] } },
+              ] }
             : {
                 OR: [
-                  { ownerId: input.callerId },
-                  { members: { some: { studentId: input.callerId, status: 'ACTIVE' } } },
+                  { repositoryType: { not: 'CLASS_WORKSPACE' }, ownerId: input.callerId },
+                  { repositoryType: { not: 'CLASS_WORKSPACE' }, members: { some: { studentId: input.callerId, status: 'ACTIVE' } } },
+                  { repositoryType: 'CLASS_WORKSPACE', ownerId: input.callerId, class: { status: 'ACTIVE', members: { some: { studentId: input.callerId, status: 'ACTIVE' } } } },
                   {
                     repositoryType: 'CLASS_PROJECT',
                     visibility: 'CLASS_ONLY',
@@ -526,17 +563,14 @@ export function createPrismaRepositoryRepository(
                 ],
               }
       const where: Prisma.RepositoryWhereInput = {
-        ...roleScope,
+        AND: [roleScope, ...(input.query.search ? [{ OR: [
+          { repositoryName: { contains: input.query.search, mode: 'insensitive' as const } },
+          { description: { contains: input.query.search, mode: 'insensitive' as const } },
+        ] }] : [])],
         ...(input.query.repositoryType ? { repositoryType: input.query.repositoryType } : {}),
         ...(input.query.status ? { status: input.query.status } : {}),
         ...(input.query.reviewStatus ? { reviewStatus: input.query.reviewStatus } : {}),
         ...(input.query.projectTaskId ? { projectTaskId: input.query.projectTaskId } : {}),
-        ...(input.query.search
-          ? { OR: [
-              { repositoryName: { contains: input.query.search, mode: 'insensitive' } },
-              { description: { contains: input.query.search, mode: 'insensitive' } },
-            ] }
-          : {}),
       }
       const [repositories, totalItems] = await prisma.$transaction([
         prisma.repository.findMany({
@@ -581,12 +615,14 @@ export function createPrismaRepositoryRepository(
               },
             },
           },
+          class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } }, members: { where: { studentId: callerId }, take: 1, select: { id: true, status: true } } } },
         },
       })
       if (!repository) return null
       const { members, ...base } = repository
       const repositoryMembership = members[0] ?? null
-      const classMembership = repository.projectTask?.class.members[0] ?? null
+      const classMembership = repository.class?.members[0] ?? repository.projectTask?.class.members[0] ?? null
+      const classRecord = repository.class ? { id: repository.class.id, instructorId: repository.class.instructorId, status: repository.class.status, teachingStaff: repository.class.teachingStaff } : null
       const projectTask = repository.projectTask
         ? {
             ...repository.projectTask,
@@ -599,7 +635,7 @@ export function createPrismaRepositoryRepository(
           }
         : null
       return {
-        repository: { ...base, projectTask },
+        repository: { ...base, class: classRecord, projectTask },
         classMembership,
         repositoryMembership,
       }

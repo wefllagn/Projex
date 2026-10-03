@@ -18,6 +18,7 @@ import type {
 export interface RepositoryRecord {
   id: string
   projectTaskId: string | null
+  classId: string | null
   teamId: string | null
   ownerId: string
   repositoryType: RepositoryType
@@ -42,6 +43,7 @@ export interface RepositoryRecord {
     status: ProjectTaskStatus
     class: { id: string; instructorId: string | null; status: ClassStatus; teachingStaff?: { instructorId: string; status: string }[] }
   } | null
+  class: { id: string; instructorId: string | null; status: ClassStatus; teachingStaff?: { instructorId: string; status: string }[] } | null
   team: { id: string; leadStudentId: string } | null
 }
 
@@ -58,6 +60,7 @@ export interface RepositoryAccessRecord {
 export interface RepositoryProjection {
   id: string
   projectTaskId: string | null
+  classId: string | null
   teamId: string | null
   repositoryType: RepositoryType
   repositoryName: string
@@ -134,6 +137,7 @@ export function toRepositoryProjection(record: RepositoryRecord): RepositoryProj
   return {
     id: record.id,
     projectTaskId: record.projectTaskId,
+    classId: record.classId,
     teamId: record.teamId,
     repositoryType: record.repositoryType,
     repositoryName: record.repositoryName,
