@@ -17,7 +17,7 @@ afterEach(async () => {
 })
 describe('repository storage paths', () => {
   it('derives a UUID-only relative path without creating storage', async () => {
-    const parent = await mkdtemp(path.join(os.tmpdir(), 'projex-storage-unit-'))
+    const parent = await realpath(await mkdtemp(path.join(os.tmpdir(), 'projex-storage-unit-')))
     temporaryRoots.push(parent)
     const root = path.join(parent, 'storage-not-created')
     const storage = createRepositoryStorage({ root, repositorySizeLimitBytes: 1_000_000 })
@@ -39,7 +39,7 @@ describe('repository storage paths', () => {
   })
 
   it('rejects a mismatched persisted locator before creating the configured root', async () => {
-    const parent = await mkdtemp(path.join(os.tmpdir(), 'projex-storage-invalid-locator-'))
+    const parent = await realpath(await mkdtemp(path.join(os.tmpdir(), 'projex-storage-invalid-locator-')))
     temporaryRoots.push(parent)
     const root = path.join(parent, 'must-not-be-created')
     const storage = createRepositoryStorage({ root, repositorySizeLimitBytes: 1_000_000 })
@@ -51,7 +51,7 @@ describe('repository storage paths', () => {
   })
 
   it('resolves exact legacy locators through UUID-derived components and verifies the marker', async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), 'projex-storage-legacy-'))
+    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'projex-storage-legacy-')))
     temporaryRoots.push(root)
     const repositoryId = '11111111-1111-4111-8111-111111111111'
     const repositoryPath = path.join(root, 'repositories', '11', '11', `${repositoryId}.git`)
@@ -76,8 +76,8 @@ describe('repository storage paths', () => {
   })
 
   it('rejects a managed path redirected through a link or junction', async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), 'projex-storage-link-'))
-    const outside = await mkdtemp(path.join(os.tmpdir(), 'projex-storage-outside-'))
+    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'projex-storage-link-')))
+    const outside = await realpath(await mkdtemp(path.join(os.tmpdir(), 'projex-storage-outside-')))
     temporaryRoots.push(root, outside)
     const repositoryId = '11111111-1111-4111-8111-111111111111'
     await mkdir(path.join(root, 'repositories', '11'), { recursive: true })
@@ -90,7 +90,7 @@ describe('repository storage paths', () => {
 
 describe('guarded Git test storage', () => {
   it('uses and cleans only a sentinel-owned run child', async () => {
-    const parent = await mkdtemp(path.join(os.tmpdir(), 'projex-git-guard-'))
+    const parent = await realpath(await mkdtemp(path.join(os.tmpdir(), 'projex-git-guard-')))
     temporaryRoots.push(parent)
     const testRoot = path.join(parent, 'projex_git_test')
     const run = await createGuardedTestRunRoot({
@@ -104,7 +104,7 @@ describe('guarded Git test storage', () => {
   })
 
   it('rejects unrecognized and overlapping roots', async () => {
-    const parent = await mkdtemp(path.join(os.tmpdir(), 'projex-git-guard-'))
+    const parent = await realpath(await mkdtemp(path.join(os.tmpdir(), 'projex-git-guard-')))
     temporaryRoots.push(parent)
     await expect(
       createGuardedTestRunRoot({
