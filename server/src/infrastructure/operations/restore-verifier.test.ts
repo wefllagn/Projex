@@ -12,7 +12,7 @@ afterEach(async () => Promise.all(roots.splice(0).map((item) => rm(item, { recur
 
 describe('restore verification framework', () => {
   it('validates artifacts and creates safe restore/fsck argument arrays', async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), 'projex-restore-'))
+    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'projex-restore-')))
     roots.push(root)
     const project = path.join(root, 'project'); const backup = path.join(root, 'backup')
     await mkdir(project); await mkdir(backup)
@@ -88,7 +88,7 @@ describe('restore verification framework', () => {
   })
 
   it('matches restored database repository records to filesystem markers and detects orphans', async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), 'projex-restore-markers-'))
+    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'projex-restore-markers-')))
     roots.push(root)
     const repositoryId = '11111111-1111-4111-8111-111111111111'
     const provisioningJobId = '22222222-2222-4222-8222-222222222222'
@@ -116,7 +116,7 @@ describe('restore verification framework', () => {
   })
 
   it('rejects unsafe locators, missing repositories, duplicate mappings, and marker mismatches', async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), 'projex-restore-correspondence-'))
+    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'projex-restore-correspondence-')))
     roots.push(root)
     const repositoryId = '11111111-1111-4111-8111-111111111111'
     const provisioningJobId = '22222222-2222-4222-8222-222222222222'

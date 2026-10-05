@@ -1,4 +1,4 @@
-const REPOSITORY_TYPES = new Set(['CLASS_PROJECT', 'PERSONAL'])
+const REPOSITORY_TYPES = new Set(['CLASS_PROJECT', 'PERSONAL', 'CLASS_WORKSPACE'])
 const REPOSITORY_STATUSES = new Set(['ACTIVE', 'INACTIVE', 'ARCHIVED'])
 const STORAGE_STATUSES = new Set(['PENDING', 'PROVISIONING', 'READY', 'FAILED', 'QUARANTINED'])
 const REVIEW_STATUSES = new Set(['WORKING', 'READY_FOR_REVIEW', 'CHANGES_REQUESTED', 'APPROVED'])
@@ -17,6 +17,7 @@ export function repositoryProjection(value = {}) {
   return {
     id: typeof value.id === 'string' ? value.id : '',
     projectTaskId: typeof value.projectTaskId === 'string' ? value.projectTaskId : null,
+    classId: typeof value.classId === 'string' ? value.classId : null,
     teamId: typeof value.teamId === 'string' ? value.teamId : null,
     repositoryType: REPOSITORY_TYPES.has(value.repositoryType) ? value.repositoryType : 'PERSONAL',
     repositoryName: typeof value.repositoryName === 'string' ? value.repositoryName : '',
@@ -37,6 +38,22 @@ export function repositoryProjection(value = {}) {
     approvedAt: safeDate(value.approvedAt),
     archivedAt: safeDate(value.archivedAt),
   }
+}
+
+export function repositoryActivityProjection(value = {}) {
+  if (!value.id || !['REPOSITORY_PROVISIONED', 'PUSH'].includes(value.activityType) || !safeDate(value.activityAt)) return null
+  if (value.activityType === 'PUSH' && (!value.actor?.userId || !value.actor?.fullName)) return null
+  return {
+    id: value.id,
+    activityType: value.activityType,
+    activityAt: value.activityAt,
+    actor: value.activityType === 'PUSH' ? { userId: value.actor.userId, fullName: value.actor.fullName } : null,
+  }
+}
+
+export function repositoryContributionProjection(value = {}) {
+  if (!value.userId || !value.fullName || !Number.isSafeInteger(value.acceptedPushes) || value.acceptedPushes < 1) return null
+  return { userId: value.userId, fullName: value.fullName, acceptedPushes: value.acceptedPushes }
 }
 
 export function repositoryMatchesProject(repository, projectTaskId) {
@@ -60,6 +77,7 @@ export function repositoryCatalogProjection(value) {
   return {
     id: repository.id,
     projectTaskId: repository.projectTaskId,
+    classId: repository.classId,
     repositoryType: repository.repositoryType,
     repositoryName: repository.repositoryName,
     description: repository.description,

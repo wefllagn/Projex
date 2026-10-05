@@ -52,6 +52,9 @@ describe('admin operational projection allowlists', () => {
     expect(execution).toMatchObject({ jobId: 'job-1', stuck: true })
     expect(provisioning).toMatchObject({ repositoryId: 'repo-1', status: 'FAILED' })
     expect(JSON.stringify({ execution, provisioning })).not.toMatch(/workerId|rawOutput|storagePath|quarantineKey/i)
+    const review = projectExecutionJob({ id: 'job-3', jobType: 'INSTRUCTOR_REVIEW_RUN', submissionId: null, practiceExecutionId: null, reviewExecutionId: 'review-1', status: 'SUCCEEDED', claimAttempt: 1, maxClaimAttempts: 3, failureCode: null, stuck: false, sourceCode: 'omit', testInput: 'omit', ...timestamps })
+    expect(review).toMatchObject({ jobType: 'INSTRUCTOR_REVIEW_RUN', reviewExecutionId: 'review-1' })
+    expect(JSON.stringify(review)).not.toMatch(/sourceCode|testInput/i)
   })
 
   it('projects credential metadata without secrets or issuance fields', () => {

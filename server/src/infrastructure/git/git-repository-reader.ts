@@ -396,7 +396,7 @@ export function createGitRepositoryReader(options: {
       const revision = await resolveRevision(repositoryPath, input)
       const requestedPath = input.path ? normalizeGitRepositoryPath(input.path) : ''
       if (!revision) return { commitId: null, path: requestedPath, entries: [] }
-      const treeish = requestedPath ? `${revision}:${requestedPath}` : revision
+      const treeish = requestedPath ? `${revision}:${requestedPath}` : `${revision}^{tree}`
       const type = await run(repositoryPath, ['cat-file', '-t', treeish], options.commandOutputLimitBytes)
         .catch((error: unknown) => {
           if (error instanceof GitRepositoryReadError && error.code === 'GIT_COMMAND_FAILED') {

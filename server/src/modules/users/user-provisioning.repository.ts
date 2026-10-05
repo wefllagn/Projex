@@ -36,6 +36,7 @@ export type StatusUpdateResult =
   | { kind: 'invalid_transition' }
   | { kind: 'stale' }
   | { kind: 'last_active_admin' }
+  | { kind: 'active_class_primary' }
 
 export interface UserProvisioningRepository {
   createStudent(input: {
@@ -103,15 +104,15 @@ export function createPrismaUserProvisioningRepository(
           if (input.classId) {
             const classRecord = await transaction.class.findUnique({
               where: { id: input.classId },
-              select: { id: true, instructorId: true, status: true },
+              select: { id: true, instructorId: true, status: true, teachingStaff: { where: { instructorId: input.callerId, status: 'ACTIVE' }, select: { id: true } } },
             })
             if (!classRecord) return { kind: 'class_not_found' } as const
-            if (classRecord.status === 'ARCHIVED') {
+            if (classRecord.status !== 'ACTIVE') {
               return { kind: 'class_archived' } as const
             }
             if (
               input.callerRole === 'INSTRUCTOR' &&
-              classRecord.instructorId !== input.callerId
+              classRecord.instructorId !== input.callerId && classRecord.teachingStaff.length === 0
             ) {
               return { kind: 'class_not_owned' } as const
             }
@@ -214,7 +215,7 @@ export function createPrismaUserProvisioningRepository(
                 ? {
                     where: {
                       status: 'ACTIVE',
-                      class: { instructorId: input.callerId },
+                      class: { OR: [{ instructorId: input.callerId }, { teachingStaff: { some: { instructorId: input.callerId, status: 'ACTIVE' } } }] },
                     },
                     take: 1,
                     select: { id: true },
@@ -306,6 +307,10 @@ export function createPrismaUserProvisioningRepository(
           if (activeAdministrators <= 1) {
             return { kind: 'last_active_admin' } as const
           }
+        }
+        if (existing.role === 'INSTRUCTOR' && existing.status === 'ACTIVE' && input.status !== 'ACTIVE') {
+          const responsibleClasses = await transaction.class.count({ where: { instructorId: input.userId, status: 'ACTIVE' } })
+          if (responsibleClasses > 0) return { kind: 'active_class_primary' } as const
         }
 
         const changed = await transaction.user.updateMany({

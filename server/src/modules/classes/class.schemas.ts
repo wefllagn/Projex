@@ -7,16 +7,23 @@ const classNameSchema = z.string().trim().min(1).max(200)
 const sectionSchema = z.string().trim().min(1).max(100)
 const semesterSchema = z.string().trim().min(1).max(100)
 const schoolYearSchema = z.string().trim().min(1).max(20)
+const optionalText = (length: number) => z.string().trim().max(length).nullable().optional()
 
 export const classIdParamsSchema = z.object({ classId: z.uuid() }).strict()
 
 export const createClassSchema = z
   .object({
     className: classNameSchema,
-    section: sectionSchema,
-    semester: semesterSchema,
-    schoolYear: schoolYearSchema,
+    section: sectionSchema.optional(),
+    semester: semesterSchema.optional(),
+    schoolYear: schoolYearSchema.optional(),
     instructorId: z.uuid().optional(),
+    courseId: z.uuid().optional(),
+    officialClassCode: z.string().trim().min(1).max(100).optional(),
+    academicPeriod: z.enum(['FIRST_SEMESTER', 'SECOND_SEMESTER']).optional(),
+    schedule: optionalText(200),
+    days: optionalText(100),
+    room: optionalText(100),
     invitationEmails: z.array(normalizedEmailSchema).max(50).optional(),
   })
   .strict()
@@ -33,9 +40,12 @@ export const createClassSchema = z
 export const updateClassSchema = z
   .object({
     className: classNameSchema.optional(),
-    section: sectionSchema.optional(),
-    semester: semesterSchema.optional(),
-    schoolYear: schoolYearSchema.optional(),
+    section: sectionSchema.nullable().optional(),
+    semester: semesterSchema.nullable().optional(),
+    schoolYear: schoolYearSchema.nullable().optional(),
+    schedule: optionalText(200),
+    days: optionalText(100),
+    room: optionalText(100),
     reason: adminReasonSchema.optional(),
   })
   .strict()
@@ -44,7 +54,10 @@ export const updateClassSchema = z
       value.className !== undefined ||
       value.section !== undefined ||
       value.semester !== undefined ||
-      value.schoolYear !== undefined,
+      value.schoolYear !== undefined ||
+      value.schedule !== undefined ||
+      value.days !== undefined ||
+      value.room !== undefined,
     { message: 'At least one class field is required.' },
   )
 
@@ -57,7 +70,7 @@ export const classListQuerySchema = z
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
     search: z.string().trim().min(1).max(200).optional(),
-    status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
+    status: z.enum(['PREPARED', 'ACTIVE', 'ARCHIVED']).optional(),
   })
   .strict()
 

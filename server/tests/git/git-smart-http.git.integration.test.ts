@@ -173,6 +173,22 @@ async function provisionPersonal() {
   return { owner, repository: ready }
 }
 
+async function provisionClassWorkspace() {
+  const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+  const owner = await createActiveUser(prisma, 'STUDENT')
+  const classRecord = await createActiveClass(prisma, instructor.id)
+  await createActiveMembership(prisma, classRecord.id, owner.id)
+  const created = await createPrismaRepositoryRepository(prisma).createClassWorkspace({ classId: classRecord.id, ownerId: owner.id, now: new Date() })
+  if (created.kind !== 'ok') throw new Error('CLASS_WORKSPACE_FIXTURE_FAILED')
+  const queue = createPostgresRepositoryProvisioningQueue(prisma)
+  const job = await queue.claimNext({ workerId: crypto.randomUUID(), now: new Date(), leaseMs: 60_000 })
+  if (!job) throw new Error('PROVISIONING_JOB_MISSING')
+  await createRepositoryProvisioningService({ queue, git, storage, logger }).process(job)
+  const ready = await prisma.repository.findUniqueOrThrow({ where: { id: created.repository.id } })
+  expect(ready.storageStatus).toBe('READY')
+  return { owner, instructor, classRecord, repository: ready }
+}
+
 async function issue(user: Awaited<ReturnType<typeof createActiveUser>>, repositoryId: string, operations: ('READ' | 'WRITE')[]) {
   const credential = await credentialService.issue(user, repositoryId, operations)
   return basic(credential.username, credential.secret)
@@ -200,6 +216,36 @@ afterAll(async () => {
 })
 
 describe('authenticated Git Smart HTTP', () => {
+  it('preserves an individual class workspace across pushes without academic submission and attributes the authenticated pusher', async () => {
+    const { owner, instructor, repository } = await provisionClassWorkspace()
+    const ownerAuthorization = await issue(owner, repository.id, ['READ', 'WRITE'])
+    const instructorAuthorization = await issue(instructor, repository.id, ['READ'])
+    await expect(issue(instructor, repository.id, ['WRITE'])).rejects.toMatchObject({ statusCode: 403 })
+    const clients = path.join(storageRoot, 'clients', crypto.randomUUID())
+    const work = path.join(clients, 'work')
+    const resumed = path.join(clients, 'resumed')
+    await mkdir(clients, { recursive: true })
+    expect((await runGit(['clone', remoteUrl(repository.id), work], clients, ownerAuthorization)).code).toBe(0)
+    expect((await runGit(['checkout', '-b', 'main'], work)).code).toBe(0)
+    await writeFile(path.join(work, 'Main.java'), 'class Main {}\n')
+    expect((await runGit(['add', 'Main.java'], work)).code).toBe(0)
+    expect((await runGit(['-c', 'user.name=Self Declared Alias', 'commit', '-m', 'First class work'], work)).code).toBe(0)
+    expect((await runGit(['push', 'origin', 'main'], work, ownerAuthorization)).code).toBe(0)
+    expect((await runGit(['clone', remoteUrl(repository.id), resumed], clients, ownerAuthorization)).code).toBe(0)
+    await writeFile(path.join(resumed, 'Main.java'), 'class Main { static int n = 2; }\n')
+    expect((await runGit(['commit', '-am', 'Continue class work'], resumed)).code).toBe(0)
+    expect((await runGit(['push', 'origin', 'main'], resumed, ownerAuthorization)).code).toBe(0)
+    const reviewer = path.join(clients, 'reviewer')
+    expect((await runGit(['clone', remoteUrl(repository.id), reviewer], clients, instructorAuthorization)).code).toBe(0)
+    const author = await runGit(['log', '--reverse', '--format=%an'], reviewer)
+    expect(author.stdout.trim().split('\n')[0]).toBe('Self Declared Alias')
+    const events = await prisma.repositoryActivity.findMany({ where: { repositoryId: repository.id }, orderBy: { activityAt: 'asc' } })
+    expect(events.filter((item) => item.activityType === 'REPOSITORY_PROVISIONED')).toHaveLength(1)
+    expect(events.filter((item) => item.activityType === 'PUSH')).toHaveLength(2)
+    expect(events.filter((item) => item.activityType === 'PUSH').every((item) => item.userId === owner.id && item.actorType === 'USER')).toBe(true)
+    expect(await prisma.activitySubmission.count()).toBe(0)
+    expect(await prisma.submissionExecution.count()).toBe(0)
+  })
   it('retains an accepted-push receipt until idempotent activity persistence succeeds', async () => {
     const operationId = crypto.randomUUID()
     const requestDirectory = path.join(storageRoot, 'transport', 'requests', operationId)

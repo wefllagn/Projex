@@ -55,7 +55,7 @@ describe('student class workflows', () => {
   it('joins through the server without retaining or redisplaying the entered code', async () => {
     const secretInput = 'ZXCV-BNMP-QA'
     const client = {
-      get: vi.fn().mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } }),
+      get: vi.fn((path) => Promise.resolve(path.startsWith('/courses') ? { data: { items: [] } } : { data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } })),
       post: vi.fn().mockResolvedValue({ data: { created: true, class: classRecord } }),
       patch: vi.fn(),
     }
@@ -98,7 +98,7 @@ describe('student class workflows', () => {
 describe('instructor class workflows', () => {
   it('creates a class with only supported fields and no browser-generated code', async () => {
     const client = {
-      get: vi.fn().mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } }),
+      get: vi.fn((path) => Promise.resolve(path.startsWith('/courses') ? { data: { items: [] } } : { data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } })),
       post: vi.fn().mockResolvedValue({ data: classRecord }),
       patch: vi.fn(),
     }
@@ -111,10 +111,10 @@ describe('instructor class workflows', () => {
       role: 'INSTRUCTOR',
     })
 
-    await user.type(screen.getByLabelText('Course name'), 'Programming Fundamentals')
-    await user.type(screen.getByLabelText('Section'), 'BSIT 1A')
-    await user.type(screen.getByLabelText('Semester'), 'First Semester')
-    await user.type(screen.getByLabelText('School year'), '2026-2027')
+    await user.type(screen.getByLabelText('Class Name'), 'Programming Fundamentals')
+    await user.type(screen.getByLabelText('Section (optional)'), 'BSIT 1A')
+    await user.type(screen.getByLabelText('Informal term label (optional)'), 'First Semester')
+    await user.type(screen.getByLabelText('School year (optional)'), '2026-2027')
     expect(screen.queryByRole('button', { name: /generate/i })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Create Class' }))
 
@@ -133,7 +133,7 @@ describe('instructor class workflows', () => {
       universityEmail: 'invitee@slu.edu.ph',
     }
     const client = {
-      get: vi.fn().mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } }),
+      get: vi.fn((path) => Promise.resolve(path.startsWith('/courses') ? { data: { items: [] } } : { data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } })),
       post: vi.fn((path) => {
         if (path === '/class-invitations/lookup') {
           return Promise.resolve({ data: { eligibility: 'ELIGIBLE', student: invitedStudent } })
@@ -152,10 +152,10 @@ describe('instructor class workflows', () => {
     })
 
     expect(screen.getByText(/the class and all invitations will not be created/i)).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Course name'), 'Programming Fundamentals')
-    await user.type(screen.getByLabelText('Section'), 'BSIT 1A')
-    await user.type(screen.getByLabelText('Semester'), 'First Semester')
-    await user.type(screen.getByLabelText('School year'), '2026-2027')
+    await user.type(screen.getByLabelText('Class Name'), 'Programming Fundamentals')
+    await user.type(screen.getByLabelText('Section (optional)'), 'BSIT 1A')
+    await user.type(screen.getByLabelText('Informal term label (optional)'), 'First Semester')
+    await user.type(screen.getByLabelText('School year (optional)'), '2026-2027')
     await user.type(screen.getByLabelText('University email'), 'INVITEE@SLU.EDU.PH')
     await user.click(screen.getByRole('button', { name: '+ Add Student' }))
     expect(await screen.findByText('Synthetic Invitee added.')).toBeInTheDocument()

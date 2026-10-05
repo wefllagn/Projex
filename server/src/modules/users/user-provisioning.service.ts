@@ -327,6 +327,9 @@ export function createUserProvisioningService(dependencies: {
           message: 'At least one active administrator must remain.',
         })
       }
+      if (result.kind === 'active_class_primary') {
+        throw new AppError({ statusCode: 409, code: 'CLASS_PRIMARY_REASSIGNMENT_REQUIRED', message: 'Transfer active classes before disabling this Instructor.' })
+      }
       logger.info(
         {
           event: 'user.status.changed',

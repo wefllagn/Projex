@@ -19,11 +19,17 @@ export function createRepositoryApi(client = apiClient) {
     createPersonal(input, options) {
       return client.post('/repositories/personal', input, options)
     },
+    createClassWorkspace(classId, options) {
+      return client.post(`/classes/${classId}/workspace-repository`, {}, options)
+    },
     listRepositories(query, options) {
       return client.get(`/repositories${queryString(query)}`, options)
     },
     getRepository(repositoryId, options) {
       return client.get(`/repositories/${repositoryId}`, options)
+    },
+    listRecordedActivity(repositoryId, query, options) {
+      return client.get(`/repositories/${repositoryId}/activity${queryString(query)}`, options)
     },
     updateRepository(repositoryId, input, options) {
       return client.patch(`/repositories/${repositoryId}`, input, options)

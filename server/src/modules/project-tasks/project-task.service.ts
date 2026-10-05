@@ -56,20 +56,20 @@ function requireActive(caller: SafeUserProfile): void {
   if (caller.status !== 'ACTIVE') throw forbidden()
 }
 
-function ownsClass(caller: SafeUserProfile, instructorId: string): boolean {
-  return caller.role === 'INSTRUCTOR' && caller.id === instructorId
+function ownsClass(caller: SafeUserProfile, classRecord: { instructorId: string | null; teachingStaff?: { instructorId: string; status: string }[] }): boolean {
+  return caller.role === 'INSTRUCTOR' && (classRecord.instructorId === caller.id || Boolean(classRecord.teachingStaff?.some((staff) => staff.instructorId === caller.id && staff.status === 'ACTIVE')))
 }
 
 function canViewClass(caller: SafeUserProfile, access: ClassAccessRecord): boolean {
   return (
     caller.role === 'ADMIN' ||
-    ownsClass(caller, access.classRecord.instructorId) ||
+    ownsClass(caller, access.classRecord) ||
     (caller.role === 'STUDENT' && access.membership?.status === 'ACTIVE')
   )
 }
 
 function canViewTask(caller: SafeUserProfile, access: ProjectTaskAccessRecord): boolean {
-  if (caller.role === 'ADMIN' || ownsClass(caller, access.projectTask.class.instructorId)) return true
+  if (caller.role === 'ADMIN' || ownsClass(caller, access.projectTask.class)) return true
   return (
     caller.role === 'STUDENT' &&
     access.membership?.status === 'ACTIVE' &&
@@ -78,7 +78,7 @@ function canViewTask(caller: SafeUserProfile, access: ProjectTaskAccessRecord): 
 }
 
 function requireOwner(caller: SafeUserProfile, access: ProjectTaskAccessRecord): void {
-  if (!ownsClass(caller, access.projectTask.class.instructorId)) throw notFound()
+  if (!ownsClass(caller, access.projectTask.class)) throw notFound()
 }
 
 function mapWriteFailure(result: ProjectTaskWriteFailure): never {
@@ -150,7 +150,7 @@ export function createProjectTaskService(dependencies: {
     async create(caller, classId, input) {
       requireActive(caller)
       const access = await classRepository.findAccess(classId, caller.id)
-      if (!access || !ownsClass(caller, access.classRecord.instructorId)) throw classNotFound()
+      if (!access || !ownsClass(caller, access.classRecord)) throw classNotFound()
       if (access.classRecord.status === 'ARCHIVED') {
         throw new AppError({ statusCode: 409, code: 'CLASS_ARCHIVED', message: 'Archived classes are read-only.' })
       }
@@ -214,12 +214,12 @@ export function createProjectTaskService(dependencies: {
     },
     async listTeams(caller, projectTaskId) {
       const access = await loadAccess(caller, projectTaskId)
-      if (!(caller.role === 'ADMIN' || ownsClass(caller, access.projectTask.class.instructorId))) throw notFound()
+      if (!(caller.role === 'ADMIN' || ownsClass(caller, access.projectTask.class))) throw notFound()
       return repository.listTeams(projectTaskId)
     },
     async monitoring(caller, projectTaskId) {
       const access = await loadAccess(caller, projectTaskId)
-      if (!(caller.role === 'ADMIN' || ownsClass(caller, access.projectTask.class.instructorId))) throw notFound()
+      if (!(caller.role === 'ADMIN' || ownsClass(caller, access.projectTask.class))) throw notFound()
       return repository.monitoring(projectTaskId, now())
     },
   }

@@ -27,7 +27,7 @@ describe('admin dashboard layout', () => {
     expect(screen.getByRole('navigation', { name: 'Administrator navigation' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Users' })).toBeInTheDocument()
-    expect(screen.getByText('Synthetic Admin')).toBeInTheDocument()
+    expect(screen.getAllByText('Synthetic Admin').length).toBeGreaterThan(0)
     expect(screen.queryByLabelText('Role switcher')).not.toBeInTheDocument()
     expect(screen.queryByText('Notifications')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Course')).not.toBeInTheDocument()

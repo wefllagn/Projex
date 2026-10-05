@@ -263,6 +263,7 @@ export function createPrismaAdminRepository(
                 storageStatus: true,
                 storagePath: true,
                 team: { select: { status: true } },
+                class: { select: { status: true } },
                 projectTask: {
                   select: {
                     status: true,
@@ -302,8 +303,9 @@ export function createPrismaAdminRepository(
 
         const repository = current.repository
         const classRepositoryAllowed =
-          repository.repositoryType !== 'CLASS_PROJECT' ||
-          (repository.team?.status === 'ACTIVE' &&
+          (repository.repositoryType === 'CLASS_WORKSPACE' && repository.class?.status === 'ACTIVE') ||
+          repository.repositoryType === 'PERSONAL' ||
+          (repository.repositoryType === 'CLASS_PROJECT' && repository.team?.status === 'ACTIVE' &&
             repository.projectTask?.class.status === 'ACTIVE' &&
             (repository.projectTask.status === 'PUBLISHED' || repository.projectTask.status === 'CLOSED'))
         if (repository.status !== 'ACTIVE' || !classRepositoryAllowed) {

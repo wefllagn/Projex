@@ -33,6 +33,7 @@ export const activityRecordSelect = {
     select: {
       id: true,
       instructorId: true,
+      teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } },
       status: true,
     },
   },
@@ -297,6 +298,7 @@ export function createPrismaActivityRepository(
             select: {
               id: true,
               instructorId: true,
+              teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } },
               status: true,
               members: {
                 where: { studentId: callerId },

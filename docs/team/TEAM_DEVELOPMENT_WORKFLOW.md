@@ -2,12 +2,12 @@
 
 ## The simple workflow
 
-One member handles development for one week.
+One member owns development at a time. Julius hands a reviewed, pushed checkpoint to Freiser, then Freiser hands off to the next member in sequence. A rotation may last a week, but the branch name is based on the rotation number, not a date.
 
 - **Codex is the developer.** It reads the repository, decides implementation details, writes code, tests the work, fixes related defects, and prepares reports.
 - **ChatGPT web is the checker.** It reviews Codex’s report, checks alignment with the roadmap, and sends corrections when needed.
 - **The member is the middleman.** They transfer the full report between Codex and ChatGPT and add what they personally observed.
-- **The project manager reviews later.** Members never merge into `development/fullstack` or `main`.
+- **Julius reviews integration later.** By team policy, only Julius merges into `development/fullstack` and `main`; this is not a claim of exclusive GitHub permissions.
 
 ```mermaid
 flowchart LR
@@ -20,31 +20,31 @@ flowchart LR
 
 ## One branch for each member
 
-Codex asks only for the member’s preferred short name or GitHub handle.
+Codex asks for the member’s preferred short name or GitHub handle and the rotation number from the handoff. If the rotation number is already documented, Codex confirms it instead of asking again.
 
-It then creates a weekly branch automatically:
+It creates the member’s branch from the previous member’s exact reviewed, pushed handoff commit:
 
 ```text
-iteration-2/<member>-week-<date>
+iteration-2/<member>-work-<rotation>
 ```
 
 Example:
 
 ```text
-iteration-2/juan-week-2026-09-07
+iteration-2/freiser-work-01
 ```
 
-The member does not need to choose a base commit, milestone number, rotation number, or task slug. Codex inspects Git and the roadmap to determine them.
+Keep Julius’s existing branch name unchanged. The member does not need to invent a base commit or milestone number: the handoff supplies the exact commit and rotation. If either is missing or differs from the pushed remote, stop and ask Julius.
 
 Rules:
 
-- Each member edits only their own weekly branch.
+- Each member edits only their own member branch.
 - The branch may contain several completed roadmap milestones.
-- Members push only their weekly branch.
-- Members never merge or push directly to `development/fullstack` or `main`.
+- Members push only their own branch.
+- By team policy, only Julius handles integration into `development/fullstack` and promotion to `main`; members do not merge or push either protected branch.
 - Codex never force-pushes or rewrites history.
-- If continuing unfinished work, Codex starts the new member branch from the previous member’s reviewed commit.
-- Otherwise, Codex starts from the latest accepted `development/fullstack`.
+- The next member branches from the previous member’s **exact reviewed, pushed handoff commit SHA**, including documented WIP when approved for transfer. Codex verifies that SHA against the remote before branching. Do not substitute `development/fullstack`, create an extra integration branch or fork, or guess from a branch name.
+- Each handoff records completed work, WIP, defects, actual automated and manual web-app checks, the next task, and the exact pushed SHA. An unrun or approval-blocked walkthrough stays explicitly pending; WIP is never called accepted.
 
 ## First-time setup
 
@@ -58,20 +58,22 @@ cd projex-ui
 git fetch --all --prune
 ```
 
-Replace `<PROJEX_GITHUB_URL>` with the actual repository URL.
+The clone example above is **not** the sequential handoff command. For unrelated work, use the real Projex GitHub URL in place of any placeholder. For this Iteration 2 continuation, use the exact branch and pushed SHA in the current handoff instead. Do not clone an older `development/fullstack` baseline or guess a base from the most recent-looking branch.
+
+For the current Instructor Rerun continuation, read [INSTRUCTOR_RERUN_TEAM_HANDOFF.md](INSTRUCTOR_RERUN_TEAM_HANDOFF.md). If Julius’s WIP checkpoint is not yet reviewed and pushed, a fresh clone cannot contain that unfinished work. Do not start from `development/fullstack` and claim to be continuing it.
 
 ### 2. Install the existing packages
 
 ```powershell
 cd client
-npm install
-cd ..\server
-npm install
+npm ci
+cd ../server
+npm ci
 npm run prisma:generate
 cd ..
 ```
 
-This installs the versions already recorded by Projex. Do not upgrade packages during setup.
+Both applications have committed lockfiles, so `npm ci` installs the versions already recorded by Projex. Do not upgrade packages during setup. In Windows PowerShell, `cd ../server` and `cd ..\server` are both accepted.
 
 ### 3. Prepare private local configuration
 
@@ -79,6 +81,8 @@ This installs the versions already recorded by Projex. Do not upgrade packages d
 - Create `server/.env` privately.
 - Get the approved local values from the project manager through a private channel.
 - Never paste the full `.env`, passwords, tokens, cookies, or database URL into Codex or ChatGPT.
+- Use your own loopback-only `projex` development database and a separate disposable `projex_test` database. Never point tests at normal or demonstration data. Migration of your normal database is a separate approval gate; the guarded integration runner may migrate and clear only its recognized test database.
+- Keep your managed Git root separate from the test Git root and other members’ storage. Git source history does not contain PostgreSQL records or managed repository objects. A demonstration environment and any paired database/Git backup or restore need separate approval; see the current handoff.
 
 ### 4. Import the repository into Codex
 
@@ -89,6 +93,8 @@ This installs the versions already recorded by Projex. Do not upgrade packages d
 5. Start a fresh Codex task.
 6. Paste **Developer Setup Prompt** from [CODEX_PROMPT_PACK.md](CODEX_PROMPT_PACK.md).
 7. Give Codex the member’s name when asked.
+
+If continuing a WIP checkpoint, give Codex the current handoff document and have it verify the pushed checkpoint hash **before** creating the member branch. The handoff, not an old conversation, supplies the exact continuation base.
 
 Codex will inspect the repository, create the member branch, read the roadmap, and explain what should be worked on next.
 
@@ -102,7 +108,7 @@ Codex will inspect the repository, create the member branch, read the roadmap, a
    - `docs/team/ITERATION_2_ROADMAP.md`
    - `docs/team/TEAM_DEVELOPMENT_WORKFLOW.md`
    - the active `docs/team/milestones/I2.X.md` report, when it already exists
-4. Keep that checker conversation for the member’s whole week.
+4. Keep that checker conversation for the member’s rotation.
 
 The checker may not have direct access to the local repository. It must review only the evidence it actually receives and must not pretend it ran Codex’s tests.
 
@@ -121,7 +127,7 @@ Codex will:
 3. Inspect the relevant code, tests, and architecture.
 4. Decide the technical implementation details inside the approved scope.
 5. Implement both backend and frontend when both are required.
-6. Test and fix related defects.
+6. Run relevant automated tests and a manual web-app walkthrough, then fix related defects. If a protected approval gate blocks live validation, document it as pending rather than claiming a pass.
 7. Keep the milestone report consistent with accepted evidence.
 8. Stop at protected decisions such as migrations on normal data, credentials, new architecture, dependencies, network exposure, or destructive operations.
 9. Prepare a complete report when the milestone is ready.
@@ -186,12 +192,12 @@ fix: protect repository activity from false attribution
 
 Never use broad staging without reviewing the exact files. Never commit secrets, runtime storage, generated repositories, database dumps, build output, or unrelated changes.
 
-## If the week ends
+## When the rotation ends
 
 Ask Codex:
 
 ```text
-Prepare the end-of-week handoff and push the reviewed work only to my member branch.
+Prepare the member handoff and push only reviewed work to my member branch.
 ```
 
 The handoff must say:
@@ -199,14 +205,17 @@ The handoff must say:
 - what was completed;
 - what remains partial or unstarted;
 - the branch and exact commit;
-- tests actually run;
+- automated tests and manual web-app walkthrough actually performed;
 - failures or pending manual checks;
+- known defects, WIP, and the next task;
 - database, migration, dependency, and environment effects;
-- the exact commit the next member should continue from.
+- the exact reviewed, pushed handoff commit SHA the next member must branch from.
 
-Codex must also update every milestone report touched during the week so the next member does not need the old conversations.
+Codex must also update every milestone report touched during the rotation so the next member does not need the old conversations.
 
-The next member uses their own new weekly branch. They do not edit the old member’s branch.
+The next member uses their own `iteration-2/<member>-work-<rotation>` branch from that exact SHA. They do not edit the old member’s branch or create an extra integration branch.
+
+After the rotation, Julius reviews the latest accepted member branch and proposes its cumulative changes through a PR into `development/fullstack`, runs integration tests, and resolves defects through reviewed changes. Only after final acceptance does he propose a separate PR from `development/fullstack` into `main`. Both protected branches currently require a PR and one approval; Julius may need another eligible reviewer for a PR he authors. This is a team workflow rule, not a claim that GitHub technically prevents other members from opening PRs. Preserve each contributor’s genuine commit authorship.
 
 ## Running Projex locally
 

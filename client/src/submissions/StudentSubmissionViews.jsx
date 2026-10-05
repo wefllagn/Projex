@@ -27,6 +27,8 @@ import {
   projectStudentSubmission,
 } from './submission-projections.js'
 import useBoundedPolling from './use-bounded-polling.js'
+import JavaSourceEditor from './JavaSourceEditor.jsx'
+import { compilerLines, focusJavaLine } from './java-source-tools.js'
 
 const FIRST_PAGE = { page: 1, pageSize: 20, status: '' }
 const DESKTOP_WORKSPACE_QUERY = '(min-width: 1181px)'
@@ -360,6 +362,8 @@ export function StudentProgrammingWorkspace({
   const [submission, setSubmission] = useState({ status: 'idle', intent: null, error: null })
   const [confirmMode, setConfirmMode] = useState(null)
   const mounted = useRef(true)
+  const editorRef = useRef(null)
+  const practicedSource = useRef(null)
   const paneSizing = useWorkspacePaneSizing()
 
   useEffect(() => {
@@ -456,6 +460,7 @@ export function StudentProgrammingWorkspace({
   }, [source])
 
   const runVisibleTests = async () => {
+    practicedSource.current = source.value
     setPractice({ record: null, error: null, requesting: true, bounded: false })
     try {
       const response = await submissions.createVisibleTestRun(activityId, source.value)
@@ -616,12 +621,12 @@ export function StudentProgrammingWorkspace({
               <strong>SOURCE</strong>
               <em className="is-file is-active">{activity.entryClassName}.java</em>
             </aside>
-            <textarea
-              aria-label="Java source code"
-              className="student-code-editor student-code-editor-input"
-              spellCheck="false"
+            <JavaSourceEditor
+              key={`${selectedClass.id}:${activity.id}`}
+              entryClassName={activity.entryClassName}
+              editorRef={editorRef}
               value={source.value}
-              onChange={(event) => setSource((current) => ({ ...current, value: event.target.value }))}
+              onChange={(value) => setSource((current) => ({ ...current, value }))}
             />
           </div>
           <footer className="student-editor-status"><span>Unsaved browser source</span><span>Java</span></footer>
@@ -639,6 +644,8 @@ export function StudentProgrammingWorkspace({
           <div className="student-output-panel student-output-panel--live" role="status">
             <p>{practiceStatus}</p>
             {practice.record?.compilerOutput && <><strong>Compiler output</strong><pre>{practice.record.compilerOutput}</pre></>}
+            {practice.record?.compilerOutput && practicedSource.current !== source.value && <p>Source changed since this run. Run again for current line references.</p>}
+            {practice.record?.compilerOutput && practicedSource.current === source.value && compilerLines(practice.record.compilerOutput, activity.entryClassName, source.value).map((line) => <button key={line} type="button" className="student-outline-action" onClick={() => focusJavaLine(editorRef.current, line)}>Go to line {line}</button>)}
             {practice.error && <p className="student-coding-failure">{executionErrorMessage(practice.error)}</p>}
             {practice.bounded && <p>Automatic refresh stopped. The server-side run may still be processing.</p>}
             {(practice.bounded || practice.error) && practice.record?.id && (

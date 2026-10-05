@@ -174,6 +174,33 @@ function LocationProbe() {
 }
 
 describe('student programming workspace', () => {
+  it('keeps imported source local until deliberate Run/Submit and navigates current compiler lines', async () => {
+    const imported = 'public class Main {\n    invalid\n}'
+    const submissions = submissionTransport({
+      createVisibleTestRun: vi.fn().mockResolvedValue({ data: { id: runId, activityId, status: 'succeeded', compilerOutput: 'Main.java:2: error: invalid statement', visibleTestOutcomes: [] } }),
+      createSubmission: vi.fn().mockResolvedValue({ data: submissionRecord() }),
+    })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const user = userEvent.setup()
+    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />, { destination: true })
+    const editor = await screen.findByLabelText('Java source code')
+    fireEvent.change(screen.getByLabelText('Import Java file'), { target: { files: [{ name: 'Main.java', size: imported.length, arrayBuffer: async () => new TextEncoder().encode(imported).buffer }] } })
+    await waitFor(() => expect(editor).toHaveValue(imported))
+    expect(submissions.createVisibleTestRun).not.toHaveBeenCalled()
+    expect(submissions.createSubmission).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Run Visible Tests' }))
+    expect(submissions.createVisibleTestRun).toHaveBeenCalledWith(activityId, imported)
+    await user.click(await screen.findByRole('button', { name: 'Go to line 2' }))
+    expect(editor).toHaveFocus()
+    expect(editor.value.slice(editor.selectionStart, editor.selectionEnd)).toBe('    invalid')
+    fireEvent.change(editor, { target: { value: imported + '\n' } })
+    expect(screen.queryByRole('button', { name: 'Go to line 2' })).not.toBeInTheDocument()
+    expect(screen.getByText(/Source changed since this run/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Submit' }))
+    await user.click(screen.getByRole('button', { name: 'Submit source' }))
+    await waitFor(() => expect(submissions.createSubmission).toHaveBeenCalledWith(activityId, imported + '\n', expect.any(String)))
+  })
+
   it('initializes real starter source in memory without fake autosave or custom input', async () => {
     renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissionTransport()} />)
 

@@ -18,6 +18,7 @@ import type {
   CreatePersonalRepositoryInput,
   InvitationActionInput,
   MemberTransitionInput,
+  RepositoryActivityQuery,
   RepositoryListQuery,
   RepositoryTransitionInput,
   RequestChangesInput,
@@ -27,6 +28,8 @@ import type {
 import {
   toRepositoryProjection,
   type RepositoryAccessRecord,
+  type RepositoryActivityProjection,
+  type RepositoryContributionProjection,
   type RepositoryFeedbackProjection,
   type RepositoryInvitationProjection,
   type RepositoryMemberProjection,
@@ -44,10 +47,17 @@ export type AdminRepositoryFeedbackProjection = Omit<
 >
 
 export interface RepositoryService {
+  createClassWorkspace(caller: SafeUserProfile, classId: string): Promise<RepositoryProjection>
   createClassProject(caller: SafeUserProfile, projectTaskId: string, input: CreateClassProjectRepositoryInput): Promise<RepositoryProjection>
   createPersonal(caller: SafeUserProfile, input: CreatePersonalRepositoryInput): Promise<RepositoryProjection>
   list(caller: SafeUserProfile, query: RepositoryListQuery): Promise<RepositoryListResult>
   get(caller: SafeUserProfile, repositoryId: string): Promise<RepositoryProjection>
+  listRecordedActivity(caller: SafeUserProfile, repositoryId: string, query: RepositoryActivityQuery): Promise<{
+    repositoryId: string
+    events: RepositoryActivityProjection[]
+    contributions: RepositoryContributionProjection[]
+    pagination: PaginationMeta
+  }>
   update(caller: SafeUserProfile, repositoryId: string, input: UpdateRepositoryInput): Promise<RepositoryProjection>
   readyForReview(caller: SafeUserProfile, repositoryId: string, input: RepositoryTransitionInput): Promise<RepositoryProjection>
   requestChanges(caller: SafeUserProfile, repositoryId: string, input: RequestChangesInput): Promise<RepositoryProjection>
@@ -91,7 +101,8 @@ function requireActive(caller: SafeUserProfile): void {
 }
 
 function instructorOwns(access: RepositoryAccessRecord, caller: SafeUserProfile): boolean {
-  return caller.role === 'INSTRUCTOR' && access.repository.projectTask?.class.instructorId === caller.id
+  const classRecord = access.repository.repositoryType === 'CLASS_WORKSPACE' ? access.repository.class : access.repository.projectTask?.class
+  return caller.role === 'INSTRUCTOR' && Boolean(classRecord && (access.repository.repositoryType !== 'CLASS_WORKSPACE' || classRecord.status === 'ACTIVE') && (classRecord.instructorId === caller.id || classRecord.teachingStaff?.some((staff) => staff.instructorId === caller.id && staff.status === 'ACTIVE')))
 }
 
 function isOwner(access: RepositoryAccessRecord, caller: SafeUserProfile): boolean {
@@ -99,6 +110,9 @@ function isOwner(access: RepositoryAccessRecord, caller: SafeUserProfile): boole
 }
 
 function canView(access: RepositoryAccessRecord, caller: SafeUserProfile): boolean {
+  if (access.repository.repositoryType === 'CLASS_WORKSPACE') {
+    return instructorOwns(access, caller) || (caller.role === 'STUDENT' && isOwner(access, caller) && access.repository.class?.status === 'ACTIVE' && access.classMembership?.status === 'ACTIVE')
+  }
   if (caller.role === 'ADMIN' || instructorOwns(access, caller) || isOwner(access, caller)) return true
   if (access.repositoryMembership?.status === 'REMOVED') return false
   if (access.repository.repositoryType === 'PERSONAL') {
@@ -193,6 +207,14 @@ export function createRepositoryService(dependencies: {
   }
 
   return {
+    async createClassWorkspace(caller, classId) {
+      requireActive(caller)
+      if (caller.role !== 'STUDENT') throw forbidden()
+      requireProvisioning()
+      const projection = unwrapRepository(await repository.createClassWorkspace({ classId, ownerId: caller.id, now: now() }))
+      logger.info({ event: 'repository.class_workspace_created', actorId: caller.id, repositoryId: projection.id, classId }, 'student class workspace created')
+      return projection
+    },
     async createClassProject(caller, projectTaskId, input) {
       requireActive(caller)
       if (caller.role !== 'STUDENT') throw forbidden()
@@ -226,6 +248,23 @@ export function createRepositoryService(dependencies: {
       const access = await loadAccess(caller, repositoryId)
       return toRepositoryProjection(access.repository)
     },
+    async listRecordedActivity(caller, repositoryId, query) {
+      const access = await loadAccess(caller, repositoryId)
+      if (caller.role !== 'ADMIN' && !instructorOwns(access, caller) && !isOwner(access, caller) && access.repositoryMembership?.status !== 'ACTIVE') {
+        throw notFound()
+      }
+      const result = await repository.listRecordedActivity({ repositoryId, ...query })
+      const totalPages = Math.ceil(result.totalItems / query.pageSize)
+      return {
+        repositoryId,
+        events: result.events,
+        contributions: result.contributions,
+        pagination: {
+          page: query.page, pageSize: query.pageSize, totalItems: result.totalItems, totalPages,
+          hasNextPage: query.page < totalPages, hasPreviousPage: query.page > 1,
+        },
+      }
+    },
     async update(caller, repositoryId, input) {
       const access = await loadAccess(caller, repositoryId)
       if (!isOwner(access, caller)) throw notFound()
@@ -236,20 +275,22 @@ export function createRepositoryService(dependencies: {
     },
     async readyForReview(caller, repositoryId, input) {
       const access = await loadAccess(caller, repositoryId)
-      if (!isOwner(access, caller)) throw notFound()
+      if (!isOwner(access, caller) || access.repository.repositoryType !== 'CLASS_PROJECT') throw notFound()
       const projection = unwrapRepository(await repository.readyForReview({ repositoryId, expectedUpdatedAt: input.expectedUpdatedAt, now: now() }))
       logger.info({ event: 'repository.ready_for_review', actorId: caller.id, repositoryId }, 'repository submitted for review')
       return projection
     },
     async requestChanges(caller, repositoryId, input) {
-      await requireInstructor(caller, repositoryId)
+      const access = await requireInstructor(caller, repositoryId)
+      if (access.repository.repositoryType !== 'CLASS_PROJECT') throw notFound()
       const projection = unwrapRepository(await repository.requestChanges({ repositoryId, instructorId: caller.id, review: input, now: now() }))
       logger.info({ event: 'repository.changes_requested', actorId: caller.id, repositoryId }, 'repository changes requested with released feedback')
       logger.info({ event: 'repository.feedback_released', actorId: caller.id, repositoryId, feedbackId: input.feedbackId }, 'repository feedback released')
       return projection
     },
     async approve(caller, repositoryId, input) {
-      await requireInstructor(caller, repositoryId)
+      const access = await requireInstructor(caller, repositoryId)
+      if (access.repository.repositoryType !== 'CLASS_PROJECT') throw notFound()
       const projection = unwrapRepository(await repository.approve({ repositoryId, instructorId: caller.id, review: input, now: now() }))
       logger.info({ event: 'repository.approved', actorId: caller.id, repositoryId }, 'repository approved')
       if (input.feedbackId) {
@@ -325,6 +366,7 @@ export function createRepositoryService(dependencies: {
     },
     async listRepositoryInvitations(caller, repositoryId) {
       const access = await loadAccess(caller, repositoryId)
+      if (access.repository.repositoryType !== 'CLASS_PROJECT') throw notFound()
       if (!(isOwner(access, caller) || instructorOwns(access, caller) || caller.role === 'ADMIN')) throw notFound()
       return repository.listRepositoryInvitations(repositoryId, now())
     },
@@ -361,7 +403,8 @@ export function createRepositoryService(dependencies: {
       return invitation
     },
     async createFeedbackDraft(caller, repositoryId, input) {
-      await requireInstructor(caller, repositoryId)
+      const access = await requireInstructor(caller, repositoryId)
+      if (access.repository.repositoryType !== 'CLASS_PROJECT') throw notFound()
       const feedback = unwrapFeedback(await repository.createFeedbackDraft({ repositoryId, instructorId: caller.id, feedback: input, now: now() }))
       logger.info({ event: 'repository.feedback_draft_created', actorId: caller.id, repositoryId, feedbackId: feedback.feedbackId }, 'repository feedback draft created')
       return feedback
@@ -370,7 +413,8 @@ export function createRepositoryService(dependencies: {
       requireActive(caller)
       const current = await repository.findFeedback(feedbackId)
       if (!current) throw feedbackNotFound()
-      await requireInstructor(caller, current.repositoryId)
+      const access = await requireInstructor(caller, current.repositoryId)
+      if (access.repository.repositoryType !== 'CLASS_PROJECT') throw notFound()
       const feedback = unwrapFeedback(await repository.updateFeedbackDraft({ feedbackId, instructorId: caller.id, feedback: input, now: now() }))
       logger.info({ event: 'repository.feedback_draft_updated', actorId: caller.id, repositoryId: current.repositoryId, feedbackId }, 'repository feedback draft updated')
       return feedback

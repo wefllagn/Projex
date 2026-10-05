@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
-import { classHref, classInitial } from '../classes/class-links.js'
+import { classHref, classInitial, classOfferingLabel } from '../classes/class-links.js'
 import { courseOptions, sectionOptions } from '../data/projexData.js'
 
 function StudentSidebarLink({ to, children, end = false, count, icon }) {
@@ -16,7 +16,7 @@ function StudentSidebarLink({ to, children, end = false, count, icon }) {
   )
 }
 
-function SidebarBrand({ to, label, collapsed, onToggle }) {
+function SidebarBrand({ to, label, collapsed, onToggle, onClose }) {
   return (
     <div className="student-sidebar-brand-row">
       <button
@@ -30,8 +30,93 @@ function SidebarBrand({ to, label, collapsed, onToggle }) {
       <NavLink to={to} className="student-brand" aria-label={label}>
         <img src="/assets/brand/projex-sidebar-logo.png" alt="Projex" />
       </NavLink>
+      <button type="button" className="student-mobile-nav-close" onClick={onClose} aria-label="Close navigation">×</button>
     </div>
   )
+}
+
+function useMobileNavigation() {
+  const location = useLocation()
+  const [openedRoute, setOpenedRoute] = useState(null)
+  const open = openedRoute === location.key
+  const setOpen = (next) => setOpenedRoute((current) => {
+    const nextOpen = typeof next === 'function' ? next(current === location.key) : next
+    return nextOpen ? location.key : null
+  })
+
+  useEffect(() => {
+    if (!open) return undefined
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setOpenedRoute(null) }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [open])
+
+  return { open, setOpen, close: () => setOpen(false) }
+}
+
+function MobileShellNavigation({ role, open, setOpen, close, navigationId }) {
+  const auth = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [accountRoute, setAccountRoute] = useState(null)
+  const [signingOut, setSigningOut] = useState(false)
+  const accountOpen = accountRoute === location.key
+
+  useEffect(() => {
+    if (!accountOpen) return undefined
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setAccountRoute(null) }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [accountOpen])
+
+  return (
+    <>
+      <header className="student-mobile-header">
+        <button
+          type="button"
+          className="student-mobile-menu-button"
+          aria-label={open ? 'Close navigation' : 'Open navigation'}
+          aria-controls={navigationId}
+          aria-expanded={open}
+          onClick={() => { setAccountRoute(null); setOpen((current) => !current) }}
+        >
+          <span aria-hidden="true">☰</span>
+        </button>
+        <span className="student-mobile-header__brand">Projex</span>
+        <div className="student-mobile-account">
+          <button
+            type="button"
+            className="student-mobile-header__identity"
+            aria-label="Account menu"
+            aria-expanded={accountOpen}
+            onClick={() => { close(); setAccountRoute(accountOpen ? null : location.key) }}
+          >
+            <strong>{auth.user.fullName}</strong><small>{role}</small>
+          </button>
+          {accountOpen && (
+            <div className="student-mobile-account__menu">
+              <strong>{auth.user.fullName}</strong>
+              <span>{auth.user.email}</span>
+              <button type="button" disabled={signingOut} onClick={async () => {
+                setSigningOut(true)
+                try {
+                  await auth.logout()
+                  navigate('/', { replace: true })
+                } finally {
+                  setSigningOut(false)
+                }
+              }}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
+            </div>
+          )}
+        </div>
+      </header>
+      {open && <button type="button" className="student-mobile-nav-backdrop" onClick={close} aria-label="Close navigation menu" />}
+    </>
+  )
+}
+
+function closeMobileNavigationOnLink(event, close) {
+  if (event.target.closest('a')) close()
 }
 
 function SidebarClassLink({ item, to, active }) {
@@ -46,7 +131,7 @@ function SidebarClassLink({ item, to, active }) {
       </span>
       <span className="student-class-link__text">
         <strong>{item.className}</strong>
-        <small>{item.section} · {item.status === 'ARCHIVED' ? 'Archived' : item.semester}</small>
+        <small>{classOfferingLabel(item)}{item.status === 'ARCHIVED' ? ' · Archived' : ''}</small>
       </span>
     </NavLink>
   )
@@ -59,7 +144,20 @@ export function CreateClassModal({ onClose, onCreated }) {
     section: '',
     semester: '',
     schoolYear: '',
+    courseId: '',
+    schedule: '',
+    days: '',
+    room: '',
   })
+  const [courses, setCourses] = useState([])
+  const [courseSearch, setCourseSearch] = useState('')
+  useEffect(() => {
+    const controller = new AbortController()
+    api.listCourses({ pageSize: 100, ...(courseSearch.trim() ? { search: courseSearch.trim() } : {}) }, { signal: controller.signal })
+      .then((response) => setCourses(response.data.items))
+      .catch((cause) => { if (cause?.name !== 'AbortError') setCourses([]) })
+    return () => controller.abort()
+  }, [api, courseSearch])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [invitationEmail, setInvitationEmail] = useState('')
@@ -76,7 +174,8 @@ export function CreateClassModal({ onClose, onCreated }) {
     setError(null)
     try {
       const response = await api.createClass({
-        ...form,
+        className: form.className,
+        ...Object.fromEntries(Object.entries(form).filter(([key, value]) => key !== 'className' && value.trim())),
         ...(invitationTargets.length > 0
           ? { invitationEmails: invitationTargets.map((target) => target.universityEmail) }
           : {}),
@@ -118,24 +217,29 @@ export function CreateClassModal({ onClose, onCreated }) {
       <form className="instructor-action-modal" onSubmit={submit}>
         <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close create class" />
         <p>Create Class</p>
-        <h2 id="create-class-title">New instructor class</h2>
+        <h2 id="create-class-title">New teaching class</h2>
         <div className="instructor-form-grid">
           <label>
-            Course name
+            Class Name
             <input value={form.className} onChange={updateField('className')} maxLength={200} required />
           </label>
+          <label>Find Course (optional)<input value={courseSearch} onChange={(event) => setCourseSearch(event.target.value)} placeholder="Search number or name" /></label>
+          <label>Course (optional)<select value={form.courseId} onChange={updateField('courseId')}><option value="">No catalog Course</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.courseNumber} — {course.courseName}</option>)}</select></label>
           <label>
-            Section
-            <input value={form.section} onChange={updateField('section')} maxLength={100} required />
+            Section (optional)
+            <input value={form.section} onChange={updateField('section')} maxLength={100} />
           </label>
           <label>
-            Semester
-            <input value={form.semester} onChange={updateField('semester')} maxLength={100} placeholder="First Semester" required />
+            Informal term label (optional)
+            <input value={form.semester} onChange={updateField('semester')} maxLength={100} placeholder="Practice term" />
           </label>
           <label>
-            School year
-            <input value={form.schoolYear} onChange={updateField('schoolYear')} maxLength={20} placeholder="2026-2027" required />
+            School year (optional)
+            <input value={form.schoolYear} onChange={updateField('schoolYear')} maxLength={20} placeholder="2026-2027" />
           </label>
+          <label>Schedule (optional)<input value={form.schedule} onChange={updateField('schedule')} maxLength={200} /></label>
+          <label>Days (optional)<input value={form.days} onChange={updateField('days')} maxLength={100} /></label>
+          <label>Room (optional)<input value={form.room} onChange={updateField('room')} maxLength={100} /></label>
         </div>
         <section className="class-create-invitations">
           <div>
@@ -206,19 +310,22 @@ function InstructorDashboardLayout() {
   const [createClassOpen, setCreateClassOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const navigate = useNavigate()
+  const mobileNavigation = useMobileNavigation()
   const { classes, requestedClassId, status, error, pagination, loadMore } = useClasses()
 
   return (
-    <div className={sidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'}>
-      <aside className="student-sidebar">
+    <div className={`${sidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'}${mobileNavigation.open ? ' is-mobile-menu-open' : ''}`}>
+      <MobileShellNavigation role="Instructor" navigationId="instructor-navigation" {...mobileNavigation} />
+      <aside id="instructor-navigation" className="student-sidebar">
         <SidebarBrand
           to="/instructor"
           label="Projex instructor home"
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((current) => !current)}
+          onClose={mobileNavigation.close}
         />
 
-        <nav className="student-sidebar__nav" aria-label="Instructor navigation">
+        <nav className="student-sidebar__nav" aria-label="Instructor navigation" onClick={(event) => closeMobileNavigationOnLink(event, mobileNavigation.close)}>
           <StudentSidebarLink to="/instructor" end icon="home">
             Home
           </StudentSidebarLink>
@@ -246,7 +353,7 @@ function InstructorDashboardLayout() {
           </div>
 
           <div className="student-sidebar__lower">
-            <button type="button" className="student-sidebar__link instructor-sidebar-button" onClick={() => setCreateClassOpen(true)}>
+            <button type="button" className="student-sidebar__link instructor-sidebar-button" onClick={() => { mobileNavigation.close(); setCreateClassOpen(true) }}>
               <span className="student-sidebar__icon student-sidebar__icon--plus" aria-hidden="true" />
               <span>Create Class</span>
             </button>
@@ -275,6 +382,7 @@ function StudentDashboardLayout() {
   const location = useLocation()
   const isCodingWorkspace = location.pathname.includes('/workspace')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(isCodingWorkspace)
+  const mobileNavigation = useMobileNavigation()
   const effectiveSidebarCollapsed = sidebarCollapsed || isCodingWorkspace
   const isInsideStudentClass = location.pathname.startsWith('/student/classes')
     || location.pathname.startsWith('/student/activity')
@@ -283,21 +391,26 @@ function StudentDashboardLayout() {
   const { classes, requestedClassId, status, error, pagination, loadMore } = useClasses()
 
   return (
-    <div className={`${effectiveSidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'}${isCodingWorkspace ? ' is-coding-workspace' : ''}`}>
-      <aside className="student-sidebar">
+    <div className={`${effectiveSidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'}${isCodingWorkspace ? ' is-coding-workspace' : ''}${mobileNavigation.open ? ' is-mobile-menu-open' : ''}`}>
+      <MobileShellNavigation role="Student" navigationId="student-navigation" {...mobileNavigation} />
+      <aside id="student-navigation" className="student-sidebar">
         <SidebarBrand
           to="/student"
           label="Projex student home"
           collapsed={effectiveSidebarCollapsed}
           onToggle={() => setSidebarCollapsed((current) => !current)}
+          onClose={mobileNavigation.close}
         />
 
-        <nav className="student-sidebar__nav" aria-label="Student navigation">
+        <nav className="student-sidebar__nav" aria-label="Student navigation" onClick={(event) => closeMobileNavigationOnLink(event, mobileNavigation.close)}>
           <StudentSidebarLink to="/student" end icon="home">
             Home
           </StudentSidebarLink>
           <StudentSidebarLink to="/student/todo" icon="todo">
             To-do
+          </StudentSidebarLink>
+          <StudentSidebarLink to="/student/submissions" icon="activity">
+            My Submissions
           </StudentSidebarLink>
 
           <div className="student-sidebar__group">
@@ -338,6 +451,7 @@ function AdminDashboardLayout() {
   const [signingOut, setSigningOut] = useState(false)
   const navigate = useNavigate()
   const auth = useAuth()
+  const mobileNavigation = useMobileNavigation()
 
   const signOut = async () => {
     setSigningOut(true)
@@ -350,15 +464,17 @@ function AdminDashboardLayout() {
   }
 
   return (
-    <div className={sidebarCollapsed ? 'student-app-shell admin-app-shell is-sidebar-collapsed' : 'student-app-shell admin-app-shell'}>
-      <aside className="student-sidebar admin-sidebar">
+    <div className={`${sidebarCollapsed ? 'student-app-shell admin-app-shell is-sidebar-collapsed' : 'student-app-shell admin-app-shell'}${mobileNavigation.open ? ' is-mobile-menu-open' : ''}`}>
+      <MobileShellNavigation role="Administrator" navigationId="administrator-navigation" {...mobileNavigation} />
+      <aside id="administrator-navigation" className="student-sidebar admin-sidebar">
         <SidebarBrand
           to="/admin"
           label="Projex administrator home"
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((current) => !current)}
+          onClose={mobileNavigation.close}
         />
-        <nav className="student-sidebar__nav" aria-label="Administrator navigation">
+        <nav className="student-sidebar__nav" aria-label="Administrator navigation" onClick={(event) => closeMobileNavigationOnLink(event, mobileNavigation.close)}>
           <StudentSidebarLink to="/admin" end icon="home">Overview</StudentSidebarLink>
           <StudentSidebarLink to="/admin/users" icon="people">Users</StudentSidebarLink>
           <div className="student-sidebar__group">

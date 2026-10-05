@@ -21,10 +21,11 @@ export const submissionInclude = {
       id: true,
       classId: true,
       title: true,
+      entryClassName: true,
       status: true,
       totalPoints: true,
       creditPolicy: true,
-      class: { select: { id: true, instructorId: true, status: true } },
+      class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
     },
   },
   student: { select: { id: true, fullName: true, email: true } },
@@ -55,7 +56,7 @@ export const practiceInclude = {
       classId: true,
       title: true,
       status: true,
-      class: { select: { id: true, instructorId: true, status: true } },
+      class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
     },
   },
   cases: { orderBy: { testOrderSnapshot: 'asc' as const } },
@@ -64,6 +65,21 @@ export const practiceInclude = {
 
 export type PracticeRecord = Prisma.PracticeExecutionGetPayload<{
   include: typeof practiceInclude
+}>
+
+export const reviewRunInclude = {
+  cases: { orderBy: { testOrderSnapshot: 'asc' as const } },
+  submission: {
+    select: {
+      id: true,
+      activityId: true,
+      activity: { select: { class: { select: { instructorId: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } } } },
+    },
+  },
+} as const
+
+export type ReviewRunRecord = Prisma.ReviewExecutionGetPayload<{
+  include: typeof reviewRunInclude
 }>
 
 const releasedAttemptSelect = {
@@ -91,7 +107,7 @@ export interface StudentAttemptStateRecord {
     dueDate: Date
     maxAttempts: number
     creditPolicy: AttemptCreditPolicyValue
-    classStatus: 'ACTIVE' | 'ARCHIVED'
+    classStatus: 'PREPARED' | 'ACTIVE' | 'ARCHIVED'
   }
   countingAttemptsUsed: number
   availableReplacement: {
@@ -115,6 +131,13 @@ export type CreatePracticeResult =
   | { kind: 'activity_not_found' }
   | { kind: 'forbidden' }
   | { kind: 'activity_not_accepting' }
+  | { kind: 'rate_limited' }
+  | { kind: 'capacity_unavailable' }
+
+export type CreateReviewRunResult =
+  | { kind: 'created'; reviewRun: ReviewRunRecord }
+  | { kind: 'not_found' }
+  | { kind: 'forbidden' }
   | { kind: 'rate_limited' }
   | { kind: 'capacity_unavailable' }
 
@@ -198,6 +221,12 @@ export interface SubmissionRepository {
     maxActivePerActivity: number
   }): Promise<CreatePracticeResult>
   findPracticeById(runId: string): Promise<PracticeRecord | null>
+  createReviewRun(input: {
+    submissionId: string
+    instructorId: string
+    now: Date
+  }): Promise<CreateReviewRunResult>
+  findReviewRunById(runId: string): Promise<ReviewRunRecord | null>
 }
 
 async function lockScope(
@@ -263,7 +292,7 @@ function canInstructorMutate(
   instructorId: string,
 ): boolean {
   return (
-    record.activity.class.instructorId === instructorId &&
+    (record.activity.class.instructorId === instructorId || record.activity.class.teachingStaff.some((staff) => staff.instructorId === instructorId)) &&
     record.activity.class.status === 'ACTIVE' &&
     record.activity.status !== 'ARCHIVED'
   )
@@ -481,6 +510,7 @@ export function createPrismaSubmissionRepository(
           class: {
             select: {
               instructorId: true,
+              teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } },
               members: {
                 where: { studentId: input.callerId },
                 take: 1,
@@ -494,7 +524,7 @@ export function createPrismaSubmissionRepository(
       const permitted =
         input.callerRole === 'ADMIN' ||
         (input.callerRole === 'INSTRUCTOR' &&
-          activity.class.instructorId === input.callerId) ||
+          (activity.class.instructorId === input.callerId || activity.class.teachingStaff.some((staff) => staff.instructorId === input.callerId))) ||
         (input.callerRole === 'STUDENT' &&
           activity.class.members[0]?.status === 'ACTIVE')
       if (!permitted) return null
@@ -1074,6 +1104,62 @@ export function createPrismaSubmissionRepository(
       return prisma.practiceExecution.findUnique({
         where: { id: runId },
         include: practiceInclude,
+      })
+    },
+
+    createReviewRun(input) {
+      return prisma.$transaction(async (transaction) => {
+        await lockScope(transaction, `review-run:${input.instructorId}`)
+        await lockSubmission(transaction, input.submissionId)
+        const submission = await loadSubmission(transaction, input.submissionId)
+        if (!submission) return { kind: 'not_found' } as const
+        if (!canInstructorMutate(submission, input.instructorId)) {
+          return { kind: 'forbidden' } as const
+        }
+        const minuteAgo = new Date(input.now.getTime() - 60_000)
+        const [active, recent] = await Promise.all([
+          transaction.reviewExecution.count({
+            where: { instructorId: input.instructorId, status: { in: ['QUEUED', 'RUNNING'] } },
+          }),
+          transaction.reviewExecution.count({
+            where: { instructorId: input.instructorId, createdAt: { gte: minuteAgo } },
+          }),
+        ])
+        if (active > 0) return { kind: 'capacity_unavailable' } as const
+        if (recent >= 10) return { kind: 'rate_limited' } as const
+        const originalCases = submission.execution?.testCaseResults ?? []
+        if (originalCases.length === 0) return { kind: 'capacity_unavailable' } as const
+        const created = await transaction.reviewExecution.create({
+          data: {
+            submissionId: submission.id,
+            instructorId: input.instructorId,
+            entryClassName: submission.activity.entryClassName,
+            createdAt: input.now,
+            cases: {
+              create: originalCases.map((testCase) => ({
+                testNameSnapshot: testCase.testNameSnapshot,
+                testOrderSnapshot: testCase.testOrderSnapshot,
+                inputSnapshot: testCase.inputSnapshot,
+                expectedOutputSnapshot: testCase.expectedOutputSnapshot,
+                isHiddenSnapshot: testCase.isHiddenSnapshot,
+              })),
+            },
+            executionJob: { create: { jobType: 'INSTRUCTOR_REVIEW_RUN' } },
+          },
+          select: { id: true },
+        })
+        return {
+          kind: 'created',
+          reviewRun: await transaction.reviewExecution.findUniqueOrThrow({
+            where: { id: created.id }, include: reviewRunInclude,
+          }),
+        } as const
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+    },
+
+    findReviewRunById(runId) {
+      return prisma.reviewExecution.findUnique({
+        where: { id: runId }, include: reviewRunInclude,
       })
     },
   }

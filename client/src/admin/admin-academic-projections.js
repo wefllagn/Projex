@@ -51,6 +51,14 @@ function safeClass(value, expectedId) {
     section: text(source.section),
     semester: text(source.semester),
     schoolYear: text(source.schoolYear),
+    courseId: nullableText(source.courseId),
+    courseNumber: nullableText(source.courseNumberSnapshot ?? source.courseNumber),
+    courseName: nullableText(source.courseNameSnapshot ?? source.courseName),
+    officialClassCode: nullableText(source.officialClassCode),
+    academicPeriod: nullableText(source.academicPeriod),
+    schedule: nullableText(source.schedule),
+    days: nullableText(source.days),
+    room: nullableText(source.room),
     status: text(source.status, 'UNKNOWN'),
   }
 }
@@ -64,17 +72,16 @@ export function projectGovernedClass(value, expectedId) {
   const source = object(value)
   if (!source) throw new AdminProjectionError()
   const instructor = object(source.instructor)
-  if (!instructor) throw new AdminProjectionError()
   return {
     ...safeClass(source, expectedId),
     createdAt: nullableText(source.createdAt),
     updatedAt: requiredText(source.updatedAt),
     archivedAt: nullableText(source.archivedAt),
-    instructor: {
+    instructor: instructor ? {
       userId: identity(instructor.userId ?? instructor.id),
       fullName: text(instructor.fullName),
       universityEmail: text(instructor.email ?? instructor.universityEmail),
-    },
+    } : null,
     membershipCounts: counts(source.membershipCounts),
   }
 }
