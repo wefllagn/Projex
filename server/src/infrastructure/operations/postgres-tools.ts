@@ -48,6 +48,12 @@ export function assertBackupSourceTarget(target: Pick<ParsedPostgresTarget, 'dat
   }
 }
 
+export function validateBackupSourceDatabaseUrl(databaseUrl: string): ParsedPostgresTarget {
+  const target = parsePostgresTarget(databaseUrl)
+  assertBackupSourceTarget(target)
+  return target
+}
+
 export function assertRestoreDatabaseName(databaseName: string): void {
   if (!RESTORE_DATABASE.test(databaseName)) {
     throw new OperationsSafetyError('RESTORE_DATABASE_UNRECOGNIZED')
@@ -69,8 +75,7 @@ export function buildPgDumpPlan(input: {
   if (!path.isAbsolute(input.outputFile)) {
     throw new OperationsSafetyError('BACKUP_OUTPUT_NOT_ABSOLUTE')
   }
-  const target = parsePostgresTarget(input.databaseUrl)
-  assertBackupSourceTarget(target)
+  const target = validateBackupSourceDatabaseUrl(input.databaseUrl)
   return {
     executable: assertExecutable(input.executable),
     args: [

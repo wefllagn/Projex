@@ -5,6 +5,7 @@ import { createPrismaClient } from '../infrastructure/database/prisma.js'
 import { createArtifact, BACKUP_MANIFEST_VERSION, type BackupManifest } from '../infrastructure/operations/backup-manifest.js'
 import { BACKUP_CONFIRMATION, buildPairedBackupPlan, executePairedBackupPlan, inspectGitStorageTree } from '../infrastructure/operations/backup.js'
 import { OperationsSafetyError } from '../infrastructure/operations/operations-error.js'
+import { validateBackupSourceDatabaseUrl } from '../infrastructure/operations/postgres-tools.js'
 import { runCommand } from '../infrastructure/operations/process-runner.js'
 import { readQuiescenceSnapshot } from '../infrastructure/operations/quiescence.js'
 
@@ -18,6 +19,7 @@ async function main(): Promise<void> {
   if (!process.argv.includes('--execute')) throw new OperationsSafetyError('BACKUP_EXECUTE_FLAG_REQUIRED')
   const projectRoot = path.resolve(process.cwd(), '..')
   const databaseUrl = required('DATABASE_URL')
+  validateBackupSourceDatabaseUrl(databaseUrl)
   const gitStorageRoot = required('GIT_STORAGE_ROOT')
   const prisma = createPrismaClient(databaseUrl)
   try {

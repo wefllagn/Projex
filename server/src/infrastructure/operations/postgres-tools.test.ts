@@ -1,11 +1,27 @@
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { buildPgDumpPlan, buildPgRestorePlan, parsePostgresTarget } from './postgres-tools.js'
+import { buildPgDumpPlan, buildPgRestorePlan, parsePostgresTarget, validateBackupSourceDatabaseUrl } from './postgres-tools.js'
 
 const executable = path.resolve('tools', 'postgres.exe')
 
 describe('PostgreSQL operation command plans', () => {
+  it('validates recovery-source URLs directly without database access', () => {
+    for (const host of ['localhost', '127.0.0.1', '[::1]']) {
+      expect(validateBackupSourceDatabaseUrl(`postgresql://backup:secret@${host}/projex_recovery_source_i26aaron01`))
+        .toMatchObject({ databaseName: 'projex_recovery_source_i26aaron01' })
+    }
+    for (const databaseName of ['projex', 'projex_test', 'projex_restore_verify_i26aaron01', 'arbitrary_database']) {
+      expect(() => validateBackupSourceDatabaseUrl(`postgresql://backup:secret@localhost/${databaseName}`))
+        .toThrowError('BACKUP_SOURCE_DATABASE_UNRECOGNIZED')
+    }
+    expect(() => validateBackupSourceDatabaseUrl('postgresql://backup:secret@database.example.edu/projex_recovery_source_i26aaron01'))
+      .toThrowError('BACKUP_SOURCE_HOST_NOT_LOOPBACK')
+    expect(() => validateBackupSourceDatabaseUrl('not-a-url')).toThrowError('POSTGRES_URL_INVALID')
+    expect(() => validateBackupSourceDatabaseUrl('https://localhost/projex_recovery_source_i26aaron01'))
+      .toThrowError('POSTGRES_URL_INVALID')
+  })
+
   it.each([
     'localhost',
     '127.0.0.1',
