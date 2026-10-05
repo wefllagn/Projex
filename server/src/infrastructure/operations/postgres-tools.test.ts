@@ -6,14 +6,47 @@ import { buildPgDumpPlan, buildPgRestorePlan, parsePostgresTarget } from './post
 const executable = path.resolve('tools', 'postgres.exe')
 
 describe('PostgreSQL operation command plans', () => {
-  it('keeps backup credentials out of the argument array', () => {
-    const url = 'postgresql://backup_user:private-password@127.0.0.1:5432/projex?sslmode=require'
+  it.each([
+    'localhost',
+    '127.0.0.1',
+    '[::1]',
+  ])('accepts the dedicated recovery source on recognized loopback host %s', (host) => {
+    const url = `postgresql://backup_user:private-password@${host}:5432/projex_recovery_source_i26aaron01?sslmode=require`
     const plan = buildPgDumpPlan({ executable, databaseUrl: url, outputFile: path.resolve('out', 'database.dump') })
     expect(plan.args).toEqual([
       '--format=custom', '--no-owner', '--no-privileges', `--file=${path.resolve('out', 'database.dump')}`,
     ])
     expect(plan.args.join(' ')).not.toContain('private-password')
-    expect(plan.environment).toMatchObject({ PGDATABASE: 'projex', PGUSER: 'backup_user', PGPASSWORD: 'private-password' })
+    expect(plan.environment).toMatchObject({ PGDATABASE: 'projex_recovery_source_i26aaron01', PGUSER: 'backup_user', PGPASSWORD: 'private-password' })
+  })
+
+  it.each([
+    'projex',
+    'projex_test',
+    'projex_restore_verify_i26aaron01',
+    'arbitrary_database',
+  ])('rejects unrecognized backup source database %s', (databaseName) => {
+    expect(() => buildPgDumpPlan({
+      executable,
+      databaseUrl: `postgresql://backup_user:secret@localhost/${databaseName}`,
+      outputFile: path.resolve('out', 'database.dump'),
+    })).toThrowError('BACKUP_SOURCE_DATABASE_UNRECOGNIZED')
+  })
+
+  it('rejects a dedicated recovery source on a non-loopback host', () => {
+    expect(() => buildPgDumpPlan({
+      executable,
+      databaseUrl: 'postgresql://backup_user:secret@database.example.edu/projex_recovery_source_i26aaron01',
+      outputFile: path.resolve('out', 'database.dump'),
+    })).toThrowError('BACKUP_SOURCE_HOST_NOT_LOOPBACK')
+  })
+
+  it('rejects a malformed backup source URL', () => {
+    expect(() => buildPgDumpPlan({
+      executable,
+      databaseUrl: 'not-a-url',
+      outputFile: path.resolve('out', 'database.dump'),
+    })).toThrowError('POSTGRES_URL_INVALID')
   })
 
   it('requires an explicitly recognized restore database and never falls back', () => {

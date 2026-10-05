@@ -4,9 +4,12 @@ import { OperationsSafetyError } from './operations-error.js'
 import type { CommandPlan } from './process-runner.js'
 
 const RESTORE_DATABASE = /^projex_restore_verify_[a-z0-9][a-z0-9_]{2,48}$/
+const BACKUP_SOURCE_DATABASE = /^projex_recovery_source_[a-z0-9][a-z0-9_]{2,48}$/
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
 
 type ParsedPostgresTarget = Readonly<{
   databaseName: string
+  hostname: string
   environment: Readonly<Record<string, string>>
 }>
 
@@ -33,7 +36,16 @@ export function parsePostgresTarget(databaseUrl: string): ParsedPostgresTarget {
   if (parsed.password) environment.PGPASSWORD = decodeURIComponent(parsed.password)
   const sslMode = parsed.searchParams.get('sslmode')
   if (sslMode) environment.PGSSLMODE = sslMode
-  return { databaseName, environment }
+  return { databaseName, hostname: parsed.hostname.toLowerCase(), environment }
+}
+
+export function assertBackupSourceTarget(target: Pick<ParsedPostgresTarget, 'databaseName' | 'hostname'>): void {
+  if (!BACKUP_SOURCE_DATABASE.test(target.databaseName)) {
+    throw new OperationsSafetyError('BACKUP_SOURCE_DATABASE_UNRECOGNIZED')
+  }
+  if (!LOOPBACK_HOSTS.has(target.hostname)) {
+    throw new OperationsSafetyError('BACKUP_SOURCE_HOST_NOT_LOOPBACK')
+  }
 }
 
 export function assertRestoreDatabaseName(databaseName: string): void {
@@ -58,6 +70,7 @@ export function buildPgDumpPlan(input: {
     throw new OperationsSafetyError('BACKUP_OUTPUT_NOT_ABSOLUTE')
   }
   const target = parsePostgresTarget(input.databaseUrl)
+  assertBackupSourceTarget(target)
   return {
     executable: assertExecutable(input.executable),
     args: [
