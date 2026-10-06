@@ -4,6 +4,7 @@ import type { PaginationMeta } from '../../shared/http/response.js'
 import type { SafeUserProfile } from '../auth/auth.types.js'
 import type { ClassRepository } from '../classes/class.repository.js'
 import { toClassProjection } from '../classes/class.types.js'
+import { isTeachingInstructor } from '../classes/class.types.js'
 import type {
   ClassInvitationRepository,
   InstructorClassInvitationProjection,
@@ -121,7 +122,7 @@ export function createClassInvitationService(dependencies: {
   ) {
     requireActiveRole(caller, 'INSTRUCTOR')
     const access = await classRepository.findAccess(classId, caller.id)
-    if (!access || access.classRecord.instructorId !== caller.id) {
+    if (!access || !isTeachingInstructor(access.classRecord, caller.id)) {
       throw classNotFound()
     }
     if (access.classRecord.status !== 'ACTIVE') {

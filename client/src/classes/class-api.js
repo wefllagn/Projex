@@ -22,6 +22,36 @@ export function createClassApi(client = apiClient) {
     createClass(input, options) {
       return client.post('/classes', input, options)
     },
+    listCourses(query, options) {
+      return client.get(`/courses${queryString(query)}`, options)
+    },
+    listClassStaff(classId, options) {
+      return client.get(`/classes/${classId}/staff`, options)
+    },
+    listStaffInvitations(options) {
+      return client.get('/classes/staff-invitations', options)
+    },
+    inviteCoInstructor(classId, universityEmail, options) {
+      return client.post(`/classes/${classId}/staff/invitations`, { universityEmail }, options)
+    },
+    acceptStaffInvitation(classId, options) {
+      return client.post(`/classes/${classId}/staff/invitations/accept`, {}, options)
+    },
+    transferPrimary(classId, nextPrimaryId, formerPrimary, options) {
+      return client.post(`/classes/${classId}/staff/transfer`, { nextPrimaryId, formerPrimary }, options)
+    },
+    leaveClassStaff(classId, options) {
+      return client.post(`/classes/${classId}/staff/leave`, {}, options)
+    },
+    removeCoInstructor(classId, instructorId, options) {
+      return client.post(`/classes/${classId}/staff/${instructorId}/remove`, {}, options)
+    },
+    previewStudentInvitationCsv(classId, csv, options) {
+      return client.post(`/classes/${classId}/invitations/import/preview`, { csv }, options)
+    },
+    confirmStudentInvitationCsv(classId, csv, fingerprint, options) {
+      return client.post(`/classes/${classId}/invitations/import/confirm`, { csv, fingerprint }, options)
+    },
     updateClass(classId, input, options) {
       return client.patch(`/classes/${classId}`, input, options)
     },

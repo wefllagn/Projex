@@ -33,10 +33,17 @@ export interface GitTransportAccess {
     status: ProjectTaskStatus
     dueDate: Date
     class: {
-      instructorId: string
+      instructorId: string | null
+      teachingStaff: { instructorId: string; status: string }[]
       status: ClassStatus
       membership: { status: ClassMemberStatus } | null
     }
+  } | null
+  classWorkspace: {
+    status: ClassStatus
+    instructorId: string | null
+    teachingStaff: { instructorId: string; status: string }[]
+    membership: { status: ClassMemberStatus } | null
   } | null
   teamLeadStudentId: string | null
 }

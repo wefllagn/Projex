@@ -70,6 +70,76 @@ beforeEach(async () => {
 afterAll(async () => prisma.$disconnect())
 
 describe('PostgreSQL repository collaboration', () => {
+  it('provisions one private Student class workspace and limits discovery to its owner and current teaching staff', async () => {
+    const primary = await createActiveUser(prisma, 'INSTRUCTOR')
+    const co = await createActiveUser(prisma, 'INSTRUCTOR')
+    const pending = await createActiveUser(prisma, 'INSTRUCTOR')
+    const outsider = await createActiveUser(prisma, 'INSTRUCTOR')
+    const owner = await createActiveUser(prisma, 'STUDENT')
+    const classmate = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, primary.id)
+    await createActiveMembership(prisma, classRecord.id, owner.id)
+    await createActiveMembership(prisma, classRecord.id, classmate.id)
+    await prisma.classTeachingStaff.createMany({ data: [
+      { classId: classRecord.id, instructorId: co.id, invitedById: primary.id, status: 'ACTIVE', acceptedAt: currentTime },
+      { classId: classRecord.id, instructorId: pending.id, invitedById: primary.id, status: 'INVITED' },
+    ] })
+    const { repositories } = services()
+    const created = await repositories.createClassWorkspace(owner, classRecord.id)
+    expect(created).toMatchObject({ classId: classRecord.id, repositoryType: 'CLASS_WORKSPACE', projectTaskId: null, teamId: null, visibility: 'PRIVATE', owner: { userId: owner.id } })
+    expect(await prisma.repositoryProvisioningJob.count({ where: { repositoryId: created.id } })).toBe(1)
+    await expect(repositories.createClassWorkspace(owner, classRecord.id)).rejects.toMatchObject({ statusCode: 409 })
+    await expect(prisma.repository.create({ data: { classId: classRecord.id, ownerId: owner.id, repositoryType: 'CLASS_WORKSPACE', repositoryName: 'duplicate', slug: 'duplicate', visibility: 'PRIVATE' } })).rejects.toMatchObject({ code: 'P2002' })
+    for (const caller of [primary, co, owner]) expect((await repositories.get(caller, created.id)).id).toBe(created.id)
+    for (const caller of [pending, outsider, classmate]) await expect(repositories.get(caller, created.id)).rejects.toMatchObject({ statusCode: 404 })
+    for (const caller of [pending, outsider, classmate]) expect((await repositories.list(caller, { page: 1, pageSize: 20, search: 'Workspace' })).repositories).toEqual([])
+    await expect(repositories.createClassWorkspace(classmate, classRecord.id)).resolves.toMatchObject({ owner: { userId: classmate.id } })
+    await prisma.classMember.update({ where: { classId_studentId: { classId: classRecord.id, studentId: owner.id } }, data: { status: 'REMOVED' } })
+    await expect(repositories.get(owner, created.id)).rejects.toMatchObject({ statusCode: 404 })
+    expect((await repositories.list(owner, { page: 1, pageSize: 20 })).repositories.some((item) => item.id === created.id)).toBe(false)
+    expect(await prisma.activitySubmission.count()).toBe(0)
+  })
+
+  it('shows only recorded operations and authenticated push counts to authorized repository participants', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const otherInstructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const owner = await createActiveUser(prisma, 'STUDENT', 'Team Lead')
+    const member = await createActiveUser(prisma, 'STUDENT', 'Team Member')
+    const classmate = await createActiveUser(prisma, 'STUDENT', 'Classmate')
+    const admin = await createActiveUser(prisma, 'ADMIN')
+    const { classRecord, projectTask } = await publishedTask(instructor.id)
+    for (const student of [owner, member, classmate]) await createActiveMembership(prisma, classRecord.id, student.id)
+    const { repositories } = services()
+    const created = await repositories.createClassProject(owner, projectTask.id, { teamName: 'Event Team', repositoryName: 'Event Repository' })
+    const invitation = await repositories.createInvitation(owner, created.id, { inviteeUserId: member.id })
+    await repositories.acceptInvitation(member, invitation.invitationId)
+    await prisma.repositoryActivity.createMany({ data: [
+      { repositoryId: created.id, actorType: 'SYSTEM', activityType: 'REPOSITORY_PROVISIONED', activityAt: new Date('2030-09-01T01:00:00Z') },
+      { repositoryId: created.id, userId: owner.id, actorType: 'USER', activityType: 'PUSH', activityAt: new Date('2030-09-01T02:00:00Z'), metadataJson: { privateMarker: 'never project' } },
+      { repositoryId: created.id, userId: member.id, actorType: 'USER', activityType: 'PUSH', activityAt: new Date('2030-09-01T03:00:00Z') },
+      { repositoryId: created.id, userId: member.id, actorType: 'USER', activityType: 'PUSH', activityAt: new Date('2030-09-01T04:00:00Z') },
+      { repositoryId: created.id, userId: owner.id, actorType: 'USER', activityType: 'COMMIT', activityAt: new Date('2030-09-01T05:00:00Z') },
+    ] })
+    const result = await repositories.listRecordedActivity(instructor, created.id, { page: 1, pageSize: 2 })
+    expect(result.repositoryId).toBe(created.id)
+    expect(result.pagination).toMatchObject({ totalItems: 4, totalPages: 2, hasNextPage: true })
+    expect(result.events).toMatchObject([{ activityType: 'PUSH', actor: { userId: member.id } }, { activityType: 'PUSH', actor: { userId: member.id } }])
+    expect(result.contributions).toEqual([
+      { userId: member.id, fullName: member.fullName, acceptedPushes: 2 },
+      { userId: owner.id, fullName: owner.fullName, acceptedPushes: 1 },
+    ])
+    expect(JSON.stringify(result)).not.toContain('privateMarker')
+    expect((await repositories.listRecordedActivity(owner, created.id, { page: 2, pageSize: 2 })).events.at(-1)).toMatchObject({ activityType: 'REPOSITORY_PROVISIONED', actor: null })
+    await expect(repositories.listRecordedActivity(member, created.id, { page: 1, pageSize: 20 })).resolves.toMatchObject({ pagination: { totalItems: 4 } })
+    await expect(repositories.listRecordedActivity(admin, created.id, { page: 1, pageSize: 20 })).resolves.toMatchObject({ pagination: { totalItems: 4 } })
+    for (const denied of [classmate, otherInstructor]) {
+      await expect(repositories.listRecordedActivity(denied, created.id, { page: 1, pageSize: 20 })).rejects.toMatchObject({ code: 'REPOSITORY_NOT_FOUND' })
+    }
+    const membership = await prisma.repositoryMember.findUniqueOrThrow({ where: { repositoryId_studentId: { repositoryId: created.id, studentId: member.id } } })
+    await repositories.transitionMember(owner, created.id, membership.id, { action: 'REMOVE', expectedUpdatedAt: membership.updatedAt })
+    await expect(repositories.listRecordedActivity(member, created.id, { page: 1, pageSize: 20 })).rejects.toMatchObject({ code: 'REPOSITORY_NOT_FOUND' })
+  })
+
   it('creates synchronized class-project metadata with server-controlled visibility', async () => {
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const owner = await createActiveUser(prisma, 'STUDENT', 'Team Lead')

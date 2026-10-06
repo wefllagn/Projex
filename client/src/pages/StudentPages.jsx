@@ -3,8 +3,9 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
-import { classHref, classInitial, firstName } from '../classes/class-links.js'
+import { classHref, classInitial, classOfferingLabel, firstName } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { WorkHubList } from '../work-hub/WorkHubViews.jsx'
 import { StudentClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
 import { StudentActivityDetail, StudentActivityList } from '../activities/StudentActivityViews.jsx'
 import {
@@ -43,7 +44,7 @@ function StudentProfileMenu() {
 
   return (
     <div className="student-profile-menu">
-      <button type="button" className="student-profile-trigger" onClick={() => setOpen(!open)}>
+      <button type="button" className="student-profile-trigger" aria-label="Account menu" onClick={() => setOpen(!open)}>
         <span className="student-user-avatar" aria-hidden="true" />
         <span className="student-user-name">
           <strong>{auth.user.fullName}</strong>
@@ -100,9 +101,9 @@ function ClassHeader({ activeTab }) {
           <div>
             <h1>{selectedClass?.className || 'Select a class'}</h1>
             <div className="student-course-meta">
-              {selectedClass && <span>{selectedClass.section}</span>}
+              {selectedClass && <span>{classOfferingLabel(selectedClass)}</span>}
               {selectedClass && <span>{selectedClass.instructor.fullName}</span>}
-              {selectedClass && <span>{selectedClass.status === 'ARCHIVED' ? 'Archived' : `${selectedClass.semester} · ${selectedClass.schoolYear}`}</span>}
+              {selectedClass?.status === 'ARCHIVED' && <span>Archived</span>}
             </div>
           </div>
         </div>
@@ -217,6 +218,11 @@ function HomeDashboardPage() {
           ))}
         </section>
 
+        <nav className="work-hub-dashboard-links" aria-label="Academic work">
+          <NavLink to="/student/todo">View cross-class To-do</NavLink>
+          <NavLink to="/student/submissions">View My Submissions</NavLink>
+        </nav>
+
         <StudentClassInvitationPanel preview />
 
         <section className="student-home-classes student-home-classes-panel">
@@ -236,7 +242,7 @@ function HomeDashboardPage() {
                 </span>
                 <div>
                   <strong>{item.className}</strong>
-                  <span>{item.section}</span>
+                  <span>{classOfferingLabel(item)}</span>
                   <span>{item.instructor.fullName}</span>
                 </div>
                 <div className="student-home-class-schedule">
@@ -272,7 +278,7 @@ function StudentClassesPage() {
             <section className="student-global-panel class-overview-card">
               <span className="class-status-chip">{selectedClass.status}</span>
               <h2>{selectedClass.className}</h2>
-              <p>{selectedClass.section} · {selectedClass.semester} · {selectedClass.schoolYear}</p>
+              <p>{classOfferingLabel(selectedClass)}</p>
               <p>Instructor: {selectedClass.instructor.fullName}</p>
               <small>{selectedClass.status === 'ARCHIVED' ? 'This class is read-only.' : 'Your membership grants access to this class.'}</small>
             </section>
@@ -302,11 +308,10 @@ function StudentClassesPage() {
                 <span className={`student-class-dot student-class-dot--${initial.toLowerCase()}`}>{initial}</span>
                 <div>
                   <strong>{item.className}</strong>
-                  <span>{item.section}</span>
+                  <span>{classOfferingLabel(item)}</span>
                   <span>{item.instructor.fullName}</span>
                 </div>
                 <div className="student-home-class-schedule">
-                  <span>{item.semester} · {item.schoolYear}</span>
                   <span>{item.status === 'ARCHIVED' ? 'Archived · read-only' : 'Active'}</span>
                 </div>
                 <span className="student-home-card-action" aria-hidden="true" />
@@ -400,19 +405,13 @@ function StudentGlobalPage({ title, eyebrow, action, children }) {
 function StudentTodoPage() {
   return (
     <StudentGlobalPage eyebrow="Student To-do" title="To-do">
-      <section className="student-global-panel student-todo-board">
-        <RequestState
-          kind="unavailable"
-          title="Consolidated to-do is not available"
-          message="Projex does not currently provide an authoritative cross-class task list. Open a class to review its real activities and project requirements, or open your repository catalog for repository work."
-        />
-        <div className="student-submit-modal-actions">
-          <NavLink className="student-primary-action" to="/student/classes">View my classes</NavLink>
-          <NavLink className="student-outline-action" to="/student/repositories">View my repositories</NavLink>
-        </div>
-      </section>
+      <WorkHubList view="todo" />
     </StudentGlobalPage>
   )
+}
+
+function StudentGlobalSubmissionsPage() {
+  return <StudentGlobalPage eyebrow="Academic Work" title="My Submissions"><WorkHubList view="submissions" /></StudentGlobalPage>
 }
 
 function JoinClassModal({ onClose, onJoin }) {
@@ -630,7 +629,7 @@ export function StudentRoutePage({ pagePath }) {
       </StudentGlobalPage>
     ),
     activity: <ActivitiesPage />,
-    submissions: <DeferredStudentPage title="My Submissions" message="A global cross-class submission list still needs a bounded backend read contract. Open a real activity to view its official attempts." />,
+    submissions: <StudentGlobalSubmissionsPage />,
     'activity/:activityId': <ActivityDetailPage />,
     'activity/:activityId/workspace': <StudentProgrammingWorkspace />,
     'activity/:activityId/submissions': <SubmissionHistoryPage />,

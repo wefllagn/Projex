@@ -35,6 +35,32 @@ function baseApi(overrides = {}) {
 }
 
 describe('Phase 10C.2 repository collaboration', () => {
+  it('loads a Personal repository without requesting unsupported invitations', async () => {
+    const personal = { ...repository, repositoryType: 'PERSONAL', projectTaskId: null, teamId: null, visibility: 'PRIVATE' }
+    const api = baseApi({ listRepositoryInvitations: vi.fn().mockRejectedValue(new ApiError({ status: 404, code: 'REPOSITORY_NOT_FOUND', message: 'The requested Projex record was not found.' })) })
+    render(<RepositoryCollaborationPanel role="student" owner repository={personal} project={null} api={api} onRepositoryChange={vi.fn()} onReloadRepository={vi.fn()} />)
+    expect(await screen.findByText('Safe Teammate')).toBeInTheDocument()
+    expect(api.listRepositoryInvitations).not.toHaveBeenCalled()
+    expect(screen.queryByText('The requested Projex record was not found.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Invited Student')).not.toBeInTheDocument()
+  })
+
+  it('continues to load collaborative invitations for an authorized Class Project owner', async () => {
+    const api = baseApi()
+    render(<RepositoryCollaborationPanel role="student" owner repository={repository} project={project} api={api} onRepositoryChange={vi.fn()} onReloadRepository={vi.fn()} />)
+    expect(await screen.findByText('Invited Student')).toBeInTheDocument()
+    expect(api.listRepositoryInvitations).toHaveBeenCalledWith(repository.id, { signal: expect.any(AbortSignal) })
+  })
+
+  it('does not request Class Project invitations for a Class Workspace', async () => {
+    const workspace = { ...repository, repositoryType: 'CLASS_WORKSPACE', projectTaskId: null, teamId: null, classId: 'class-1', visibility: 'PRIVATE' }
+    const api = baseApi()
+    render(<RepositoryCollaborationPanel role="student" owner repository={workspace} project={null} api={api} onRepositoryChange={vi.fn()} onReloadRepository={vi.fn()} />)
+    expect(await screen.findByText('Safe Teammate')).toBeInTheDocument()
+    expect(api.listRepositoryInvitations).not.toHaveBeenCalled()
+    expect(screen.queryByText('Invited Student')).not.toBeInTheDocument()
+  })
+
   it('shows received invitations in the repository experience and adopts accept/decline responses', async () => {
     const secondInvitation = { ...invitation, invitationId: 'invite-2', invitee: { userId: 'student-4', fullName: 'Second Student' } }
     const api = {

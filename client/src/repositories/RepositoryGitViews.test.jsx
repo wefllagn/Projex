@@ -138,6 +138,39 @@ describe('repository Git panel', () => {
     expect(screen.queryByText('Empty Git repository')).not.toBeInTheDocument()
   })
 
+  it('finishes a branch request that remains pending through the loading render', async () => {
+    let resolveBranches
+    const api = apiMock({ listBranches: vi.fn().mockImplementation(() => new Promise((resolve) => { resolveBranches = resolve })) })
+    render(<RepositoryGitPanel repository={repository} api={api} />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Branches' }))
+    expect(await screen.findByText('Loading branches.')).toBeInTheDocument()
+    await waitFor(() => expect(api.listBranches).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole('tab', { name: 'History' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Branches' }))
+
+    resolveBranches({ data: [{ ...summary.latestCommit, branchName: 'main', isDefault: true }] })
+    expect(await screen.findByText('main')).toBeInTheDocument()
+    expect(screen.getByText('Default')).toBeInTheDocument()
+    expect(screen.queryByText('Loading branches.')).not.toBeInTheDocument()
+  })
+
+  it('shows a branch request failure and recovers after refreshing Git status', async () => {
+    let rejectBranches
+    const pending = new Promise((_, reject) => { rejectBranches = reject })
+    const api = apiMock({ listBranches: vi.fn()
+      .mockReturnValueOnce(pending)
+      .mockResolvedValue({ data: [{ ...summary.latestCommit, branchName: 'main', isDefault: true }] }) })
+    render(<RepositoryGitPanel repository={repository} api={api} />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Branches' }))
+    expect(await screen.findByText('Loading branches.')).toBeInTheDocument()
+    rejectBranches(new Error('request failed'))
+    expect(await screen.findByText('Branches unavailable')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Git status' }))
+    expect(await screen.findByText('main')).toBeInTheDocument()
+    expect(api.listBranches).toHaveBeenCalledTimes(2)
+  })
+
   it('loads commit detail and an explicit parent diff while explaining Git author identity', async () => {
     const api = apiMock()
     render(<RepositoryGitPanel repository={repository} api={api} />)

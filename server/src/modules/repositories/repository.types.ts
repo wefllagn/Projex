@@ -18,6 +18,7 @@ import type {
 export interface RepositoryRecord {
   id: string
   projectTaskId: string | null
+  classId: string | null
   teamId: string | null
   ownerId: string
   repositoryType: RepositoryType
@@ -40,8 +41,9 @@ export interface RepositoryRecord {
     classId: string
     dueDate: Date
     status: ProjectTaskStatus
-    class: { id: string; instructorId: string; status: ClassStatus }
+    class: { id: string; instructorId: string | null; status: ClassStatus; teachingStaff?: { instructorId: string; status: string }[] }
   } | null
+  class: { id: string; instructorId: string | null; status: ClassStatus; teachingStaff?: { instructorId: string; status: string }[] } | null
   team: { id: string; leadStudentId: string } | null
 }
 
@@ -58,6 +60,7 @@ export interface RepositoryAccessRecord {
 export interface RepositoryProjection {
   id: string
   projectTaskId: string | null
+  classId: string | null
   teamId: string | null
   repositoryType: RepositoryType
   repositoryName: string
@@ -74,6 +77,19 @@ export interface RepositoryProjection {
   readyForReviewAt: Date | null
   approvedAt: Date | null
   archivedAt: Date | null
+}
+
+export interface RepositoryActivityProjection {
+  id: string
+  activityType: 'REPOSITORY_PROVISIONED' | 'PUSH'
+  activityAt: Date
+  actor: { userId: string; fullName: string } | null
+}
+
+export interface RepositoryContributionProjection {
+  userId: string
+  fullName: string
+  acceptedPushes: number
 }
 
 export interface RepositoryMemberProjection {
@@ -121,6 +137,7 @@ export function toRepositoryProjection(record: RepositoryRecord): RepositoryProj
   return {
     id: record.id,
     projectTaskId: record.projectTaskId,
+    classId: record.classId,
     teamId: record.teamId,
     repositoryType: record.repositoryType,
     repositoryName: record.repositoryName,

@@ -6,6 +6,7 @@ import ProtectedRoute from '../auth/ProtectedRoute.jsx'
 import ClassProvider from '../classes/ClassProvider.jsx'
 import { InstructorRoutePage } from './InstructorPages.jsx'
 import { StudentRoutePage } from './StudentPages.jsx'
+import { apiClient } from '../api/api-client.js'
 
 const pagination = {
   page: 1,
@@ -32,7 +33,8 @@ function auth(role) {
 }
 
 describe('Phase 10 closeout routes', () => {
-  it('renders an honest student to-do backend gap without prototype academic records', () => {
+  it('renders authoritative cross-class Student to-do rows without prototype academic records', async () => {
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue({ data: [{ id: 'activity-1', kind: 'activity', title: 'Actual programming work', dueDate: '2030-01-01T00:00:00.000Z', dueState: 'upcoming', hasSubmission: false, class: { id: 'class-1', className: 'Actual class', officialClassCode: null, section: null, semester: null, schoolYear: null } }], pagination: { ...pagination, totalItems: 1 } })
     const { container } = render(
       <AuthContext.Provider value={auth('STUDENT')}>
         <MemoryRouter initialEntries={['/student/todo']}>
@@ -42,15 +44,15 @@ describe('Phase 10 closeout routes', () => {
     )
 
     expect(screen.getByRole('heading', { name: 'To-do' })).toBeInTheDocument()
-    expect(screen.getByText('Consolidated to-do is not available')).toBeInTheDocument()
-    expect(screen.getByText(/does not currently provide an authoritative cross-class task list/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'View my classes' })).toHaveAttribute('href', '/student/classes')
-    expect(screen.getByRole('link', { name: 'View my repositories' })).toHaveAttribute('href', '/student/repositories')
+    expect(await screen.findByText('Actual programming work')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open record' })).toHaveAttribute('href', '/student/activity/activity-1?classId=class-1')
+    expect(get).toHaveBeenCalledWith('/work-hub/student/todo?page=1&pageSize=20', expect.any(Object))
     expect(screen.queryByText('Prelim Programming Exercise 1 LAB')).not.toBeInTheDocument()
     expect(screen.queryByText('Prelim Group Project 1 Specifications')).not.toBeInTheDocument()
     expect(screen.queryByText(/IT 112 - BSIT 2A/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Jul 3, 2026/i)).not.toBeInTheDocument()
     expect(container.querySelector('[href*="prelim-group-project-1"]')).not.toBeInTheDocument()
+    get.mockRestore()
   })
 
   it('keeps the student to-do route protected from an instructor account', () => {
@@ -72,7 +74,7 @@ describe('Phase 10 closeout routes', () => {
     expect(screen.queryByRole('heading', { name: 'To-do' })).not.toBeInTheDocument()
   })
 
-  it('describes the instructor review queue as a current backend gap', async () => {
+  it('links the Instructor dashboard to the current review queue', async () => {
     const client = {
       get: vi.fn().mockResolvedValue({ data: [], pagination }),
       post: vi.fn(),
@@ -88,8 +90,7 @@ describe('Phase 10 closeout routes', () => {
       </AuthContext.Provider>,
     )
 
-    expect(await screen.findByText('Cross-class review queue unavailable')).toBeInTheDocument()
-    expect(screen.getByText(/bounded backend contract/i)).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Open review queue' })).toHaveAttribute('href', '/instructor/review-queues')
     expect(screen.queryByText(/will be connected in Phase 10B and 10C/i)).not.toBeInTheDocument()
   })
 })

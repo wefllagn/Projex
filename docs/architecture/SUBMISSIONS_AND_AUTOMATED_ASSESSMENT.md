@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document is the current Phase 6 contract for backend-only submission, automated Java assessment, instructor review/release, infrastructure-failure replacement, and Run Visible Tests behavior.
+This document records the Phase 6 submission/assessment contract and the bounded Iteration 2 Instructor review-rerun extension. The original submission, score, and release contract remains unchanged.
 
 Phase 6 does not integrate the frontend, calculate course grades, implement rubrics or similarity analysis, permit post-release correction/versioning, execute Java on an internet-accessible host, or begin project/repository work.
 
@@ -12,6 +12,7 @@ Phase 6 does not integrate the frontend, calculate course grades, implement rubr
 - `local_process` is accepted only when `NODE_ENV` is not `production` and only for controlled local verification/demonstration.
 - The API process never invokes `javac` or `java`. It persists a durable job; a separate worker claims and executes it.
 - The worker invokes executables with argument arrays and `shell: false`, compiles with `--release 17`, uses a unique server-created temporary directory, compiles once per job, bounds time/output, applies a JVM heap limit, kills the process tree on a limit, and removes the directory afterward.
+- Instructor review reruns use that same separate worker and runner, with their own durable `INSTRUCTOR_REVIEW_RUN` job target. They never reuse the official assessment job or Student practice record.
 - Client payloads cannot select commands, executables, flags, paths, environment variables, test visibility, test inputs, or limits.
 - Phase 6 local-process controls are not a complete hostile-code sandbox. Container or equivalent CPU, process, network, and filesystem isolation is required before internet-hosted Java execution is enabled.
 
@@ -122,6 +123,7 @@ The projection is observational. Official submission creation remains the concur
 | View hidden evidence | Never | Owned class | No |
 | Correct/review/release | No | Owned class, unarchived state | No |
 | Retry/resolve infrastructure failure | No | Owned class, unarchived state | No |
+| Start/read fresh review rerun | No | Owned class, unarchived start; historical read after archive | No |
 
 Before release, students receive visible-test outcomes but no numeric scores, corrections, instructor points, final score, or feedback. After release they may receive the released final score, total points, and released feedback. Students never receive hidden-test inputs, expected outputs, identifiers, names, individual outcomes, points, or counts.
 
@@ -134,6 +136,16 @@ Java output comparison first normalizes CRLF and CR line endings to LF. Exact no
 The transaction snapshots only `isHidden=false` test cases and creates a short-lived `PracticeExecution`, visible-case records, and durable `VISIBLE_TEST_RUN` job. It does not create an `ActivitySubmission`, attempt number, idempotency record, score, feedback, or official history.
 
 Creation is protected by a per-student rate limit and per-student/activity active-job capacity. `GET /api/v1/visible-test-runs/:runId` returns only the owning student's result or the owning instructor's result. Phase 9A removes administrator access to individual practice-run outcomes.
+
+## Instructor review rerun (Iteration 2)
+
+`POST /api/v1/submissions/:submissionId/review-runs` accepts an empty JSON object. It requires an ACTIVE owning Instructor, cookie authentication, CSRF, controlled local Java execution, and an unarchived activity/class. The request does not accept source, stdin, test selection, paths, or execution limits. One active review run per Instructor and at most ten requests per rolling minute bound use. A CLOSED activity and a RELEASED submission may still be rerun; archive blocks new work.
+
+The transaction copies the original submission's saved test-case input/expected-output snapshots into a separate `ReviewExecution` and cases, then creates one `ExecutionJob`. The worker reads the original immutable `ActivitySubmission.sourceCode`, compiles it in a new temporary directory, supplies each saved stdin value, and records fresh compiler/runtime/output evidence in the review-run tables. It never writes `ActivitySubmission`, `SubmissionExecution`, `TestCaseResult`, attempt allowance, score corrections, feedback, or released score. An infrastructure retry or exhausted lease affects only the review-run target. A rerun's case comparison is diagnostic; it never regrades the submission.
+
+`GET /api/v1/submissions/:submissionId/review-runs/:runId` requires the current owning Instructor and matching submission identity. It returns the bounded run status, compiler output, and saved-input/expected/fresh-actual case evidence (including hidden cases) only to that Instructor. Students and Administrators cannot retrieve a review run. A previously authorized run remains readable after archive, but no new run can start. The frontend polls non-overlapping requests for a bounded interval, stops on terminal state or unmount, and offers a manual refresh afterward. Cancelling browser polling does not cancel server execution.
+
+The existing local-process Java boundary is still not an OS-level hostile-code sandbox. No normal-development database migration is implied by the test-database verification of this extension.
 
 ## Archive terminal state
 
@@ -161,6 +173,8 @@ PUT  /api/v1/submissions/:submissionId/review
 POST /api/v1/submissions/:submissionId/release
 POST /api/v1/submissions/:submissionId/assessment/retry
 POST /api/v1/submissions/:submissionId/assessment/resolve-failure
+POST /api/v1/submissions/:submissionId/review-runs
+GET  /api/v1/submissions/:submissionId/review-runs/:runId
 ```
 
 All mutation endpoints require JSON, cookie authentication, CSRF validation, Zod validation, and backend role/ownership/state checks. Mutation logs include IDs, state, actor, and safe failure code only; they redact source, hashes, test data/results, compiler output, feedback/reasons, credentials, cookies, tokens, and database URLs.

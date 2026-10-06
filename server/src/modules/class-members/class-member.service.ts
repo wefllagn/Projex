@@ -4,7 +4,7 @@ import type { PaginationMeta } from '../../shared/http/response.js'
 import type { SafeUserProfile } from '../auth/auth.types.js'
 import { normalizeClassCode } from '../classes/class-code.js'
 import type { ClassRepository } from '../classes/class.repository.js'
-import { toClassProjection, type ClassAccessRecord } from '../classes/class.types.js'
+import { isTeachingInstructor, toClassProjection, type ClassAccessRecord } from '../classes/class.types.js'
 import type {
   ClassMemberRecord,
   ClassMemberRepository,
@@ -88,7 +88,7 @@ function isOwnerOrAdmin(
   return (
     caller.role === 'ADMIN' ||
     (caller.role === 'INSTRUCTOR' &&
-      access.classRecord.instructorId === caller.id)
+      isTeachingInstructor(access.classRecord, caller.id))
   )
 }
 

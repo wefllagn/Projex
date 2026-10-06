@@ -68,6 +68,8 @@ GET    /api/v1/activities/:activityId/attempt-state
 POST   /api/v1/activities/:activityId/visible-test-runs
 GET    /api/v1/visible-test-runs/:runId
 GET    /api/v1/submissions/:submissionId
+POST   /api/v1/submissions/:submissionId/review-runs
+GET    /api/v1/submissions/:submissionId/review-runs/:runId
 POST   /api/v1/submissions/:submissionId/score-corrections
 PUT    /api/v1/submissions/:submissionId/review
 POST   /api/v1/submissions/:submissionId/release
@@ -185,6 +187,8 @@ Implemented examples reflect their actual contracts. Future-feature examples rem
 - A replacement never bypasses an archived class/activity, inactive account, removed membership, expiration, or single-use consumption.
 - `POST /activities/:activityId/submissions` returns `201` for a new accepted attempt and `200` with `meta.idempotentReplay=true` for an exact replay.
 - `POST /activities/:activityId/visible-test-runs` returns `202`, creates only a short-lived practice job, executes only visible test snapshots, accepts no custom stdin, and creates no submission, attempt, history, or score.
+- `POST /submissions/:submissionId/review-runs` returns `202` to the ACTIVE owning Instructor only. Its empty JSON body cannot supply source, stdin, tests, paths, or limits. It queues a separate diagnostic rerun of the immutable submitted source against the submission's saved test inputs, subject to one active run per Instructor and ten starts per minute. It does not change official assessment, attempts, review, or released score. Archived activity/class state blocks new runs; CLOSED activities and RELEASED submissions are allowed.
+- `GET /submissions/:submissionId/review-runs/:runId` returns the exact run only to the current owning Instructor. It includes fresh compiler/runtime and per-case output diagnostics, including hidden-case evidence in this Instructor-only boundary. Students and Administrators cannot access it. A wrong submission/run pairing fails closed.
 - Students may immediately receive visible-test outcomes. Before release they receive no numeric score, correction, instructor points, final score, or feedback. After release they receive only the released final score, activity total, and released feedback.
 - Student responses never contain hidden-test inputs, expected outputs, identifiers, names, individual outcomes, individual points, or hidden-test counts.
 - Owning ACTIVE instructors may read detailed assessment evidence, append score corrections, save review/feedback drafts, release results, retry exhausted infrastructure failures, and resolve failures. Administrators have safe read-only submission access and cannot grade, correct, release, retry, or resolve failures.

@@ -11,6 +11,7 @@ import { formatProjectDate, formatProjectStatus, projectMatchesClass, projectTas
 import useBoundedPolling from '../submissions/use-bounded-polling.js'
 import { repositoryApi } from './repository-api.js'
 import { RepositoryGitPanel } from './RepositoryGitViews.jsx'
+import { RepositoryActivityPanel } from './RepositoryActivityPanel.jsx'
 import {
   RepositoryCollaborationPanel,
   RepositoryLifecyclePanel,
@@ -53,12 +54,16 @@ function StorageState({ status }) {
 
 function RepositoryRow({ repository, role = 'student' }) {
   return (
-    <NavLink to={repositoryPath(repository, role)} className={`student-repository-index-row student-repository-index-row--${repository.repositoryType === 'PERSONAL' ? 'personal' : 'active'}`}>
-      <span className="student-repository-row-icon" aria-hidden="true" />
-      <strong>{repository.repositoryName}</strong>
-      <span>{repository.repositoryType === 'PERSONAL' ? 'Personal repository' : 'Class project repository'}</span>
-      <small>{formatRepositoryLabel(repository.storageStatus)}</small>
-      <em>{formatRepositoryLabel(repository.status)}</em>
+    <NavLink to={repositoryPath(repository, role)} className={`student-repository-index-row repository-catalog-row student-repository-index-row--${repository.repositoryType === 'PERSONAL' ? 'personal' : 'active'}`}>
+      <span className="repository-catalog-row__identity">
+        <span className="student-repository-row-icon" aria-hidden="true" />
+        <strong>{repository.repositoryName}</strong>
+      </span>
+      <span className="repository-catalog-row__metadata">
+        <span>{repository.repositoryType === 'PERSONAL' ? 'Personal repository' : repository.repositoryType === 'CLASS_WORKSPACE' ? 'Class workspace' : 'Class project repository'}</span>
+        <small>{formatRepositoryLabel(repository.storageStatus)}</small>
+        <em>{formatRepositoryLabel(repository.status)}</em>
+      </span>
     </NavLink>
   )
 }
@@ -79,11 +84,28 @@ function PersonalRepositoryForm({ busy, onSubmit, onCancel }) {
   )
 }
 
+function ClassWorkspaceForm({ classes, busy, onSubmit, onCancel }) {
+  const [classId, setClassId] = useState('')
+  return (
+    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="class-workspace-title">
+      <form className="student-action-modal project-repository-create class-workspace-form" onSubmit={(event) => { event.preventDefault(); if (classId) onSubmit(classId) }}>
+        <button type="button" className="student-modal-close" onClick={onCancel} aria-label="Close class workspace" />
+        <p>Individual Class Workspace</p><h2 id="class-workspace-title">Create your class Git workspace</h2>
+        <label>Enrolled class<select value={classId} onChange={(event) => setClassId(event.target.value)} disabled={busy} required><option value="">Select a class</option>{classes.filter((item) => item.status === 'ACTIVE').map((item) => <option key={item.id} value={item.id}>{item.className}</option>)}</select></label>
+        <p className="activity-lifecycle-note">One workspace per Student and Class. Creating or pushing to Git does not submit academic work.</p>
+        <div className="student-submit-modal-actions"><button type="button" className="student-outline-action" onClick={onCancel} disabled={busy}>Cancel</button><button type="submit" className="student-primary-action" disabled={busy || !classId}>{busy ? 'Creating…' : 'Create Workspace'}</button></div>
+      </form>
+    </div>
+  )
+}
+
 export function StudentRepositoryCatalog({ archived = false, api = repositoryApi }) {
   const capabilities = useCapabilities()
+  const { classes = [], loadMore, pagination: classPagination } = useClasses()
   const [query, setQuery] = useState({ ...FIRST_PAGE, repositoryType: '', status: archived ? 'ARCHIVED' : 'ACTIVE' })
   const [state, setState] = useState({ status: 'loading', items: [], pagination: null, error: null })
   const [createOpen, setCreateOpen] = useState(false)
+  const [workspaceOpen, setWorkspaceOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [actionError, setActionError] = useState(null)
 
@@ -114,23 +136,37 @@ export function StudentRepositoryCatalog({ archived = false, api = repositoryApi
     } catch (error) { setActionError(error) } finally { setCreating(false) }
   }
 
+  const createWorkspace = async (classId) => {
+    setCreating(true); setActionError(null)
+    try {
+      const response = await api.createClassWorkspace(classId)
+      const created = repositoryCatalogProjection(response.data)
+      if (!created.id || created.repositoryType !== 'CLASS_WORKSPACE' || created.classId !== classId) throw repositoryContextError()
+      setWorkspaceOpen(false)
+      setState((current) => ({ ...current, items: [created, ...current.items], pagination: current.pagination ? { ...current.pagination, totalItems: current.pagination.totalItems + 1 } : current.pagination }))
+    } catch (error) { setActionError(error) } finally { setCreating(false) }
+  }
+
   const personal = state.items.filter((item) => item.repositoryType === 'PERSONAL')
   const classProjects = state.items.filter((item) => item.repositoryType === 'CLASS_PROJECT')
+  const workspaces = state.items.filter((item) => item.repositoryType === 'CLASS_WORKSPACE')
   return (
     <>
       <section className="student-repository-stats" aria-label="Repository overview"><article className="student-dashboard-stat"><div><span>Repositories</span><strong>{state.pagination?.totalItems ?? state.items.length}</strong><small>{archived ? 'archived records' : 'authorized records'}</small></div></article><article className="student-dashboard-stat"><div><span>Ready</span><strong>{state.items.filter((item) => item.storageStatus === 'READY').length}</strong><small>on this page</small></div></article><article className="student-dashboard-stat"><div><span>Provisioning</span><strong>{state.items.filter((item) => isProvisioning(item.storageStatus)).length}</strong><small>on this page</small></div></article></section>
       {!archived && <StudentInvitationInbox api={api} />}
       <section className="student-global-panel student-repository-board">
-        <div className="student-assignment-toolbar student-assignment-toolbar--board"><div><strong>{archived ? 'Archived Repositories' : 'My Repository Catalog'}</strong><p>Server-authorized repository and collaboration records.</p></div><div className="repository-catalog-actions"><label className="student-sort-control">Type<select value={query.repositoryType} onChange={(event) => setQuery((current) => ({ ...current, page: 1, repositoryType: event.target.value }))}><option value="">All types</option><option value="CLASS_PROJECT">Class project</option><option value="PERSONAL">Personal</option></select></label>{!archived && <button type="button" className="student-primary-action" disabled={!capabilities.git.provisioning} onClick={() => setCreateOpen(true)}>New Personal Repository</button>}</div></div>
+        <div className="student-assignment-toolbar student-assignment-toolbar--board"><div><strong>{archived ? 'Archived Repositories' : 'My Repository Catalog'}</strong><p>Server-authorized repository and collaboration records.</p></div><div className="repository-catalog-actions"><label className="student-sort-control">Type<select value={query.repositoryType} onChange={(event) => setQuery((current) => ({ ...current, page: 1, repositoryType: event.target.value }))}><option value="">All types</option><option value="CLASS_PROJECT">Class project</option><option value="CLASS_WORKSPACE">Class workspace</option><option value="PERSONAL">Personal</option></select></label>{!archived && <button type="button" className="student-primary-action" disabled={!capabilities.git.provisioning || classes.length === 0} onClick={() => setWorkspaceOpen(true)}>New Class Workspace</button>}{!archived && <button type="button" className="student-primary-action" disabled={!capabilities.git.provisioning} onClick={() => setCreateOpen(true)}>New Personal Repository</button>}</div></div>
+        {!archived && classPagination?.hasNextPage && <button type="button" className="student-outline-action" onClick={loadMore}>Load more enrolled classes</button>}
         {!archived && !capabilities.git.provisioning && <RequestState kind="unavailable" compact title="Repository provisioning unavailable" message="Existing repository records remain available, but this environment cannot create new Git storage." />}
         {state.status === 'loading' && <RequestState kind="loading" compact message="Loading repositories." />}
         {state.status === 'error' && <RequestState kind="unavailable" compact error={state.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />}
         {state.status === 'ready' && state.items.length === 0 && <RequestState kind="empty" compact message={archived ? 'No archived repositories are available.' : 'No repositories match this view.'} />}
-        {state.status === 'ready' && state.items.length > 0 && <div className="repository-foundation-groups">{classProjects.length > 0 && <section><h2>Class Project Repositories</h2><div className="student-repository-index-list">{classProjects.map((repository) => <RepositoryRow repository={repository} key={repository.id} />)}</div></section>}{personal.length > 0 && <section><h2>Personal Repositories</h2><div className="student-repository-index-list">{personal.map((repository) => <RepositoryRow repository={repository} key={repository.id} />)}</div></section>}</div>}
+        {state.status === 'ready' && state.items.length > 0 && <div className="repository-foundation-groups">{workspaces.length > 0 && <section><h2>Class Workspaces</h2><div className="student-repository-index-list">{workspaces.map((repository) => <RepositoryRow repository={repository} key={repository.id} />)}</div></section>}{classProjects.length > 0 && <section><h2>Class Project Repositories</h2><div className="student-repository-index-list">{classProjects.map((repository) => <RepositoryRow repository={repository} key={repository.id} />)}</div></section>}{personal.length > 0 && <section><h2>Personal Repositories</h2><div className="student-repository-index-list">{personal.map((repository) => <RepositoryRow repository={repository} key={repository.id} />)}</div></section>}</div>}
         {state.pagination && state.pagination.totalPages > 1 && <nav className="activity-pagination" aria-label="Repository pages"><button type="button" className="student-outline-action" disabled={!state.pagination.hasPreviousPage} onClick={() => setQuery((current) => ({ ...current, page: state.pagination.page - 1 }))}>Previous</button><span>Page {state.pagination.page} of {state.pagination.totalPages}</span><button type="button" className="student-outline-action" disabled={!state.pagination.hasNextPage} onClick={() => setQuery((current) => ({ ...current, page: state.pagination.page + 1 }))}>Next</button></nav>}
         {actionError && <p className="activity-action-error">{describeApiError(actionError)}</p>}
       </section>
       {createOpen && <PersonalRepositoryForm busy={creating} onSubmit={createPersonal} onCancel={() => { setCreateOpen(false); setActionError(null) }} />}
+      {workspaceOpen && <ClassWorkspaceForm classes={classes} busy={creating} onSubmit={createWorkspace} onCancel={() => { setWorkspaceOpen(false); setActionError(null) }} />}
     </>
   )
 }
@@ -138,7 +174,7 @@ export function StudentRepositoryCatalog({ archived = false, api = repositoryApi
 function RepositoryMetadataForm({ repository, project, busy, notice, error, onSave }) {
   const [form, setForm] = useState({ repositoryName: repository.repositoryName, description: repository.description ?? '' })
   const [dirty, setDirty] = useState(false)
-  const editable = repository.repositoryType === 'PERSONAL'
+  const editable = repository.repositoryType === 'PERSONAL' || repository.repositoryType === 'CLASS_WORKSPACE'
     ? repository.status === 'ACTIVE'
     : repository.status === 'ACTIVE' && project?.status === 'PUBLISHED' && project?.dueState === 'OPEN'
   return (
@@ -255,8 +291,11 @@ export function RepositoryFoundationDetail({ role = 'student', api = repositoryA
             <section className="student-repo-card"><h2>Repository Record</h2><dl className="repository-metadata-list"><div><dt>Type</dt><dd>{formatRepositoryLabel(repository.repositoryType)}</dd></div><div><dt>Visibility</dt><dd>{formatRepositoryLabel(repository.visibility)}</dd></div><div><dt>Owner</dt><dd>{repository.owner.fullName}</dd></div><div><dt>Default branch</dt><dd>{repository.defaultBranch}</dd></div><div><dt>Review state</dt><dd>{formatRepositoryLabel(repository.reviewStatus)}</dd></div><div><dt>Created</dt><dd>{formatProjectDate(repository.createdAt)}</dd></div></dl></section>
             {current.project && <section className="student-repo-card"><h2>Linked Project Requirement</h2><h3>{current.project.title}</h3><p>{current.project.instructions}</p><p>Due {formatProjectDate(current.project.dueDate)} · {formatProjectStatus(current.project.status)}</p></section>}
             {current.projectUnavailable && <RequestState kind="unavailable" compact title="Archived project detail unavailable" message="The archived repository record remains authorized, but the related archived project-task detail is not exposed to students by the current backend." />}
-            <RepositoryCollaborationPanel role={role} owner={owner} repository={repository} project={current.project} api={api} classApi={classApi} onRepositoryChange={applyRepository} onReloadRepository={load} />
+            {repository.repositoryType === 'CLASS_WORKSPACE'
+              ? <section className="student-repo-card"><h2>Individual Class Workspace</h2><p>This is the Student-owned Git workspace for this class. Git pushes preserve work but never submit an academic activity or consume an attempt. Current class teaching staff may inspect source; only the active Student owner may push.</p></section>
+              : <RepositoryCollaborationPanel role={role} owner={owner} repository={repository} project={current.project} api={api} classApi={classApi} onRepositoryChange={applyRepository} onReloadRepository={load} />}
             <RepositoryGitPanel key={repository.id} repository={repository} role={role} project={current.project} owner={owner} />
+            <RepositoryActivityPanel key={`${repository.id}-activity`} repositoryId={repository.id} api={api} />
           </section>
           <aside className="student-repo-side-column">
             <StorageState status={repository.storageStatus} />

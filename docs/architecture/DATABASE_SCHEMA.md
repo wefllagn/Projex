@@ -37,9 +37,11 @@ The authoritative sources are:
 | `SubmissionIdempotency` | `submission_idempotencies` | Hashed student/activity request identity linked to one accepted attempt. |
 | `SubmissionScoreCorrection` | `submission_score_corrections` | Append-only automated-score correction history. |
 | `SubmissionFailureResolution` | `submission_failure_resolutions` | Immutable infrastructure-failure resolution and optional expiring replacement grant. |
-| `ExecutionJob` | `execution_jobs` | Durable official/practice queue record with claim, lease, retry, and terminal state. |
+| `ExecutionJob` | `execution_jobs` | Durable official/practice/Instructor-review queue record with an exclusive target, claim, lease, retry, and terminal state. |
 | `PracticeExecution` | `practice_executions` | Short-lived Run Visible Tests source/job record that is not a submission. |
 | `PracticeExecutionCase` | `practice_execution_cases` | Visible-only practice test snapshot and outcome. |
+| `ReviewExecution` | `review_executions` | Separate Instructor diagnostic run linked to an immutable submission; never a new attempt or score. |
+| `ReviewExecutionCase` | `review_execution_cases` | Saved test-input snapshot and fresh output for that review run, visible only to the owning Instructor. |
 | `ProjectTask` | `project_tasks` | Class project work linked to repositories. |
 | `Team` | `teams` | One class-project team with an immutable lead during Phase 7. |
 | `TeamMember` | `team_members` | Team membership lifecycle synchronized with repository membership. |
@@ -98,6 +100,7 @@ Phase 7 adds:
 - Test-case order is positive and unique per activity, and test-case names are non-empty.
 - Test-case points, automated scores, final scores, automated points, instructor points, correction values, execution time, and optional repository grades cannot be negative where specified.
 - Submission execution completion cannot precede its start.
+- An `ExecutionJob` has exactly one target matching its kind: official submission, Student visible-test run, or Instructor review rerun. Review-run rows and cases are separate from original `SubmissionExecution` and `TestCaseResult` evidence.
 - A similarity record cannot compare a submission with itself, and its percentage is limited to 0 through 100.
 - A `CLASS_PROJECT` repository requires `projectTaskId`; a `PERSONAL` repository forbids it.
 - A partial unique index permits multiple personal repositories while allowing only one repository per non-null `(projectTaskId, ownerId)` pair.

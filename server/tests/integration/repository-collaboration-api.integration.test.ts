@@ -223,6 +223,16 @@ describe('Phase 7 HTTP and PostgreSQL workflow', () => {
     expect(created.body.data).not.toHaveProperty('storagePath')
     const repositoryId = created.body.data.id as string
 
+    await request(app).get(`/api/v1/repositories/${repositoryId}/activity`).expect(401)
+    await prisma.repositoryActivity.create({ data: {
+      repositoryId, userId: owner.id, actorType: 'USER', activityType: 'PUSH',
+      activityAt: new Date(), metadataJson: { rawPrivateMarker: 'not-for-response' },
+    } })
+    const ownerActivity = await ownerAgent.get(`/api/v1/repositories/${repositoryId}/activity?page=1&pageSize=20`).expect(200)
+    expect(ownerActivity.body.data).toMatchObject({ repositoryId, events: [{ activityType: 'PUSH', actor: { userId: owner.id } }], contributions: [{ userId: owner.id, acceptedPushes: 1 }] })
+    expect(JSON.stringify(ownerActivity.body)).not.toContain('rawPrivateMarker')
+    await ownerAgent.get(`/api/v1/repositories/${repositoryId}/activity?pageSize=200`).expect(400)
+
     const classmateAgent = request.agent(app)
     await classmateAgent
       .post('/api/v1/auth/login')
@@ -233,6 +243,7 @@ describe('Phase 7 HTTP and PostgreSQL workflow', () => {
       .get(`/api/v1/repositories/${repositoryId}`)
       .expect(200)
     expect(classmateView.body.data.visibility).toBe('CLASS_ONLY')
+    await classmateAgent.get(`/api/v1/repositories/${repositoryId}/activity`).expect(404)
 
     const outsiderAgent = request.agent(app)
     await outsiderAgent
@@ -245,6 +256,7 @@ describe('Phase 7 HTTP and PostgreSQL workflow', () => {
       .expect(404)
     expect(denied.body.error).toMatchObject({ code: 'REPOSITORY_NOT_FOUND' })
     expect(denied.body.meta.requestId).toEqual(expect.any(String))
+    await outsiderAgent.get(`/api/v1/repositories/${repositoryId}/activity`).expect(404)
 
     const studentMembers = await classmateAgent
       .get(`/api/v1/repositories/${repositoryId}/members`)

@@ -4,6 +4,7 @@ import { ApiError, describeApiError } from '../api/api-client.js'
 import RequestState from '../components/RequestState.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
 import { adminApi } from './admin-api.js'
+import { AdminOfficialMetadataPanel, AdminStudentInvitationCsvPanel, AdminTeachingStaffPanel } from './AdminClassFoundationPanels.jsx'
 import {
   AdminProjectionError,
   projectAdminUser,
@@ -57,6 +58,7 @@ function ErrorNotice({ error }) {
 
 export function AdminAcademicHomePage() {
   const areas = [
+    ['Course Catalog', 'Create, edit, and import reusable Course Number and Course Name records.', '/admin/academic/courses'],
     ['Classes', 'Create and govern real class records, join codes, and memberships.', '/admin/academic/classes'],
     ['Programming activities', 'Inspect lifecycle and aggregate assessment configuration without source or test definitions.', '/admin/academic/activities'],
     ['Submissions', 'Inspect operational submission state and released scores only.', '/admin/academic/submissions'],
@@ -112,7 +114,7 @@ export function AdminClassListPage({ api = adminApi }) {
       <AdminPanel title="Class catalog" eyebrow="Server-filtered records">
         <form className="admin-filter-bar admin-filter-bar--wide" onSubmit={submit} key={searchParams.toString()}>
           <label className="admin-filter-search">Search<input name="search" maxLength="200" defaultValue={search} placeholder="Name, section, semester, or year" /></label>
-          <label>Status<select name="status" defaultValue={status}><option value="">All statuses</option><option>ACTIVE</option><option>ARCHIVED</option></select></label>
+          <label>Status<select name="status" defaultValue={status}><option value="">All statuses</option><option>PREPARED</option><option>ACTIVE</option><option>ARCHIVED</option></select></label>
           <label>Sort<select name="sortBy" defaultValue={sortBy}><option value="createdAt">Created</option><option value="updatedAt">Updated</option><option value="className">Name</option></select></label>
           <label>Order<select name="sortOrder" defaultValue={sortOrder}><option value="desc">Descending</option><option value="asc">Ascending</option></select></label>
           <button className="student-primary-action" type="submit">Apply</button>
@@ -124,8 +126,8 @@ export function AdminClassListPage({ api = adminApi }) {
           <div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>Class</th><th>Instructor</th><th>Term</th><th>Memberships</th><th>Status</th><th /></tr></thead><tbody>
             {state.items.map((item) => <tr key={item.classId}>
               <td><strong>{item.className}</strong><span>{item.section}</span></td>
-              <td><strong>{item.instructor.fullName}</strong><span>{item.instructor.universityEmail}</span></td>
-              <td>{item.semester}<span>{item.schoolYear}</span></td>
+              <td><strong>{item.instructor?.fullName ?? 'Unassigned'}</strong><span>{item.instructor?.universityEmail ?? ''}</span></td>
+              <td>{item.academicPeriod ? humanize(item.academicPeriod) : item.semester || 'Informal'}<span>{item.schoolYear || 'No school year'}</span></td>
               <td>{Object.entries(item.membershipCounts).map(([key, value]) => `${humanize(key)} ${value}`).join(' · ') || 'None'}</td>
               <td><StatusBadge label={humanize(item.status)} /></td>
               <td><Link to={`/admin/academic/classes/${item.classId}`}>Manage</Link></td>
@@ -146,6 +148,15 @@ export function AdminClassCreatePage({ api = adminApi }) {
   const [searching, setSearching] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [courses, setCourses] = useState([])
+  const [courseSearch, setCourseSearch] = useState('')
+  useEffect(() => {
+    const controller = new AbortController()
+    api.listCourses({ pageSize: 100, ...(courseSearch.trim() ? { search: courseSearch.trim() } : {}) }, { signal: controller.signal })
+      .then((response) => setCourses(response.data.items))
+      .catch((cause) => { if (cause?.name !== 'AbortError') setError(cause) })
+    return () => controller.abort()
+  }, [api, courseSearch])
 
   const findInstructors = async (event) => {
     event?.preventDefault()
@@ -168,7 +179,13 @@ export function AdminClassCreatePage({ api = adminApi }) {
     setError(null)
     try {
       const response = await api.createClass({
-        className: form.get('className'), section: form.get('section'), semester: form.get('semester'), schoolYear: form.get('schoolYear'), instructorId: selectedInstructorId,
+        className: form.get('className') || courses.find((course) => course.id === form.get('courseId'))?.courseName,
+        courseId: form.get('courseId'), officialClassCode: form.get('officialClassCode'), academicPeriod: form.get('academicPeriod'), schoolYear: form.get('schoolYear'),
+        ...(form.get('section') ? { section: form.get('section') } : {}),
+        ...(form.get('schedule') ? { schedule: form.get('schedule') } : {}),
+        ...(form.get('days') ? { days: form.get('days') } : {}),
+        ...(form.get('room') ? { room: form.get('room') } : {}),
+        ...(selectedInstructorId ? { instructorId: selectedInstructorId } : {}),
       })
       const created = projectGovernedClass(response.data)
       navigate(`/admin/academic/classes/${created.classId}`, { replace: true })
@@ -180,20 +197,26 @@ export function AdminClassCreatePage({ api = adminApi }) {
 
   return (
     <div className="admin-page-stack">
-      <AdminPageHeader eyebrow="Class governance" title="Create class" summary="Create an ACTIVE class owned by an existing ACTIVE instructor. Projex generates the join code on the server." actions={<Link className="student-outline-action" to="/admin/academic/classes">Cancel</Link>} />
+      <AdminPageHeader eyebrow="Class governance" title="Create official offering" summary="Choose a Course and official metadata. Without an initial Instructor, the offering stays prepared and its join code is inactive." actions={<Link className="student-outline-action" to="/admin/academic/classes">Cancel</Link>} />
       <AdminPanel title="Class details" eyebrow="Supported fields only">
         <form className="admin-form-grid" onSubmit={submit}>
-          <label>Class name<input name="className" required maxLength="200" /></label>
-          <label>Section<input name="section" required maxLength="100" /></label>
-          <label>Semester<input name="semester" required maxLength="100" /></label>
+          <label>Find Course<input value={courseSearch} onChange={(event) => setCourseSearch(event.target.value)} placeholder="Search number or name" /></label>
+          <label>Course<select name="courseId" required defaultValue=""><option value="">Select Course</option>{courses.map((course) => <option value={course.id} key={course.id}>{course.courseNumber} — {course.courseName}</option>)}</select></label>
+          <label>Class name (optional display title)<input name="className" maxLength="200" /></label>
+          <label>Official Class Code<input name="officialClassCode" required maxLength="100" /></label>
+          <label>Academic Period<select name="academicPeriod" required defaultValue=""><option value="">Select period</option><option value="FIRST_SEMESTER">1st Semester</option><option value="SECOND_SEMESTER">2nd Semester</option></select></label>
           <label>School year<input name="schoolYear" required maxLength="20" /></label>
+          <label>Section (optional)<input name="section" maxLength="100" /></label>
+          <label>Schedule (optional)<input name="schedule" maxLength="200" /></label>
+          <label>Days (optional)<input name="days" maxLength="100" /></label>
+          <label>Room (optional)<input name="room" maxLength="100" /></label>
           <div className="admin-form-span admin-instructor-picker">
             <label>Find an active instructor<input value={search} maxLength="200" onChange={(event) => setSearch(event.target.value)} placeholder="Name or university email" /></label>
             <button type="button" className="student-outline-action" onClick={findInstructors} disabled={searching}>{searching ? 'Searching…' : 'Search instructors'}</button>
-            {instructors.length ? <div className="admin-choice-list">{instructors.map((item) => <label key={item.id}><input type="radio" name="instructorId" value={item.id} checked={selectedInstructorId === item.id} onChange={() => setSelectedInstructorId(item.id)} /><span><strong>{item.fullName}</strong><small>{item.universityEmail}</small></span></label>)}</div> : <p className="admin-panel-note">Search to select the instructor who will own this class.</p>}
+            {instructors.length ? <div className="admin-choice-list">{instructors.map((item) => <label key={item.id}><input type="radio" name="instructorId" value={item.id} checked={selectedInstructorId === item.id} onChange={() => setSelectedInstructorId(item.id)} /><span><strong>{item.fullName}</strong><small>{item.universityEmail}</small></span></label>)}</div> : <p className="admin-panel-note">An initial Primary Instructor is optional. Assignment activates the prepared offering.</p>}
           </div>
           <ErrorNotice error={error} />
-          <div className="admin-form-span admin-dialog__actions"><button type="submit" className="student-primary-action" disabled={busy || !selectedInstructorId}>{busy ? 'Creating…' : 'Create class'}</button></div>
+          <div className="admin-form-span admin-dialog__actions"><button type="submit" className="student-primary-action" disabled={busy || !courses.length}>{busy ? 'Creating…' : 'Create offering'}</button></div>
         </form>
       </AdminPanel>
     </div>
@@ -325,18 +348,19 @@ export function AdminClassDetailPage({ api = adminApi }) {
   }
 
   return <div className="admin-page-stack">
-    <AdminPageHeader eyebrow="Class governance" title={classRecord.className} summary={`${classRecord.section} · ${classRecord.semester} · ${classRecord.schoolYear}`} actions={<Link className="student-outline-action" to="/admin/academic/classes">Back to classes</Link>} />
+    <AdminPageHeader eyebrow="Class governance" title={classRecord.className} summary={[classRecord.officialClassCode, classRecord.academicPeriod ? humanize(classRecord.academicPeriod) : classRecord.semester, classRecord.schoolYear].filter(Boolean).join(' · ') || 'Informal teaching class'} actions={<Link className="student-outline-action" to="/admin/academic/classes">Back to classes</Link>} />
     {notice ? <p className="admin-notice" role="status">{notice}</p> : null}
     <div className="admin-detail-grid">
       <AdminPanel title="Class record" eyebrow="Authoritative metadata">
-        <div className="admin-detail-values"><div className="admin-detail-value"><span>Status</span><strong><StatusBadge label={humanize(classRecord.status)} /></strong></div><div className="admin-detail-value"><span>Instructor</span><strong>{classRecord.instructor.fullName}</strong></div><div className="admin-detail-value"><span>Created</span><strong>{formatDate(classRecord.createdAt)}</strong></div><div className="admin-detail-value"><span>Updated</span><strong>{formatDate(classRecord.updatedAt)}</strong></div></div>
-        <div className="admin-action-row">{!archived ? <button type="button" className="student-outline-action" onClick={() => setDialog('metadata')}>Edit metadata</button> : null}<button type="button" className={archived ? 'student-primary-action' : 'admin-danger-outline'} onClick={() => setDialog(archived ? 'restore' : 'archive')}>{archived ? 'Restore class' : 'Archive class'}</button></div>
+        <div className="admin-detail-values"><div className="admin-detail-value"><span>Status</span><strong><StatusBadge label={humanize(classRecord.status)} /></strong></div><div className="admin-detail-value"><span>Primary Instructor</span><strong>{classRecord.instructor?.fullName ?? 'Unassigned'}</strong></div><div className="admin-detail-value"><span>Created</span><strong>{formatDate(classRecord.createdAt)}</strong></div><div className="admin-detail-value"><span>Updated</span><strong>{formatDate(classRecord.updatedAt)}</strong></div></div>
+        <div className="admin-action-row">{!archived && !classRecord.officialClassCode ? <button type="button" className="student-outline-action" onClick={() => setDialog('metadata')}>Edit informal details</button> : null}<button type="button" className={archived ? 'student-primary-action' : 'admin-danger-outline'} onClick={() => setDialog(archived ? 'restore' : 'archive')}>{archived ? 'Restore class' : 'Archive class'}</button></div>
         <div className="admin-record-links"><Link to={`/admin/academic/activities?classId=${classId}`}>View activities</Link><Link to={`/admin/academic/submissions?classId=${classId}`}>View submissions</Link><Link to={`/admin/academic/project-tasks?classId=${classId}`}>View project tasks</Link></div>
       </AdminPanel>
       <AdminPanel title="Join code" eyebrow="Server-owned secret">
         {!joinCode ? <button type="button" className="student-outline-action" onClick={revealCode}>Reveal join code</button> : joinCode.active ? <div className="admin-join-code"><strong>{joinCode.classCode}</strong><StatusBadge label="Active" /><button type="button" className="student-outline-action" onClick={() => navigator.clipboard?.writeText(joinCode.classCode)}>Copy active code</button></div> : <div className="admin-join-code"><StatusBadge label="Inactive" /><p>The previous code is not usable and is intentionally hidden.</p></div>}
-        {!archived ? <div className="admin-action-row"><button type="button" className="student-outline-action" onClick={() => setDialog('rotate')}>Rotate code</button><button type="button" className="admin-danger-outline" onClick={() => setDialog('revoke')}>Revoke code</button></div> : <p className="admin-panel-note">Archived classes are read-only.</p>}
+        {classRecord.status === 'ACTIVE' ? <div className="admin-action-row"><button type="button" className="student-outline-action" onClick={() => setDialog('rotate')}>Rotate code</button><button type="button" className="admin-danger-outline" onClick={() => setDialog('revoke')}>Revoke code</button></div> : <p className="admin-panel-note">Join code actions require an ACTIVE class.</p>}
       </AdminPanel>
+      {!archived ? <div className="admin-detail-grid__wide"><AdminOfficialMetadataPanel classRecord={classRecord} onSaved={loadClass} api={api} /><AdminTeachingStaffPanel classRecord={classRecord} onSaved={loadClass} api={api} /><AdminStudentInvitationCsvPanel classRecord={classRecord} api={api} /></div> : null}
       <AdminPanel title="Class roster" eyebrow="Detailed administrative projection" className="admin-detail-grid__wide">
         {roster.status === 'loading' && !roster.members.length ? <RequestState kind="loading" compact /> : null}
         {roster.status === 'error' ? <RequestState error={roster.error} compact action={<button type="button" onClick={() => loadRoster()}>Try again</button>} /> : null}
@@ -355,14 +379,14 @@ const ACADEMIC_CONFIG = {
   activities: { title: 'Programming activities', summary: 'Lifecycle, language, deadlines, totals, and aggregate test/submission counts only.', list: 'listAcademicActivities', project: projectAcademicActivity, statuses: ['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED'], sort: [['createdAt', 'Created'], ['updatedAt', 'Updated'], ['dueDate', 'Deadline'], ['title', 'Title']] },
   submissions: { title: 'Submissions', summary: 'Operational attempt state and released scores only. Source, tests, corrections, and feedback are omitted.', list: 'listAcademicSubmissions', project: projectAcademicSubmission, statuses: ['QUEUED', 'ASSESSING', 'ASSESSED', 'ASSESSMENT_FAILED', 'REVIEWED', 'RELEASED', 'FAILED_RESOLVED'], sort: [['submittedAt', 'Submitted'], ['updatedAt', 'Updated']], noSearch: true },
   'project-tasks': { title: 'Project tasks', summary: 'Lifecycle, deadline, team size, and bounded collaboration counts without instructions.', list: 'listAcademicProjectTasks', project: projectAcademicProjectTask, statuses: ['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED'], sort: [['createdAt', 'Created'], ['updatedAt', 'Updated'], ['dueDate', 'Deadline'], ['title', 'Title']] },
-  repositories: { title: 'Repositories', summary: 'Ownership, lifecycle, review, provisioning, and measured storage metadata without source, Git history, credentials, or feedback.', list: 'listAcademicRepositories', project: projectAcademicRepository, statuses: ['ACTIVE', 'INACTIVE', 'ARCHIVED'], sort: [['createdAt', 'Created'], ['updatedAt', 'Updated'], ['repositoryName', 'Name'], ['storageSizeBytes', 'Measured size']], repositoryTypes: ['CLASS_PROJECT', 'PERSONAL'] },
+  repositories: { title: 'Repositories', summary: 'Ownership, lifecycle, review, provisioning, and measured storage metadata without source, Git history, credentials, or feedback.', list: 'listAcademicRepositories', project: projectAcademicRepository, statuses: ['ACTIVE', 'INACTIVE', 'ARCHIVED'], sort: [['createdAt', 'Created'], ['updatedAt', 'Updated'], ['repositoryName', 'Name'], ['storageSizeBytes', 'Measured size']], repositoryTypes: ['CLASS_PROJECT', 'CLASS_WORKSPACE', 'PERSONAL'] },
 }
 
 function AcademicRow({ kind, item }) {
   if (kind === 'activities') return <><td><strong>{item.title}</strong><span>{item.class.className} · {item.class.section}</span></td><td><StatusBadge label={humanize(item.status)} /></td><td>{humanize(item.language)}<span>{item.testCaseCount} tests · {item.testCasePointTotal} points</span></td><td>{item.submissionCount} submissions<span>Due {formatDate(item.dueDate)}</span></td></>
   if (kind === 'submissions') return <><td><strong>{item.student.fullName}</strong><span>{item.student.universityEmail}</span></td><td>{item.activity.title}<span>{item.activity.class.className}</span></td><td><StatusBadge label={humanize(item.submissionStatus)} /><span>Attempt {item.attemptNumber}{item.isLate ? ' · Late' : ''}</span></td><td>{item.releasedScore === null ? 'Not released' : `${item.releasedScore} points`}<span>{formatDate(item.submittedAt)}</span></td></>
   if (kind === 'project-tasks') return <><td><strong>{item.title}</strong><span>{item.class.className} · {item.class.section}</span></td><td><StatusBadge label={humanize(item.status)} /></td><td>Max team {item.maxTeamSize}<span>Due {formatDate(item.dueDate)}</span></td><td>{item.counts.repositories ?? 0} repositories<span>{item.counts.teams ?? 0} teams · {item.counts.invitations ?? 0} invitations</span></td></>
-  return <><td><strong>{item.repositoryName}</strong><span>{item.repositoryType === 'PERSONAL' ? 'Personal' : item.projectTask?.class.className || 'Class project'}</span></td><td>{item.owner.fullName}<span>{item.owner.universityEmail}</span></td><td><StatusBadge label={humanize(item.status)} /><span>{humanize(item.reviewStatus)}</span></td><td>{humanize(item.storageStatus)}<span>{item.storageSizeBytes === null ? 'Unmeasured' : `${item.storageSizeBytes} bytes measured`}</span></td></>
+  return <><td><strong>{item.repositoryName}</strong><span>{item.repositoryType === 'PERSONAL' ? 'Personal' : item.repositoryType === 'CLASS_WORKSPACE' ? 'Student class workspace' : item.projectTask?.class.className || 'Class project'}</span></td><td>{item.owner.fullName}<span>{item.owner.universityEmail}</span></td><td><StatusBadge label={humanize(item.status)} /><span>{humanize(item.reviewStatus)}</span></td><td>{humanize(item.storageStatus)}<span>{item.storageSizeBytes === null ? 'Unmeasured' : `${item.storageSizeBytes} bytes measured`}</span></td></>
 }
 
 export function AdminAcademicListPage({ kind, api = adminApi }) {

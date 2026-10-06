@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { createServer, type Server } from 'node:http'
 import { fileURLToPath } from 'node:url'
 import { createApp } from './app.js'
+import { createWorkHubRouter } from './modules/work-hub/work-hub.routes.js'
 import { EnvironmentValidationError, loadEnv } from './config/env.js'
 import {
   createPrismaClient,
@@ -29,6 +30,10 @@ import { createUserDirectoryService } from './modules/users/user-directory.servi
 import { createUsersRouter } from './modules/users/users.routes.js'
 import { createPrismaClassRepository } from './modules/classes/class.repository.js'
 import { createClassService } from './modules/classes/class.service.js'
+import { createClassStaffRouter } from './modules/classes/class-staff.routes.js'
+import { createOfficialMetadataRouter } from './modules/classes/official-metadata.routes.js'
+import { createCourseRouter } from './modules/courses/course.routes.js'
+import { createClassInvitationImportRouter } from './modules/class-invitations/class-invitation-import.routes.js'
 import { createClassesRouter } from './modules/classes/classes.routes.js'
 import { createPrismaClassMemberRepository } from './modules/class-members/class-member.repository.js'
 import { createClassMemberService } from './modules/class-members/class-member.service.js'
@@ -251,6 +256,7 @@ async function bootstrap(): Promise<void> {
     databaseHealth: createPrismaDatabaseHealth(prisma),
     logger,
     featureRouters: {
+      workHub: createWorkHubRouter({ prisma, requireAuthentication }),
       capabilities: createCapabilitiesRouter(createCapabilitiesService({
         profile: env.nodeEnv === 'production' ? 'HOSTED_SAFE' : 'LOCAL_FULL',
         java: { execution: env.javaExecutionMode === 'local_process' },
@@ -288,6 +294,10 @@ async function bootstrap(): Promise<void> {
         requireAuthentication,
         requireCsrf,
       }),
+      classStaff: createClassStaffRouter({ prisma, requireAuthentication, requireCsrf }),
+      officialMetadata: createOfficialMetadataRouter({ prisma, requireAuthentication, requireCsrf }),
+      classInvitationImport: createClassInvitationImportRouter({ prisma, requireAuthentication, requireCsrf }),
+      courses: createCourseRouter({ prisma, requireAuthentication, requireCsrf }),
       classInvitations: createClassInvitationRouter({
         service: classInvitationService,
         requireAuthentication,

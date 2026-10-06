@@ -28,7 +28,8 @@ export interface ActivityRecord {
   archivedAt: Date | null
   class: {
     id: string
-    instructorId: string
+    instructorId: string | null
+    teachingStaff?: { instructorId: string; status: string }[]
     status: ClassStatus
   }
   createdBy: {

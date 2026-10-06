@@ -179,6 +179,15 @@ describe('Phase 8C repository inspection', () => {
     expect(tree.entries).toEqual([
       expect.objectContaining({ name: 'Main.java', path: 'src/Main.java', entryType: 'blob' }),
     ])
+    const rootTree = await contentService.tree(owner, repository.id, { commitId: secondCommit })
+    expect(rootTree.entries).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'NOTES.md', path: 'NOTES.md', entryType: 'blob' }),
+      expect.objectContaining({ name: 'src', path: 'src', entryType: 'tree' }),
+    ]))
+    await expect(contentService.tree(owner, repository.id, {})).resolves.toMatchObject({
+      commitId: firstCommit,
+      entries: expect.arrayContaining([expect.objectContaining({ name: 'src', entryType: 'tree' })]),
+    })
     await expect(contentService.file(owner, repository.id, { commitId: secondCommit, path: 'src/Main.java' }))
       .resolves.toMatchObject({ encoding: 'utf-8', content: expect.stringContaining('public static void main') })
     await expect(contentService.diff(owner, repository.id, { baseCommitId: firstCommit, targetCommitId: secondCommit }))

@@ -114,6 +114,19 @@ function safeAuditMetadata(action: string, value: Prisma.JsonValue | null): Reco
       const instructorId = stringValue(value, 'instructorId')
       return instructorId && uuidPattern.test(instructorId) ? { instructorId } : null
     }
+    case 'CLASS_OFFICIAL_METADATA_CORRECTED': {
+      const before = isObject(value.before ?? null) ? value.before : null
+      const after = isObject(value.after ?? null) ? value.after : null
+      if (!before || !after) return null
+      const safe = (item: Record<string, unknown>) => ({
+        courseNumber: typeof item.courseNumber === 'string' ? item.courseNumber : null,
+        courseName: typeof item.courseName === 'string' ? item.courseName : null,
+        officialClassCode: typeof item.officialClassCode === 'string' ? item.officialClassCode : null,
+        academicPeriod: typeof item.academicPeriod === 'string' ? item.academicPeriod : null,
+        schoolYear: typeof item.schoolYear === 'string' ? item.schoolYear : null,
+      })
+      return { before: safe(before as Record<string, unknown>), after: safe(after as Record<string, unknown>), historyPresent: value.historyPresent === true }
+    }
     case 'CLASS_UPDATED':
     case 'CLASS_ARCHIVED':
     case 'CLASS_RESTORED':

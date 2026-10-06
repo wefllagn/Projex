@@ -61,6 +61,39 @@ export function createAdminApi(client = apiClient) {
     createClass(input, options) {
       return client.post('/classes', input, options)
     },
+    listCourses(query, options) {
+      return client.get(`/courses${queryString(query)}`, options)
+    },
+    createCourse(input, options) {
+      return client.post('/courses', input, options)
+    },
+    updateCourse(courseId, input, options) {
+      return client.patch(`/courses/${courseId}`, input, options)
+    },
+    previewCourseCsv(csv, options) {
+      return client.post('/courses/import/preview', { csv }, options)
+    },
+    confirmCourseCsv(csv, fingerprint, options) {
+      return client.post('/courses/import/confirm', { csv, fingerprint }, options)
+    },
+    getOfficialMetadataImpact(classId, options) {
+      return client.get(`/classes/${classId}/official-metadata-impact`, options)
+    },
+    correctOfficialMetadata(classId, input, options) {
+      return client.patch(`/classes/${classId}/official-metadata`, input, options)
+    },
+    listClassStaff(classId, options) {
+      return client.get(`/classes/${classId}/staff`, options)
+    },
+    assignPrimary(classId, input, options) {
+      return client.post(`/classes/${classId}/staff/admin-assign-primary`, input, options)
+    },
+    previewStudentInvitationCsv(classId, csv, options) {
+      return client.post(`/classes/${classId}/invitations/import/preview`, { csv }, options)
+    },
+    confirmStudentInvitationCsv(classId, csv, fingerprint, options) {
+      return client.post(`/classes/${classId}/invitations/import/confirm`, { csv, fingerprint }, options)
+    },
     updateClass(classId, input, options) {
       return client.patch(`/classes/${classId}`, input, options)
     },

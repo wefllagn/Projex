@@ -17,6 +17,7 @@ import type {
 } from './class.schemas.js'
 import {
   toClassProjection,
+  isTeachingInstructor,
   type ClassAccessRecord,
   type ClassProjection,
   type ClassRecord,
@@ -87,7 +88,7 @@ function requireActiveCaller(caller: SafeUserProfile): void {
 function canView(caller: SafeUserProfile, access: ClassAccessRecord): boolean {
   if (caller.role === 'ADMIN') return true
   if (caller.role === 'INSTRUCTOR') {
-    return access.classRecord.instructorId === caller.id
+    return isTeachingInstructor(access.classRecord, caller.id)
   }
   return access.membership?.status === 'ACTIVE'
 }
@@ -191,12 +192,21 @@ export function createClassService(dependencies: {
           message: 'Instructors cannot assign class ownership.',
         })
       }
-      if (caller.role === 'ADMIN' && !input.instructorId) {
+      if (caller.role === 'ADMIN' && !input.instructorId && !input.officialClassCode) {
         throw new AppError({
           statusCode: 400,
           code: 'INSTRUCTOR_ID_REQUIRED',
-          message: 'An active instructor is required.',
+          message: 'An active instructor is required for an informal class.',
         })
+      }
+      if (caller.role === 'INSTRUCTOR' && (input.officialClassCode || input.academicPeriod)) {
+        throw forbidden()
+      }
+      if (input.officialClassCode && (!input.courseId || !input.academicPeriod || !input.schoolYear)) {
+        throw new AppError({ statusCode: 422, code: 'OFFICIAL_METADATA_REQUIRED', message: 'Course, period, and school year are required for an official offering.' })
+      }
+      if (!input.officialClassCode && input.academicPeriod) {
+        throw new AppError({ statusCode: 422, code: 'OFFICIAL_METADATA_REQUIRED', message: 'Academic period requires an official offering.' })
       }
       if (caller.role === 'ADMIN' && (input.invitationEmails?.length ?? 0) > 0) {
         throw new AppError({
@@ -205,8 +215,7 @@ export function createClassService(dependencies: {
           message: 'Only the owning instructor may invite students to a class.',
         })
       }
-      const instructorId =
-        caller.role === 'INSTRUCTOR' ? caller.id : input.instructorId!
+      const instructorId = caller.role === 'INSTRUCTOR' ? caller.id : input.instructorId ?? null
 
       for (let attempt = 0; attempt < CLASS_CODE_COLLISION_RETRIES; attempt += 1) {
         const result = await repository.create({
@@ -215,6 +224,12 @@ export function createClassService(dependencies: {
           section: input.section,
           semester: input.semester,
           schoolYear: input.schoolYear,
+          courseId: input.courseId,
+          officialClassCode: input.officialClassCode,
+          academicPeriod: input.academicPeriod,
+          schedule: input.schedule,
+          days: input.days,
+          room: input.room,
           classCode: normalizeClassCode(generateCode()),
           invitationEmails: input.invitationEmails,
           now: now(),
@@ -226,6 +241,9 @@ export function createClassService(dependencies: {
             code: 'INSTRUCTOR_NOT_ACTIVE',
             message: 'The assigned instructor is not active.',
           })
+        }
+        if (result.kind === 'course_not_found') {
+          throw new AppError({ statusCode: 404, code: 'COURSE_NOT_FOUND', message: 'Course not found.' })
         }
         if (result.kind === 'invitation_target_not_active_student') {
           throw new AppError({
@@ -283,6 +301,9 @@ export function createClassService(dependencies: {
     async update(caller, classId, input, requestId) {
       const access = await loadOwnerAccess(caller, classId)
       requireMutable(access.classRecord)
+      if (access.classRecord.officialClassCode && (input.className !== undefined || input.section !== undefined || input.semester !== undefined || input.schoolYear !== undefined)) {
+        throw new AppError({ statusCode: 409, code: 'OFFICIAL_METADATA_GUARDED', message: 'Use the guarded Admin official-metadata workflow.' })
+      }
       const { reason, ...fields } = input
       const classRecord = await repository.updateMetadata(
         classId,

@@ -12,7 +12,7 @@ const repository = { id: 'repo-1', projectTaskId: 'task-1', teamId: 'team-1', re
 function wrapper(ui, path = '/') {
   return render(
     <AuthContext.Provider value={{ user: { id: 'student-1', role: 'STUDENT', status: 'ACTIVE' } }}>
-      <ClassContext.Provider value={{ selectedClass, selectionStatus: 'ready', api: { listMembers: vi.fn().mockResolvedValue({ data: [], pagination: { page: 1, hasNextPage: false } }) } }}>
+      <ClassContext.Provider value={{ selectedClass, classes: [selectedClass], selectionStatus: 'ready', api: { listMembers: vi.fn().mockResolvedValue({ data: [], pagination: { page: 1, hasNextPage: false } }) } }}>
         <MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>
       </ClassContext.Provider>
     </AuthContext.Provider>,
@@ -32,6 +32,30 @@ function repositoryApiMock(overrides = {}) {
 afterEach(() => vi.useRealTimers())
 
 describe('Phase 10C.1 repository views', () => {
+  it('creates a Student class workspace from an active enrolled Class without academic submission', async () => {
+    const workspace = { ...repository, id: 'workspace-1', classId: selectedClass.id, projectTaskId: null, teamId: null, repositoryType: 'CLASS_WORKSPACE', visibility: 'PRIVATE' }
+    const api = repositoryApiMock({
+      listRepositories: vi.fn().mockResolvedValue({ data: [], pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 } }),
+      createClassWorkspace: vi.fn().mockResolvedValue({ data: workspace }),
+    })
+    wrapper(<StudentRepositoryCatalog api={api} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'New Class Workspace' }))
+    fireEvent.change(screen.getByLabelText('Enrolled class'), { target: { value: selectedClass.id } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create Workspace' }))
+    expect(await screen.findByText('Class Workspaces')).toBeInTheDocument()
+    expect(api.createClassWorkspace).toHaveBeenCalledWith(selectedClass.id)
+  })
+  it('groups repository identity separately from ordered type, storage, and lifecycle metadata', async () => {
+    const workspace = { ...repository, id: 'workspace-1', classId: selectedClass.id, projectTaskId: null, teamId: null, repositoryType: 'CLASS_WORKSPACE', repositoryName: 'Class work', visibility: 'PRIVATE', storageStatus: 'READY' }
+    const personal = { ...repository, id: 'personal-1', projectTaskId: null, teamId: null, repositoryType: 'PERSONAL', repositoryName: 'Personal work', visibility: 'PRIVATE', storageStatus: 'PENDING' }
+    const api = repositoryApiMock({ listRepositories: vi.fn().mockResolvedValue({ data: [workspace, personal], pagination: { page: 1, pageSize: 20, totalItems: 2, totalPages: 1 } }) })
+    wrapper(<StudentRepositoryCatalog api={api} />)
+    for (const [name, metadata] of [['Class work', 'Class workspaceReadyActive'], ['Personal work', 'Personal repositoryPendingActive']]) {
+      const row = await screen.findByRole('link', { name: new RegExp(name) })
+      expect(row.querySelector('.repository-catalog-row__identity strong')).toHaveTextContent(name)
+      expect(row.querySelector('.repository-catalog-row__metadata')).toHaveTextContent(metadata)
+    }
+  })
   it('creates a real personal repository without browser Git behavior', async () => {
     const api = repositoryApiMock({
       listRepositories: vi.fn().mockResolvedValue({ data: [], pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 } }),

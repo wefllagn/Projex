@@ -11,7 +11,16 @@ export function evaluateGitPermission(access: GitTransportAccess, now: Date): Gi
     access.projectTask?.class.membership?.status === 'ACTIVE'
   const instructorOwnsClass =
     access.user.role === 'INSTRUCTOR' &&
-    access.projectTask?.class.instructorId === access.user.id
+    (access.projectTask?.class.instructorId === access.user.id || Boolean(access.projectTask?.class.teachingStaff.some((staff) => staff.instructorId === access.user.id)))
+
+  if (access.repositoryType === 'CLASS_WORKSPACE') {
+    const classActive = access.classWorkspace?.status === 'ACTIVE'
+    const studentOwner = access.user.role === 'STUDENT' && access.ownerId === access.user.id && activeRepositoryMember && access.classWorkspace?.membership?.status === 'ACTIVE'
+    const instructorReader = access.user.role === 'INSTRUCTOR' && classActive && (access.classWorkspace?.instructorId === access.user.id || Boolean(access.classWorkspace?.teachingStaff.some((staff) => staff.instructorId === access.user.id && staff.status === 'ACTIVE')))
+    const read = Boolean(classActive && (studentOwner || instructorReader))
+    const write = Boolean(read && studentOwner && access.status === 'ACTIVE' && access.repositoryMember?.memberRole === 'OWNER')
+    return { read, write, canUpdateMain: write }
+  }
 
   let read = false
   if (access.repositoryType === 'PERSONAL') {

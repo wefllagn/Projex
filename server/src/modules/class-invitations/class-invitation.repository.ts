@@ -11,10 +11,10 @@ export interface ClassInvitationStudentSummary {
 export interface ClassInvitationClassSummary {
   classId: string
   className: string
-  section: string
-  semester: string
-  schoolYear: string
-  instructor: { userId: string; fullName: string }
+  section: string | null
+  semester: string | null
+  schoolYear: string | null
+  instructor: { userId: string; fullName: string } | null
 }
 
 export interface StudentClassInvitationProjection {
@@ -144,10 +144,10 @@ function studentProjection(
       section: record.class.section,
       semester: record.class.semester,
       schoolYear: record.class.schoolYear,
-      instructor: {
+      instructor: record.class.instructor ? {
         userId: record.class.instructor.id,
         fullName: record.class.instructor.fullName,
-      },
+      } : null,
     },
   }
 }
@@ -233,7 +233,7 @@ export function createPrismaClassInvitationRepository(
               const [classRecord, student] = await Promise.all([
                 transaction.class.findUnique({
                   where: { id: input.classId },
-                  select: { instructorId: true, status: true },
+                  select: { instructorId: true, status: true, teachingStaff: { where: { instructorId: input.invitedById, status: 'ACTIVE' }, select: { id: true } } },
                 }),
                 transaction.user.findUnique({
                   where: { email: input.universityEmail },
@@ -244,7 +244,7 @@ export function createPrismaClassInvitationRepository(
                   },
                 }),
               ])
-              if (!classRecord || classRecord.instructorId !== input.invitedById) {
+              if (!classRecord || (classRecord.instructorId !== input.invitedById && classRecord.teachingStaff.length === 0)) {
                 return { kind: 'not_found' } as const
               }
               if (classRecord.status !== 'ACTIVE') {
