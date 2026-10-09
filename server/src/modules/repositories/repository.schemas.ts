@@ -14,6 +14,7 @@ export const repositoryInvitationParamsSchema = z.object({ invitationId: z.uuid(
 export const repositoryFeedbackParamsSchema = z.object({ feedbackId: z.uuid() }).strict()
 export const projectRepositoryParamsSchema = z.object({ projectTaskId: z.uuid() }).strict()
 export const classWorkspaceParamsSchema = z.object({ classId: z.uuid() }).strict()
+export const activityWorkspaceParamsSchema = z.object({ activityId: z.uuid() }).strict()
 
 export const createClassProjectRepositorySchema = z
   .object({
@@ -48,7 +49,7 @@ export const repositoryListQuerySchema = z
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
     search: z.string().trim().min(1).max(120).optional(),
-    repositoryType: z.enum(['CLASS_PROJECT', 'PERSONAL', 'CLASS_WORKSPACE']).optional(),
+    repositoryType: z.enum(['CLASS_PROJECT', 'PERSONAL', 'CLASS_WORKSPACE', 'ACTIVITY_WORKSPACE']).optional(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'ARCHIVED']).optional(),
     reviewStatus: z.enum(['WORKING', 'READY_FOR_REVIEW', 'CHANGES_REQUESTED', 'APPROVED']).optional(),
     projectTaskId: z.uuid().optional(),

@@ -203,6 +203,7 @@ enum RepositoryType {
   CLASS_PROJECT
   PERSONAL
   CLASS_WORKSPACE
+  ACTIVITY_WORKSPACE
 
   @@map("repository_type")
 }
@@ -578,6 +579,7 @@ model ProgrammingActivity {
   submissions             ActivitySubmission[]
   submissionIdempotencies SubmissionIdempotency[]
   practiceExecutions      PracticeExecution[]
+  workspaceRepositories   Repository[]             @relation("ActivityWorkspaceRepositories")
 
   @@index([classId, status])
   @@index([dueDate])
@@ -953,6 +955,7 @@ model Repository {
   id                 String                     @id @default(uuid()) @map("repository_id") @db.Uuid
   projectTaskId      String?                    @map("project_task_id") @db.Uuid
   classId            String?                    @map("class_id") @db.Uuid
+  activityId         String?                    @map("activity_id") @db.Uuid
   teamId             String?                    @unique @map("team_id") @db.Uuid
   ownerId            String                     @map("owner_id") @db.Uuid
   repositoryType     RepositoryType             @map("repository_type")
@@ -976,6 +979,7 @@ model Repository {
   archivedAt         DateTime?                  @map("archived_at") @db.Timestamptz(3)
   projectTask        ProjectTask?               @relation(fields: [projectTaskId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   class              Class?                     @relation("ClassWorkspaceRepositories", fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  activity           ProgrammingActivity?       @relation("ActivityWorkspaceRepositories", fields: [activityId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   team               Team?                      @relation(fields: [teamId, projectTaskId], references: [id, projectTaskId], onDelete: Restrict, onUpdate: Cascade)
   owner              User                       @relation("RepositoryOwner", fields: [ownerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   members            RepositoryMember[]
@@ -989,6 +993,7 @@ model Repository {
   @@index([ownerId])
   @@index([projectTaskId])
   @@unique([classId, ownerId])
+  @@unique([activityId, ownerId])
   @@index([repositoryType, status])
   @@index([projectTaskId, reviewStatus])
   @@map("repositories")

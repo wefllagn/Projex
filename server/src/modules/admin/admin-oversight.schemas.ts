@@ -46,7 +46,7 @@ export const adminProjectTaskQuerySchema = z.object({
 export const adminRepositoryQuerySchema = z.object({
   ...pagination,
   search,
-  repositoryType: z.enum(['CLASS_PROJECT', 'PERSONAL', 'CLASS_WORKSPACE']).optional(),
+  repositoryType: z.enum(['CLASS_PROJECT', 'PERSONAL', 'CLASS_WORKSPACE', 'ACTIVITY_WORKSPACE']).optional(),
   status: z.enum(['ACTIVE', 'INACTIVE', 'ARCHIVED']).optional(),
   storageStatus: z.enum(['PENDING', 'PROVISIONING', 'READY', 'FAILED', 'QUARANTINED']).optional(),
   reviewStatus: z.enum(['WORKING', 'READY_FOR_REVIEW', 'CHANGES_REQUESTED', 'APPROVED']).optional(),

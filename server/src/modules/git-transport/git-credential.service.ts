@@ -97,7 +97,8 @@ export function createGitCredentialService(dependencies: {
     async issue(caller, repositoryId, operations) {
       if (!dependencies.issuanceEnabled) throw smartHttpUnavailable()
       const current = now()
-      const { permission } = await currentAccess(caller, repositoryId)
+      const { access, permission } = await currentAccess(caller, repositoryId)
+      if (access.repositoryType === 'ACTIVITY_WORKSPACE') throw operationDenied()
       for (const operation of operations) {
         if ((operation === 'READ' && !permission.read) || (operation === 'WRITE' && !permission.write)) {
           throw operationDenied()
@@ -158,6 +159,7 @@ export function createGitCredentialService(dependencies: {
       }
       const access = await repository.findAccess(input.repositoryId, credential.userId)
       if (!access) throw authenticationFailed()
+      if (access.repositoryType === 'ACTIVITY_WORKSPACE') throw authenticationFailed()
       const permission = evaluateGitPermission(access, current)
       if ((input.operation === 'READ' && !permission.read) || (input.operation === 'WRITE' && !permission.write)) {
         throw authenticationFailed()

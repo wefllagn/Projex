@@ -22,6 +22,7 @@ function access(overrides: Partial<GitTransportAccess> = {}): GitTransportAccess
     },
     teamLeadStudentId: '22222222-2222-4222-8222-222222222222',
     classWorkspace: null,
+    activityWorkspace: null,
     ...overrides,
   }
 }
@@ -39,6 +40,33 @@ describe('Git authorization', () => {
     expect(evaluateGitPermission({ ...workspace, user: { id: '55555555-5555-4555-8555-555555555555', role: 'INSTRUCTOR', status: 'ACTIVE' }, repositoryMember: null }, now).read).toBe(false)
     expect(evaluateGitPermission({ ...workspace, user: { id: '66666666-6666-4666-8666-666666666666', role: 'STUDENT', status: 'ACTIVE' }, repositoryMember: null }, now).read).toBe(false)
     expect(evaluateGitPermission({ ...workspace, classWorkspace: { ...workspace.classWorkspace!, status: 'ARCHIVED' } }, now).read).toBe(false)
+  })
+
+  it('grants Activity workspace source access only to its active owner and current teaching staff', () => {
+    const workspace = access({
+      repositoryType: 'ACTIVITY_WORKSPACE',
+      projectTask: null,
+      teamMember: null,
+      activityWorkspace: {
+        status: 'PUBLISHED',
+        dueDate: new Date('2030-01-02T00:00:00.000Z'),
+        class: {
+          status: 'ACTIVE',
+          instructorId: '33333333-3333-4333-8333-333333333333',
+          teachingStaff: [{ instructorId: '44444444-4444-4444-8444-444444444444', status: 'ACTIVE' }],
+          membership: { status: 'ACTIVE' },
+        },
+      },
+    })
+    expect(evaluateGitPermission(workspace, now)).toEqual({ read: true, write: true, canUpdateMain: true })
+    for (const instructorId of ['33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444']) {
+      expect(evaluateGitPermission({ ...workspace, user: { id: instructorId, role: 'INSTRUCTOR', status: 'ACTIVE' }, repositoryMember: null }, now)).toEqual({ read: true, write: false, canUpdateMain: false })
+    }
+    expect(evaluateGitPermission({ ...workspace, user: { id: '55555555-5555-4555-8555-555555555555', role: 'INSTRUCTOR', status: 'ACTIVE' }, repositoryMember: null }, now).read).toBe(false)
+    expect(evaluateGitPermission({ ...workspace, user: { id: '66666666-6666-4666-8666-666666666666', role: 'STUDENT', status: 'ACTIVE' }, repositoryMember: null }, now).read).toBe(false)
+    expect(evaluateGitPermission({ ...workspace, user: { id: '77777777-7777-4777-8777-777777777777', role: 'ADMIN', status: 'ACTIVE' }, repositoryMember: null }, now).read).toBe(false)
+    expect(evaluateGitPermission({ ...workspace, activityWorkspace: { ...workspace.activityWorkspace!, status: 'CLOSED' } }, now)).toEqual({ read: true, write: false, canUpdateMain: false })
+    expect(evaluateGitPermission({ ...workspace, activityWorkspace: { ...workspace.activityWorkspace!, class: { ...workspace.activityWorkspace!.class, membership: { status: 'REMOVED' } } } }, now).read).toBe(false)
   })
 
   it('allows an active class-project lead to read, write, and update main', () => {
