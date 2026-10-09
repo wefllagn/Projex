@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 import { ApiError } from '../api/api-client.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { useCapabilities } from '../capabilities/capability-context.js'
+import { repositoryApi } from '../repositories/repository-api.js'
+import { isProvisioning, repositoryProjection } from '../repositories/repository-projections.js'
+import useBoundedPolling from '../submissions/use-bounded-polling.js'
 import { activityApi } from './activity-api.js'
 import { submissionApi } from '../submissions/submission-api.js'
 import { projectStudentAttemptState } from '../submissions/submission-projections.js'
@@ -21,6 +25,176 @@ function contextMismatchError() {
     code: 'ACTIVITY_NOT_FOUND',
     message: 'The activity is not available in the selected class.',
   })
+}
+
+function activityWorkspaceContextError() {
+  return new ApiError({
+    status: 502,
+    code: 'INVALID_API_RESPONSE',
+    message: 'Projex returned a mismatched Activity Workspace record.',
+  })
+}
+
+function ActivityGitWorkspaceCard({ activity, api, classId }) {
+  const capabilities = useCapabilities()
+  const createLock = useRef(false)
+  const refreshLock = useRef(false)
+  const [state, setState] = useState({ identity: null, status: 'loading', repository: null, error: null })
+  const [creating, setCreating] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [pollingStopped, setPollingStopped] = useState(false)
+
+  const projectRepository = useCallback((raw) => {
+    const repository = repositoryProjection(raw)
+    if (!repository.id || repository.repositoryType !== 'ACTIVITY_WORKSPACE' || repository.activityId !== activity.id) {
+      throw activityWorkspaceContextError()
+    }
+    return repository
+  }, [activity.id])
+
+  const applyRepository = useCallback((raw) => {
+    const repository = projectRepository(raw)
+    setState({ identity: activity.id, status: 'ready', repository, error: null })
+    return repository
+  }, [activity.id, projectRepository])
+
+  const load = useCallback(async ({ signal } = {}) => {
+    try {
+      const response = await api.getActivityWorkspace(activity.id, { signal })
+      const repository = applyRepository(response.data)
+      if (!isProvisioning(repository.storageStatus)) setPollingStopped(false)
+    } catch (error) {
+      if (error?.name === 'AbortError') return
+      if (error?.status === 404) {
+        setState({ identity: activity.id, status: 'not-created', repository: null, error: null })
+        setPollingStopped(false)
+      } else {
+        setState((current) => ({
+          identity: activity.id,
+          status: current.repository ? 'ready' : 'error',
+          repository: current.repository,
+          error,
+        }))
+      }
+    }
+  }, [activity.id, api, applyRepository])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    Promise.resolve().then(() => load({ signal: controller.signal }))
+    return () => controller.abort()
+  }, [load])
+
+  const current = state.identity === activity.id
+    ? state
+    : { identity: activity.id, status: 'loading', repository: null, error: null }
+  const provisioning = Boolean(current.repository && isProvisioning(current.repository.storageStatus))
+
+  useBoundedPolling({
+    identity: activity.id,
+    active: provisioning && !pollingStopped,
+    load: (identity, options) => api.getActivityWorkspace(identity, options),
+    onData: (response) => isProvisioning(applyRepository(response.data).storageStatus),
+    onError: (error) => {
+      setState((value) => ({ ...value, error }))
+      setPollingStopped(true)
+    },
+    onBoundedStop: () => setPollingStopped(true),
+    maximumDurationMs: 60_000,
+  })
+
+  const refreshStatus = async () => {
+    if (refreshLock.current) return
+    refreshLock.current = true
+    setRefreshing(true)
+    setState((currentState) => ({ ...currentState, error: null }))
+    try {
+      const response = await api.getActivityWorkspace(activity.id)
+      const repository = applyRepository(response.data)
+      setPollingStopped(!isProvisioning(repository.storageStatus))
+    } catch (error) {
+      if (error?.status === 404) {
+        setState({ identity: activity.id, status: 'not-created', repository: null, error: null })
+      } else {
+        setState((currentState) => ({ ...currentState, error }))
+      }
+      setPollingStopped(true)
+    } finally {
+      refreshLock.current = false
+      setRefreshing(false)
+    }
+  }
+
+  const createRepository = async () => {
+    if (createLock.current) return
+    createLock.current = true
+    setCreating(true)
+    setState((currentState) => ({ ...currentState, error: null }))
+    try {
+      const response = await api.createActivityWorkspace(activity.id)
+      applyRepository(response.data)
+      setPollingStopped(false)
+    } catch (error) {
+      setState((currentState) => ({ ...currentState, error }))
+    } finally {
+      createLock.current = false
+      setCreating(false)
+    }
+  }
+
+  const activityOpen = activity.status === 'PUBLISHED' && activity.dueState === 'OPEN'
+  const canCreate = activityOpen && capabilities.git.provisioning
+  const repository = current.repository
+  const repositoryPath = repository ? classHref(`/student/repositories/${repository.id}`, classId) : ''
+  const localGitPath = repository ? classHref(`/student/repositories/${repository.id}?git=local`, classId) : ''
+  const unavailable = repository && ['FAILED', 'QUARANTINED'].includes(repository.storageStatus)
+
+  return (
+    <section className="student-work-card activity-git-workspace-card" aria-live="polite">
+      <div className="student-work-card__header"><h2>Git Workspace</h2>{repository && <span className="student-work-status">{repository.storageStatus === 'READY' ? 'Ready' : unavailable ? 'Unavailable' : 'Provisioning'}</span>}</div>
+      <p>Save and continue unfinished work using Git.</p>
+      {current.status === 'loading' && <RequestState kind="loading" compact message="Checking your Git Workspace." />}
+      {current.status === 'error' && <RequestState kind="unavailable" compact title="Git Workspace unavailable" error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />}
+      {current.status === 'not-created' && (
+        <>
+          <dl className="activity-git-workspace-facts"><div><dt>Repository</dt><dd>Not created</dd></div></dl>
+          {canCreate
+            ? <button type="button" className="student-primary-action" disabled={creating} onClick={createRepository}>{creating ? 'Creating…' : 'Create repository'}</button>
+            : <p className="activity-lifecycle-note">A repository can be created only while this Activity is published, open, and Git provisioning is available.</p>}
+        </>
+      )}
+      {repository && provisioning && (
+        <>
+          <dl className="activity-git-workspace-facts"><div><dt>Repository</dt><dd>Provisioning</dd></div></dl>
+          <p>Projex is preparing your private Git workspace.</p>
+          {!pollingStopped && <small>Checking status without overlapping requests…</small>}
+          {pollingStopped && <button type="button" className="student-outline-action" disabled={refreshing} onClick={refreshStatus}>{refreshing ? 'Refreshing…' : 'Refresh status'}</button>}
+        </>
+      )}
+      {repository?.storageStatus === 'READY' && (
+        <>
+          <dl className="activity-git-workspace-facts">
+            <div><dt>Repository</dt><dd>Ready</dd></div>
+            <div><dt>Branch</dt><dd>{repository.defaultBranch}</dd></div>
+            <div><dt>Visibility</dt><dd>Private</dd></div>
+          </dl>
+          {!activityOpen && <p className="activity-git-read-only">Activity closed — repository is read-only.</p>}
+          <div className="activity-git-workspace-actions">
+            <NavLink to={localGitPath} className="student-primary-action">Get Git credentials</NavLink>
+            <NavLink to={repositoryPath} className="student-outline-action">Browse repository</NavLink>
+          </div>
+        </>
+      )}
+      {unavailable && (
+        <>
+          <RequestState kind="unavailable" compact title="Git Workspace unavailable" message="Repository storage is unavailable. Internal worker and storage details are not shown." />
+          <button type="button" className="student-outline-action" onClick={() => load()}>Refresh status</button>
+        </>
+      )}
+      {current.error && current.status !== 'error' && <p className="activity-action-error">The latest Git Workspace status could not be loaded. Refresh to try again.</p>}
+      <p className="activity-git-submission-warning">Git push saves your work. It does not submit the Activity.</p>
+    </section>
+  )
 }
 
 function StudentActivityRow({ activity, classId }) {
@@ -130,7 +304,7 @@ export function StudentActivityList({ api = activityApi }) {
   )
 }
 
-export function StudentActivityDetail({ api = activityApi, submissions = submissionApi }) {
+export function StudentActivityDetail({ api = activityApi, submissions = submissionApi, repositories = repositoryApi }) {
   const { activityId } = useParams()
   const { selectedClass, selectionStatus } = useClasses()
   const [state, setState] = useState({ key: null, status: 'idle', activity: null, testCases: [], attemptState: null, error: null })
@@ -237,6 +411,7 @@ export function StudentActivityDetail({ api = activityApi, submissions = submiss
           </NavLink>
           <small>Run visible tests before creating an immutable official submission.</small>
         </section>
+        <ActivityGitWorkspaceCard activity={activity} api={repositories} classId={selectedClass.id} />
       </aside>
     </div>
   )

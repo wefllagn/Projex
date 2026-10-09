@@ -265,6 +265,30 @@ describe('repository Git panel', () => {
     expect(api.issueCredential).toHaveBeenCalledWith('repo-1', ['READ', 'WRITE'])
   })
 
+  it('offers Activity Workspace read/write only while its validated linked Activity is open', async () => {
+    const activityRepository = { ...repository, repositoryType: 'ACTIVITY_WORKSPACE', activityId: 'activity-1' }
+    const api = apiMock()
+    const { rerender } = render(<RepositoryGitPanel repository={activityRepository} activity={{ id: 'activity-1', status: 'PUBLISHED', dueState: 'OPEN' }} initialTab="local" api={api} />)
+
+    expect(await screen.findByRole('button', { name: 'Issue Read + Write Credential' })).toBeInTheDocument()
+    expect(screen.getByText('Git push saves your work. It does not submit the Activity.')).toBeInTheDocument()
+    rerender(<RepositoryGitPanel repository={activityRepository} activity={{ id: 'activity-1', status: 'CLOSED', dueState: 'CLOSED' }} initialTab="local" api={api} />)
+    expect(await screen.findByText('Activity closed — repository is read-only.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Issue Read Credential' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Issue Read + Write Credential' })).not.toBeInTheDocument()
+  })
+
+  it('keeps existing Personal and Class Workspace Local Git write behavior', async () => {
+    const personalApi = apiMock()
+    const { unmount } = render(<RepositoryGitPanel repository={repository} initialTab="local" api={personalApi} />)
+    expect(await screen.findByRole('button', { name: 'Issue Read + Write Credential' })).toBeInTheDocument()
+    unmount()
+
+    const workspaceApi = apiMock()
+    render(<RepositoryGitPanel repository={{ ...repository, repositoryType: 'CLASS_WORKSPACE', classId: 'class-1' }} initialTab="local" api={workspaceApi} />)
+    expect(await screen.findByRole('button', { name: 'Issue Read + Write Credential' })).toBeInTheDocument()
+  })
+
   it('keeps an archived READY repository read-only while allowing authorized inspection', async () => {
     const api = apiMock({ getSummary: vi.fn().mockResolvedValue({ data: { ...summary, repositoryStatus: 'ARCHIVED' } }) })
     render(<RepositoryGitPanel repository={{ ...repository, status: 'ARCHIVED' }} api={api} />)

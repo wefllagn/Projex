@@ -22,6 +22,12 @@ export function createRepositoryApi(client = apiClient) {
     createClassWorkspace(classId, options) {
       return client.post(`/classes/${classId}/workspace-repository`, {}, options)
     },
+    getActivityWorkspace(activityId, options) {
+      return client.get(`/activities/${activityId}/repository`, options)
+    },
+    createActivityWorkspace(activityId, options) {
+      return client.post(`/activities/${activityId}/repository`, {}, options)
+    },
     listRepositories(query, options) {
       return client.get(`/repositories${queryString(query)}`, options)
     },

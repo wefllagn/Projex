@@ -3490,6 +3490,59 @@ textarea:focus-visible {
   padding: 22px;
 }
 
+.activity-git-workspace-card > p {
+  margin: 0;
+}
+
+.activity-git-workspace-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.activity-git-workspace-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2eaf4;
+}
+
+.activity-git-workspace-facts dt {
+  color: #62718a;
+  font-weight: 800;
+}
+
+.activity-git-workspace-facts dd {
+  margin: 0;
+  color: #132440;
+  font-weight: 900;
+  text-align: right;
+}
+
+.activity-git-workspace-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.activity-git-submission-warning,
+.activity-git-read-only {
+  padding: 12px 14px;
+  border-radius: 9px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.activity-git-submission-warning {
+  color: #704a08;
+  background: #fff7df;
+}
+
+.activity-git-read-only {
+  color: #7a2b2b;
+  background: #fff0f0;
+}
+
 .student-work-card__header {
   display: flex;
   justify-content: space-between;

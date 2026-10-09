@@ -8,6 +8,7 @@ import { RepositoryFoundationDetail, StudentRepositoryCatalog } from './Reposito
 const selectedClass = { id: 'class-1', className: 'Synthetic Class', status: 'ACTIVE' }
 const project = { id: 'task-1', classId: 'class-1', title: 'Project', instructions: 'Build it', dueDate: '2026-12-01T00:00:00.000Z', dueState: 'OPEN', maxTeamSize: 4, status: 'PUBLISHED', createdAt: '2026-08-01T00:00:00.000Z', updatedAt: '2026-08-01T00:00:00.000Z', createdBy: { userId: 'instructor-1', fullName: 'Synthetic Instructor' } }
 const repository = { id: 'repo-1', projectTaskId: 'task-1', teamId: 'team-1', repositoryType: 'CLASS_PROJECT', repositoryName: 'team-repo', slug: 'team-repo', description: 'Repository description', defaultBranch: 'main', visibility: 'CLASS_ONLY', status: 'ACTIVE', storageStatus: 'PENDING', reviewStatus: 'WORKING', owner: { userId: 'student-1', fullName: 'Synthetic Student' }, createdAt: '2026-08-01T00:00:00.000Z', updatedAt: '2026-08-01T00:00:00.000Z' }
+const activity = { id: 'activity-1', classId: selectedClass.id, title: 'Loops Activity', instructions: 'Practice loops.', dueDate: '2099-12-01T00:00:00.000Z', dueState: 'OPEN', status: 'PUBLISHED' }
 
 function wrapper(ui, path = '/') {
   return render(
@@ -55,6 +56,16 @@ describe('Phase 10C.1 repository views', () => {
       expect(row.querySelector('.repository-catalog-row__identity strong')).toHaveTextContent(name)
       expect(row.querySelector('.repository-catalog-row__metadata')).toHaveTextContent(metadata)
     }
+  })
+  it('labels and groups Activity Workspaces without offering a general creation action', async () => {
+    const activityRepository = { ...repository, id: 'activity-repo-1', activityId: activity.id, classId: selectedClass.id, projectTaskId: null, teamId: null, repositoryType: 'ACTIVITY_WORKSPACE', repositoryName: 'Loops workspace', visibility: 'PRIVATE', storageStatus: 'READY' }
+    const api = repositoryApiMock({ listRepositories: vi.fn().mockResolvedValue({ data: [activityRepository], pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 } }) })
+    wrapper(<StudentRepositoryCatalog api={api} />)
+
+    expect(await screen.findByRole('heading', { name: 'Activity Workspaces' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Loops workspace/ })).toHaveTextContent('Activity workspace')
+    expect(screen.getByRole('option', { name: 'Activity workspace' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /New Activity Workspace/i })).not.toBeInTheDocument()
   })
   it('creates a real personal repository without browser Git behavior', async () => {
     const api = repositoryApiMock({
@@ -115,5 +126,31 @@ describe('Phase 10C.1 repository views', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save Metadata' }))
     await waitFor(() => expect(api.updateRepository).toHaveBeenCalledWith('repo-1', { expectedUpdatedAt: personal.updatedAt, repositoryName: 'renamed', description: 'Repository description' }))
     expect(await screen.findByText('Repository metadata updated from the server.')).toBeInTheDocument()
+  })
+
+  it('renders Activity Workspace detail as read-only, reuses Local Git, and links back to the validated Activity', async () => {
+    const activityRepository = { ...repository, activityId: activity.id, classId: null, projectTaskId: null, teamId: null, repositoryType: 'ACTIVITY_WORKSPACE', repositoryName: 'Loops workspace', visibility: 'PRIVATE', storageStatus: 'READY' }
+    const api = repositoryApiMock({
+      getRepository: vi.fn().mockResolvedValue({ data: activityRepository }),
+      listRecordedActivity: vi.fn().mockResolvedValue({ data: { repositoryId: repository.id, events: [], contributions: [], pagination: { page: 1, pageSize: 20, totalItems: 0, totalPages: 0, hasPreviousPage: false, hasNextPage: false } } }),
+    })
+    const activities = { getActivity: vi.fn().mockResolvedValue({ data: activity }) }
+    const gitApi = {
+      getSummary: vi.fn().mockResolvedValue({ data: { repositoryId: repository.id, repositoryStatus: 'ACTIVE', storageStatus: 'READY', empty: true, defaultBranch: 'main', branchCount: 0, commitCount: 0, latestCommit: null } }),
+      getTransportUrl: vi.fn().mockReturnValue(`http://localhost:3000/api/v1/git/repositories/${repository.id}`),
+      listCredentials: vi.fn().mockResolvedValue({ data: [] }),
+    }
+    wrapper(<Routes><Route path="/student/repositories/:repositoryId" element={<RepositoryFoundationDetail api={api} activities={activities} projects={{}} gitApi={gitApi} />} /></Routes>, `/student/repositories/${repository.id}?git=local&classId=${selectedClass.id}`)
+
+    expect(await screen.findByRole('heading', { name: 'Activity Workspace' })).toBeInTheDocument()
+    expect(screen.getByText('Loops Activity')).toBeInTheDocument()
+    expect(screen.getAllByText('Git push saves your work. It does not submit the Activity.').length).toBeGreaterThan(0)
+    expect(screen.getByRole('tab', { name: 'Local Git' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('button', { name: 'Issue Read + Write Credential' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back' })).toHaveAttribute('href', `/student/activity/${activity.id}?classId=${selectedClass.id}`)
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Repository invitations/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Archive/i })).not.toBeInTheDocument()
+    expect(screen.getByText(/metadata is read-only/i)).toBeInTheDocument()
   })
 })
