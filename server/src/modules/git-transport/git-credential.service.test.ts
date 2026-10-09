@@ -117,28 +117,7 @@ describe('Git credential issuance availability', () => {
     expect(repository.createCredential).not.toHaveBeenCalled()
   })
 
-  it.each(['READ', 'WRITE'] as const)(
-    'fails closed for ACTIVITY_WORKSPACE %s credential issuance in V1-A',
-    async (operation) => {
-      const repository = {
-        findAccess: vi.fn().mockResolvedValue(access('ACTIVITY_WORKSPACE')),
-        createCredential: vi.fn(),
-      } as unknown as GitTransportRepository
-      const service = createGitCredentialService({
-        issuanceEnabled: true,
-        repository,
-        logger: pino({ level: 'silent' }),
-        credentialTtlMinutes: 15,
-        now: () => current,
-      })
-
-      await expect(service.issue(caller, repositoryId, [operation]))
-        .rejects.toMatchObject({ statusCode: 403, code: 'GIT_OPERATION_NOT_AUTHORIZED' })
-      expect(repository.createCredential).not.toHaveBeenCalled()
-    },
-  )
-
-  it.each(['PERSONAL', 'CLASS_PROJECT', 'CLASS_WORKSPACE'] as const)(
+  it.each(['PERSONAL', 'CLASS_PROJECT', 'CLASS_WORKSPACE', 'ACTIVITY_WORKSPACE'] as const)(
     'preserves existing %s owner READ and WRITE credential issuance',
     async (repositoryType) => {
       const repository = {
@@ -160,7 +139,7 @@ describe('Git credential issuance availability', () => {
   )
 
   it.each(['READ', 'WRITE'] as const)(
-    'rejects ACTIVITY_WORKSPACE %s transport authentication even for a valid stored credential',
+    'authenticates authorized ACTIVITY_WORKSPACE %s transport credentials in V1-B',
     async (operation) => {
       const secret = 'activityworkspacecredentialsecret1234567890'
       const repository = {
@@ -182,8 +161,8 @@ describe('Git credential issuance availability', () => {
       const authorization = `Basic ${Buffer.from(`${credentialId}:${secret}`).toString('base64')}`
 
       await expect(service.authenticate({ authorization, repositoryId, operation }))
-        .rejects.toMatchObject({ statusCode: 401, code: 'GIT_AUTHENTICATION_FAILED' })
-      expect(repository.touchCredential).not.toHaveBeenCalled()
+        .resolves.toMatchObject({ userId: caller.id, repositoryId, operation })
+      expect(repository.touchCredential).toHaveBeenCalledOnce()
     },
   )
 })
