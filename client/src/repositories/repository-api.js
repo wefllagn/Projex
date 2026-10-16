@@ -28,6 +28,15 @@ export function createRepositoryApi(client = apiClient) {
     createActivityWorkspace(activityId, options) {
       return client.post(`/activities/${activityId}/repository`, {}, options)
     },
+    createActivityCheckpoint(activityId, input, idempotencyKey, options) {
+      return client.post(`/activities/${activityId}/repository/checkpoints`, input, {
+        ...options,
+        headers: { ...options?.headers, 'Idempotency-Key': idempotencyKey },
+      })
+    },
+    getActivityCheckpoint(activityId, checkpointId, options) {
+      return client.get(`/activities/${activityId}/repository/checkpoints/${checkpointId}`, options)
+    },
     listRepositories(query, options) {
       return client.get(`/repositories${queryString(query)}`, options)
     },

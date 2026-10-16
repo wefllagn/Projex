@@ -48,6 +48,8 @@ The serializable creation transaction:
 5. Creates immutable source/activity/test snapshots, one execution, per-test result placeholders, one durable job, and one idempotency record.
 6. When applicable, consumes and links exactly one valid replacement grant in the same transaction.
 
+I2.3 Activity Git Workspace saves are explicitly outside this transaction. A browser checkpoint or native Git push creates no `ActivitySubmission`, consumes no attempt, queues no Java assessment, and produces no score. Loading the latest pushed/checkpointed entry file only replaces the editable browser source. The Student must still review that source and use the existing explicit Submit confirmation; submission continues to persist its own immutable source snapshot.
+
 A new attempt returns `201`. An exact replay returns the original response with `200` and `meta.idempotentReplay=true`. Reusing the same scoped key with different source returns `DUPLICATE_SUBMISSION_REQUEST`. Another student has a separate scope.
 
 ## Attempt allowance and replacement grants

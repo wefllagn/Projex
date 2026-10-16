@@ -4,7 +4,7 @@
 
 Phase 8C adds backend-only, authenticated, read-only inspection of READY Projex repositories. It builds on the Phase 8A managed bare-repository storage and Phase 8B authorization model without requiring Smart HTTP to be enabled. It does not modify the React frontend.
 
-Phase 10C.3 later integrates this unchanged backend surface into the real student/instructor repository detail. The client lazy-loads only the selected files/history/branches view, uses allowlisted projections, aborts stale repository/revision/path requests, treats Git author names as self-asserted metadata, and never falls back to prototype Git data. Browser Git mutation remains excluded.
+Phase 10C.3 later integrates this unchanged backend surface into the real student/instructor repository detail. The client lazy-loads only the selected files/history/branches view, uses allowlisted projections, aborts stale repository/revision/path requests, treats Git author names as self-asserted metadata, and never falls back to prototype Git data. General browser Git mutation remains excluded. I2.3 V1-D adds one narrow exception: the owning Student may explicitly checkpoint the current Activity browser editor source to that Student's READY `ACTIVITY_WORKSPACE` while its Activity is open.
 
 The implemented scope is deliberately limited to repository summary, branch listing, paginated commit history, reachable commit details, tree browsing, bounded UTF-8 text-file viewing, and bounded commit-to-commit diff. Empty repositories return valid empty projections rather than synthetic branches, commits, files, or activity.
 
@@ -14,7 +14,9 @@ Repository placement is server-derived rather than selected by the persisted str
 
 ## Deferred operations
 
-Server-created branches, file commits, merges, conflict resolution, and branch deletion remain deferred. Phase 8B already provides the approved authenticated write path through protected Smart HTTP. Adding a second server-side write path would require a separately approved database-backed repository lock/lease, temporary-worktree lifecycle, author-identity policy, mutation idempotency, audit semantics, and recovery design.
+Server-created branches, general file commits, merges, conflict resolution, and branch deletion remain deferred. Phase 8B already provides the approved authenticated write path through protected Smart HTTP. The bounded I2.3 Activity checkpoint path uses the separately approved controls: one database-backed active-job lock per repository, claim lease and bounded retry, scoped request idempotency, a unique temporary worktree, fixed server-owned commit message and local author identity, authenticated Student audit attribution, expected-HEAD comparison, and a normal fast-forward push that fails closed if Smart HTTP work changed `main` concurrently. It can update only the Activity entry `.java` file on `main`; clients cannot choose paths, refs, commands, author metadata, or commit messages.
+
+The Activity editor loads Git code through the existing read-only file endpoint at an exact latest reachable commit. Loading only replaces the browser editor after an overwrite warning when needed. It does not create an academic submission.
 
 Contribution summaries are also deferred. Git author names and emails are self-asserted commit metadata and cannot yet be treated as verified Projex identities or academic contribution evidence. A later analytics phase must define identity association and anti-spoofing rules before presenting contributor metrics.
 
@@ -32,7 +34,11 @@ GET /api/v1/repositories/:repositoryId/source/commits/:commitId
 GET /api/v1/repositories/:repositoryId/source/tree?branchName=&commitId=&path=
 GET /api/v1/repositories/:repositoryId/source/file?branchName=&commitId=&path=
 GET /api/v1/repositories/:repositoryId/source/diff?baseCommitId=&targetCommitId=&path=
+POST /api/v1/activities/:activityId/repository/checkpoints
+GET /api/v1/activities/:activityId/repository/checkpoints/:checkpointId
 ```
+
+Checkpoint creation accepts only `sourceCode` and `expectedHeadCommitHash`, enforces the configured UTF-8 Java source byte limit, requires CSRF plus a validated `Idempotency-Key`, and returns a durable checkpoint job. Database constraints bound claim attempts, require complete worker/lease state while `RUNNING`, require completion timestamps for terminal states, and require a valid resulting commit for `SUCCEEDED`. The worker rechecks current Activity Workspace WRITE authority both before preparing work and immediately before push. `PENDING`/`RUNNING` jobs are polled through the owning Student-only status endpoint; terminal states are `SUCCEEDED`, `FAILED`, or `CONFLICTED`.
 
 `branchName` and `commitId` are mutually exclusive for tree/file requests. When neither is supplied, the server uses the repository's server-owned default branch. Commit IDs must be full 40-character hexadecimal object IDs and must be reachable from a current `refs/heads/*` branch. History pagination is capped at 50 commits per request.
 

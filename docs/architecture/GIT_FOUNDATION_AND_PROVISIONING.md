@@ -71,7 +71,7 @@ This admin API does not resolve a storage path, inspect or create a directory, e
 
 ## Empty repository rule
 
-A successfully provisioned repository is an empty bare Git repository whose symbolic `HEAD` is `refs/heads/main`. It has no commits, branch refs, tags, README, starter content, or synthetic activity. The first branch and commit are created only by an authenticated Phase 8B push; provisioning itself continues to create no history.
+A successfully provisioned repository is an empty bare Git repository whose symbolic `HEAD` is `refs/heads/main`. It has no commits, branch refs, tags, README, starter content, or synthetic activity. Provisioning itself continues to create no history. The first branch and commit may be created by an authenticated Phase 8B push or, only for an owning Student's open `ACTIVITY_WORKSPACE`, by the durable I2.3 browser-checkpoint worker. The checkpoint path uses the same verified managed storage and never runs Git in the API process.
 
 ## Test isolation
 

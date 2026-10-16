@@ -278,6 +278,16 @@ enum RepositoryProvisioningJobStatus {
   @@map("repository_provisioning_job_status")
 }
 
+enum RepositoryCheckpointJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CONFLICTED
+
+  @@map("repository_checkpoint_job_status")
+}
+
 enum GitCredentialOperation {
   READ
   WRITE
@@ -372,6 +382,7 @@ model User {
   repositoryFeedbackAuthored    RepositoryFeedback[]          @relation("RepositoryFeedbackInstructor")
   repositoryFeedbackReleased    RepositoryFeedback[]          @relation("RepositoryFeedbackReleaser")
   gitCredentials                GitCredential[]
+  repositoryCheckpointJobs      RepositoryCheckpointJob[]     @relation("RepositoryCheckpointStudent")
   adminAuditEvents              AdminAuditEvent[]              @relation("AdminAuditActor")
 
   @@index([role, status])
@@ -580,6 +591,7 @@ model ProgrammingActivity {
   submissionIdempotencies SubmissionIdempotency[]
   practiceExecutions      PracticeExecution[]
   workspaceRepositories   Repository[]             @relation("ActivityWorkspaceRepositories")
+  repositoryCheckpointJobs RepositoryCheckpointJob[]
 
   @@index([classId, status])
   @@index([dueDate])
@@ -988,6 +1000,7 @@ model Repository {
   feedback           RepositoryFeedback[]
   provisioningJob    RepositoryProvisioningJob?
   gitCredentials     GitCredential[]
+  checkpointJobs     RepositoryCheckpointJob[]
 
   @@unique([teamId, projectTaskId])
   @@index([ownerId])
@@ -1019,6 +1032,39 @@ model RepositoryProvisioningJob {
   @@index([status, availableAt])
   @@index([leaseExpiresAt])
   @@map("repository_provisioning_jobs")
+}
+
+model RepositoryCheckpointJob {
+  id                     String                        @id @default(uuid()) @map("checkpoint_job_id") @db.Uuid
+  repositoryId           String                        @map("repository_id") @db.Uuid
+  activityId             String                        @map("activity_id") @db.Uuid
+  studentId              String                        @map("student_id") @db.Uuid
+  status                 RepositoryCheckpointJobStatus @default(PENDING)
+  sourceCode             String                        @map("source_code") @db.Text
+  sourceHash             String                        @map("source_hash")
+  idempotencyKeyHash     String                        @map("idempotency_key_hash")
+  expectedHeadCommitHash String?                       @map("expected_head_commit_hash")
+  resultingCommitHash    String?                       @map("resulting_commit_hash")
+  entryFilePath          String                        @map("entry_file_path")
+  claimAttempt           Int                           @default(0) @map("claim_attempt")
+  maxClaimAttempts       Int                           @default(3) @map("max_claim_attempts")
+  availableAt            DateTime                      @default(now()) @map("available_at") @db.Timestamptz(3)
+  claimedAt              DateTime?                     @map("claimed_at") @db.Timestamptz(3)
+  leaseExpiresAt         DateTime?                     @map("lease_expires_at") @db.Timestamptz(3)
+  completedAt            DateTime?                     @map("completed_at") @db.Timestamptz(3)
+  workerId               String?                       @map("worker_id")
+  lastFailureCode        String?                       @map("last_failure_code")
+  createdAt              DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  repository             Repository                    @relation(fields: [repositoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  activity               ProgrammingActivity           @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  student                User                          @relation("RepositoryCheckpointStudent", fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([studentId, activityId, idempotencyKeyHash])
+  @@index([status, availableAt])
+  @@index([leaseExpiresAt])
+  @@index([repositoryId, createdAt])
+  @@map("repository_checkpoint_jobs")
 }
 
 model GitCredential {

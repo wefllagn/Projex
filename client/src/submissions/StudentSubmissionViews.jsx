@@ -29,6 +29,8 @@ import {
 import useBoundedPolling from './use-bounded-polling.js'
 import JavaSourceEditor from './JavaSourceEditor.jsx'
 import { compilerLines, focusJavaLine } from './java-source-tools.js'
+import { repositoryApi } from '../repositories/repository-api.js'
+import { repositoryContentApi } from '../repositories/repository-content-api.js'
 
 const FIRST_PAGE = { page: 1, pageSize: 20, status: '' }
 const DESKTOP_WORKSPACE_QUERY = '(min-width: 1181px)'
@@ -259,6 +261,14 @@ function createIdempotencyKey() {
   return `submission:${Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('')}`
 }
 
+function createCheckpointIdempotencyKey() {
+  return createIdempotencyKey().replace(/^submission:/, 'checkpoint:')
+}
+
+function isCheckpointPending(record) {
+  return ['PENDING', 'RUNNING'].includes(record?.status)
+}
+
 function VisibleOutcomeList({ outcomes, emptyMessage = 'No visible-test outcomes are available yet.' }) {
   if (!outcomes.length) return <p className="submission-muted-copy">{emptyMessage}</p>
   return (
@@ -348,6 +358,8 @@ function useWorkspaceActivity(api, activityId, selectedClass, selectionStatus) {
 export function StudentProgrammingWorkspace({
   api = activityApi,
   submissions = submissionApi,
+  repositories = repositoryApi,
+  repositoryContent = repositoryContentApi,
   pollingOptions,
 }) {
   const capabilities = useCapabilities()
@@ -361,9 +373,13 @@ export function StudentProgrammingWorkspace({
   const [history, setHistory] = useState({ key: null, status: 'idle', items: [], error: null, reviewedAfterAmbiguity: false })
   const [submission, setSubmission] = useState({ status: 'idle', intent: null, error: null })
   const [confirmMode, setConfirmMode] = useState(null)
+  const [gitWorkspace, setGitWorkspace] = useState({ status: 'idle', repository: null, summary: null, error: null })
+  const [checkpoint, setCheckpoint] = useState({ record: null, requesting: false, bounded: false, error: null, intent: null })
+  const [gitSource, setGitSource] = useState({ loading: false, loadedCommitHash: null, error: null })
   const mounted = useRef(true)
   const editorRef = useRef(null)
   const practicedSource = useRef(null)
+  const checkpointIntent = useRef(null)
   const paneSizing = useWorkspacePaneSizing()
 
   useEffect(() => {
@@ -381,7 +397,138 @@ export function StudentProgrammingWorkspace({
     setSubmission({ status: 'idle', intent: null, error: null })
     setAttemptState({ key: workspace.activity.id, status: 'loading', record: null, error: null })
     setHistory({ key: workspace.activity.id, status: 'idle', items: [], error: null, reviewedAfterAmbiguity: false })
+    setGitWorkspace({ status: 'loading', repository: null, summary: null, error: null })
+    setCheckpoint({ record: null, requesting: false, bounded: false, error: null, intent: null })
+    setGitSource({ loading: false, loadedCommitHash: null, error: null })
+    checkpointIntent.current = null
   }, [selectedClass?.id, workspace.activity])
+
+  const loadGitWorkspace = useCallback(async ({ signal } = {}) => {
+    if (!activityId) return null
+    setGitWorkspace((current) => ({ ...current, status: 'loading', error: null }))
+    let repository = null
+    try {
+      const repositoryResponse = await repositories.getActivityWorkspace(activityId, { signal })
+      repository = repositoryResponse.data
+      if (repository.repositoryType !== 'ACTIVITY_WORKSPACE' || repository.activityId !== activityId) {
+        throw contextMismatchError('The Git Workspace does not match this activity.')
+      }
+      if (repository.storageStatus !== 'READY') {
+        setGitWorkspace({ status: 'provisioning', repository, summary: null, error: null })
+        return null
+      }
+      const summaryResponse = await repositoryContent.getSummary(repository.id, { signal })
+      if (summaryResponse.data.repositoryId !== repository.id) throw contextMismatchError('The Git summary does not match this repository.')
+      setGitWorkspace({ status: 'ready', repository, summary: summaryResponse.data, error: null })
+      return summaryResponse.data
+    } catch (error) {
+      if (error?.name === 'AbortError') return null
+      setGitWorkspace({ status: !repository && error?.status === 404 ? 'not-created' : 'error', repository, summary: null, error })
+      return null
+    }
+  }, [activityId, repositories, repositoryContent])
+
+  useEffect(() => {
+    if (workspace.status !== 'ready') return undefined
+    const controller = new AbortController()
+    Promise.resolve().then(() => loadGitWorkspace({ signal: controller.signal }))
+    return () => controller.abort()
+  }, [loadGitWorkspace, workspace.status])
+
+  const checkpointLoad = useCallback(
+    (checkpointId, options) => repositories.getActivityCheckpoint(activityId, checkpointId, options),
+    [activityId, repositories],
+  )
+  const updateCheckpoint = useCallback((response) => {
+    const record = response.data
+    if (record.activityId !== activityId || record.repositoryId !== gitWorkspace.repository?.id) {
+      throw contextMismatchError('The checkpoint does not match this Activity Workspace.')
+    }
+    const pending = isCheckpointPending(record)
+    const intent = checkpointIntent.current
+    setCheckpoint({ record, requesting: false, bounded: false, error: null, intent: pending ? intent : null })
+    if (record.status === 'SUCCEEDED') {
+      if (intent) setSource((current) => ({ ...current, initial: intent.sourceCode }))
+      Promise.resolve().then(() => loadGitWorkspace())
+    }
+    if (!pending) checkpointIntent.current = null
+    return pending
+  }, [activityId, gitWorkspace.repository?.id, loadGitWorkspace])
+
+  useBoundedPolling({
+    identity: checkpoint.record?.checkpointId,
+    active: isCheckpointPending(checkpoint.record) && !checkpoint.requesting && !checkpoint.error && !checkpoint.bounded,
+    load: checkpointLoad,
+    onData: updateCheckpoint,
+    onError: (error) => setCheckpoint((current) => ({ ...current, error, requesting: false })),
+    onBoundedStop: () => setCheckpoint((current) => ({ ...current, bounded: true })),
+    ...pollingOptions,
+  })
+
+  const saveGitCheckpoint = async () => {
+    if (!gitWorkspace.repository || checkpoint.requesting || isCheckpointPending(checkpoint.record)) return
+    const ambiguousIntent = checkpoint.error?.code === 'NETWORK_ERROR' ? checkpoint.intent : null
+    let intent = ambiguousIntent
+    setCheckpoint((current) => ({ ...current, record: null, requesting: true, bounded: false, error: null }))
+    try {
+      if (!intent) {
+        const freshSummary = await repositoryContent.getSummary(gitWorkspace.repository.id)
+        const expected = gitWorkspace.summary?.latestCommit?.commitId ?? null
+        const current = freshSummary.data.latestCommit?.commitId ?? null
+        if (current !== expected) {
+          setGitWorkspace((state) => ({ ...state, summary: freshSummary.data }))
+          throw new ApiError({ status: 409, code: 'CHECKPOINT_HEAD_CHANGED', message: 'Newer Git code is available. Load it before saving this browser source.' })
+        }
+        intent = {
+          sourceCode: source.value,
+          expectedHeadCommitHash: current,
+          idempotencyKey: createCheckpointIdempotencyKey(),
+        }
+      }
+      checkpointIntent.current = intent
+      setCheckpoint((current) => ({ ...current, intent }))
+      const response = await repositories.createActivityCheckpoint(
+        activityId,
+        { sourceCode: intent.sourceCode, expectedHeadCommitHash: intent.expectedHeadCommitHash },
+        intent.idempotencyKey,
+      )
+      updateCheckpoint(response)
+    } catch (error) {
+      if (error?.code !== 'NETWORK_ERROR') checkpointIntent.current = null
+      setCheckpoint((current) => ({ ...current, requesting: false, error, intent: error?.code === 'NETWORK_ERROR' ? intent : null }))
+    }
+  }
+
+  const refreshCheckpoint = async () => {
+    if (!checkpoint.record?.checkpointId || checkpoint.requesting) return
+    setCheckpoint((current) => ({ ...current, requesting: true, bounded: false, error: null }))
+    try { updateCheckpoint(await checkpointLoad(checkpoint.record.checkpointId)) }
+    catch (error) { setCheckpoint((current) => ({ ...current, requesting: false, error })) }
+  }
+
+  const loadLatestGitSource = async () => {
+    if (!gitWorkspace.repository || gitSource.loading) return
+    setGitSource((current) => ({ ...current, loading: true, error: null }))
+    try {
+      const summaryResponse = await repositoryContent.getSummary(gitWorkspace.repository.id)
+      const latestCommitHash = summaryResponse.data.latestCommit?.commitId ?? null
+      setGitWorkspace((current) => ({ ...current, summary: summaryResponse.data }))
+      if (!latestCommitHash) throw new ApiError({ status: 404, code: 'GIT_CONTENT_NOT_FOUND', message: 'No Git checkpoint or pushed source exists yet.' })
+      const filePath = `${workspace.activity.entryClassName}.java`
+      const fileResponse = await repositoryContent.getFile(gitWorkspace.repository.id, { commitId: latestCommitHash, path: filePath })
+      if (fileResponse.data.commitId !== latestCommitHash || fileResponse.data.path !== filePath) {
+        throw contextMismatchError('The loaded Git source does not match the requested file.')
+      }
+      if (source.value !== source.initial && !window.confirm('Replace the unsaved browser source with the latest Git Workspace version?')) {
+        setGitSource((current) => ({ ...current, loading: false }))
+        return
+      }
+      setSource((current) => ({ ...current, initial: fileResponse.data.content, value: fileResponse.data.content }))
+      setGitSource({ loading: false, loadedCommitHash: latestCommitHash, error: null })
+    } catch (error) {
+      setGitSource((current) => ({ ...current, loading: false, error }))
+    }
+  }
 
   const refreshAttemptState = useCallback(async ({ signal } = {}) => {
     if (!activityId) return null
@@ -545,6 +692,7 @@ export function StudentProgrammingWorkspace({
   const replacement = attempt?.replacementAvailable ? attempt.replacement : null
   const archived = selectedClass.status === 'ARCHIVED' || activity.status === 'ARCHIVED'
   const ordinaryOpen = attempt?.dueState === 'OPEN'
+  const sourceDirty = source.value !== source.initial
   const canRun = ordinaryOpen && !archived
   const canSubmit = Boolean(
     !archived &&
@@ -602,8 +750,8 @@ export function StudentProgrammingWorkspace({
             </div>
           </section>
           <div className="student-source-memory-note">
-            <strong>Not automatically saved</strong>
-            <span>Your edited source stays only in this browser tab.</span>
+            <strong>{checkpoint.record?.status === 'SUCCEEDED' && !sourceDirty ? 'Saved to Git Workspace' : 'Browser draft'}</strong>
+            <span>{checkpoint.record?.status === 'SUCCEEDED' && !sourceDirty ? 'This checkpoint is available to clone or pull. It is not a submission.' : 'Use Save to Git Workspace before leaving this browser tab.'}</span>
           </div>
         </aside>
 
@@ -664,6 +812,35 @@ export function StudentProgrammingWorkspace({
           </div>
         </section>
       </main>
+
+      <section className="student-git-checkpoint-panel" aria-live="polite">
+        <div>
+          <strong>Activity Git Workspace</strong>
+          <span>Checkpoints save unfinished work without consuming an attempt. Git push also saves work; only Submit creates an official submission.</span>
+          {gitWorkspace.status === 'loading' && <small>Checking Git Workspace...</small>}
+          {gitWorkspace.status === 'not-created' && <small>Create the Activity Git Workspace from Activity Detail before saving or loading code.</small>}
+          {gitWorkspace.status === 'provisioning' && <small>Git Workspace is still provisioning. Refresh after it becomes Ready.</small>}
+          {gitWorkspace.status === 'error' && <small className="student-coding-failure">{describeApiError(gitWorkspace.error)}</small>}
+          {gitWorkspace.status === 'ready' && <small>{gitWorkspace.summary?.latestCommit ? `Latest Git commit ${gitWorkspace.summary.latestCommit.commitId.slice(0, 8)}` : 'The Git Workspace has no commits yet.'}</small>}
+          {checkpoint.requesting && <small>Queueing checkpoint...</small>}
+          {isCheckpointPending(checkpoint.record) && <small>Saving checkpoint: {formatStatus(checkpoint.record.status)}</small>}
+          {checkpoint.record?.status === 'SUCCEEDED' && <small>Checkpoint saved at commit {checkpoint.record.resultingCommitHash?.slice(0, 8)}. No submission was created.</small>}
+          {checkpoint.record?.status === 'CONFLICTED' && <small className="student-coding-failure">The Git branch changed before this checkpoint was saved. Load the latest Git source, review it, then save again.</small>}
+          {checkpoint.record?.status === 'FAILED' && <small className="student-coding-failure">The checkpoint could not be saved. Your browser source remains unchanged.</small>}
+          {checkpoint.error && <small className="student-coding-failure">{describeApiError(checkpoint.error)}</small>}
+          {checkpoint.error?.code === 'NETWORK_ERROR' && <small>The checkpoint result is uncertain. Retry sends the exact same source and request key; it does not create a deliberate second checkpoint.</small>}
+          {checkpoint.error?.code === 'NETWORK_ERROR' && checkpoint.intent?.sourceCode !== source.value && <small>The editor changed after the uncertain request. Retry still sends the earlier source snapshot.</small>}
+          {checkpoint.bounded && <small>Automatic checkpoint refresh stopped. Use Refresh checkpoint status.</small>}
+          {gitSource.loadedCommitHash && <small>Loaded {workspace.activity.entryClassName}.java from commit {gitSource.loadedCommitHash.slice(0, 8)}. Review it before submitting.</small>}
+          {gitSource.error && <small className="student-coding-failure">{describeApiError(gitSource.error)}</small>}
+        </div>
+        <div className="student-git-checkpoint-actions">
+          <button type="button" className="student-outline-action" disabled={gitWorkspace.status === 'loading'} onClick={() => loadGitWorkspace()}>Refresh Git Workspace</button>
+          <button type="button" className="student-outline-action" disabled={gitWorkspace.status !== 'ready' || gitSource.loading || isCheckpointPending(checkpoint.record)} onClick={loadLatestGitSource}>{gitSource.loading ? 'Loading Git source...' : 'Load latest Git source'}</button>
+          <button type="button" className="student-primary-action" disabled={gitWorkspace.status !== 'ready' || !ordinaryOpen || archived || !(checkpoint.intent?.sourceCode || source.value).trim() || checkpoint.requesting || isCheckpointPending(checkpoint.record)} onClick={saveGitCheckpoint}>{checkpoint.requesting || isCheckpointPending(checkpoint.record) ? 'Saving checkpoint...' : checkpoint.error?.code === 'NETWORK_ERROR' ? 'Retry exact checkpoint request' : 'Save to Git Workspace'}</button>
+          {checkpoint.bounded && checkpoint.record?.checkpointId && <button type="button" className="student-outline-action" disabled={checkpoint.requesting} onClick={refreshCheckpoint}>Refresh checkpoint status</button>}
+        </div>
+      </section>
 
       <footer className="student-coding-actions">
         <div className="workspace-action-message">

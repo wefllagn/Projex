@@ -2,8 +2,8 @@
 
 ## Revision control
 
-- Revision: **I2-R7**
-- Revised: **2026-10-03**
+- Revision: **I2-R8**
+- Revised: **2026-10-17**
 - Deadline target: **2026-10-30** for the system and research paper
 - Planning authority: this file owns Iteration 2 scope and dependency order.
 - Execution status: `docs/team/ITERATION_2_CHECKLIST.md` owns the maintained phase checklist.
@@ -50,6 +50,11 @@
 
 - ChatGPT Checker accepted Freiser's I2.2 Academic Work Hub after the final 390 × 844 Student and Instructor visual re-check. This records milestone evidence without changing roadmap scope or the separate protected-integration gate.
 
+### I2-R8 Activity Workspace continuation
+
+- Aaron's Activity Workspace V1-A, V1-B, and V1-C slices are Checker-accepted and committed on `iteration-2/aaron-work-01` through `56a7d3352e8c265d9b31d4b739d8166de13fc63a`.
+- V1-D browser/Git checkpoint continuity is an unstaged pre-commit WIP. Its additive migrations remain unapplied to normal `projex`; Checker acceptance, task-branch savepoint, protected integration, and I2.8 networking remain separate gates.
+
 ## Program name
 
 **Projex Iteration 2 — Classroom and Laboratory Readiness**
@@ -62,13 +67,14 @@ Iteration 2 turns the accepted Home-LAN-tested baseline into a coherent classroo
 
 ## Current verified position
 
-As of I2-R7, the cumulative member branch is `iteration-2/freiser-work-01`; verify HEAD and working-tree state directly before work.
+As of I2-R8, the active cumulative member branch is `iteration-2/aaron-work-01`; verify HEAD and working-tree state directly before work.
 
 - **I2.1 core, Instructor Rerun, bounded I2.3 repository workflow: ACCEPTED ON MEMBER BRANCH.** Protected integration remains a separate Julius gate. Instructor Rerun diagnostics remain durable for Iteration 2 without automatic cleanup.
 - **Academic Course/Class Offering foundation: ACCEPTED ON MEMBER BRANCH.** Additive migrations and the authenticated walkthrough were exercised only on disposable `projex_test`; normal `projex` migration needs separate approval. Final evidence and limitations are recorded in `milestones/ACADEMIC_FOUNDATION.md`.
 - **Other I2.1 follow-ups: PROPOSED / AWAITING APPROVAL.** Entry-class explanation, compact test-case authoring, scoring-allocation clarity and invitation-flow simplification remain bounded UX candidates. Personalized nonempty-output checking and ungraded activities need separate implementation decisions.
 - **I2.2: ACCEPTED FOR FREISER CHECKPOINT.** Cross-class API/UI, guarded integration, final client regression, authenticated API validation, Freiser's detailed desktop walkthrough and final 390 × 844 Student/Instructor PASS are recorded in `milestones/I2.2.md`. Checker accepted the bounded responsive/dashboard correction. Loading/error/retry were not separately reported as manually passed; protected integration remains separate.
-- **I2.4–I2.9: PENDING.** The bounded I2.3 slice is accepted; its proposed class-workspace extension remains gated.
+- **I2.3 Activity Workspace V1-A/V1-B/V1-C: ACCEPTED ON AARON TASK BRANCH.** Database/API foundation, loopback Smart HTTP, and Student UI are committed through `56a7d3352e8c265d9b31d4b739d8166de13fc63a`. V1-D checkpoint continuity remains WIP pending Checker review, and its normal-database migration is not approved.
+- **I2.4–I2.9: PENDING.** Earlier I2.3 repository, Class Workspace, and Activity Workspace V1-A/V1-B/V1-C slices are accepted on their task branches; V1-D remains WIP. Submission provenance, protected integration, and network Git remain separate gates.
 - Existing Phase 0–11 history remains unchanged. A working UI, model or test foundation does not mark an Iteration 2 capability complete.
 
 ## Rules across every milestone

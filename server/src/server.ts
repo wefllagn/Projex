@@ -70,6 +70,9 @@ import { createPrismaAdminOversightRepository } from './modules/admin/admin-over
 import { createAdminOversightService } from './modules/admin/admin-oversight.service.js'
 import { createCapabilitiesRouter } from './modules/capabilities/capabilities.routes.js'
 import { createCapabilitiesService } from './modules/capabilities/capabilities.service.js'
+import { createPrismaActivityWorkspaceCheckpointRepository } from './modules/activity-workspace-checkpoints/activity-workspace-checkpoint.repository.js'
+import { createActivityWorkspaceCheckpointService } from './modules/activity-workspace-checkpoints/activity-workspace-checkpoint.service.js'
+import { createActivityWorkspaceCheckpointRouter } from './modules/activity-workspace-checkpoints/activity-workspace-checkpoint.routes.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
@@ -221,6 +224,13 @@ async function bootstrap(): Promise<void> {
     }),
     logger,
   })
+  const activityWorkspaceCheckpointService = createActivityWorkspaceCheckpointService({
+    enabled: env.gitExecutionMode === 'local_process',
+    sourceLimitBytes: env.javaSourceLimitBytes,
+    repository: createPrismaActivityWorkspaceCheckpointRepository(prisma),
+    accessRepository: gitTransportRepository,
+    logger,
+  })
   const gitSmartHttpBackend = createGitSmartHttpBackend({
     executable: env.gitHttpBackendExecutable || process.execPath,
     gitExecutable: env.gitExecutable || process.execPath,
@@ -333,6 +343,11 @@ async function bootstrap(): Promise<void> {
       repositoryContent: createRepositoryContentRouter({
         service: repositoryContentService,
         requireAuthentication,
+      }),
+      activityWorkspaceCheckpoints: createActivityWorkspaceCheckpointRouter({
+        service: activityWorkspaceCheckpointService,
+        requireAuthentication,
+        requireCsrf,
       }),
     },
   })

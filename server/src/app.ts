@@ -40,6 +40,7 @@ export interface AppDependencies {
     repositories?: Router
     gitTransport?: Router
     repositoryContent?: Router
+    activityWorkspaceCheckpoints?: Router
     capabilities?: Router
     workHub?: Router
   }
@@ -110,6 +111,9 @@ export function createApp({
     }
     if (featureRouters.repositoryContent) {
       app.use('/api/v1', featureRouters.repositoryContent)
+    }
+    if (featureRouters.activityWorkspaceCheckpoints) {
+      app.use('/api/v1', featureRouters.activityWorkspaceCheckpoints)
     }
     if (featureRouters.workHub) app.use('/api/v1/work-hub', featureRouters.workHub)
   }

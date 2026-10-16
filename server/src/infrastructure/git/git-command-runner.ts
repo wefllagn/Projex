@@ -183,5 +183,5 @@ export function createGitCommandRunner(options: {
     }
   }
 
-  return { executable, detectVersion, initializeBare, verifyEmptyBare }
+  return { executable, run, detectVersion, initializeBare, verifyEmptyBare }
 }
