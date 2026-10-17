@@ -14073,6 +14073,818 @@ textarea:focus-visible {
   }
 }
 
+/* Approved Activity workspace flow: academic detail, native Git menu, and light browser IDE. */
+.student-activity-detail-card {
+  display: grid;
+  gap: 18px;
+}
+
+.activity-detail-heading,
+.activity-detail-identity {
+  min-width: 0;
+  flex: 1;
+}
+
+.activity-detail-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.activity-detail-title-row h2 {
+  min-width: 180px;
+  margin-right: 4px;
+}
+
+.activity-open-status {
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: #187243;
+  background: #def6e8;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.activity-code-menu {
+  position: relative;
+}
+
+.activity-code-button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px;
+  border: 1px solid #0b63ff;
+  border-radius: 9px;
+  color: #ffffff;
+  background: #0b63ff;
+  font: inherit;
+  font-weight: 900;
+  box-shadow: 0 10px 22px rgba(11, 99, 255, 0.2);
+  cursor: pointer;
+}
+
+.activity-code-button:disabled {
+  border-color: #c6d2e4;
+  color: #71809a;
+  background: #edf2f8;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.activity-code-popover {
+  position: absolute;
+  z-index: 90;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(390px, calc(100vw - 40px));
+  display: grid;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #cedbec;
+  border-radius: 12px;
+  color: #14233d;
+  background: #ffffff;
+  box-shadow: 0 24px 64px rgba(24, 43, 76, 0.22);
+}
+
+.activity-code-popover__heading,
+.activity-code-label-row,
+.activity-code-copy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.activity-code-popover__heading {
+  padding: 15px 17px 10px;
+}
+
+.activity-code-popover__heading button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 7px;
+  color: #53647d;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.activity-code-local-tab {
+  padding: 0 16px;
+  border-bottom: 1px solid #e3eaf4;
+}
+
+.activity-code-local-tab button {
+  min-height: 38px;
+  padding: 0 8px;
+  border: 0;
+  border-bottom: 2px solid #0b63ff;
+  color: #0b63ff;
+  background: transparent;
+  font: inherit;
+  font-weight: 900;
+}
+
+.activity-code-section {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e7edf5;
+}
+
+.activity-code-section > small,
+.activity-code-section label,
+.activity-code-expiry,
+.activity-code-footnote {
+  color: #5b6b83;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.activity-code-section label {
+  display: grid;
+  gap: 5px;
+  font-weight: 800;
+}
+
+.activity-code-label-row span {
+  padding: 4px 8px;
+  border: 1px solid #d6e0ec;
+  border-radius: 6px;
+  color: #415470;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.activity-code-copy-row {
+  min-width: 0;
+  padding-left: 10px;
+  overflow: hidden;
+  border: 1px solid #d9e3ef;
+  border-radius: 8px;
+  background: #f7f9fc;
+}
+
+.activity-code-copy-row code {
+  min-width: 0;
+  overflow: hidden;
+  color: #263b5d;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-code-copy-row button {
+  align-self: stretch;
+  padding: 8px 10px;
+  border: 0;
+  border-left: 1px solid #d9e3ef;
+  color: #0b63ff;
+  background: #ffffff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.activity-code-expiry,
+.activity-code-footnote,
+.activity-code-popover > .activity-action-success {
+  margin: 0;
+  padding: 10px 16px;
+}
+
+.activity-repository-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: #6c7b91;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.activity-git-workspace-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 20px 22px;
+}
+
+.activity-git-workspace-card .student-work-card__header,
+.activity-git-workspace-card > p,
+.activity-git-workspace-card > .request-state,
+.activity-git-workspace-card > .activity-action-error,
+.activity-git-workspace-card > .activity-git-submission-warning {
+  grid-column: 1 / -1;
+}
+
+.activity-git-workspace-card .activity-git-workspace-facts {
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+}
+
+.activity-git-workspace-card .activity-git-submission-warning {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.repository-catalog-row--activity {
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 0.7fr) auto;
+}
+
+.repository-activity-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.repository-activity-actions .student-primary-action,
+.repository-activity-actions .student-outline-action {
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
+.student-coding-page {
+  grid-template-rows: 84px minmax(0, 1fr) 56px;
+  color: #14233d;
+  background: radial-gradient(circle, rgba(86, 132, 196, 0.1) 1px, transparent 1.4px) 0 0 / 18px 18px, #f8fbff;
+}
+
+.student-coding-topbar {
+  min-height: 84px;
+  grid-template-columns: minmax(240px, 1fr) auto;
+  gap: 18px;
+  padding: 10px 22px;
+}
+
+.student-workspace-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.student-workspace-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.student-workspace-heading h1 {
+  margin: 0;
+  overflow: hidden;
+  color: #10213d;
+  font-size: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-workspace-heading span {
+  color: #5c6c84;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.student-workspace-heading span.is-unsaved {
+  color: #a55a08;
+}
+
+.student-workspace-heading span.is-saved {
+  color: #137a48;
+}
+
+.student-workspace-back {
+  flex: 0 0 auto;
+  color: #0b63ff;
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.student-workspace-back::before {
+  content: "← ";
+}
+
+.student-coding-toolbar {
+  flex-wrap: nowrap;
+}
+
+.student-workspace-branch {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 13px;
+  border: 1px solid #d4deec;
+  border-radius: 8px;
+  color: #31445f;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.student-coding-toolbar .student-run-code,
+.student-coding-toolbar .student-run-tests,
+.student-save-git,
+.student-coding-toolbar .student-submit-code {
+  min-height: 42px;
+  padding: 0 15px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.student-coding-toolbar .student-run-code {
+  border: 1px solid #b9d0ff;
+  color: #0b63ff;
+  background: #eef5ff;
+}
+
+.student-save-git {
+  border: 1px solid #b9d0ff;
+  color: #0b63ff;
+  background: #ffffff;
+}
+
+.student-coding-toolbar button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.student-coding-shell {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.student-coding-instructions {
+  grid-row: 1;
+}
+
+.student-editor-area,
+.student-output-area {
+  border-color: #d8e3f0;
+  background: #ffffff;
+  box-shadow: 0 16px 36px rgba(25, 48, 82, 0.09);
+}
+
+.student-editor-tabs,
+.student-output-header,
+.student-workspace-panel-tabs {
+  border-bottom: 1px solid #dce6f2;
+  background: #f8fbff;
+}
+
+.student-editor-tabs button,
+.student-editor-tabs button.is-active {
+  color: #223551;
+  background: #ffffff;
+}
+
+.student-editor-workbench,
+.student-editor-explorer,
+.student-code-editor,
+.student-output-panel {
+  color: #263b5d;
+  background: #ffffff;
+}
+
+.student-editor-explorer {
+  border-right-color: #dce6f2;
+  color: #53647d;
+  background: #f7f9fc;
+}
+
+.student-editor-explorer strong,
+.student-editor-explorer .is-open,
+.student-editor-explorer .is-folder,
+.student-editor-explorer .is-file {
+  color: #40536e;
+}
+
+.student-editor-explorer .is-active {
+  color: #0b63ff;
+  background: #e8f1ff;
+}
+
+.student-editor-explorer button {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border: 0;
+  color: #40536e;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.student-editor-explorer .student-explorer-section {
+  min-height: auto;
+  margin-top: 8px;
+  padding-block: 7px;
+  border-top: 1px solid #dce6f2;
+  color: #71809a;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.student-explorer-section small {
+  min-height: 0;
+  margin: 0 0 0 6px;
+  padding: 0;
+  border: 0;
+  font-size: 9px;
+}
+
+.student-editor-status {
+  color: #53647d;
+  border-top-color: #dce6f2;
+  background: #f8fbff;
+}
+
+.student-output-area {
+  grid-column: 5;
+  grid-row: 1;
+  grid-template-rows: 48px minmax(0, 1fr);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.student-pane-resizer--instructions,
+.student-pane-resizer--output {
+  grid-row: 1;
+}
+
+.student-workspace-panel-tabs {
+  min-height: 48px;
+  display: flex;
+  align-items: end;
+  padding: 0 10px;
+}
+
+.student-workspace-panel-tabs button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #65748b;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.student-workspace-panel-tabs button.is-active {
+  color: #0b63ff;
+  border-bottom-color: #0b63ff;
+}
+
+.student-output-panel {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 18px;
+  white-space: normal;
+  font-family: inherit;
+}
+
+.student-output-panel > *,
+.student-workspace-git-panel,
+.student-workspace-git-panel > *,
+.submission-outcome,
+.submission-output-comparison,
+.student-panel-status-row {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.student-output-panel p,
+.student-output-panel span,
+.student-output-panel small,
+.student-output-panel strong,
+.student-workspace-git-panel dt,
+.student-workspace-git-panel dd {
+  overflow-wrap: anywhere;
+}
+
+.student-output-panel p,
+.student-output-panel pre {
+  margin: 0;
+}
+
+.student-output-panel pre {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px;
+  border: 1px solid #dce6f2;
+  border-radius: 8px;
+  color: #263b5d;
+  background: #f7f9fc;
+  white-space: pre-wrap;
+  font-family: var(--mono);
+}
+
+.student-panel-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.student-panel-status-row span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #355273;
+  background: #e8f1ff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.student-workspace-git-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.student-workspace-git-panel dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.student-workspace-git-panel dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid #e2eaf4;
+}
+
+.student-workspace-git-panel dd {
+  margin: 0;
+  font-weight: 900;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.student-git-checkpoint-actions {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.student-git-checkpoint-actions button {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.student-run-code-form,
+.student-code-run-output {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.student-run-code-form {
+  padding: 14px;
+  border: 1px solid #c9dcff;
+  border-radius: 10px;
+  background: #f6f9ff;
+}
+
+.student-run-code-form label,
+.student-code-run-output > span {
+  color: #40536e;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.student-run-code-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 116px;
+  resize: vertical;
+  padding: 11px 12px;
+  border: 1px solid #bfcde0;
+  border-radius: 8px;
+  color: #263b5d;
+  background: #ffffff;
+  font: 13px/1.55 Consolas, "Courier New", monospace;
+}
+
+.student-run-code-form > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.activity-repository-latest {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #dce6f2;
+  border-radius: 9px;
+  background: #f8fbff;
+}
+
+.activity-repository-latest span,
+.activity-repository-latest small {
+  color: #64748b;
+}
+
+.activity-repository-latest strong,
+.activity-repository-latest small {
+  overflow-wrap: anywhere;
+}
+
+.activity-repository-empty {
+  color: #64748b;
+}
+
+.student-newer-git-notice {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid #ffd28a;
+  border-radius: 8px;
+  color: #704a08;
+  background: #fff7df;
+}
+
+.student-coding-actions {
+  min-height: 56px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 8px 22px;
+}
+
+.workspace-action-message {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: #53647d;
+  font-size: 12px;
+}
+
+.student-workspace-history-link {
+  color: #0b63ff;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+@media (max-width: 980px) {
+  .student-coding-page {
+    height: auto;
+    max-height: none;
+    grid-template-rows: auto auto auto;
+    overflow: visible;
+  }
+
+  .student-coding-topbar {
+    position: sticky;
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .student-workspace-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .student-coding-toolbar {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .student-workspace-branch {
+    grid-column: 1 / -1;
+  }
+
+  .student-coding-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(440px, 58vh) minmax(360px, auto);
+    overflow: visible;
+    padding: 12px;
+  }
+
+  .student-coding-instructions,
+  .student-editor-area,
+  .student-output-area {
+    grid-column: 1;
+    grid-row: auto;
+    margin-bottom: 12px;
+    border: 1px solid #d8e3f0;
+    border-radius: 10px;
+  }
+
+  .student-coding-instructions {
+    max-height: 420px;
+  }
+
+  .student-editor-workbench--single-file {
+    grid-template-columns: minmax(120px, 170px) minmax(0, 1fr);
+  }
+
+  .student-editor-workbench--single-file .student-code-editor {
+    grid-column: 2;
+  }
+
+  .student-coding-actions {
+    position: sticky;
+    grid-template-columns: 1fr auto;
+  }
+}
+
+@media (max-width: 540px) {
+  .activity-detail-title-row {
+    align-items: flex-start;
+  }
+
+  .activity-code-menu {
+    position: static;
+  }
+
+  .activity-code-popover {
+    position: fixed;
+    top: 88px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100vh - 112px);
+    overflow-y: auto;
+  }
+
+  .activity-git-workspace-card,
+  .repository-catalog-row--activity {
+    grid-template-columns: 1fr;
+  }
+
+  .repository-activity-actions,
+  .repository-activity-actions a {
+    width: 100%;
+  }
+
+  .student-coding-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .student-coding-toolbar .student-run-tests {
+    grid-column: 2;
+  }
+
+  .student-coding-toolbar .student-run-code {
+    grid-column: 1;
+  }
+
+  .student-coding-toolbar .student-save-git {
+    grid-column: 1;
+  }
+
+  .student-coding-toolbar .student-submit-code {
+    grid-column: 2;
+  }
+
+  .student-editor-workbench--single-file {
+    grid-template-columns: 1fr;
+  }
+
+  .student-editor-explorer {
+    max-height: 150px;
+    overflow-y: auto;
+    border-right: 0;
+    border-bottom: 1px solid #dce6f2;
+  }
+
+  .student-editor-workbench--single-file .student-code-editor {
+    grid-column: 1;
+  }
+
+  .student-coding-actions {
+    align-items: flex-start;
+    grid-template-columns: 1fr;
+  }
+}
+
 .workspace-visible-example {
   display: grid;
   gap: 7px;

@@ -22,6 +22,7 @@ import { formatOutputWhitespace } from './output-diagnostics.js'
 import {
   isPracticePending,
   isSubmissionPending,
+  projectCodeRun,
   projectPracticeRun,
   projectStudentAttemptState,
   projectStudentSubmission,
@@ -369,6 +370,9 @@ export function StudentProgrammingWorkspace({
   const [workspace, reloadWorkspace] = useWorkspaceActivity(api, activityId, selectedClass, selectionStatus)
   const [source, setSource] = useState({ key: null, initial: '', value: '' })
   const [practice, setPractice] = useState({ record: null, error: null, requesting: false, bounded: false })
+  const [codeRun, setCodeRun] = useState({ record: null, error: null, requesting: false, bounded: false })
+  const [programInput, setProgramInput] = useState('')
+  const [codeInputOpen, setCodeInputOpen] = useState(false)
   const [attemptState, setAttemptState] = useState({ key: null, status: 'idle', record: null, error: null })
   const [history, setHistory] = useState({ key: null, status: 'idle', items: [], error: null, reviewedAfterAmbiguity: false })
   const [submission, setSubmission] = useState({ status: 'idle', intent: null, error: null })
@@ -376,10 +380,15 @@ export function StudentProgrammingWorkspace({
   const [gitWorkspace, setGitWorkspace] = useState({ status: 'idle', repository: null, summary: null, error: null })
   const [checkpoint, setCheckpoint] = useState({ record: null, requesting: false, bounded: false, error: null, intent: null })
   const [gitSource, setGitSource] = useState({ loading: false, loadedCommitHash: null, error: null })
+  const [workspacePanel, setWorkspacePanel] = useState('tests')
+  const [repositoryTree, setRepositoryTree] = useState({ status: 'idle', path: '', entries: [], error: null })
+  const [newerGitAvailable, setNewerGitAvailable] = useState(false)
   const mounted = useRef(true)
   const editorRef = useRef(null)
   const practicedSource = useRef(null)
+  const codeRunSource = useRef(null)
   const checkpointIntent = useRef(null)
+  const observedGitHead = useRef(null)
   const paneSizing = useWorkspacePaneSizing()
 
   useEffect(() => {
@@ -394,16 +403,23 @@ export function StudentProgrammingWorkspace({
       ? current
       : { key, initial: workspace.activity.starterCode ?? '', value: workspace.activity.starterCode ?? '' })
     setPractice({ record: null, error: null, requesting: false, bounded: false })
+    setCodeRun({ record: null, error: null, requesting: false, bounded: false })
+    setProgramInput('')
+    setCodeInputOpen(false)
     setSubmission({ status: 'idle', intent: null, error: null })
     setAttemptState({ key: workspace.activity.id, status: 'loading', record: null, error: null })
     setHistory({ key: workspace.activity.id, status: 'idle', items: [], error: null, reviewedAfterAmbiguity: false })
     setGitWorkspace({ status: 'loading', repository: null, summary: null, error: null })
     setCheckpoint({ record: null, requesting: false, bounded: false, error: null, intent: null })
     setGitSource({ loading: false, loadedCommitHash: null, error: null })
+    setWorkspacePanel('tests')
+    setRepositoryTree({ status: 'idle', path: '', entries: [], error: null })
+    setNewerGitAvailable(false)
     checkpointIntent.current = null
+    observedGitHead.current = null
   }, [selectedClass?.id, workspace.activity])
 
-  const loadGitWorkspace = useCallback(async ({ signal } = {}) => {
+  const loadGitWorkspace = useCallback(async ({ signal, announceChange = false } = {}) => {
     if (!activityId) return null
     setGitWorkspace((current) => ({ ...current, status: 'loading', error: null }))
     let repository = null
@@ -419,6 +435,9 @@ export function StudentProgrammingWorkspace({
       }
       const summaryResponse = await repositoryContent.getSummary(repository.id, { signal })
       if (summaryResponse.data.repositoryId !== repository.id) throw contextMismatchError('The Git summary does not match this repository.')
+      const nextHead = summaryResponse.data.latestCommit?.commitId ?? null
+      if (announceChange && observedGitHead.current && nextHead && observedGitHead.current !== nextHead) setNewerGitAvailable(true)
+      observedGitHead.current = nextHead
       setGitWorkspace({ status: 'ready', repository, summary: summaryResponse.data, error: null })
       return summaryResponse.data
     } catch (error) {
@@ -434,6 +453,37 @@ export function StudentProgrammingWorkspace({
     Promise.resolve().then(() => loadGitWorkspace({ signal: controller.signal }))
     return () => controller.abort()
   }, [loadGitWorkspace, workspace.status])
+
+  useEffect(() => {
+    if (workspace.status !== 'ready') return undefined
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') loadGitWorkspace({ announceChange: true })
+    }
+    window.addEventListener('focus', refreshWhenVisible)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      window.removeEventListener('focus', refreshWhenVisible)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [loadGitWorkspace, workspace.status])
+
+  const loadRepositoryTree = useCallback(async (path = '') => {
+    if (!gitWorkspace.repository || gitWorkspace.status !== 'ready' || gitWorkspace.summary?.empty || typeof repositoryContent.getTree !== 'function') return
+    setRepositoryTree((current) => ({ ...current, status: 'loading', path, error: null }))
+    try {
+      const response = await repositoryContent.getTree(gitWorkspace.repository.id, {
+        commitId: gitWorkspace.summary.latestCommit.commitId,
+        path,
+      })
+      setRepositoryTree({ status: 'ready', path: response.data.path ?? path, entries: Array.isArray(response.data.entries) ? response.data.entries : [], error: null })
+    } catch (error) {
+      if (error?.name !== 'AbortError') setRepositoryTree((current) => ({ ...current, status: 'error', error }))
+    }
+  }, [gitWorkspace.repository, gitWorkspace.status, gitWorkspace.summary, repositoryContent])
+
+  useEffect(() => {
+    if (gitWorkspace.status === 'ready' && !gitWorkspace.summary?.empty) Promise.resolve().then(() => loadRepositoryTree(''))
+  }, [gitWorkspace.status, gitWorkspace.summary?.empty, gitWorkspace.summary?.latestCommit?.commitId, loadRepositoryTree])
 
   const checkpointLoad = useCallback(
     (checkpointId, options) => repositories.getActivityCheckpoint(activityId, checkpointId, options),
@@ -462,6 +512,27 @@ export function StudentProgrammingWorkspace({
     onData: updateCheckpoint,
     onError: (error) => setCheckpoint((current) => ({ ...current, error, requesting: false })),
     onBoundedStop: () => setCheckpoint((current) => ({ ...current, bounded: true })),
+    ...pollingOptions,
+  })
+
+  const codeRunLoad = useCallback(
+    (runId, options) => submissions.getCodeRun(runId, options),
+    [submissions],
+  )
+  const updateCodeRun = useCallback((response) => {
+    const record = projectCodeRun(response.data)
+    if (record.activityId !== activityId) throw contextMismatchError('The code run does not match this activity.')
+    setCodeRun({ record, error: null, requesting: false, bounded: false })
+    return isPracticePending(record)
+  }, [activityId])
+
+  useBoundedPolling({
+    identity: codeRun.record?.id,
+    active: isPracticePending(codeRun.record) && !codeRun.error && !codeRun.bounded,
+    load: codeRunLoad,
+    onData: updateCodeRun,
+    onError: (error) => setCodeRun((current) => ({ ...current, error, requesting: false })),
+    onBoundedStop: () => setCodeRun((current) => ({ ...current, bounded: true })),
     ...pollingOptions,
   })
 
@@ -525,6 +596,8 @@ export function StudentProgrammingWorkspace({
       }
       setSource((current) => ({ ...current, initial: fileResponse.data.content, value: fileResponse.data.content }))
       setGitSource({ loading: false, loadedCommitHash: latestCommitHash, error: null })
+      setNewerGitAvailable(false)
+      observedGitHead.current = latestCommitHash
     } catch (error) {
       setGitSource((current) => ({ ...current, loading: false, error }))
     }
@@ -607,6 +680,7 @@ export function StudentProgrammingWorkspace({
   }, [source])
 
   const runVisibleTests = async () => {
+    setWorkspacePanel('tests')
     practicedSource.current = source.value
     setPractice({ record: null, error: null, requesting: true, bounded: false })
     try {
@@ -617,6 +691,32 @@ export function StudentProgrammingWorkspace({
       setPractice({ record, error: null, requesting: false, bounded: false })
     } catch (error) {
       if (mounted.current) setPractice({ record: null, error, requesting: false, bounded: false })
+    }
+  }
+
+  const runCode = async () => {
+    codeRunSource.current = source.value
+    setCodeRun({ record: null, error: null, requesting: true, bounded: false })
+    setWorkspacePanel('output')
+    try {
+      const response = await submissions.createCodeRun(activityId, source.value, programInput)
+      if (!mounted.current) return
+      const record = projectCodeRun(response.data)
+      if (record.activityId !== activityId) throw contextMismatchError('The code run does not match this activity.')
+      setCodeRun({ record, error: null, requesting: false, bounded: false })
+      setCodeInputOpen(false)
+    } catch (error) {
+      if (mounted.current) setCodeRun({ record: null, error, requesting: false, bounded: false })
+    }
+  }
+
+  const refreshCodeRun = async () => {
+    if (!codeRun.record?.id) return
+    setCodeRun((current) => ({ ...current, requesting: true, error: null }))
+    try {
+      updateCodeRun(await submissions.getCodeRun(codeRun.record.id))
+    } catch (error) {
+      setCodeRun((current) => ({ ...current, requesting: false, error }))
     }
   }
 
@@ -710,12 +810,25 @@ export function StudentProgrammingWorkspace({
   return (
     <div className="student-coding-page">
       <header className="student-coding-topbar">
-        <nav className="student-coding-breadcrumb" aria-label="Coding workspace breadcrumb">
-          <NavLink to={classHref(`/student/activity/${activity.id}`, selectedClass.id)}>{selectedClass.className}</NavLink>
-          <span>{activity.title}</span>
-          <strong>{activity.entryClassName}.java</strong>
-        </nav>
-        <NavLink className="student-outline-action" to={classHref(`/student/activity/${activity.id}/submissions`, selectedClass.id)}>Attempt history</NavLink>
+        <div className="student-workspace-heading">
+          <NavLink className="student-workspace-back" to={classHref(`/student/activity/${activity.id}`, selectedClass.id)}>Back to Activity</NavLink>
+          <div><h1>{activity.title}</h1><span className={sourceDirty ? 'is-unsaved' : 'is-saved'}>{sourceDirty ? 'Unsaved browser changes' : checkpoint.record?.status === 'SUCCEEDED' ? 'Saved to Git' : 'Browser source ready'}</span></div>
+        </div>
+        <div className="student-coding-toolbar" aria-label="Workspace actions">
+          <span className="student-workspace-branch" title="Current repository branch">⌘ {gitWorkspace.summary?.defaultBranch || gitWorkspace.repository?.defaultBranch || 'main'}</span>
+          <button type="button" className="student-run-code" disabled={!capabilities.java.execution || !canRun || codeRun.requesting || isPracticePending(codeRun.record)} onClick={() => { setCodeInputOpen(true); setWorkspacePanel('output') }}>
+            {codeRun.requesting || isPracticePending(codeRun.record) ? 'Running code…' : 'Run Code'}
+          </button>
+          <button type="button" className="student-run-tests" disabled={!capabilities.java.execution || !canRun || practice.requesting || isPracticePending(practice.record)} onClick={runVisibleTests}>
+            {practice.requesting || isPracticePending(practice.record) ? 'Running tests…' : 'Run Visible Tests'}
+          </button>
+          <button type="button" className="student-save-git" disabled={gitWorkspace.status !== 'ready' || !ordinaryOpen || archived || !(checkpoint.intent?.sourceCode || source.value).trim() || checkpoint.requesting || isCheckpointPending(checkpoint.record)} onClick={saveGitCheckpoint}>
+            {checkpoint.requesting || isCheckpointPending(checkpoint.record) ? 'Saving…' : checkpoint.error?.code === 'NETWORK_ERROR' ? 'Retry Save to Git' : 'Save to Git'}
+          </button>
+          <button type="button" className="student-submit-code" disabled={!capabilities.java.execution || !canSubmit || !source.value.trim() || submission.status === 'submitting' || submission.status === 'ambiguous'} onClick={() => setConfirmMode('new')}>
+            {submission.status === 'submitting' ? 'Submitting...' : attempt?.nextAllowedSubmissionKind === 'REPLACEMENT' ? 'Submit replacement' : 'Submit'}
+          </button>
+        </div>
       </header>
 
       <main
@@ -750,8 +863,8 @@ export function StudentProgrammingWorkspace({
             </div>
           </section>
           <div className="student-source-memory-note">
-            <strong>{checkpoint.record?.status === 'SUCCEEDED' && !sourceDirty ? 'Saved to Git Workspace' : 'Browser draft'}</strong>
-            <span>{checkpoint.record?.status === 'SUCCEEDED' && !sourceDirty ? 'This checkpoint is available to clone or pull. It is not a submission.' : 'Use Save to Git Workspace before leaving this browser tab.'}</span>
+            <strong>{checkpoint.record?.status === 'SUCCEEDED' && !sourceDirty ? 'Saved to Git' : 'Browser draft'}</strong>
+            <span>{checkpoint.record?.status === 'SUCCEEDED' && !sourceDirty ? 'This save is available to clone or pull. It is not a submission.' : 'Use Save to Git before leaving this browser tab.'}</span>
           </div>
         </aside>
 
@@ -765,9 +878,18 @@ export function StudentProgrammingWorkspace({
         <section className="student-editor-area" id="student-workspace-editor">
           <div className="student-editor-tabs"><button type="button" className="is-active">{activity.entryClassName}.java</button></div>
           <div className="student-editor-workbench student-editor-workbench--single-file">
-            <aside className="student-editor-explorer" aria-label="Source file">
-              <strong>SOURCE</strong>
+            <aside className="student-editor-explorer" aria-label="Repository explorer">
+              <strong>EXPLORER</strong>
+              <span className="student-explorer-section">Browser source</span>
               <em className="is-file is-active">{activity.entryClassName}.java</em>
+              {gitWorkspace.status === 'ready' && <span className="student-explorer-section">Git · {gitWorkspace.summary?.defaultBranch || 'main'} <small>read-only tree</small></span>}
+              {repositoryTree.path && <button type="button" className="student-explorer-up" onClick={() => loadRepositoryTree(repositoryTree.path.split('/').slice(0, -1).join('/'))}>← {repositoryTree.path}</button>}
+              {repositoryTree.status === 'loading' && <small>Loading repository files…</small>}
+              {repositoryTree.status === 'error' && <small>Repository tree unavailable.</small>}
+              {repositoryTree.status === 'ready' && repositoryTree.entries.length === 0 && <small>No files at this path.</small>}
+              {repositoryTree.status === 'ready' && repositoryTree.entries.map((entry) => entry.entryType === 'tree'
+                ? <button type="button" className="is-folder" key={entry.path} onClick={() => loadRepositoryTree(entry.path)}>▸ {entry.name}</button>
+                : <em className="is-file" key={entry.path}>{entry.name}</em>)}
             </aside>
             <JavaSourceEditor
               key={`${selectedClass.id}:${activity.id}`}
@@ -777,7 +899,7 @@ export function StudentProgrammingWorkspace({
               onChange={(value) => setSource((current) => ({ ...current, value }))}
             />
           </div>
-          <footer className="student-editor-status"><span>Unsaved browser source</span><span>Java</span></footer>
+          <footer className="student-editor-status"><span>{sourceDirty ? 'Unsaved browser changes' : 'Browser source ready'}</span><span>Java · single editable file</span></footer>
         </section>
 
         {paneSizing.isDesktop && (
@@ -788,74 +910,84 @@ export function StudentProgrammingWorkspace({
         )}
 
         <section className="student-output-area" id="student-workspace-diagnostics">
-          <div className="student-output-header"><strong>Visible-test diagnostics</strong><button type="button" onClick={() => setPractice({ record: null, error: null, requesting: false, bounded: false })}>Clear</button></div>
-          <div className="student-output-panel student-output-panel--live" role="status">
-            <p>{practiceStatus}</p>
-            {practice.record?.compilerOutput && <><strong>Compiler output</strong><pre>{practice.record.compilerOutput}</pre></>}
-            {practice.record?.compilerOutput && practicedSource.current !== source.value && <p>Source changed since this run. Run again for current line references.</p>}
-            {practice.record?.compilerOutput && practicedSource.current === source.value && compilerLines(practice.record.compilerOutput, activity.entryClassName, source.value).map((line) => <button key={line} type="button" className="student-outline-action" onClick={() => focusJavaLine(editorRef.current, line)}>Go to line {line}</button>)}
-            {practice.error && <p className="student-coding-failure">{executionErrorMessage(practice.error)}</p>}
-            {practice.bounded && <p>Automatic refresh stopped. The server-side run may still be processing.</p>}
-            {(practice.bounded || practice.error) && practice.record?.id && (
-              <button type="button" className="student-outline-action" disabled={practice.requesting} onClick={refreshPractice}>Refresh status</button>
-            )}
+          <div className="student-workspace-panel-tabs" role="tablist" aria-label="Workspace results">
+            {['tests', 'output', 'git'].map((panel) => <button type="button" role="tab" aria-selected={workspacePanel === panel} className={workspacePanel === panel ? 'is-active' : ''} key={panel} onClick={() => setWorkspacePanel(panel)}>{panel[0].toUpperCase() + panel.slice(1)}</button>)}
           </div>
-        </section>
-
-        <section className="student-tests-area">
-          <div className="student-tests-tabs">
-            <button type="button" className="is-active">Visible test outcomes</button>
-            <span className="student-test-summary">{practice.record ? formatStatus(practice.record.status) : 'Not run'}</span>
-          </div>
-          <div className="student-tests-table student-tests-table--outcomes">
-            <VisibleOutcomeList outcomes={practice.record?.visibleTestOutcomes ?? []} />
+          <div className={`student-output-panel student-output-panel--${workspacePanel}`} role="tabpanel">
+            {workspacePanel === 'tests' && <>
+              <div className="student-panel-status-row"><strong>Visible test outcomes</strong><span>{practice.record ? formatStatus(practice.record.status) : 'Not run'}</span></div>
+              <p>{practiceStatus}</p>
+              <VisibleOutcomeList outcomes={practice.record?.visibleTestOutcomes ?? []} />
+              {practice.error && <p className="student-coding-failure">{executionErrorMessage(practice.error)}</p>}
+              {practice.bounded && <p>Automatic refresh stopped. The server-side run may still be processing.</p>}
+              {(practice.bounded || practice.error) && practice.record?.id && <button type="button" className="student-outline-action" disabled={practice.requesting} onClick={refreshPractice}>Refresh status</button>}
+            </>}
+            {workspacePanel === 'output' && <>
+              <div className="student-panel-status-row"><strong>Compiler / runtime output</strong><button type="button" onClick={() => { setCodeRun({ record: null, error: null, requesting: false, bounded: false }); setPractice({ record: null, error: null, requesting: false, bounded: false }) }}>Clear</button></div>
+              {codeInputOpen && <section className="student-run-code-form" aria-label="Run code input">
+                <label htmlFor="student-program-input">Program input (stdin)</label>
+                <textarea id="student-program-input" value={programInput} onChange={(event) => setProgramInput(event.target.value)} placeholder={'Enter input before running. Line boundaries are preserved.'} maxLength={20000} />
+                <div><button type="button" className="student-outline-action" disabled={codeRun.requesting} onClick={() => setCodeInputOpen(false)}>Cancel</button><button type="button" className="student-primary-action" disabled={codeRun.requesting || !source.value.trim()} onClick={runCode}>{codeRun.requesting ? 'Running…' : 'Run'}</button></div>
+              </section>}
+              {!codeRun.record && !practice.record?.compilerOutput && !codeRun.error && <p>Run Code with your own input, or Run Visible Tests with instructor-defined input.</p>}
+              {codeRun.requesting && <p>Queueing this bounded Java run…</p>}
+              {codeRun.record && <div className="student-code-run-output" aria-live="polite">
+                <div className="student-panel-status-row"><strong>Run Code</strong><span>{isPracticePending(codeRun.record) ? formatStatus(codeRun.record.status) : codeRun.record.compileStatus === 'student_error' ? 'Compilation failed' : codeRun.record.runtimeStatus === 'passed' ? 'Completed' : formatStatus(codeRun.record.runtimeStatus)}</span></div>
+                {codeRun.record.compilerOutput && <><span>Compiler output</span><pre>{codeRun.record.compilerOutput}</pre></>}
+                {codeRun.record.stdout !== null && <><span>Standard output</span><pre>{codeRun.record.stdout || '(no output)'}</pre></>}
+                {codeRun.record.stderr && <><span>Standard error</span><pre>{codeRun.record.stderr}</pre></>}
+                {codeRun.record.runtimeStatus === 'timeout' && <p className="student-coding-failure">Execution timed out.</p>}
+                {codeRun.record.runtimeStatus === 'output_limit' && <p className="student-coding-failure">Execution exceeded the output limit.</p>}
+                {codeRunSource.current !== source.value && <p>Source changed since this run.</p>}
+                {codeRun.record.executionTimeMs !== null && <small>{codeRun.record.executionTimeMs} ms</small>}
+              </div>}
+              {codeRun.error && <p className="student-coding-failure">{executionErrorMessage(codeRun.error)}</p>}
+              {codeRun.bounded && <p>Automatic refresh stopped. The server-side run may still be processing.</p>}
+              {(codeRun.bounded || codeRun.error) && codeRun.record?.id && <button type="button" className="student-outline-action" disabled={codeRun.requesting} onClick={refreshCodeRun}>Refresh Run Code status</button>}
+              {practice.record?.compilerOutput && <><span>Visible-test compiler output</span><pre>{practice.record.compilerOutput}</pre></>}
+              {practice.record?.compilerOutput && practicedSource.current !== source.value && <p>Source changed since this visible-test run. Run again for current line references.</p>}
+              {practice.record?.compilerOutput && practicedSource.current === source.value && compilerLines(practice.record.compilerOutput, activity.entryClassName, source.value).map((line) => <button key={line} type="button" className="student-outline-action" onClick={() => focusJavaLine(editorRef.current, line)}>Go to line {line}</button>)}
+            </>}
+            {workspacePanel === 'git' && <div className="student-workspace-git-panel" aria-live="polite">
+              <div className="student-panel-status-row"><strong>Git workspace</strong><span>{gitWorkspace.summary?.defaultBranch || gitWorkspace.repository?.defaultBranch || 'main'}</span></div>
+              <p>Save to Git preserves your browser source. It does not submit the Activity.</p>
+              {gitWorkspace.status === 'loading' && <small>Checking Git workspace…</small>}
+              {gitWorkspace.status === 'not-created' && <small>Prepare the coding workspace from Activity Detail before saving or loading code.</small>}
+              {gitWorkspace.status === 'provisioning' && <small>The Git workspace is still being prepared.</small>}
+              {gitWorkspace.status === 'error' && <small className="student-coding-failure">{describeApiError(gitWorkspace.error)}</small>}
+              {gitWorkspace.status === 'ready' && <dl><div><dt>Branch</dt><dd>{gitWorkspace.summary?.defaultBranch || 'main'}</dd></div><div><dt>Latest commit</dt><dd>{gitWorkspace.summary?.latestCommit?.commitId?.slice(0, 8) || 'No commits yet'}</dd></div><div><dt>Browser source</dt><dd>{sourceDirty ? 'Unsaved changes' : 'Up to date with last browser save'}</dd></div></dl>}
+              {newerGitAvailable && <div className="student-newer-git-notice"><strong>Newer Git changes are available.</strong><span>Your browser source was not changed.</span></div>}
+              {checkpoint.requesting && <small>Queueing save…</small>}
+              {isCheckpointPending(checkpoint.record) && <small>Saving to Git: {formatStatus(checkpoint.record.status)}</small>}
+              {checkpoint.record?.status === 'SUCCEEDED' && <small>Saved at commit {checkpoint.record.resultingCommitHash?.slice(0, 8)}. No submission was created.</small>}
+              {checkpoint.record?.status === 'CONFLICTED' && <small className="student-coding-failure">The Git branch changed before this save. Load the latest Git source, review it, then save again.</small>}
+              {checkpoint.record?.status === 'FAILED' && <small className="student-coding-failure">The source could not be saved. Your browser source remains unchanged.</small>}
+              {checkpoint.error && <small className="student-coding-failure">{describeApiError(checkpoint.error)}</small>}
+              {checkpoint.error?.code === 'NETWORK_ERROR' && <small>The save result is uncertain. Retry uses the exact same source and request key.</small>}
+              {checkpoint.error?.code === 'NETWORK_ERROR' && checkpoint.intent?.sourceCode !== source.value && <small>The editor changed after the uncertain request. Retry still sends the earlier source snapshot.</small>}
+              {checkpoint.bounded && <small>Automatic save-status refresh stopped.</small>}
+              {gitSource.loadedCommitHash && <small>Loaded {workspace.activity.entryClassName}.java from commit {gitSource.loadedCommitHash.slice(0, 8)}. Review it before submitting.</small>}
+              {gitSource.error && <small className="student-coding-failure">{describeApiError(gitSource.error)}</small>}
+              <div className="student-git-checkpoint-actions">
+                <button type="button" className="student-outline-action" disabled={gitWorkspace.status !== 'ready' || gitSource.loading || isCheckpointPending(checkpoint.record)} onClick={loadLatestGitSource}>{gitSource.loading ? 'Loading latest…' : 'Load latest from Git'}</button>
+                {(gitWorkspace.status === 'error' || gitWorkspace.status === 'provisioning') && <button type="button" className="student-outline-action" onClick={() => loadGitWorkspace({ announceChange: true })}>Retry Git status</button>}
+                {checkpoint.bounded && checkpoint.record?.checkpointId && <button type="button" className="student-outline-action" disabled={checkpoint.requesting} onClick={refreshCheckpoint}>Refresh save status</button>}
+              </div>
+            </div>}
           </div>
         </section>
       </main>
 
-      <section className="student-git-checkpoint-panel" aria-live="polite">
-        <div>
-          <strong>Activity Git Workspace</strong>
-          <span>Checkpoints save unfinished work without consuming an attempt. Git push also saves work; only Submit creates an official submission.</span>
-          {gitWorkspace.status === 'loading' && <small>Checking Git Workspace...</small>}
-          {gitWorkspace.status === 'not-created' && <small>Create the Activity Git Workspace from Activity Detail before saving or loading code.</small>}
-          {gitWorkspace.status === 'provisioning' && <small>Git Workspace is still provisioning. Refresh after it becomes Ready.</small>}
-          {gitWorkspace.status === 'error' && <small className="student-coding-failure">{describeApiError(gitWorkspace.error)}</small>}
-          {gitWorkspace.status === 'ready' && <small>{gitWorkspace.summary?.latestCommit ? `Latest Git commit ${gitWorkspace.summary.latestCommit.commitId.slice(0, 8)}` : 'The Git Workspace has no commits yet.'}</small>}
-          {checkpoint.requesting && <small>Queueing checkpoint...</small>}
-          {isCheckpointPending(checkpoint.record) && <small>Saving checkpoint: {formatStatus(checkpoint.record.status)}</small>}
-          {checkpoint.record?.status === 'SUCCEEDED' && <small>Checkpoint saved at commit {checkpoint.record.resultingCommitHash?.slice(0, 8)}. No submission was created.</small>}
-          {checkpoint.record?.status === 'CONFLICTED' && <small className="student-coding-failure">The Git branch changed before this checkpoint was saved. Load the latest Git source, review it, then save again.</small>}
-          {checkpoint.record?.status === 'FAILED' && <small className="student-coding-failure">The checkpoint could not be saved. Your browser source remains unchanged.</small>}
-          {checkpoint.error && <small className="student-coding-failure">{describeApiError(checkpoint.error)}</small>}
-          {checkpoint.error?.code === 'NETWORK_ERROR' && <small>The checkpoint result is uncertain. Retry sends the exact same source and request key; it does not create a deliberate second checkpoint.</small>}
-          {checkpoint.error?.code === 'NETWORK_ERROR' && checkpoint.intent?.sourceCode !== source.value && <small>The editor changed after the uncertain request. Retry still sends the earlier source snapshot.</small>}
-          {checkpoint.bounded && <small>Automatic checkpoint refresh stopped. Use Refresh checkpoint status.</small>}
-          {gitSource.loadedCommitHash && <small>Loaded {workspace.activity.entryClassName}.java from commit {gitSource.loadedCommitHash.slice(0, 8)}. Review it before submitting.</small>}
-          {gitSource.error && <small className="student-coding-failure">{describeApiError(gitSource.error)}</small>}
-        </div>
-        <div className="student-git-checkpoint-actions">
-          <button type="button" className="student-outline-action" disabled={gitWorkspace.status === 'loading'} onClick={() => loadGitWorkspace()}>Refresh Git Workspace</button>
-          <button type="button" className="student-outline-action" disabled={gitWorkspace.status !== 'ready' || gitSource.loading || isCheckpointPending(checkpoint.record)} onClick={loadLatestGitSource}>{gitSource.loading ? 'Loading Git source...' : 'Load latest Git source'}</button>
-          <button type="button" className="student-primary-action" disabled={gitWorkspace.status !== 'ready' || !ordinaryOpen || archived || !(checkpoint.intent?.sourceCode || source.value).trim() || checkpoint.requesting || isCheckpointPending(checkpoint.record)} onClick={saveGitCheckpoint}>{checkpoint.requesting || isCheckpointPending(checkpoint.record) ? 'Saving checkpoint...' : checkpoint.error?.code === 'NETWORK_ERROR' ? 'Retry exact checkpoint request' : 'Save to Git Workspace'}</button>
-          {checkpoint.bounded && checkpoint.record?.checkpointId && <button type="button" className="student-outline-action" disabled={checkpoint.requesting} onClick={refreshCheckpoint}>Refresh checkpoint status</button>}
-        </div>
-      </section>
-
       <footer className="student-coding-actions">
         <div className="workspace-action-message">
+          <span>Save to Git preserves progress; Submit creates the official academic attempt.</span>
           {replacement && <strong>Replacement available until {formatDate(replacement.expiresAt)}.</strong>}
           {currentAttemptState.status === 'loading' && <span>Checking attempt availability...</span>}
           {currentAttemptState.status === 'error' && <span className="student-coding-failure">Attempt availability could not be loaded. Submission remains disabled.</span>}
           {currentAttemptState.status === 'ready' && !canSubmit && <span>Another submission is not currently available.</span>}
           {submission.status === 'error' && <span className="student-coding-failure">{submissionErrorMessage(submission.error)}</span>}
         </div>
-        <button type="button" className="student-run-tests" disabled={!capabilities.java.execution || !canRun || practice.requesting || isPracticePending(practice.record)} onClick={runVisibleTests}>
-          {practice.requesting || isPracticePending(practice.record) ? 'Running visible tests...' : 'Run Visible Tests'}
-        </button>
-        <button type="button" className="student-submit-code" disabled={!capabilities.java.execution || !canSubmit || !source.value.trim() || submission.status === 'submitting' || submission.status === 'ambiguous'} onClick={() => setConfirmMode('new')}>
-          {submission.status === 'submitting' ? 'Submitting...' : attempt?.nextAllowedSubmissionKind === 'REPLACEMENT' ? 'Submit replacement' : 'Submit'}
-        </button>
+        <NavLink className="student-workspace-history-link" to={classHref(`/student/activity/${activity.id}/submissions`, selectedClass.id)}>Attempt history</NavLink>
       </footer>
       {!capabilities.java.execution && <RequestState kind="unavailable" compact title="Java execution unavailable" message="This environment preserves activity and submission records but cannot run or assess Java code." />}
 

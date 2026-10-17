@@ -21,6 +21,13 @@ export const createSubmissionSchema = z
 
 export const createPracticeRunSchema = createSubmissionSchema
 
+export const createCodeRunSchema = z
+  .object({
+    sourceCode: z.string().min(1).max(100_000),
+    stdin: z.string().max(20_000),
+  })
+  .strict()
+
 export const submissionListQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).default(1),

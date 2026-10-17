@@ -8,6 +8,8 @@ export interface JavaCaseInput {
   input: string | null
   expectedOutput: string
   maximumPoints?: number
+  compareOutput?: boolean
+  captureStandardError?: boolean
 }
 
 export interface JavaCaseResult {
@@ -145,6 +147,9 @@ async function runProcess(input: {
 
     child.stdout.on('data', (chunk: Buffer) => collect('stdout', chunk))
     child.stderr.on('data', (chunk: Buffer) => collect('stderr', chunk))
+    // Programs may terminate before consuming all pre-supplied input.
+    // A closed stdin pipe must not crash the separate worker.
+    child.stdin.on('error', () => undefined)
     child.once('error', (processError) => {
       clearTimeout(timer)
       if (settled) return
@@ -271,6 +276,11 @@ export function createJavaRunner(config: JavaRunnerConfig) {
               execution.stderr || 'Execution failed.',
               config.outputLimitBytes,
             )
+          } else if (testCase.compareOutput === false) {
+            status = 'PASSED'
+            errorMessage = testCase.captureStandardError && execution.stderr
+              ? boundedText(execution.stderr, config.outputLimitBytes)
+              : null
           } else if (areJavaOutputsEquivalent(testCase.expectedOutput, actualOutput)) {
             status = 'PASSED'
           } else {

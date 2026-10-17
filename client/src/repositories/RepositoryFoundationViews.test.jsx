@@ -63,7 +63,9 @@ describe('Phase 10C.1 repository views', () => {
     wrapper(<StudentRepositoryCatalog api={api} />)
 
     expect(await screen.findByRole('heading', { name: 'Activity Workspaces' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Loops workspace/ })).toHaveTextContent('Activity workspace')
+    expect(screen.getByText('Loops workspace')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open Activity' })).toHaveAttribute('href', `/student/activity/${activity.id}?classId=${selectedClass.id}`)
+    expect(screen.getByRole('link', { name: 'Open Workspace' })).toHaveAttribute('href', `/student/activity/${activity.id}/workspace?classId=${selectedClass.id}`)
     expect(screen.getByRole('option', { name: 'Activity workspace' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /New Activity Workspace/i })).not.toBeInTheDocument()
   })

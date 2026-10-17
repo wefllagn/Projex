@@ -139,6 +139,14 @@ The transaction snapshots only `isHidden=false` test cases and creates a short-l
 
 Creation is protected by a per-student rate limit and per-student/activity active-job capacity. `GET /api/v1/visible-test-runs/:runId` returns only the owning student's result or the owning instructor's result. Phase 9A removes administrator access to individual practice-run outcomes.
 
+## Run Code with Student input
+
+`POST /api/v1/activities/:activityId/code-runs` accepts the current Java `sourceCode` and bounded `stdin` text. It is Student-only, uses the same account, membership, class, Activity lifecycle, rate, active-capacity, durable queue, worker, timeout, output-limit, and cleanup boundaries as Run Visible Tests, and preserves stdin line boundaries. The API process never invokes Java.
+
+A Run Code request creates one short-lived practice execution with a server-created debug case anchored to a visible test's ID, as required by the existing foreign key. No input or expected output is copied from that test. It deliberately performs no expected-output comparison and returns only compiler output, stdout, stderr, runtime state, and bounded timing through `GET /api/v1/code-runs/:runId`. It exposes no instructor test input, expected output, hidden-test data, score, or assessment result. The existing practice persistence is reused without a schema migration; a server-owned marker plus a domain-separated source hash distinguishes debug executions from visible-test runs, and each read endpoint rejects the other execution kind. An instructor test name alone cannot select debug behavior. Debug-result reads recheck current active Student membership and reject expired records.
+
+Run Code never creates an `ActivitySubmission`, consumes an attempt, changes a credited result, creates a Git checkpoint, writes repository state, or grades visible or hidden tests. It executes the current browser source snapshot only. This is bounded pre-supplied stdin execution, not a terminal or interactive process session.
+
 ## Instructor review rerun (Iteration 2)
 
 `POST /api/v1/submissions/:submissionId/review-runs` accepts an empty JSON object. It requires an ACTIVE owning Instructor, cookie authentication, CSRF, controlled local Java execution, and an unarchived activity/class. The request does not accept source, stdin, test selection, paths, or execution limits. One active review run per Instructor and at most ten requests per rolling minute bound use. A CLOSED activity and a RELEASED submission may still be rerun; archive blocks new work.
@@ -169,6 +177,8 @@ GET  /api/v1/activities/:activityId/submissions
 GET  /api/v1/activities/:activityId/attempt-state
 POST /api/v1/activities/:activityId/visible-test-runs
 GET  /api/v1/visible-test-runs/:runId
+POST /api/v1/activities/:activityId/code-runs
+GET  /api/v1/code-runs/:runId
 GET  /api/v1/submissions/:submissionId
 POST /api/v1/submissions/:submissionId/score-corrections
 PUT  /api/v1/submissions/:submissionId/review

@@ -140,6 +140,8 @@ function submissionTransport(overrides = {}) {
     listSubmissions: vi.fn().mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } }),
     createVisibleTestRun: vi.fn(),
     getVisibleTestRun: vi.fn(),
+    createCodeRun: vi.fn(),
+    getCodeRun: vi.fn(),
     createSubmission: vi.fn(),
     getSubmission: vi.fn().mockResolvedValue({ data: submissionRecord() }),
     ...overrides,
@@ -223,7 +225,7 @@ describe('student programming workspace', () => {
 
     const editor = await screen.findByLabelText('Java source code')
     fireEvent.change(editor, { target: { value: changedCode } })
-    await userEvent.click(await screen.findByRole('button', { name: 'Save to Git Workspace' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Save to Git' }))
 
     await waitFor(() => expect(repositories.repositories.createActivityCheckpoint).toHaveBeenCalledOnce())
     expect(repositories.repositories.createActivityCheckpoint).toHaveBeenCalledWith(
@@ -231,7 +233,8 @@ describe('student programming workspace', () => {
       { sourceCode: changedCode, expectedHeadCommitHash: null },
       expect.stringMatching(/^checkpoint:[A-Za-z0-9-]{16,}$/),
     )
-    expect(await screen.findByText(/Checkpoint saved at commit aaaaaaaa/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
+    expect(await screen.findByText(/Saved at commit aaaaaaaa/)).toBeInTheDocument()
     expect(submissions.createSubmission).not.toHaveBeenCalled()
     expect(submissions.getAttemptState).toHaveBeenCalledTimes(1)
   })
@@ -282,7 +285,7 @@ describe('student programming workspace', () => {
 
     const editor = await screen.findByLabelText('Java source code')
     fireEvent.change(editor, { target: { value: queuedSource } })
-    await userEvent.click(await screen.findByRole('button', { name: 'Save to Git Workspace' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Save to Git' }))
     await waitFor(() => expect(git.repositories.getActivityCheckpoint).toHaveBeenCalledOnce())
 
     fireEvent.change(editor, { target: { value: newerSource } })
@@ -295,11 +298,12 @@ describe('student programming workspace', () => {
       resultingCommitHash: commitId,
     } }))
 
-    expect(await screen.findByText(/Checkpoint saved at commit aaaaaaaa/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
+    expect(await screen.findByText(/Saved at commit aaaaaaaa/)).toBeInTheDocument()
     expect(screen.getByText('Browser draft')).toBeInTheDocument()
     expect(editor).toHaveValue(newerSource)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Load latest Git source' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Load latest from Git' }))
     expect(window.confirm).toHaveBeenCalledWith('Replace the unsaved browser source with the latest Git Workspace version?')
     expect(editor).toHaveValue(newerSource)
   })
@@ -313,7 +317,8 @@ describe('student programming workspace', () => {
     const submissions = submissionTransport()
     renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissions} />)
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Load latest Git source' }))
+    await userEvent.click(await screen.findByRole('tab', { name: 'Git' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Load latest from Git' }))
     expect(await screen.findByLabelText('Java source code')).toHaveValue(pushedSource)
     expect(screen.getByText(/Loaded Main.java from commit aaaaaaaa/)).toBeInTheDocument()
     expect(git.repositoryContent.getFile).toHaveBeenCalledWith(repositoryId, { commitId, path: 'Main.java' })
@@ -329,8 +334,9 @@ describe('student programming workspace', () => {
     } })
     renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissionTransport()} />)
     fireEvent.change(await screen.findByLabelText('Java source code'), { target: { value: changedCode } })
-    await userEvent.click(await screen.findByRole('button', { name: 'Save to Git Workspace' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Save to Git' }))
 
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
     expect(await screen.findByText('This record changed while you were working. Refresh it before trying again.')).toBeInTheDocument()
     expect(git.repositories.createActivityCheckpoint).not.toHaveBeenCalled()
   })
@@ -348,12 +354,13 @@ describe('student programming workspace', () => {
     renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissionTransport()} />)
     const editor = await screen.findByLabelText('Java source code')
     fireEvent.change(editor, { target: { value: changedCode } })
-    await userEvent.click(await screen.findByRole('button', { name: 'Save to Git Workspace' }))
-    expect(await screen.findByText(/checkpoint result is uncertain/i)).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Save to Git' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
+    expect(await screen.findByText(/save result is uncertain/i)).toBeInTheDocument()
 
     fireEvent.change(editor, { target: { value: starterCode } })
-    await userEvent.click(screen.getByRole('button', { name: 'Retry exact checkpoint request' }))
-    await screen.findByText(/Checkpoint saved at commit aaaaaaaa/)
+    await userEvent.click(screen.getByRole('button', { name: 'Retry Save to Git' }))
+    await screen.findByText(/Saved at commit aaaaaaaa/)
 
     expect(git.repositories.createActivityCheckpoint).toHaveBeenCalledTimes(2)
     expect(git.repositories.createActivityCheckpoint.mock.calls[1]).toEqual(git.repositories.createActivityCheckpoint.mock.calls[0])
@@ -376,12 +383,13 @@ describe('student programming workspace', () => {
     expect(submissions.createSubmission).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Run Visible Tests' }))
     expect(submissions.createVisibleTestRun).toHaveBeenCalledWith(activityId, imported)
+    await user.click(screen.getByRole('tab', { name: 'Output' }))
     await user.click(await screen.findByRole('button', { name: 'Go to line 2' }))
     expect(editor).toHaveFocus()
     expect(editor.value.slice(editor.selectionStart, editor.selectionEnd)).toBe('    invalid')
     fireEvent.change(editor, { target: { value: imported + '\n' } })
     expect(screen.queryByRole('button', { name: 'Go to line 2' })).not.toBeInTheDocument()
-    expect(screen.getByText(/Source changed since this run/)).toBeInTheDocument()
+    expect(screen.getByText(/Source changed since this visible-test run/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Submit' }))
     await user.click(screen.getByRole('button', { name: 'Submit source' }))
     await waitFor(() => expect(submissions.createSubmission).toHaveBeenCalledWith(activityId, imported + '\n', expect.any(String)))
@@ -391,6 +399,7 @@ describe('student programming workspace', () => {
     renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissionTransport()} />)
 
     const editor = await screen.findByLabelText('Java source code')
+    expect(screen.getByRole('link', { name: 'Back to Activity' })).toHaveAttribute('href', `/student/activity/${activityId}?classId=${classId}`)
     expect(editor).toHaveValue(starterCode)
     fireEvent.change(editor, { target: { value: changedCode } })
     expect(editor).toHaveValue(changedCode)
@@ -398,6 +407,43 @@ describe('student programming workspace', () => {
     expect(screen.queryByText(/Auto-save/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Custom Input/i)).not.toBeInTheDocument()
     expect(screen.getByText('Visible sample')).toBeInTheDocument()
+  })
+
+  it('refetches Git on focus, reports a newer external commit, and never overwrites browser source', async () => {
+    const newerCommit = 'b'.repeat(40)
+    const getSummary = vi.fn()
+      .mockResolvedValueOnce({ data: { repositoryId, empty: false, defaultBranch: 'main', latestCommit: { commitId } } })
+      .mockResolvedValue({ data: { repositoryId, empty: false, defaultBranch: 'main', latestCommit: { commitId: newerCommit } } })
+    const git = gitDependencies({ contentOverrides: { getSummary } })
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissionTransport()} />)
+
+    const editor = await screen.findByLabelText('Java source code')
+    await waitFor(() => expect(getSummary).toHaveBeenCalledTimes(1))
+    fireEvent.change(editor, { target: { value: changedCode } })
+    act(() => window.dispatchEvent(new Event('focus')))
+    await waitFor(() => expect(getSummary.mock.calls.length).toBeGreaterThanOrEqual(2))
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
+
+    expect(await screen.findByText('Newer Git changes are available.')).toBeInTheDocument()
+    expect(screen.getByText('Your browser source was not changed.')).toBeInTheDocument()
+    expect(editor).toHaveValue(changedCode)
+  })
+
+  it('shows only the real read-only repository tree and navigates returned folders', async () => {
+    const getTree = vi.fn()
+      .mockResolvedValueOnce({ data: { commitId, path: '', entries: [{ name: 'src', path: 'src', entryType: 'tree' }] } })
+      .mockResolvedValueOnce({ data: { commitId, path: 'src', entries: [{ name: 'Main.java', path: 'src/Main.java', entryType: 'blob' }] } })
+    const git = gitDependencies({ contentOverrides: {
+      getSummary: vi.fn().mockResolvedValue({ data: { repositoryId, empty: false, defaultBranch: 'main', latestCommit: { commitId } } }),
+      getTree,
+    } })
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissionTransport()} />)
+
+    expect(await screen.findByText('read-only tree')).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: /src/ }))
+    expect(await screen.findByText('Main.java', { selector: '.student-editor-explorer em:not(.is-active)' })).toBeInTheDocument()
+    expect(getTree).toHaveBeenLastCalledWith(repositoryId, { commitId, path: 'src' })
+    expect(screen.queryByText('README.md')).not.toBeInTheDocument()
   })
 
   it('resizes desktop panes with pointer input while preserving editor and activity state', async () => {
@@ -508,6 +554,33 @@ describe('student programming workspace', () => {
     expect(screen.queryByText('17')).not.toBeInTheDocument()
     expect(screen.queryByText('9876')).not.toBeInTheDocument()
     expect(submissions.getVisibleTestRun).toHaveBeenCalledTimes(2)
+  })
+
+  it('runs unsaved Scanner code with multiline stdin without submission or Git side effects', async () => {
+    const scannerSource = 'import java.util.Scanner; public class Main { public static void main(String[] args) { Scanner scanner = new Scanner(System.in); System.out.println("Hello " + scanner.nextLine()); } }'
+    const submissions = submissionTransport({
+      createCodeRun: vi.fn().mockResolvedValue({ data: {
+        id: runId, activityId, status: 'queued', compileStatus: 'pending', runtimeStatus: 'not_run',
+      } }),
+      getCodeRun: vi.fn().mockResolvedValue({ data: {
+        id: runId, activityId, status: 'succeeded', compileStatus: 'success', runtimeStatus: 'passed',
+        stdout: 'Hello Julius\n', stderr: null, executionTimeMs: 12,
+        hiddenTestResults: ['HIDDEN'], score: 100,
+      } }),
+    })
+    const git = gitDependencies()
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 1, maximumDelayMs: 1, maximumDurationMs: 1000 }} />)
+
+    fireEvent.change(await screen.findByLabelText('Java source code'), { target: { value: scannerSource } })
+    await userEvent.click(screen.getByRole('button', { name: 'Run Code' }))
+    fireEvent.change(screen.getByLabelText('Program input (stdin)'), { target: { value: 'Julius\n23' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Run' }))
+
+    expect(submissions.createCodeRun).toHaveBeenCalledWith(activityId, scannerSource, 'Julius\n23')
+    expect(await screen.findByText('Hello Julius')).toBeInTheDocument()
+    expect(screen.queryByText('HIDDEN')).not.toBeInTheDocument()
+    expect(submissions.createSubmission).not.toHaveBeenCalled()
+    expect(git.repositories.createActivityCheckpoint).not.toHaveBeenCalled()
   })
 
   it('explains whitespace differences for failed visible tests without rendering hidden evidence', async () => {

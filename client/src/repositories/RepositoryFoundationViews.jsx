@@ -66,8 +66,7 @@ function RepositoryRow({ repository, role = 'student' }) {
       : repository.repositoryType === 'ACTIVITY_WORKSPACE'
         ? 'Activity workspace'
         : 'Class project repository'
-  return (
-    <NavLink to={repositoryPath(repository, role)} className={`student-repository-index-row repository-catalog-row student-repository-index-row--${repository.repositoryType === 'PERSONAL' ? 'personal' : 'active'}`}>
+  const content = <>
       <span className="repository-catalog-row__identity">
         <span className="student-repository-row-icon" aria-hidden="true" />
         <strong>{repository.repositoryName}</strong>
@@ -77,8 +76,19 @@ function RepositoryRow({ repository, role = 'student' }) {
         <small>{formatRepositoryLabel(repository.storageStatus)}</small>
         <em>{formatRepositoryLabel(repository.status)}</em>
       </span>
-    </NavLink>
-  )
+    </>
+  if (role === 'student' && repository.repositoryType === 'ACTIVITY_WORKSPACE' && repository.activityId) {
+    return (
+      <article className="student-repository-index-row repository-catalog-row repository-catalog-row--activity">
+        {content}
+        <div className="repository-activity-actions">
+          <NavLink className="student-outline-action" to={classHref(`/student/activity/${repository.activityId}`, repository.classId)}>Open Activity</NavLink>
+          <NavLink className="student-primary-action" to={classHref(`/student/activity/${repository.activityId}/workspace`, repository.classId)}>Open Workspace</NavLink>
+        </div>
+      </article>
+    )
+  }
+  return <NavLink to={repositoryPath(repository, role)} className={`student-repository-index-row repository-catalog-row student-repository-index-row--${repository.repositoryType === 'PERSONAL' ? 'personal' : 'active'}`}>{content}</NavLink>
 }
 
 function PersonalRepositoryForm({ busy, onSubmit, onCancel }) {

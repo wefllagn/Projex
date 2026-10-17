@@ -77,6 +77,16 @@ export function createSubmissionApi(client = apiClient) {
     getVisibleTestRun(runId, options) {
       return client.get(`/visible-test-runs/${runId}`, options)
     },
+    createCodeRun(activityId, sourceCode, stdin, options) {
+      return client.post(
+        `/activities/${activityId}/code-runs`,
+        { sourceCode, stdin },
+        options,
+      )
+    },
+    getCodeRun(runId, options) {
+      return client.get(`/code-runs/${runId}`, options)
+    },
   }
 }
 

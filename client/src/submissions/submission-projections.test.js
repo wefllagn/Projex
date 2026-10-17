@@ -1,11 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import {
+  projectCodeRun,
   projectPracticeRun,
   projectStudentAttemptState,
   projectStudentSubmission,
 } from './submission-projections.js'
 
 describe('student-safe submission projections', () => {
+  it('allowlists Run Code output without accepting academic or hidden-test fields', () => {
+    const projected = projectCodeRun({
+      id: 'code-run-1', activityId: 'activity-1', status: 'succeeded',
+      compileStatus: 'success', runtimeStatus: 'passed', stdout: 'Hello Julius\n',
+      stderr: null, executionTimeMs: 18, sourceCode: 'PRIVATE', stdin: 'PRIVATE',
+      hiddenTestResults: ['PRIVATE'], score: 100,
+    })
+
+    expect(projected).toMatchObject({ id: 'code-run-1', stdout: 'Hello Julius\n', executionTimeMs: 18 })
+    expect(projected).not.toHaveProperty('sourceCode')
+    expect(projected).not.toHaveProperty('stdin')
+    expect(projected).not.toHaveProperty('hiddenTestResults')
+    expect(projected).not.toHaveProperty('score')
+  })
+
   it('allowlists practice fields and discards hidden evidence and scores', () => {
     const projected = projectPracticeRun({
       id: 'run-1',
