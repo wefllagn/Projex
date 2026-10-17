@@ -117,6 +117,12 @@ export function assertRestoreTarget(target: Pick<ParsedPostgresTarget, 'database
   }
 }
 
+export function validateRestoreDatabaseUrl(databaseUrl: string): ParsedPostgresTarget {
+  const target = parsePostgresTarget(databaseUrl)
+  assertRestoreTarget(target)
+  return target
+}
+
 function assertExecutable(executable: string): string {
   if (!path.isAbsolute(executable)) {
     throw new OperationsSafetyError('POSTGRES_EXECUTABLE_NOT_ABSOLUTE')
@@ -153,8 +159,7 @@ export function buildPgRestorePlan(input: {
   if (!path.isAbsolute(input.inputFile)) {
     throw new OperationsSafetyError('RESTORE_INPUT_NOT_ABSOLUTE')
   }
-  const target = parsePostgresTarget(input.restoreDatabaseUrl)
-  assertRestoreTarget(target)
+  const target = validateRestoreDatabaseUrl(input.restoreDatabaseUrl)
   return {
     executable: assertExecutable(input.executable),
     args: [

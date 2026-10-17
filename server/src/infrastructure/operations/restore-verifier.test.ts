@@ -53,6 +53,22 @@ describe('restore verification framework', () => {
     expect(sanitizeRestoreEvidence({ manifestValid: true, artifactsValid: true, migrationHistoryMatches: true, safeCountsMatch: true, relationshipsValid: true, markersValid: true, repositoryCorrespondenceValid: true, gitFsckPassed: true, orphanRepositories: 0, capabilityProfile: 'HOSTED_SAFE', healthStatus: 'ok', syntheticAuthentication: 'passed' })).not.toHaveProperty('databaseUrl')
   })
 
+  it.each([
+    ['postgresql://restore:secret@database.example.edu/projex_restore_verify_run123', 'RESTORE_DATABASE_HOST_NOT_LOOPBACK'],
+    ['postgresql://restore:secret@localhost/projex', 'RESTORE_DATABASE_UNRECOGNIZED'],
+  ])('validates restore target %s before invalid filesystem and artifact inputs', async (restoreDatabaseUrl, expectedCode) => {
+    await expect(buildRestoreVerificationPlan({
+      projectRoot: 'relative-project',
+      backupSourceRoot: 'relative-backup',
+      restoreGitRoot: 'relative-restore',
+      restoreDatabaseUrl,
+      pgRestoreExecutable: path.resolve('pg_restore'),
+      gitExecutable: path.resolve('git'),
+      manifestRaw: 'not-json',
+      manifestChecksumRaw: 'not-a-checksum',
+    })).rejects.toThrowError(expectedCode)
+  })
+
   it('compares only safe restored-state evidence against the manifest', () => {
     const manifest: BackupManifest = {
       manifestVersion: BACKUP_MANIFEST_VERSION, backupId: 'run-20260813', createdAt: '2026-08-13T00:00:00.000Z',
