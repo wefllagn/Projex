@@ -3,10 +3,12 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   assertConnectedBackupSourceIdentity,
+  assertConnectedRestoreTargetIdentity,
   buildPgDumpPlan,
   buildPgRestorePlan,
   parsePostgresTarget,
   runAfterConnectedBackupSourceAttestation,
+  runAfterConnectedRestoreTargetAttestation,
   validateBackupSourceDatabaseUrl,
   validateRestoreDatabaseUrl,
 } from './postgres-tools.js'
@@ -226,5 +228,103 @@ describe('PostgreSQL operation command plans', () => {
     })).rejects.toThrowError('BACKUP_SOURCE_DATABASE_MISMATCH')
     expect(readIdentity).toHaveBeenCalledOnce()
     expect(readQuiescence).not.toHaveBeenCalled()
+  })
+
+  it.each(['127.0.0.1', '::1'])('accepts matching connected restore target on %s', (serverAddress) => {
+    expect(() => assertConnectedRestoreTargetIdentity('projex_restore_verify_i26aaron01', [{
+      database_name: 'projex_restore_verify_i26aaron01',
+      server_address: serverAddress,
+    }])).not.toThrow()
+  })
+
+  it.each([
+    'projex',
+    'projex_restore_verify_different',
+  ])('rejects connected restore database mismatch %s', (databaseName) => {
+    expect(() => assertConnectedRestoreTargetIdentity('projex_restore_verify_i26aaron01', [{
+      database_name: databaseName,
+      server_address: '127.0.0.1',
+    }])).toThrowError('RESTORE_TARGET_DATABASE_MISMATCH')
+  })
+
+  it('rejects a connected restore target on a non-loopback server', () => {
+    expect(() => assertConnectedRestoreTargetIdentity('projex_restore_verify_i26aaron01', [{
+      database_name: 'projex_restore_verify_i26aaron01',
+      server_address: '192.0.2.10',
+    }])).toThrowError('RESTORE_TARGET_SERVER_NOT_LOOPBACK')
+  })
+
+  it.each([null, ''])('rejects indeterminate connected restore server address %#', (serverAddress) => {
+    expect(() => assertConnectedRestoreTargetIdentity('projex_restore_verify_i26aaron01', [{
+      database_name: 'projex_restore_verify_i26aaron01',
+      server_address: serverAddress,
+    }])).toThrowError('RESTORE_TARGET_SERVER_ADDRESS_INDETERMINATE')
+  })
+
+  it('rejects missing or multiple connected restore identity rows', () => {
+    expect(() => assertConnectedRestoreTargetIdentity('projex_restore_verify_i26aaron01', []))
+      .toThrowError('RESTORE_TARGET_IDENTITY_MISSING')
+    expect(() => assertConnectedRestoreTargetIdentity('projex_restore_verify_i26aaron01', [
+      { database_name: 'projex_restore_verify_i26aaron01', server_address: '127.0.0.1' },
+      { database_name: 'projex_restore_verify_i26aaron01', server_address: '127.0.0.1' },
+    ])).toThrowError('RESTORE_TARGET_IDENTITY_MULTIPLE_ROWS')
+  })
+
+  it.each([
+    null,
+    {},
+    [null],
+    [{ database_name: '', server_address: '127.0.0.1' }],
+    [{ database_name: 42, server_address: '127.0.0.1' }],
+    [{ database_name: 'projex_restore_verify_i26aaron01', server_address: 42 }],
+  ])('rejects malformed connected restore identity result %#', (result) => {
+    expect(() => assertConnectedRestoreTargetIdentity('projex_restore_verify_i26aaron01', result))
+      .toThrowError('RESTORE_TARGET_IDENTITY_MALFORMED')
+  })
+
+  it('keeps connected restore identity errors redacted', () => {
+    const expected = 'projex_restore_verify_expected_private'
+    const observed = 'projex_restore_verify_observed_private'
+    const address = '198.51.100.42'
+    let rejection: unknown
+    try {
+      assertConnectedRestoreTargetIdentity(expected, [{ database_name: observed, server_address: address }])
+    } catch (error) {
+      rejection = error
+    }
+    expect(rejection).toMatchObject({
+      name: 'OperationsSafetyError',
+      code: 'RESTORE_TARGET_DATABASE_MISMATCH',
+      message: 'RESTORE_TARGET_DATABASE_MISMATCH',
+    })
+    expect((rejection as Error).message).not.toContain(expected)
+    expect((rejection as Error).message).not.toContain(observed)
+    expect((rejection as Error).message).not.toContain(address)
+  })
+
+  it('gates restore planning on successful connected identity attestation', async () => {
+    const readIdentity = vi.fn().mockResolvedValue([{
+      database_name: 'projex',
+      server_address: '127.0.0.1',
+    }])
+    const continueRestore = vi.fn().mockResolvedValue('planned')
+    await expect(runAfterConnectedRestoreTargetAttestation({
+      expectedDatabaseName: 'projex_restore_verify_i26aaron01',
+      readIdentity,
+      runAfterAttestation: continueRestore,
+    })).rejects.toThrowError('RESTORE_TARGET_DATABASE_MISMATCH')
+    expect(readIdentity).toHaveBeenCalledOnce()
+    expect(continueRestore).not.toHaveBeenCalled()
+
+    readIdentity.mockResolvedValueOnce([{
+      database_name: 'projex_restore_verify_i26aaron01',
+      server_address: '::1',
+    }])
+    await expect(runAfterConnectedRestoreTargetAttestation({
+      expectedDatabaseName: 'projex_restore_verify_i26aaron01',
+      readIdentity,
+      runAfterAttestation: continueRestore,
+    })).resolves.toBe('planned')
+    expect(continueRestore).toHaveBeenCalledOnce()
   })
 })

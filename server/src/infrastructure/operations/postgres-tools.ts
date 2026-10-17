@@ -18,6 +18,11 @@ type ConnectedBackupSourceIdentity = Readonly<{
   server_address: string
 }>
 
+type ConnectedRestoreTargetIdentity = Readonly<{
+  database_name: string
+  server_address: string
+}>
+
 export function parsePostgresTarget(databaseUrl: string): ParsedPostgresTarget {
   let parsed: URL
   try {
@@ -101,6 +106,51 @@ export async function runAfterConnectedBackupSourceAttestation<T>(input: {
 }): Promise<T> {
   const result = await input.readIdentity()
   assertConnectedBackupSourceIdentity(input.expectedDatabaseName, result)
+  return input.runAfterAttestation()
+}
+
+export function assertConnectedRestoreTargetIdentity(
+  expectedDatabaseName: string,
+  result: unknown,
+): asserts result is readonly [ConnectedRestoreTargetIdentity] {
+  if (!Array.isArray(result)) {
+    throw new OperationsSafetyError('RESTORE_TARGET_IDENTITY_MALFORMED')
+  }
+  if (result.length === 0) {
+    throw new OperationsSafetyError('RESTORE_TARGET_IDENTITY_MISSING')
+  }
+  if (result.length !== 1) {
+    throw new OperationsSafetyError('RESTORE_TARGET_IDENTITY_MULTIPLE_ROWS')
+  }
+  const row = result[0]
+  if (!row || typeof row !== 'object' || Array.isArray(row)) {
+    throw new OperationsSafetyError('RESTORE_TARGET_IDENTITY_MALFORMED')
+  }
+  const identity = row as Record<string, unknown>
+  if (typeof identity.database_name !== 'string' || identity.database_name.length === 0) {
+    throw new OperationsSafetyError('RESTORE_TARGET_IDENTITY_MALFORMED')
+  }
+  if (identity.server_address === null || identity.server_address === '') {
+    throw new OperationsSafetyError('RESTORE_TARGET_SERVER_ADDRESS_INDETERMINATE')
+  }
+  if (typeof identity.server_address !== 'string') {
+    throw new OperationsSafetyError('RESTORE_TARGET_IDENTITY_MALFORMED')
+  }
+  if (identity.database_name !== expectedDatabaseName) {
+    throw new OperationsSafetyError('RESTORE_TARGET_DATABASE_MISMATCH')
+  }
+  if (!['127.0.0.1', '::1'].includes(identity.server_address)) {
+    throw new OperationsSafetyError('RESTORE_TARGET_SERVER_NOT_LOOPBACK')
+  }
+}
+
+export async function runAfterConnectedRestoreTargetAttestation<T>(input: {
+  expectedDatabaseName: string
+  readIdentity(): Promise<unknown>
+  runAfterAttestation(): Promise<T>
+}): Promise<T> {
+  const result = await input.readIdentity()
+  assertConnectedRestoreTargetIdentity(input.expectedDatabaseName, result)
   return input.runAfterAttestation()
 }
 
