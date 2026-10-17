@@ -110,6 +110,13 @@ export function assertRestoreDatabaseName(databaseName: string): void {
   }
 }
 
+export function assertRestoreTarget(target: Pick<ParsedPostgresTarget, 'databaseName' | 'hostname'>): void {
+  assertRestoreDatabaseName(target.databaseName)
+  if (!LOOPBACK_HOSTS.has(target.hostname)) {
+    throw new OperationsSafetyError('RESTORE_DATABASE_HOST_NOT_LOOPBACK')
+  }
+}
+
 function assertExecutable(executable: string): string {
   if (!path.isAbsolute(executable)) {
     throw new OperationsSafetyError('POSTGRES_EXECUTABLE_NOT_ABSOLUTE')
@@ -147,7 +154,7 @@ export function buildPgRestorePlan(input: {
     throw new OperationsSafetyError('RESTORE_INPUT_NOT_ABSOLUTE')
   }
   const target = parsePostgresTarget(input.restoreDatabaseUrl)
-  assertRestoreDatabaseName(target.databaseName)
+  assertRestoreTarget(target)
   return {
     executable: assertExecutable(input.executable),
     args: [

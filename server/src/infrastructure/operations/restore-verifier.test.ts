@@ -36,6 +36,13 @@ describe('restore verification framework', () => {
     expect(plan.databaseRestore.args.join(' ')).not.toContain('secret')
     expect(plan.gitFsck(path.join(restoreRoot, 'repo.git')).args).toEqual(['--git-dir', path.join(restoreRoot, 'repo.git'), 'fsck', '--full'])
     expect(() => plan.gitFsck(path.join(root, 'outside.git'))).toThrowError('GIT_REPOSITORY_OUTSIDE_RESTORE_ROOT')
+    await expect(buildRestoreVerificationPlan({
+      projectRoot: project, backupSourceRoot: backup, restoreGitRoot: restoreRoot,
+      restoreDatabaseUrl: 'postgresql://restore:secret@database.example.edu/projex_restore_verify_run123',
+      pgRestoreExecutable: path.join(root, 'pg_restore'), gitExecutable: path.join(root, 'git'),
+      manifestRaw: serializeManifest(manifest),
+      manifestChecksumRaw: `${manifestChecksum(manifest)}  manifest.json\n`,
+    })).rejects.toThrowError('RESTORE_DATABASE_HOST_NOT_LOOPBACK')
   })
 
   it('requires an explicit restore database URL and exposes only allowlisted evidence', async () => {

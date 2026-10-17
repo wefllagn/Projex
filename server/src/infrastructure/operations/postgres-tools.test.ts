@@ -72,21 +72,71 @@ describe('PostgreSQL operation command plans', () => {
     })).toThrowError('POSTGRES_URL_INVALID')
   })
 
-  it('requires an explicitly recognized restore database and never falls back', () => {
-    expect(() => buildPgRestorePlan({
-      executable,
-      restoreDatabaseUrl: 'postgresql://user:secret@localhost/projex',
-      inputFile: path.resolve('backup', 'database.dump'),
-    })).toThrowError('RESTORE_DATABASE_UNRECOGNIZED')
+  it.each([
+    'localhost',
+    '127.0.0.1',
+    '[::1]',
+  ])('accepts an explicitly recognized restore database on loopback host %s', (host) => {
+    const restoreDatabaseUrl = `postgresql://restore_user:private-password@${host}:5432/projex_restore_verify_run123`
     const plan = buildPgRestorePlan({
       executable,
-      restoreDatabaseUrl: 'postgresql://user:secret@localhost/projex_restore_verify_run123',
+      restoreDatabaseUrl,
       inputFile: path.resolve('backup', 'database.dump'),
     })
     expect(plan.args).toEqual([
       '--exit-on-error', '--single-transaction', '--no-owner', '--no-privileges', path.resolve('backup', 'database.dump'),
     ])
-    expect(plan.args.join(' ')).not.toContain('secret')
+    expect(plan.args.join(' ')).not.toContain('restore_user')
+    expect(plan.args.join(' ')).not.toContain('private-password')
+    expect(plan.args.join(' ')).not.toContain(restoreDatabaseUrl)
+    expect(plan.environment).toMatchObject({
+      PGDATABASE: 'projex_restore_verify_run123',
+      PGUSER: 'restore_user',
+      PGPASSWORD: 'private-password',
+    })
+  })
+
+  it.each([
+    'projex',
+    'projex_test',
+    'projex_recovery_source_i26aaron01',
+    'arbitrary_database',
+  ])('rejects unrecognized restore database %s', (databaseName) => {
+    expect(() => buildPgRestorePlan({
+      executable,
+      restoreDatabaseUrl: `postgresql://user:secret@localhost/${databaseName}`,
+      inputFile: path.resolve('backup', 'database.dump'),
+    })).toThrowError('RESTORE_DATABASE_UNRECOGNIZED')
+  })
+
+  it('rejects a restore database on a non-loopback host with only the stable redacted code', () => {
+    const restoreDatabaseUrl = 'postgresql://restore_user:private-password@database.example.edu/projex_restore_verify_run123'
+    let rejection: unknown
+    try {
+      buildPgRestorePlan({ executable, restoreDatabaseUrl, inputFile: path.resolve('backup', 'database.dump') })
+    } catch (error) {
+      rejection = error
+    }
+    expect(rejection).toMatchObject({
+      name: 'OperationsSafetyError',
+      code: 'RESTORE_DATABASE_HOST_NOT_LOOPBACK',
+      message: 'RESTORE_DATABASE_HOST_NOT_LOOPBACK',
+    })
+    expect((rejection as Error).message).not.toContain('database.example.edu')
+    expect((rejection as Error).message).not.toContain('restore_user')
+    expect((rejection as Error).message).not.toContain('private-password')
+    expect((rejection as Error).message).not.toContain('projex_restore_verify_run123')
+  })
+
+  it.each([
+    'not-a-url',
+    'https://localhost/projex_restore_verify_run123',
+  ])('rejects malformed or non-PostgreSQL restore URL %s', (restoreDatabaseUrl) => {
+    expect(() => buildPgRestorePlan({
+      executable,
+      restoreDatabaseUrl,
+      inputFile: path.resolve('backup', 'database.dump'),
+    })).toThrowError('POSTGRES_URL_INVALID')
   })
 
   it('rejects malformed and non-PostgreSQL URLs', () => {
