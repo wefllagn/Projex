@@ -13,6 +13,11 @@ type ParsedPostgresTarget = Readonly<{
   environment: Readonly<Record<string, string>>
 }>
 
+type ConnectedBackupSourceIdentity = Readonly<{
+  database_name: string
+  server_address: string
+}>
+
 export function parsePostgresTarget(databaseUrl: string): ParsedPostgresTarget {
   let parsed: URL
   try {
@@ -52,6 +57,51 @@ export function validateBackupSourceDatabaseUrl(databaseUrl: string): ParsedPost
   const target = parsePostgresTarget(databaseUrl)
   assertBackupSourceTarget(target)
   return target
+}
+
+export function assertConnectedBackupSourceIdentity(
+  expectedDatabaseName: string,
+  result: unknown,
+): asserts result is readonly [ConnectedBackupSourceIdentity] {
+  if (!Array.isArray(result)) {
+    throw new OperationsSafetyError('BACKUP_SOURCE_IDENTITY_MALFORMED')
+  }
+  if (result.length === 0) {
+    throw new OperationsSafetyError('BACKUP_SOURCE_IDENTITY_MISSING')
+  }
+  if (result.length !== 1) {
+    throw new OperationsSafetyError('BACKUP_SOURCE_IDENTITY_MULTIPLE_ROWS')
+  }
+  const row = result[0]
+  if (!row || typeof row !== 'object' || Array.isArray(row)) {
+    throw new OperationsSafetyError('BACKUP_SOURCE_IDENTITY_MALFORMED')
+  }
+  const identity = row as Record<string, unknown>
+  if (typeof identity.database_name !== 'string' || identity.database_name.length === 0) {
+    throw new OperationsSafetyError('BACKUP_SOURCE_IDENTITY_MALFORMED')
+  }
+  if (identity.server_address === null || identity.server_address === '') {
+    throw new OperationsSafetyError('BACKUP_SOURCE_SERVER_ADDRESS_INDETERMINATE')
+  }
+  if (typeof identity.server_address !== 'string') {
+    throw new OperationsSafetyError('BACKUP_SOURCE_IDENTITY_MALFORMED')
+  }
+  if (identity.database_name !== expectedDatabaseName) {
+    throw new OperationsSafetyError('BACKUP_SOURCE_DATABASE_MISMATCH')
+  }
+  if (!['127.0.0.1', '::1'].includes(identity.server_address)) {
+    throw new OperationsSafetyError('BACKUP_SOURCE_SERVER_NOT_LOOPBACK')
+  }
+}
+
+export async function runAfterConnectedBackupSourceAttestation<T>(input: {
+  expectedDatabaseName: string
+  readIdentity(): Promise<unknown>
+  runAfterAttestation(): Promise<T>
+}): Promise<T> {
+  const result = await input.readIdentity()
+  assertConnectedBackupSourceIdentity(input.expectedDatabaseName, result)
+  return input.runAfterAttestation()
 }
 
 export function assertRestoreDatabaseName(databaseName: string): void {

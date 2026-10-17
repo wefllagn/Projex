@@ -1,7 +1,14 @@
 import path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { buildPgDumpPlan, buildPgRestorePlan, parsePostgresTarget, validateBackupSourceDatabaseUrl } from './postgres-tools.js'
+import {
+  assertConnectedBackupSourceIdentity,
+  buildPgDumpPlan,
+  buildPgRestorePlan,
+  parsePostgresTarget,
+  runAfterConnectedBackupSourceAttestation,
+  validateBackupSourceDatabaseUrl,
+} from './postgres-tools.js'
 
 const executable = path.resolve('tools', 'postgres.exe')
 
@@ -85,5 +92,72 @@ describe('PostgreSQL operation command plans', () => {
   it('rejects malformed and non-PostgreSQL URLs', () => {
     expect(() => parsePostgresTarget('not-a-url')).toThrowError('POSTGRES_URL_INVALID')
     expect(() => parsePostgresTarget('https://localhost/projex')).toThrowError('POSTGRES_URL_INVALID')
+  })
+
+  it.each(['127.0.0.1', '::1'])('accepts matching connected recovery source on %s', (serverAddress) => {
+    expect(() => assertConnectedBackupSourceIdentity('projex_recovery_source_i26aaron01', [{
+      database_name: 'projex_recovery_source_i26aaron01',
+      server_address: serverAddress,
+    }])).not.toThrow()
+  })
+
+  it.each([
+    'projex',
+    'projex_recovery_source_different',
+  ])('rejects connected database mismatch %s', (databaseName) => {
+    expect(() => assertConnectedBackupSourceIdentity('projex_recovery_source_i26aaron01', [{
+      database_name: databaseName,
+      server_address: '127.0.0.1',
+    }])).toThrowError('BACKUP_SOURCE_DATABASE_MISMATCH')
+  })
+
+  it('rejects a connected non-loopback server address', () => {
+    expect(() => assertConnectedBackupSourceIdentity('projex_recovery_source_i26aaron01', [{
+      database_name: 'projex_recovery_source_i26aaron01',
+      server_address: '192.0.2.10',
+    }])).toThrowError('BACKUP_SOURCE_SERVER_NOT_LOOPBACK')
+  })
+
+  it.each([null, ''])('rejects an indeterminate connected server address', (serverAddress) => {
+    expect(() => assertConnectedBackupSourceIdentity('projex_recovery_source_i26aaron01', [{
+      database_name: 'projex_recovery_source_i26aaron01',
+      server_address: serverAddress,
+    }])).toThrowError('BACKUP_SOURCE_SERVER_ADDRESS_INDETERMINATE')
+  })
+
+  it('rejects zero or duplicate connected identity rows', () => {
+    expect(() => assertConnectedBackupSourceIdentity('projex_recovery_source_i26aaron01', []))
+      .toThrowError('BACKUP_SOURCE_IDENTITY_MISSING')
+    expect(() => assertConnectedBackupSourceIdentity('projex_recovery_source_i26aaron01', [
+      { database_name: 'projex_recovery_source_i26aaron01', server_address: '127.0.0.1' },
+      { database_name: 'projex_recovery_source_i26aaron01', server_address: '127.0.0.1' },
+    ])).toThrowError('BACKUP_SOURCE_IDENTITY_MULTIPLE_ROWS')
+  })
+
+  it.each([
+    null,
+    {},
+    [null],
+    [{ database_name: '', server_address: '127.0.0.1' }],
+    [{ database_name: 42, server_address: '127.0.0.1' }],
+    [{ database_name: 'projex_recovery_source_i26aaron01', server_address: 42 }],
+  ])('rejects malformed connected identity result %#', (result) => {
+    expect(() => assertConnectedBackupSourceIdentity('projex_recovery_source_i26aaron01', result))
+      .toThrowError('BACKUP_SOURCE_IDENTITY_MALFORMED')
+  })
+
+  it('does not continue to quiescence after connected identity failure', async () => {
+    const readIdentity = vi.fn().mockResolvedValue([{
+      database_name: 'projex',
+      server_address: '127.0.0.1',
+    }])
+    const readQuiescence = vi.fn()
+    await expect(runAfterConnectedBackupSourceAttestation({
+      expectedDatabaseName: 'projex_recovery_source_i26aaron01',
+      readIdentity,
+      runAfterAttestation: readQuiescence,
+    })).rejects.toThrowError('BACKUP_SOURCE_DATABASE_MISMATCH')
+    expect(readIdentity).toHaveBeenCalledOnce()
+    expect(readQuiescence).not.toHaveBeenCalled()
   })
 })
