@@ -52,8 +52,8 @@
 
 ### I2-R8 Activity Workspace continuation
 
-- Aaron's Activity Workspace V1-A, V1-B, and V1-C slices are Checker-accepted and committed on `iteration-2/aaron-work-01` through `56a7d3352e8c265d9b31d4b739d8166de13fc63a`.
-- V1-D browser/Git checkpoint continuity is an unstaged pre-commit WIP. Its additive migrations remain unapplied to normal `projex`; Checker acceptance, task-branch savepoint, protected integration, and I2.8 networking remain separate gates.
+- Aaron's Activity Workspace V1-A, V1-B, V1-C, and V1-D slices are Checker-accepted and committed on `iteration-2/aaron-work-01` through `d98a7f382606d096cf4ecb115c31f6acf54fd942`.
+- The completed V1-D localhost walkthrough used only loopback services and disposable `projex_test` data and proved browser checkpoint Save/Load, dirty-editor protection, native Git/IntelliJ continuity, and separation from academic submission. Its additive migrations remain unapplied to normal `projex`; protected integration and I2.8 networking remain separate gates.
 
 ## Program name
 
@@ -73,8 +73,8 @@ As of I2-R8, the active cumulative member branch is `iteration-2/aaron-work-01`;
 - **Academic Course/Class Offering foundation: ACCEPTED ON MEMBER BRANCH.** Additive migrations and the authenticated walkthrough were exercised only on disposable `projex_test`; normal `projex` migration needs separate approval. Final evidence and limitations are recorded in `milestones/ACADEMIC_FOUNDATION.md`.
 - **Other I2.1 follow-ups: PROPOSED / AWAITING APPROVAL.** Entry-class explanation, compact test-case authoring, scoring-allocation clarity and invitation-flow simplification remain bounded UX candidates. Personalized nonempty-output checking and ungraded activities need separate implementation decisions.
 - **I2.2: ACCEPTED FOR FREISER CHECKPOINT.** Cross-class API/UI, guarded integration, final client regression, authenticated API validation, Freiser's detailed desktop walkthrough and final 390 × 844 Student/Instructor PASS are recorded in `milestones/I2.2.md`. Checker accepted the bounded responsive/dashboard correction. Loading/error/retry were not separately reported as manually passed; protected integration remains separate.
-- **I2.3 Activity Workspace V1-A/V1-B/V1-C: ACCEPTED ON AARON TASK BRANCH.** Database/API foundation, loopback Smart HTTP, and Student UI are committed through `56a7d3352e8c265d9b31d4b739d8166de13fc63a`. V1-D checkpoint continuity remains WIP pending Checker review, and its normal-database migration is not approved.
-- **I2.4–I2.9: PENDING.** Earlier I2.3 repository, Class Workspace, and Activity Workspace V1-A/V1-B/V1-C slices are accepted on their task branches; V1-D remains WIP. Submission provenance, protected integration, and network Git remain separate gates.
+- **I2.3 Activity Workspace V1-A/V1-B/V1-C/V1-D: ACCEPTED ON AARON TASK BRANCH.** Database/API foundation, loopback Smart HTTP, Student UI, and browser/Git checkpoint continuity are committed through `d98a7f382606d096cf4ecb115c31f6acf54fd942`. The V1-D loopback manual walkthrough passed; its normal-database migration is not approved.
+- **I2.4–I2.9: PENDING.** Earlier I2.3 repository, Class Workspace, and Activity Workspace V1-A/V1-B/V1-C/V1-D slices are accepted on their task branches. Submission provenance, protected integration, and network Git remain separate gates.
 - Existing Phase 0–11 history remains unchanged. A working UI, model or test foundation does not mark an Iteration 2 capability complete.
 
 ## Rules across every milestone
