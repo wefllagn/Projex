@@ -29,8 +29,13 @@ Independent Admin audit/safe fixes are **VERIFIED — PENDING REVIEW** on
 `codex/julius-overnight-admin-mvp`, based on approved Activity HEAD `42666278d7987018cdf24af3499d10e7b84c4e4b`.
 No Group source was merged. See `ADMIN_MVP_AUDIT_AND_PLAN.md`,
 `OVERNIGHT_AUTOPILOT_REPORT.md` and `MVP_INTEGRATION_PREPARATION.md`.
+Admin implementation checkpoint: `0e755bd710b1572c5849239bc8e8c12d62b1789c`.
 Final Admin checks: client full 353 plus final focused academic 8; guarded PG 109;
 lint/build/integration types and desktop/390 checks. No normal DB changes.
+Runnable review: Group `http://127.0.0.1:5174` (compiled API 3300 + Git worker),
+Admin `http://localhost:5180` (API 3301), both disposable `projex_test`.
+Private test-login manifests remain outside Git in the task artifact directory.
+Stop demo APIs/workers before any future shared mutable test-database suite.
 
 ## Activity behavior now locked
 

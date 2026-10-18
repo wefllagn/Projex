@@ -65,7 +65,8 @@ dependency was installed or changed to solve them.
 
 Group SHA above is local only. Admin branch `codex/julius-overnight-admin-mvp` is
 independent from `42666278d7987018cdf24af3499d10e7b84c4e4b`; checkpoint SHA is
-owned by Git after this report is committed. No pushes, merges or history rewrites.
+owned by Git after this report is committed. Implementation checkpoint:
+`0e755bd710b1572c5849239bc8e8c12d62b1789c`. No pushes, merges or history rewrites.
 The primary dirty checkout remains untouched on its original branch.
 
 ## H. Affected files
@@ -109,7 +110,20 @@ Admin preview is loopback `http://localhost:5180`, API loopback port 3301,
 disposable `projex_test`. Login uses a randomized test Admin, already signed in
 in the preview tab. Credentials live privately outside Git. Group screenshot
 evidence is preserved; DB suites clear disposable fixtures, so old Group URLs
-must not be treated as permanent data. No normal `projex` changes, persistent
+must not be treated as permanent data. After the checkpoint, Group fixtures were
+recreated without clearing Admin fixtures. Group is runnable at
+`http://127.0.0.1:5174` with compiled API on loopback port 3300 and its local Git
+provisioning worker. Admin stays at `http://localhost:5180` / API port 3301.
+Different loopback hostnames isolate test login cookies. Both previews were
+signed in with their disposable role; sessions still expire normally.
+Private `group-demo-private.json` and `admin-demo-private.json` in the external
+task artifact directory contain test login details, never committed here.
+
+Group startup initially failed using the TypeScript source entrypoint: native
+Smart HTTP validates an on-disk compiled `.js` hook. The verified compiled build
+was started successfully; no hook validation or transport control was bypassed.
+Future mutable database suites must stop these demo APIs/workers first and run
+serially, then recreate disposable fixtures as needed. No normal `projex` changes, persistent
 config, dependency upgrades, deployment or worker Java exposure.
 
 ## L. Recommended first action
