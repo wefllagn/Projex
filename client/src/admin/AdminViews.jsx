@@ -121,7 +121,7 @@ export function AdminOverviewPage({ api = adminApi }) {
       <AdminPageHeader
         eyebrow="Platform administration"
         title="Overview"
-        summary="Authoritative account and academic record totals from Projex. Operational health and recovery remain in a later milestone."
+        summary="Authoritative account and academic record totals from Projex. Measured health and supported recovery actions are available in Operations."
         actions={<button type="button" className="student-outline-action" onClick={() => load()}>Refresh</button>}
       />
       <div className="admin-metric-grid">

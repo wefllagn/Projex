@@ -20,6 +20,18 @@ Runtime credentials, environment files, and test storage are not in Git.
 
 Activity Workflow MVP — COMPLETE / APPROVED FOR BASELINE
 
+Overnight continuation: Group is **IMPLEMENTED — PENDING PRODUCT OWNER REVIEW**
+at local `9203a2c827e8f68e07e920a8a246d34b6d33af42` on
+`work/julius-overnight-group-mvp` (795 passing tests and desktop/390 verification).
+Its detailed report and decisions are on that branch, not copied into this base.
+
+Independent Admin audit/safe fixes are **VERIFIED — PENDING REVIEW** on
+`codex/julius-overnight-admin-mvp`, based on approved Activity HEAD `42666278d7987018cdf24af3499d10e7b84c4e4b`.
+No Group source was merged. See `ADMIN_MVP_AUDIT_AND_PLAN.md`,
+`OVERNIGHT_AUTOPILOT_REPORT.md` and `MVP_INTEGRATION_PREPARATION.md`.
+Final Admin checks: client full 353 plus final focused academic 8; guarded PG 109;
+lint/build/integration types and desktop/390 checks. No normal DB changes.
+
 ## Activity behavior now locked
 
 - Activity Workspace is a constrained academic coding environment.
@@ -35,9 +47,9 @@ Activity Workflow MVP — COMPLETE / APPROVED FOR BASELINE
 ## Current roadmap
 
 1. Activity Workflow MVP — complete
-2. Group Repository MVP — next
-3. Admin Architecture MVP
-4. MVP Integration / Hardening
+2. Group Repository MVP — implemented/verified, Product Owner review pending
+3. Admin Architecture MVP — audit/safe fixes verified, product lock/review pending
+4. MVP Integration / Hardening — stable-contract test/plan prepared; merge gate pending
 5. Adviser Review / Approval
 6. Portable Docker demo package
 7. Release / Submission freeze
@@ -46,11 +58,11 @@ Activity Workflow MVP — COMPLETE / APPROVED FOR BASELINE
 
 ## Next major task
 
-Group Repository MVP architecture/audit.
-
-Before implementation, inspect existing `CLASS_PROJECT`, `CLASS_WORKSPACE`,
-team, membership, and repository authorization functionality. Reuse existing
-work where possible. Architecture/audit does not authorize implementation.
+Product Owner reviews independent Group and Admin checkpoints, locks remaining
+Admin decisions and explicitly authorizes an integration target/SHAs before
+combining them. The newer overnight order authorizes these local task checkpoints
+and safe existing-scope work, not pushes, integration, schema/authority expansion,
+normal-database changes, Docker/Azure or release. Both worktrees remain recoverable.
 
 ## Do not touch unless explicitly requested
 

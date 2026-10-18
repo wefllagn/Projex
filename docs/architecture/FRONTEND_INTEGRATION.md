@@ -10,6 +10,20 @@ Phase 10A completed shared infrastructure, authentication, classes, and membersh
 
 ## Shared client contract
 
+### Overnight Admin foundation reconciliation (pending Product Owner review)
+
+The independent 2026-10-18 Admin slice reuses existing Phase 10D authority and
+Iteration 2 Course/offering APIs. Course catalog pagination/search are URL-owned;
+loading/failure never stands in for an empty catalog. Official correction requires
+history impact matching the displayed Class identity and version; stale Class
+forms cannot adopt a newer impact version implicitly. Late reads are discarded,
+Class context retries refresh the displayed record, and current Course selection
+survives asynchronous option loading. Teaching staff failures do not imply an
+unassigned Primary. Admin repository metadata filters include ACTIVITY_WORKSPACE
+without source or credential issuance. No new Admin policy or full milestone
+acceptance is implied; audit, tests and pending decisions are under
+`docs/ADMIN_MVP_AUDIT_AND_PLAN.md`.
+
 ### API client
 
 - All JSON application requests use one native-fetch client and the `/api/v1` base by default. `VITE_API_BASE_URL` may configure a different API base without containing a secret.
