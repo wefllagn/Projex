@@ -1,4 +1,6 @@
 import type { Logger } from 'pino'
+import { evaluateGitPermission } from '../git-transport/git-authorization.js'
+import type { GroupContextProjection } from './group-context.types.js'
 import { AppError } from '../../shared/errors/app-error.js'
 import type { PaginationMeta } from '../../shared/http/response.js'
 import type { SafeUserProfile } from '../auth/auth.types.js'
@@ -47,6 +49,7 @@ export type AdminRepositoryFeedbackProjection = Omit<
 >
 
 export interface RepositoryService {
+  groupContext(caller: SafeUserProfile, repositoryId: string): Promise<GroupContextProjection>
   createClassWorkspace(caller: SafeUserProfile, classId: string): Promise<RepositoryProjection>
   createActivityWorkspace(caller: SafeUserProfile, activityId: string): Promise<RepositoryProjection>
   getActivityWorkspace(caller: SafeUserProfile, activityId: string): Promise<RepositoryProjection>
@@ -117,6 +120,11 @@ function isOwner(access: RepositoryAccessRecord, caller: SafeUserProfile): boole
 }
 
 function canView(access: RepositoryAccessRecord, caller: SafeUserProfile): boolean {
+  if (access.repository.repositoryType === 'CLASS_PROJECT') {
+    if (caller.role === 'ADMIN' || instructorOwns(access, caller)) return true
+    return caller.role === 'STUDENT' && access.classMembership?.status === 'ACTIVE'
+      && access.repositoryMembership?.status !== 'REMOVED' && access.repository.visibility === 'CLASS_ONLY'
+  }
   if (access.repository.repositoryType === 'CLASS_WORKSPACE') {
     return instructorOwns(access, caller) || (caller.role === 'STUDENT' && isOwner(access, caller) && access.repository.class?.status === 'ACTIVE' && access.classMembership?.status === 'ACTIVE')
   }
@@ -219,6 +227,39 @@ export function createRepositoryService(dependencies: {
   }
 
   return {
+    async groupContext(caller, repositoryId) {
+      const access = await loadAccess(caller, repositoryId)
+      if (access.repository.repositoryType !== 'CLASS_PROJECT') throw notFound()
+      const record = await repository.findGroupContext(repositoryId, caller.id)
+      if (!record) throw notFound()
+      const { gitAccess, ...context } = record
+      if (gitAccess.user.status !== 'ACTIVE') throw notFound()
+      const current = now()
+      const permission = evaluateGitPermission(gitAccess, current)
+      const instructor = instructorOwns(access, caller)
+      const participant = caller.role === 'STUDENT' && gitAccess.user.status === 'ACTIVE'
+        && gitAccess.repositoryMember?.status === 'ACTIVE' && gitAccess.teamMember?.status === 'ACTIVE'
+        && gitAccess.projectTask?.class.membership?.status === 'ACTIVE'
+      const maintainer = participant && access.repository.ownerId === caller.id && gitAccess.teamLeadStudentId === caller.id
+      const active = record.class.status === 'ACTIVE' && access.repository.status === 'ACTIVE'
+      const open = active && !isCutoff(access, current)
+      const corrective = active && isCutoff(access, current) && ['PUBLISHED', 'CLOSED'].includes(record.project.status)
+      return { ...context,
+        currentRole: instructor ? 'INSTRUCTOR' : maintainer ? 'MAINTAINER' : participant ? 'DEVELOPER' : 'METADATA_ONLY',
+        permissions: {
+          canRead: permission.read, canWrite: permission.write, canUpdateMain: permission.canUpdateMain,
+          canManageMembers: Boolean((maintainer && open) || (instructor && corrective)),
+          canInviteMembers: Boolean(maintainer && open),
+          canReview: Boolean(instructor && active && record.project.status !== 'ARCHIVED' && access.repository.reviewStatus === 'READY_FOR_REVIEW'),
+          canRequestChanges: Boolean(instructor && open && access.repository.reviewStatus === 'READY_FOR_REVIEW'),
+          canSubmitForReview: Boolean(maintainer && open && ['WORKING', 'CHANGES_REQUESTED'].includes(access.repository.reviewStatus)),
+          canViewActivity: Boolean(participant || instructor || caller.role === 'ADMIN'),
+          canEditFeedback: Boolean(instructor && active && record.project.status !== 'ARCHIVED'),
+          canArchive: Boolean(instructor && access.repository.status === 'ACTIVE' && access.repository.reviewStatus === 'APPROVED'),
+          canRestore: Boolean(instructor && access.repository.status === 'ARCHIVED' && record.class.status === 'ACTIVE' && record.project.status !== 'ARCHIVED'),
+        },
+      }
+    },
     async createClassWorkspace(caller, classId) {
       requireActive(caller)
       if (caller.role !== 'STUDENT') throw forbidden()
@@ -359,6 +400,7 @@ export function createRepositoryService(dependencies: {
       if (access.repository.repositoryType !== 'CLASS_PROJECT') throw notFound()
       const currentTime = now()
       const cutoff = isCutoff(access, currentTime)
+      if (access.repository.projectTask?.class.status !== 'ACTIVE') mapFailure({ kind: 'class_archived' })
       if (cutoff) {
         if (!instructorOwns(access, caller)) throw notFound()
         if (!input.reason?.trim()) mapFailure({ kind: 'reason_required' })

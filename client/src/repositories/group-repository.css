@@ -1,0 +1,34 @@
+.group-repository-page { max-width: 1240px; margin: 0 auto; padding: 28px; color: #122350; min-width: 0; }
+.group-repository-header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; padding: 24px 0; }
+.group-repository-header h1 { font-size: 26px; margin: 8px 0; }
+.group-repository-header p { margin: 6px 0; color: #5d6e91; overflow-wrap: anywhere; }
+.group-repository-header dl { display: flex; flex-wrap: wrap; width: 100%; gap: 20px 40px; margin: 0; }
+.group-repository-header dt { font-size: 12px; color: #617391; }
+.group-repository-header dd { margin: 5px 0 0; font-size: 14px; overflow-wrap: anywhere; }
+.group-state { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px; max-width: 270px; }
+.group-state span { padding: 6px 10px; border-radius: 16px; background: #eef4ff; font-size: 12px; }
+.group-state small { width: 100%; color: #617391; }
+.group-repository-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border-bottom: 1px solid #dae4f3; padding-bottom: 12px; margin-bottom: 20px; }
+.group-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-right: auto; }
+.group-repository-actions > .student-outline-action { width: auto; flex: 0 0 auto; min-height: 36px; }
+.group-code-menu { flex: 0 0 auto; }
+.group-tabs button { border: 0; background: transparent; color: #586b90; padding: 12px; cursor: pointer; border-bottom: 3px solid transparent; }
+.group-tabs button[aria-selected=true] { color: #0961ed; border-bottom-color: #0961ed; font-weight: 700; }
+.group-source { border: 1px solid #dce6f4; border-radius: 12px; padding: 20px; background: #fff; min-width: 0; }
+.group-latest-commit { display: grid; gap: 8px; padding: 0 0 18px; overflow-wrap: anywhere; }
+.group-latest-commit span, .group-readme small { font-size: 12px; color: #617391; }
+.group-repository-page pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; }
+.group-readme { margin-top: 24px; padding-top: 20px; border-top: 1px solid #dce6f4; }
+.group-repository-page .repository-git-history-grid > *, .group-repository-page .repository-git-browser > * { min-width: 0; }
+.group-code-menu .activity-code-popover { right: 0; left: auto; max-width: min(360px, calc(100vw - 40px)); z-index: 30; }
+@media (max-width: 600px) {
+  .group-repository-page { padding: 18px 12px; }
+  .group-repository-header h1 { font-size: 22px; }
+  .group-repository-header dl { gap: 14px; }
+  .group-repository-header dl > div { flex: 1 1 42%; min-width: 0; }
+  .group-tabs { width: 100%; }
+  .group-tabs button { padding: 10px 8px; font-size: 12px; }
+  .group-repository-actions { justify-content: space-between; }
+  .group-source { padding: 12px; }
+  .group-repository-page .repository-git-browser, .group-repository-page .repository-git-history-grid { grid-template-columns: minmax(0, 1fr); }
+}

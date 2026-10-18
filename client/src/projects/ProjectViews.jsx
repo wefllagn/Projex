@@ -6,6 +6,7 @@ import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
 import { useCapabilities } from '../capabilities/capability-context.js'
 import { repositoryApi } from '../repositories/repository-api.js'
+import { StudentInvitationInbox } from '../repositories/RepositoryCollaborationViews.jsx'
 import { repositoryCatalogProjection, repositoryMatchesProject } from '../repositories/repository-projections.js'
 import { projectApi } from './project-api.js'
 import {
@@ -88,7 +89,7 @@ export function StudentProjectList({ api = projectApi }) {
       </section>
       <section className="student-assignment-panel student-assignment-panel--board">
         <div className="student-assignment-toolbar student-assignment-toolbar--board">
-          <div><strong>Class Projects</strong><p>Published and closed project requirements for {selectedClass?.className}.</p></div>
+          <div><strong>My Projects</strong><p>Published and closed group project requirements for {selectedClass?.className}.</p></div>
           <label className="student-sort-control">Status<select value={query.status} onChange={(event) => setQuery({ ...FIRST_PAGE, status: event.target.value })}><option value="">Published and closed</option><option value="PUBLISHED">Published</option><option value="CLOSED">Closed</option></select></label>
         </div>
         {current.status === 'loading' && <RequestState kind="loading" compact message="Loading project requirements." />}
@@ -118,12 +119,12 @@ function ClassRepositoryForm({ busy, onSubmit }) {
   const valid = form.teamName.trim() && form.repositoryName.trim()
   return (
     <form className="project-repository-create" onSubmit={(event) => { event.preventDefault(); if (valid) onSubmit({ teamName: form.teamName.trim(), repositoryName: form.repositoryName.trim(), description: form.description.trim() || null }) }}>
-      <h3>Create your team repository</h3>
+      <h3>Create Group</h3>
       <p>Creation atomically establishes your team and owner membership. Joining another team requires accepting an authorized repository invitation.</p>
-      <label>Team name<input value={form.teamName} maxLength={120} onChange={(event) => setField('teamName', event.target.value)} disabled={busy} /></label>
+      <label>Group name<input value={form.teamName} maxLength={120} onChange={(event) => setField('teamName', event.target.value)} disabled={busy} /></label>
       <label>Repository name<input value={form.repositoryName} maxLength={120} onChange={(event) => setField('repositoryName', event.target.value)} disabled={busy} /></label>
       <label>Description<textarea value={form.description} maxLength={5000} onChange={(event) => setField('description', event.target.value)} disabled={busy} /></label>
-      <button type="submit" className="student-primary-action" disabled={!valid || busy}>{busy ? 'Creating…' : 'Create Repository'}</button>
+      <button type="submit" className="student-primary-action" disabled={!valid || busy}>{busy ? 'Creating…' : 'Create Group'}</button>
     </form>
   )
 }
@@ -133,7 +134,7 @@ export function StudentProjectDetail({ api = projectApi, repositories = reposito
   const { projectTaskId } = useParams()
   const navigate = useNavigate()
   const { selectedClass, selectionStatus } = useClasses()
-  const [state, setState] = useState({ key: null, status: 'idle', project: null, repositoryItems: [], error: null })
+  const [state, setState] = useState({ key: null, status: 'idle', project: null, repositoryItems: [], myRepository: null, pagination: null, error: null })
   const [creating, setCreating] = useState(false)
   const [actionError, setActionError] = useState(null)
 
@@ -141,15 +142,18 @@ export function StudentProjectDetail({ api = projectApi, repositories = reposito
     if (!selectedClass || !projectTaskId) return
     const key = `${selectedClass.id}:${projectTaskId}`
     try {
-      const [projectResponse, repositoryResponse] = await Promise.all([
+      const [projectResponse, repositoryResponse, mineResponse] = await Promise.all([
         api.getProjectTask(projectTaskId, { signal }),
-        repositories.listRepositories({ page: 1, pageSize: 100, projectTaskId }, { signal }),
+        repositories.listRepositories({ page: 1, pageSize: 20, projectTaskId, groupScope: 'CLASS_METADATA' }, { signal }),
+        repositories.listRepositories({ page: 1, pageSize: 20, projectTaskId, groupScope: 'MINE' }, { signal }),
       ])
       const project = projectTaskProjection(projectResponse.data)
       const repositoryItems = repositoryResponse.data.map(repositoryCatalogProjection)
+      const mine = mineResponse.data.map(repositoryCatalogProjection)
       if (!projectMatchesClass(project, selectedClass)) throw projectContextError()
       if (repositoryItems.some((item) => !repositoryMatchesProject(item, projectTaskId))) throw repositoryContextError()
-      setState({ key, status: 'ready', project, repositoryItems, error: null })
+      if (mine.some((item) => !repositoryMatchesProject(item, projectTaskId) || item.groupRelationship !== 'MY_GROUP')) throw repositoryContextError()
+      setState({ key, status: 'ready', project, repositoryItems, myRepository: mine[0] || null, pagination: repositoryResponse.pagination, error: null })
     } catch (error) {
       if (error?.name !== 'AbortError') setState({ key, status: 'error', project: null, repositoryItems: [], error })
     }
@@ -183,7 +187,7 @@ export function StudentProjectDetail({ api = projectApi, repositories = reposito
   if (current.status === 'error') return <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />
   if (!current.project) return null
   const project = current.project
-  const mayCreate = selectedClass.status === 'ACTIVE' && project.status === 'PUBLISHED' && project.dueState === 'OPEN'
+  const mayCreate = !current.myRepository && selectedClass.status === 'ACTIVE' && project.status === 'PUBLISHED' && project.dueState === 'OPEN'
   return (
     <div className="student-detail-layout student-project-detail-layout">
       <main className="student-activity-detail-card">
@@ -194,21 +198,33 @@ export function StudentProjectDetail({ api = projectApi, repositories = reposito
           <section className="student-project-instructions"><h3>Project requirement</h3><p>{project.instructions}</p><ul><li>Maximum team size: {project.maxTeamSize}</li><li>Lifecycle: {formatProjectStatus(project.dueState)}</li></ul></section>
         </article>
         <section className="student-detail-card project-repository-list">
-          <div className="student-side-card-heading"><h2>Class repositories</h2><span>{current.repositoryItems.length} visible</span></div>
-          {current.repositoryItems.length === 0 && <RequestState kind="empty" compact message="No class repository is available for this project yet." />}
+          <div className="student-side-card-heading"><h2>My Group</h2></div>
+          {current.myRepository ? <NavLink className="student-primary-action" to={classHref(`/student/projects/${project.id}/repositories/${current.myRepository.id}`, selectedClass.id)}>Open Group Repository · {current.myRepository.repositoryName}</NavLink> : <p>You have not joined a group for this project. Create Group or accept an invitation below.</p>}
+          <StudentInvitationInbox api={repositories} projectTaskId={project.id} onAccepted={load} />
+          <div className="student-side-card-heading"><h2>Other class repository metadata</h2><span>{current.repositoryItems.length} visible</span></div>
+          <p>Class visibility is metadata only. It does not grant access to another group's code or Git activity.</p>
+          {current.repositoryItems.length === 0 && <RequestState kind="empty" compact message="No other class repository metadata is available." />}
           {current.repositoryItems.map((repository) => (
             <NavLink to={classHref(`/student/projects/${project.id}/repositories/${repository.id}`, selectedClass.id)} className="student-repository-index-row" key={repository.id}>
               <span className="student-repository-row-icon" aria-hidden="true" /><strong>{repository.repositoryName}</strong><span>{repository.owner.fullName}</span><small>{formatProjectStatus(repository.storageStatus)}</small><em>{formatProjectStatus(repository.status)}</em>
             </NavLink>
           ))}
+          {current.pagination?.hasNextPage && <button type="button" className="student-outline-action" onClick={async () => {
+            try {
+              const response = await repositories.listRepositories({ page: current.pagination.page + 1, pageSize: 20, projectTaskId, groupScope: 'CLASS_METADATA' })
+              const items = response.data.map(repositoryCatalogProjection)
+              if (items.some((item) => !repositoryMatchesProject(item, projectTaskId) || item.groupRelationship !== 'CLASS_METADATA')) throw repositoryContextError()
+              setState((previous) => previous.key === key ? { ...previous, repositoryItems: [...new Map([...previous.repositoryItems, ...items].map((item) => [item.id, item])).values()], pagination: response.pagination } : previous)
+            } catch (error) { setActionError(error) }
+          }}>Load more class metadata</button>}
         </section>
       </main>
       <aside className="student-work-rail">
         <section className="student-work-card">
-          {mayCreate && capabilities.git.provisioning ? <ClassRepositoryForm busy={creating} onSubmit={createRepository} /> : <RequestState kind="unavailable" compact title={mayCreate ? 'Repository provisioning unavailable' : 'Repository creation is closed'} message={mayCreate ? 'This environment preserves repository records but cannot provision new Git storage.' : 'A team repository can be created only while the project is published, before its deadline, in an active class.'} />}
+          {current.myRepository ? <p>Your group already has a shared repository. Open My Group to work with your team.</p> : mayCreate && capabilities.git.provisioning ? <ClassRepositoryForm busy={creating} onSubmit={createRepository} /> : <RequestState kind="unavailable" compact title={mayCreate ? 'Repository provisioning unavailable' : 'Repository creation is closed'} message={mayCreate ? 'This environment preserves repository records but cannot provision new Git storage.' : 'A group can be created only while the project is published, before its deadline, in an active class.'} />}
           {actionError && <p className="activity-action-error">{describeApiError(actionError)}</p>}
         </section>
-        <section className="student-work-card student-private-card"><h2>Collaboration</h2><p>Repository invitations are available from My Repositories. Direct arbitrary repository joining is not supported.</p></section>
+        <section className="student-work-card student-private-card"><h2>Collaboration</h2><p>Join a group by accepting an invitation. Manage your group from its shared repository. Direct arbitrary repository joining is not supported.</p></section>
       </aside>
     </div>
   )
@@ -395,8 +411,8 @@ export function InstructorProjectDetail({ api = projectApi }) {
       <section className="instructor-page-heading"><p>Project Requirement Monitoring</p><h2>{current.project.title}</h2><span>Due {formatProjectDate(current.project.dueDate)} · {formatProjectStatus(current.project.status)}</span></section>
       <div className="instructor-stat-grid instructor-monitor-grid"><article className="instructor-stat-card"><span>Teams</span><strong>{current.monitoring.teamCount}</strong><p>authoritative records</p></article><article className="instructor-stat-card"><span>Repositories</span><strong>{current.monitoring.repositoryCount}</strong><p>created for this task</p></article><article className="instructor-stat-card"><span>Active members</span><strong>{current.monitoring.activeMemberCount}</strong><p>across project teams</p></article></div>
       {current.teams.length === 0 && <RequestState kind="empty" compact message="No teams or repositories have been created for this project task." />}
-      {current.teams.length > 0 && <div className="instructor-data-table" role="table" aria-label="Project teams"><div className="instructor-table-row instructor-table-row--head instructor-team-row project-team-foundation-row" role="row"><span>Team</span><span>Lead</span><span>Members</span><span>Repository</span><span>Status</span><span>Action</span></div>{current.teams.map((team) => <div className="instructor-table-row instructor-team-row project-team-foundation-row" role="row" key={team.teamId}><strong>{team.name}</strong><span>{team.lead.fullName}</span><span>{team.activeMemberCount}</span><span>{team.repository?.repositoryName ?? 'No repository'}</span><ProjectStatus value={team.repository?.reviewStatus ?? team.status} /><div>{team.repository ? <NavLink to={classHref(`/instructor/projects/${projectTaskId}/repositories/${team.repository.repositoryId}`, selectedClass.id)}>View metadata</NavLink> : <span>Unavailable</span>}</div></div>)}</div>}
-      <RequestState kind="unavailable" compact title="Git contribution evidence is not active yet" message="Open an authorized repository above for collaboration, feedback, and academic review. Git history, contribution analytics, and similarity remain later boundaries." />
+      {current.teams.length > 0 && <div className="instructor-data-table" role="table" aria-label="Project teams"><div className="instructor-table-row instructor-table-row--head instructor-team-row project-team-foundation-row" role="row"><span>Group</span><span>Maintainer</span><span>Members</span><span>Repository</span><span>Status</span><span>Action</span></div>{current.teams.map((team) => <div className="instructor-table-row instructor-team-row project-team-foundation-row" role="row" key={team.teamId}><strong>{team.name}</strong><span>{team.lead.fullName}</span><span>{team.activeMemberCount}</span><span>{team.repository?.repositoryName ?? 'No repository'}</span><ProjectStatus value={team.repository?.reviewStatus ?? team.status} /><div>{team.repository ? <NavLink to={classHref(`/instructor/projects/${projectTaskId}/repositories/${team.repository.repositoryId}`, selectedClass.id)}>Open Repository</NavLink> : <span>Unavailable</span>}</div></div>)}</div>}
+      <RequestState kind="unavailable" compact title="Repository evidence and academic review" message="Open an authorized repository above for Git history, source inspection, collaboration, feedback, and academic review. Contribution analytics and similarity are not available yet." />
     </div>
   )
 }

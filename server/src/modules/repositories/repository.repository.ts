@@ -1,4 +1,6 @@
 import type { Prisma, PrismaClient, UserRole } from '@prisma/client'
+import { createPrismaGitTransportRepository } from '../git-transport/git-transport.repository.js'
+import type { GroupContextRecord } from './group-context.types.js'
 import type {
   ApproveRepositoryInput,
   CreateClassProjectRepositoryInput,
@@ -100,6 +102,7 @@ export type FeedbackWriteResult =
   | CollaborationFailure
 
 export interface RepositoryRepository {
+  findGroupContext(repositoryId: string, callerId: string): Promise<GroupContextRecord | null>
   createClassWorkspace(input: { classId: string; ownerId: string; now: Date }): Promise<RepositoryWriteResult>
   createActivityWorkspace(input: { activityId: string; ownerId: string; now: Date }): Promise<RepositoryWriteResult>
   findActivityWorkspaceId(activityId: string, ownerId: string): Promise<string | null>
@@ -375,6 +378,32 @@ export function createPrismaRepositoryRepository(
   }
 
   return {
+    async findGroupContext(repositoryId, callerId) {
+      const [record, gitAccess] = await Promise.all([
+        prisma.repository.findUnique({ where: { id: repositoryId }, select: {
+          id: true, repositoryType: true,
+          team: { select: { id: true, name: true, status: true, _count: { select: { members: { where: { status: 'ACTIVE' } } } } } },
+          projectTask: { select: { id: true, title: true, dueDate: true, status: true, class: { select: {
+            id: true, className: true, status: true,
+            instructor: { select: { id: true, fullName: true } },
+            teachingStaff: { where: { status: 'ACTIVE', instructor: { status: 'ACTIVE' } }, select: { instructor: { select: { id: true, fullName: true } } } },
+          } } } },
+        } }),
+        createPrismaGitTransportRepository(prisma).findAccess(repositoryId, callerId),
+      ])
+      if (!record?.team || !record.projectTask || record.repositoryType !== 'CLASS_PROJECT' || !gitAccess) return null
+      const { class: classRecord, ...project } = record.projectTask
+      return {
+        repositoryId: record.id, project,
+        class: { id: classRecord.id, className: classRecord.className, status: classRecord.status },
+        team: { id: record.team.id, name: record.team.name, status: record.team.status, activeMemberCount: record.team._count.members },
+        teachingStaff: [
+          ...(classRecord.instructor ? [{ userId: classRecord.instructor.id, fullName: classRecord.instructor.fullName, role: 'PRIMARY' as const }] : []),
+          ...classRecord.teachingStaff.map(({ instructor }) => ({ userId: instructor.id, fullName: instructor.fullName, role: 'CO_INSTRUCTOR' as const })),
+        ],
+        gitAccess,
+      }
+    },
     async createClassWorkspace(input) {
       try {
         return await runSerializable(async (transaction) => {
@@ -633,7 +662,6 @@ export function createPrismaRepositoryRepository(
             : {
                 OR: [
                   { repositoryType: 'PERSONAL', members: { some: { studentId: input.callerId, status: 'ACTIVE' } } },
-                  { repositoryType: 'CLASS_PROJECT', members: { some: { studentId: input.callerId, status: 'ACTIVE' } } },
                   { repositoryType: 'CLASS_WORKSPACE', ownerId: input.callerId, class: { status: 'ACTIVE', members: { some: { studentId: input.callerId, status: 'ACTIVE' } } } },
                   { repositoryType: 'ACTIVITY_WORKSPACE', ownerId: input.callerId, activity: { class: { status: 'ACTIVE', members: { some: { studentId: input.callerId, status: 'ACTIVE' } } } } },
                   {
@@ -642,6 +670,7 @@ export function createPrismaRepositoryRepository(
                     projectTask: {
                       class: { members: { some: { studentId: input.callerId, status: 'ACTIVE' } } },
                     },
+                    members: { none: { studentId: input.callerId, status: 'REMOVED' } },
                   },
                 ],
               }
@@ -650,7 +679,10 @@ export function createPrismaRepositoryRepository(
           { repositoryName: { contains: input.query.search, mode: 'insensitive' as const } },
           { description: { contains: input.query.search, mode: 'insensitive' as const } },
         ] }] : [])],
-        ...(input.query.repositoryType ? { repositoryType: input.query.repositoryType } : {}),
+        ...(input.query.groupScope ? { repositoryType: 'CLASS_PROJECT', members: input.query.groupScope === 'MINE'
+          ? { some: { studentId: input.callerId, status: 'ACTIVE' } }
+          : { none: { studentId: input.callerId } } } : {}),
+        ...(input.query.repositoryType && !input.query.groupScope ? { repositoryType: input.query.repositoryType } : {}),
         ...(input.query.status ? { status: input.query.status } : {}),
         ...(input.query.reviewStatus ? { reviewStatus: input.query.reviewStatus } : {}),
         ...(input.query.projectTaskId ? { projectTaskId: input.query.projectTaskId } : {}),
@@ -658,14 +690,16 @@ export function createPrismaRepositoryRepository(
       const [repositories, totalItems] = await prisma.$transaction([
         prisma.repository.findMany({
           where,
-          select: repositoryRecordSelect,
+          select: { ...repositoryRecordSelect, members: { where: { studentId: input.callerId, status: 'ACTIVE' }, select: { id: true } } },
           orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
           skip: (input.query.page - 1) * input.query.pageSize,
           take: input.query.pageSize,
         }),
         prisma.repository.count({ where }),
       ])
-      return { repositories, totalItems }
+      return { repositories: repositories.map(({ members, ...record }) => ({ ...record,
+        ...(record.repositoryType === 'CLASS_PROJECT' ? { groupRelationship: members.length ? 'MY_GROUP' as const : 'CLASS_METADATA' as const } : {}),
+      })), totalItems }
     },
     async findAccess(repositoryId, callerId) {
       const repository = await prisma.repository.findUnique({

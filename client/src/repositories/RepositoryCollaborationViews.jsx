@@ -29,7 +29,7 @@ function invitationLabel(invitation) {
   return formatRepositoryLabel(invitation.status)
 }
 
-export function StudentInvitationInbox({ api }) {
+export function StudentInvitationInbox({ api, projectTaskId, onAccepted }) {
   const [state, setState] = useState({ status: 'loading', invitations: [], repositories: {}, error: null })
   const [busyId, setBusyId] = useState(null)
   const [actionError, setActionError] = useState(null)
@@ -37,7 +37,7 @@ export function StudentInvitationInbox({ api }) {
   const load = useCallback(async ({ signal } = {}) => {
     try {
       const response = await api.listReceivedInvitations({ signal })
-      const invitations = response.data.map(repositoryInvitationProjection)
+      const invitations = response.data.map(repositoryInvitationProjection).filter((item) => !projectTaskId || item.projectTaskId === projectTaskId)
       if (invitations.some((item) => !item.invitationId || !item.repositoryId || !item.projectTaskId)) throw contextError('A repository invitation returned an invalid identity.')
       const repositoryIds = [...new Set(invitations.map((item) => item.repositoryId))]
       const details = await Promise.allSettled(repositoryIds.map((id) => api.getRepository(id, { signal })))
@@ -53,7 +53,7 @@ export function StudentInvitationInbox({ api }) {
     } catch (error) {
       if (error?.name !== 'AbortError') setState({ status: 'error', invitations: [], repositories: {}, error })
     }
-  }, [api])
+  }, [api, projectTaskId])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -68,6 +68,7 @@ export function StudentInvitationInbox({ api }) {
       const updated = repositoryInvitationProjection(response.data)
       if (updated.invitationId !== invitation.invitationId || updated.repositoryId !== invitation.repositoryId) throw contextError('The invitation response did not match the selected invitation.')
       setState((current) => ({ ...current, invitations: current.invitations.map((item) => item.invitationId === updated.invitationId ? updated : item) }))
+      if (action === 'acceptInvitation') await onAccepted?.()
     } catch (error) { setActionError(error) } finally { setBusyId(null) }
   }
 
@@ -108,7 +109,7 @@ function MemberList({ role, owner, members, open, corrective, busyId, reasons, s
           const action = member.membershipStatus === 'REMOVED' ? 'REACTIVATE' : 'REMOVE'
           return (
             <article key={member.memberId}>
-              <div><strong>{member.fullName}</strong><span>{formatRepositoryLabel(member.teamRole || member.memberRole)}</span>{role === 'instructor' && <small>{formatRepositoryLabel(member.membershipStatus)} · {formatRepositoryLabel(member.userStatus)}</small>}</div>
+              <div><strong>{member.fullName}</strong><span>{member.teamRole === 'LEAD' ? 'Maintainer' : member.teamRole === 'MEMBER' ? 'Developer' : formatRepositoryLabel(member.memberRole)}</span>{member.membershipStatus && <small>{formatRepositoryLabel(member.membershipStatus)}{role === 'instructor' ? ` · ${formatRepositoryLabel(member.userStatus)}` : ''}</small>}</div>
               {(mayOwnerManage || mayInstructorManage) && <div className="repository-member-action">{mayInstructorManage && <label>Corrective reason<input value={reasons[member.memberId] || ''} maxLength={2000} onChange={(event) => setReasons((current) => ({ ...current, [member.memberId]: event.target.value }))} /></label>}<button type="button" className="student-outline-action" disabled={busyId === member.memberId || (mayInstructorManage && !reasons[member.memberId]?.trim())} onClick={() => onTransition(member, action, mayInstructorManage ? reasons[member.memberId].trim() : undefined)}>{busyId === member.memberId ? 'Saving…' : formatRepositoryLabel(action)}</button></div>}
             </article>
           )
@@ -175,7 +176,7 @@ function InvitationManager({ role, owner, open, corrective, repository, project,
   )
 }
 
-function FeedbackPanel({ role, repository, project, feedback, api, onFeedback, onRepository, onError, onRefresh, onReloadRepository }) {
+function FeedbackPanel({ role, repository, project, feedback, api, onFeedback, onRepository, onError, onRefresh, onReloadRepository, permissions }) {
   const drafts = feedback.filter((item) => item.status === 'DRAFT')
   const released = feedback.filter((item) => item.status === 'RELEASED')
   const initialDraft = drafts.at(-1) || null
@@ -236,9 +237,9 @@ function FeedbackPanel({ role, repository, project, feedback, api, onFeedback, o
     } finally { setBusy(false) }
   }
 
-  const open = project?.status === 'PUBLISHED' && project?.dueState === 'OPEN'
-  const ready = repository.reviewStatus === 'READY_FOR_REVIEW' && repository.status === 'ACTIVE'
-  const editable = repository.status === 'ACTIVE' && project?.status !== 'ARCHIVED'
+  const open = permissions ? permissions.canRequestChanges : project?.status === 'PUBLISHED' && project?.dueState === 'OPEN'
+  const ready = permissions ? permissions.canReview : repository.reviewStatus === 'READY_FOR_REVIEW' && repository.status === 'ACTIVE'
+  const editable = permissions ? permissions.canEditFeedback : repository.status === 'ACTIVE' && project?.status !== 'ARCHIVED'
   return (
     <section className="student-repo-card repository-feedback-card">
       <div className="student-side-card-heading"><h2>Instructor Review</h2><span>{formatRepositoryLabel(repository.reviewStatus)}</span></div>
@@ -254,13 +255,13 @@ function FeedbackPanel({ role, repository, project, feedback, api, onFeedback, o
   )
 }
 
-export function RepositoryCollaborationPanel({ role, owner, repository, project, api, classApi, onRepositoryChange, onReloadRepository }) {
+export function RepositoryCollaborationPanel({ role, owner, repository, project, api, classApi, onRepositoryChange, onReloadRepository, permissions }) {
   const [state, setState] = useState({ identity: null, status: 'loading', members: [], invitations: [], feedback: [], error: null })
   const [busyMemberId, setBusyMemberId] = useState(null)
   const [reasons, setReasons] = useState({})
   const [actionError, setActionError] = useState(null)
-  const open = Boolean(project?.status === 'PUBLISHED' && project?.dueState === 'OPEN' && repository.status === 'ACTIVE')
-  const corrective = Boolean(role === 'instructor' && repository.status === 'ACTIVE' && project && !open && ['PUBLISHED', 'CLOSED'].includes(project.status))
+  const open = permissions ? permissions.canInviteMembers : Boolean(project?.status === 'PUBLISHED' && project?.dueState === 'OPEN' && repository.status === 'ACTIVE')
+  const corrective = permissions ? role === 'instructor' && permissions.canManageMembers : Boolean(role === 'instructor' && repository.status === 'ACTIVE' && project && !open && ['PUBLISHED', 'CLOSED'].includes(project.status))
 
   const load = useCallback(async ({ signal } = {}) => {
     try {
@@ -292,6 +293,7 @@ export function RepositoryCollaborationPanel({ role, owner, repository, project,
       if (updated.memberId !== member.memberId) throw contextError('The member response did not match the selected member.')
       setState((value) => ({ ...value, members: value.members.map((item) => item.memberId === updated.memberId ? updated : item) }))
       setReasons((value) => ({ ...value, [member.memberId]: '' }))
+      if (permissions) await onReloadRepository()
     } catch (error) {
       setActionError(error)
       if (error?.status === 409) await load()
@@ -313,22 +315,22 @@ export function RepositoryCollaborationPanel({ role, owner, repository, project,
 
   if (current.status === 'loading') return <RequestState kind="loading" compact message="Loading collaboration and review records." />
   if (current.status === 'error') return <RequestState kind="unavailable" compact error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />
-  const maySubmit = role === 'student' && owner && open && ['WORKING', 'CHANGES_REQUESTED'].includes(repository.reviewStatus)
+  const maySubmit = permissions ? permissions.canSubmitForReview : role === 'student' && owner && open && ['WORKING', 'CHANGES_REQUESTED'].includes(repository.reviewStatus)
   return (
     <div className="repository-collaboration-stack">
       <MemberList role={role} owner={owner} members={current.members} open={open} corrective={corrective} busyId={busyMemberId} reasons={reasons} setReasons={setReasons} onTransition={transitionMember} />
       {repository.repositoryType === 'CLASS_PROJECT' && (owner || role === 'instructor') && <InvitationManager role={role} owner={owner} open={open} corrective={corrective} repository={repository} project={project} invitations={current.invitations} members={current.members} classApi={classApi} api={api} onInvitations={(updater) => setState((value) => ({ ...value, invitations: updater(value.invitations) }))} onError={setActionError} />}
       {maySubmit && <section className="student-repo-card repository-review-submit"><h2>{repository.reviewStatus === 'CHANGES_REQUESTED' ? 'Resubmit for Review' : 'Submit for Review'}</h2><p>This submits the current repository metadata for instructor review. It does not fabricate Git activity.</p><button type="button" className="student-primary-action" onClick={submitForReview}>{repository.reviewStatus === 'CHANGES_REQUESTED' ? 'Resubmit Repository' : 'Mark Ready for Review'}</button></section>}
-      {repository.repositoryType === 'CLASS_PROJECT' && <FeedbackPanel role={role} repository={repository} project={project} feedback={current.feedback} api={api} onFeedback={(updater) => setState((value) => ({ ...value, feedback: updater(value.feedback) }))} onRepository={(updated) => { onRepositoryChange(updated); load() }} onError={setActionError} onRefresh={load} onReloadRepository={onReloadRepository} />}
+      {repository.repositoryType === 'CLASS_PROJECT' && <FeedbackPanel permissions={permissions} role={role} repository={repository} project={project} feedback={current.feedback} api={api} onFeedback={(updater) => setState((value) => ({ ...value, feedback: updater(value.feedback) }))} onRepository={(updated) => { onRepositoryChange(updated); load() }} onError={setActionError} onRefresh={load} onReloadRepository={onReloadRepository} />}
       {actionError && <p className="activity-action-error">{describeApiError(actionError)}</p>}
     </div>
   )
 }
 
-export function RepositoryLifecyclePanel({ role, owner, repository, api, onRepositoryChange, onReloadRepository }) {
+export function RepositoryLifecyclePanel({ role, owner, repository, api, onRepositoryChange, onReloadRepository, permissions }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
-  const authorized = repository.repositoryType === 'CLASS_PROJECT' ? role === 'instructor' : role === 'student' && owner
+  const authorized = permissions ? (repository.status === 'ARCHIVED' ? permissions.canRestore : permissions.canArchive) : repository.repositoryType === 'CLASS_PROJECT' ? role === 'instructor' : role === 'student' && owner
   const action = repository.status === 'ARCHIVED' ? 'restoreRepository' : 'archiveRepository'
   const label = repository.status === 'ARCHIVED' ? 'Restore Repository' : 'Archive Repository'
   if (!authorized || !['ACTIVE', 'ARCHIVED'].includes(repository.status)) return null

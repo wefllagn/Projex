@@ -46,6 +46,7 @@ export const repositoryTransitionSchema = z
 
 export const repositoryListQuerySchema = z
   .object({
+    groupScope: z.enum(['MINE', 'CLASS_METADATA']).optional(),
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
     search: z.string().trim().min(1).max(120).optional(),

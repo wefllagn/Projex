@@ -26,6 +26,12 @@ function repositoryApiMock(overrides = {}) {
     listMembers: vi.fn().mockResolvedValue({ data: [] }),
     listFeedback: vi.fn().mockResolvedValue({ data: [] }),
     listRepositoryInvitations: vi.fn().mockResolvedValue({ data: [] }),
+    getGroupContext: vi.fn().mockResolvedValue({ data: {
+      repositoryId: repository.id, project: { id: project.id, title: project.title, dueDate: project.dueDate, status: project.status },
+      class: selectedClass, team: { id: repository.teamId, name: 'Synthetic Group', status: 'ACTIVE', activeMemberCount: 1 },
+      currentRole: 'MAINTAINER', teachingStaff: [],
+      permissions: Object.fromEntries(['canRead', 'canWrite', 'canUpdateMain', 'canManageMembers', 'canInviteMembers', 'canReview', 'canRequestChanges', 'canSubmitForReview', 'canViewActivity', 'canEditFeedback', 'canArchive', 'canRestore'].map((key) => [key, false])),
+    } }),
     ...overrides,
   }
 }
@@ -102,8 +108,8 @@ describe('Phase 10C.1 repository views', () => {
     })
     const projects = { getProjectTask: vi.fn().mockResolvedValue({ data: project }) }
     wrapper(<Routes><Route path="/student/projects/:projectTaskId/repositories/:repositoryId" element={<RepositoryFoundationDetail api={api} projects={projects} />} /></Routes>, '/student/projects/task-1/repositories/repo-1?classId=class-1')
-    expect(await screen.findByText('Pending')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByText('Ready')).toBeInTheDocument(), { timeout: 3500 })
+    expect(await screen.findByText(/Repository read-only · Pending/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText(/Repository read-only · Ready/)).toBeInTheDocument(), { timeout: 3500 })
     expect(api.getRepository).toHaveBeenCalledTimes(3)
     expect(screen.queryByText('Copy clone URL')).not.toBeInTheDocument()
     expect(screen.queryByText('New branch')).not.toBeInTheDocument()
@@ -114,8 +120,8 @@ describe('Phase 10C.1 repository views', () => {
     const api = repositoryApiMock({ getRepository: vi.fn().mockResolvedValue({ data: archived }) })
     const projects = { getProjectTask: vi.fn().mockRejectedValue({ status: 404 }) }
     wrapper(<Routes><Route path="/student/repositories/:repositoryId" element={<RepositoryFoundationDetail api={api} projects={projects} />} /></Routes>, '/student/repositories/repo-1')
-    expect(await screen.findByText('Failed')).toBeInTheDocument()
-    expect(screen.getByText(/archived project-task detail is not exposed/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Repository read-only · Failed/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Project' })).toBeInTheDocument()
     expect(screen.queryByText(/Prelim Group Project/i)).not.toBeInTheDocument()
   })
 

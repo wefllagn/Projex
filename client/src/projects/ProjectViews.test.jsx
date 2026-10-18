@@ -21,6 +21,16 @@ function renderWithClass(ui, path = '/') {
 }
 
 describe('Phase 10C.1 project views', () => {
+  it('prioritizes the server-authorized My Group and does not offer duplicate creation', async () => {
+    const mine = { id: 'mine', projectTaskId: project.id, repositoryType: 'CLASS_PROJECT', repositoryName: 'Shared group repository', groupRelationship: 'MY_GROUP' }
+    const other = { ...mine, id: 'other', repositoryName: 'Other group metadata', groupRelationship: 'CLASS_METADATA' }
+    const api = { getProjectTask: vi.fn().mockResolvedValue({ data: project }) }
+    const repositories = { listRepositories: vi.fn((query) => Promise.resolve({ data: [query.groupScope === 'MINE' ? mine : other], pagination: { page: 1, hasNextPage: false } })), listReceivedInvitations: vi.fn().mockResolvedValue({ data: [] }) }
+    renderWithClass(<Routes><Route path="/student/projects/:projectTaskId" element={<StudentProjectDetail api={api} repositories={repositories} />} /></Routes>, '/student/projects/task-1?classId=class-1')
+    expect(await screen.findByRole('link', { name: /Open Group Repository · Shared group repository/ })).toHaveAttribute('href', '/student/projects/task-1/repositories/mine?classId=class-1')
+    expect(screen.getByText('Other class repository metadata')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Create Group' })).not.toBeInTheDocument()
+  })
   it('fails closed when a project list contains another class and never renders prototype data', async () => {
     const api = { listProjectTasks: vi.fn().mockResolvedValue({ data: [{ ...project, classId: 'other-class', title: 'Should not render' }], pagination: { totalItems: 1, totalPages: 1 } }) }
     renderWithClass(<StudentProjectList api={api} />)
@@ -36,9 +46,9 @@ describe('Phase 10C.1 project views', () => {
       createClassProject: vi.fn().mockResolvedValue({ data: { id: 'repo-1', projectTaskId: 'task-1', repositoryType: 'CLASS_PROJECT', repositoryName: 'team-repo', storageStatus: 'PENDING', status: 'ACTIVE', reviewStatus: 'WORKING', owner: { userId: 'student-1', fullName: 'Synthetic Student' }, createdAt: '2026-08-01T00:00:00.000Z', updatedAt: '2026-08-01T00:00:00.000Z' } }),
     }
     renderWithClass(<Routes><Route path="/student/projects/:projectTaskId" element={<StudentProjectDetail api={api} repositories={repositories} />} /><Route path="/student/projects/:projectTaskId/repositories/:repositoryId" element={<p>Repository route reached</p>} /></Routes>, '/student/projects/task-1?classId=class-1')
-    fireEvent.change(await screen.findByLabelText('Team name'), { target: { value: 'Synthetic Team' } })
+    fireEvent.change(await screen.findByLabelText('Group name'), { target: { value: 'Synthetic Team' } })
     fireEvent.change(screen.getByLabelText('Repository name'), { target: { value: 'team-repo' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Create Repository' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create Group' }))
     expect(await screen.findByText('Repository route reached')).toBeInTheDocument()
     expect(repositories.createClassProject).toHaveBeenCalledWith('task-1', { teamName: 'Synthetic Team', repositoryName: 'team-repo', description: null })
   })

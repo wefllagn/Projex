@@ -116,7 +116,7 @@ function BranchSelector({ branches, value, onChange }) {
   )
 }
 
-function FilesView({ api, repositoryId, summary, branches, selectedBranch, onSelectBranch }) {
+export function FilesView({ api, repositoryId, summary, branches, selectedBranch, onSelectBranch }) {
   const [path, setPath] = useState('')
   const [tree, setTree] = useState(state())
   const [file, setFile] = useState(state())
@@ -189,7 +189,7 @@ function FilesView({ api, repositoryId, summary, branches, selectedBranch, onSel
   )
 }
 
-function HistoryView({ api, repositoryId, summary, branches, selectedBranch, onSelectBranch }) {
+export function HistoryView({ api, repositoryId, summary, branches, selectedBranch, onSelectBranch }) {
   const [page, setPage] = useState(1)
   const [history, setHistory] = useState(state())
   const [detail, setDetail] = useState(state())
@@ -256,11 +256,11 @@ function HistoryView({ api, repositoryId, summary, branches, selectedBranch, onS
   )
 }
 
-function BranchesView({ summary, branches, loading, error }) {
+export function BranchesView({ summary, branches, loading, error, group = false }) {
   if (summary.empty) return <RequestState kind="empty" compact title="No branches" message="This empty repository has no branches yet." />
   if (loading) return <RequestState kind="loading" compact message="Loading branches." />
   if (error) return <RequestState kind="unavailable" compact title="Branches unavailable" message={gitErrorMessage(error)} />
-  return <div className="repository-git-branch-list">{branches.map((branch) => <article key={branch.branchName}><div><strong>{branch.branchName}</strong>{branch.isDefault && <span>Default</span>}</div><code>{shortCommit(branch.commitId)}</code><p>{branch.subject || 'Untitled commit'}</p><small>{branch.authorName} · self-asserted Git author · {formatProjectDate(branch.authoredAt)}</small></article>)}</div>
+  return <div className="repository-git-branch-list">{branches.map((branch) => <article key={branch.branchName}><div><strong>{branch.branchName}</strong>{branch.isDefault && <span>Default</span>}{group && branch.branchName === 'main' && <span>Protected</span>}</div><code>{shortCommit(branch.commitId)}</code><p>{branch.subject || 'Untitled commit'}</p><small>{branch.authorName} · self-asserted Git author · {formatProjectDate(branch.authoredAt)}</small></article>)}</div>
 }
 
 function credentialLifecycle(credential) {

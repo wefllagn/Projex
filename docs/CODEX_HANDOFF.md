@@ -20,6 +20,14 @@ Runtime credentials, environment files, and test storage are not in Git.
 
 Activity Workflow MVP — COMPLETE / APPROVED FOR BASELINE
 
+Group Repository MVP is **IMPLEMENTED — PENDING PRODUCT OWNER REVIEW** on
+`work/julius-overnight-group-mvp`, from approved Activity HEAD
+`42666278d7987018cdf24af3499d10e7b84c4e4b`. This is a local review checkpoint,
+not acceptance or integration. Final matrix: 795 passing tests across 121 files.
+Product authority: [locked decisions](GROUP_REPOSITORY_MVP_DECISIONS.md).
+Auditable slice/verification status: [checklist](GROUP_REPOSITORY_MVP_CHECKLIST.md).
+Student-led group creation is approved; Instructor assignment is deferred.
+
 ## Activity behavior now locked
 
 - Activity Workspace is a constrained academic coding environment.
@@ -35,8 +43,8 @@ Activity Workflow MVP — COMPLETE / APPROVED FOR BASELINE
 ## Current roadmap
 
 1. Activity Workflow MVP — complete
-2. Group Repository MVP — next
-3. Admin Architecture MVP
+2. Group Repository MVP — verified, pending Product Owner review
+3. Admin Architecture MVP — overnight audit / safe bounded improvements authorized
 4. MVP Integration / Hardening
 5. Adviser Review / Approval
 6. Portable Docker demo package
@@ -46,11 +54,14 @@ Activity Workflow MVP — COMPLETE / APPROVED FOR BASELINE
 
 ## Next major task
 
-Group Repository MVP architecture/audit.
-
-Before implementation, inspect existing `CLASS_PROJECT`, `CLASS_WORKSPACE`,
-team, membership, and repository authorization functionality. Reuse existing
-work where possible. Architecture/audit does not authorize implementation.
+The 2026-10-18 overnight work order supersedes the earlier pre-commit stop:
+local checkpoints on dedicated overnight branches are authorized. Continue the
+Admin source/schema/route/auth/UI/test audit independently from approved Activity
+HEAD, then implement only existing-scope safe improvements. Do not combine
+unreviewed Group/Admin work. Record new authority/schema/ownership choices as
+AWAITING PRODUCT OWNER APPROVAL and continue independent work.
+See `OVERNIGHT_AUTOPILOT_REPORT.md` and `GROUP_REPOSITORY_MVP_IMPLEMENTATION_REPORT.md`.
+No push, protected integration, normal-database mutation or deployment authorized.
 
 ## Do not touch unless explicitly requested
 

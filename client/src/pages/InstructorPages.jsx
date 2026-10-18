@@ -666,15 +666,15 @@ function InstructorReviewQueuePage() {
 }
 
 function InstructorProjectListPage() {
-  return <InstructorClassPage activeTab="assignments"><InstructorProjectList /></InstructorClassPage>
+  return <InstructorClassPage activeTab="assignments" deferredLabel=""><InstructorProjectList /></InstructorClassPage>
 }
 
 function InstructorProjectDetailPage() {
-  return <InstructorClassPage activeTab="assignments"><InstructorProjectDetail /></InstructorClassPage>
+  return <InstructorClassPage activeTab="assignments" deferredLabel=""><InstructorProjectDetail /></InstructorClassPage>
 }
 
 function InstructorProjectEditorPage({ mode }) {
-  return <InstructorClassPage activeTab="assignments"><InstructorProjectEditor mode={mode} /></InstructorClassPage>
+  return <InstructorClassPage activeTab="assignments" deferredLabel=""><InstructorProjectEditor mode={mode} /></InstructorClassPage>
 }
 
 export function InstructorRoutePage({ pagePath }) {

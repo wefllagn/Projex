@@ -1,5 +1,32 @@
 # Project and Repository Collaboration
 
+## Approved Group Repository MVP extension (2026-10-18)
+
+`docs/GROUP_REPOSITORY_MVP_DECISIONS.md` locks Student-led Team formation,
+Maintainer (LEAD/OWNER), Developer (MEMBER), native local merge and read-only
+Primary/active Co-Instructor Git oversight. Instructor assignment remains deferred.
+These current details supersede historical exact-owner-only staff wording below.
+
+`GET /repositories/:repositoryId/group-context` returns only academic identity,
+current teaching-staff display names, active member count, current product role,
+and effective source/member/review capabilities. Git capabilities reuse
+`evaluateGitPermission`; action endpoints still authorize independently. Source
+capabilities require READY storage; membership/review capabilities are distinct.
+No storage locator, credential/verifier, email, join code or raw Git access record
+is projected. Class-visible nonmembers receive metadata-only capabilities.
+
+Student catalog `groupScope=MINE` selects active repository memberships within
+current Class eligibility; `CLASS_METADATA` selects eligible same-Class metadata
+without repository membership. Removed repository members are excluded from both
+catalog and detail. Former Class members lose group metadata/activity authority,
+including owner shortcuts; current teaching staff retain academic oversight.
+Other repository types retain their existing policies.
+
+Group UI is Code-first with academic header, five tabs and automatic-scope Code
+menu. README is bounded escaped plain text, not executable HTML/Markdown. Recorded
+accepted pushes are authenticated account signals, never verified authored commits
+or grades. Existing review freeze and local Git/ref protections remain unchanged.
+
 ## Scope
 
 This document is the authoritative Phase 7 backend contract for instructor-created project tasks, student-created repository metadata, teams, synchronized collaborators, invitations, textual project feedback, review lifecycle, monitoring, and archive protection.

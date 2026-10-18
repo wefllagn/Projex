@@ -11,6 +11,7 @@ export function createRepositoryRouter(dependencies: {
   const router = Router()
   const controller = createRepositoryController(dependencies.service)
   const mutation = [requireJson, dependencies.requireAuthentication, dependencies.requireCsrf]
+  router.get('/repositories/:repositoryId/group-context', dependencies.requireAuthentication, controller.groupContext)
 
   router.get('/activities/:activityId/repository', dependencies.requireAuthentication, controller.getActivityWorkspace)
   router.post('/activities/:activityId/repository', ...mutation, controller.createActivityWorkspace)
