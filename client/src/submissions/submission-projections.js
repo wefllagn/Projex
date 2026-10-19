@@ -43,6 +43,23 @@ export function projectPracticeRun(value = {}) {
   }
 }
 
+export function projectCodeRun(value = {}) {
+  return {
+    id: nullableString(value.id),
+    activityId: nullableString(value.activityId),
+    status: nullableString(value.status) ?? 'queued',
+    compileStatus: nullableString(value.compileStatus) ?? 'pending',
+    runtimeStatus: nullableString(value.runtimeStatus) ?? 'pending',
+    compilerOutput: nullableString(value.compilerOutput),
+    stdout: nullableString(value.stdout),
+    stderr: nullableString(value.stderr),
+    executionTimeMs: nullableNumber(value.executionTimeMs),
+    createdAt: nullableString(value.createdAt),
+    completedAt: nullableString(value.completedAt),
+    expiresAt: nullableString(value.expiresAt),
+  }
+}
+
 export function projectStudentSubmission(value = {}) {
   const status = nullableString(value.status) ?? 'queued'
   const released = status === 'released' && value.gradeStatus === 'released'

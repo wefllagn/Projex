@@ -18,6 +18,7 @@ import type {
   SubmissionRecord,
   SubmissionRepository,
 } from './submission.repository.js'
+import { codeRunSourceHash, isCodeRunRecord } from '../../shared/code-run.js'
 import {
   selectCreditedReleasedAttempt,
   submissionAttemptLabel,
@@ -80,6 +81,13 @@ export interface SubmissionService {
     sourceCode: string,
   ): Promise<unknown>
   getPracticeRun(caller: SafeUserProfile, runId: string): Promise<unknown>
+  createCodeRun(
+    caller: SafeUserProfile,
+    activityId: string,
+    sourceCode: string,
+    stdin: string,
+  ): Promise<unknown>
+  getCodeRun(caller: SafeUserProfile, runId: string): Promise<unknown>
   createReviewRun(caller: SafeUserProfile, submissionId: string): Promise<unknown>
   getReviewRun(caller: SafeUserProfile, submissionId: string, runId: string): Promise<unknown>
 }
@@ -98,6 +106,15 @@ function validateSource(sourceCode: string, limit: number): void {
   }
   if (sourceCode.includes('\0')) {
     throw error(400, 'SOURCE_CODE_INVALID', 'The source code contains unsupported characters.')
+  }
+}
+
+function validateStdin(stdin: string): void {
+  if (Buffer.byteLength(stdin, 'utf8') > 20_000) {
+    throw error(413, 'PROGRAM_INPUT_TOO_LARGE', 'Program input exceeds the allowed size.')
+  }
+  if (stdin.includes('\0')) {
+    throw error(400, 'PROGRAM_INPUT_INVALID', 'Program input contains unsupported characters.')
   }
 }
 
@@ -458,6 +475,24 @@ function practiceProjection(record: PracticeRecord) {
   }
 }
 
+function codeRunProjection(record: PracticeRecord) {
+  const execution = record.cases[0]
+  return {
+    id: record.id,
+    activityId: record.activityId,
+    status: record.status.toLowerCase(),
+    compileStatus: record.compileStatus.toLowerCase(),
+    runtimeStatus: record.runtimeStatus.toLowerCase(),
+    compilerOutput: record.compilerOutput,
+    stdout: execution?.actualOutput ?? null,
+    stderr: execution?.errorMessage ?? null,
+    executionTimeMs: execution?.executionTimeMs ?? null,
+    createdAt: record.createdAt,
+    completedAt: record.completedAt,
+    expiresAt: record.expiresAt,
+  }
+}
+
 function reviewRunProjection(record: ReviewRunRecord) {
   return {
     id: record.id,
@@ -771,7 +806,7 @@ export function createSubmissionService(dependencies: {
 
     async getPracticeRun(caller, runId) {
       const record = await repository.findPracticeById(runId)
-      if (!record) throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
+      if (!record || isCodeRunRecord(record)) throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
       if (caller.role === 'ADMIN') {
         throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
       }
@@ -785,6 +820,69 @@ export function createSubmissionService(dependencies: {
         throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
       }
       return practiceProjection(record)
+    },
+
+    async createCodeRun(caller, activityId, sourceCode, stdin) {
+      requireExecutionEnabled(config)
+      if (caller.role !== 'STUDENT' || caller.status !== 'ACTIVE') {
+        throw error(403, 'FORBIDDEN', 'You are not authorized to run this code.')
+      }
+      validateSource(sourceCode, config.sourceLimitBytes)
+      validateStdin(stdin)
+      const createdAt = now()
+      const result = await repository.createCodeRun({
+        activityId,
+        studentId: caller.id,
+        sourceCode,
+        sourceHash: codeRunSourceHash(sourceCode),
+        stdin,
+        now: createdAt,
+        expiresAt: new Date(
+          createdAt.getTime() + config.practiceRunTtlHours * 60 * 60 * 1000,
+        ),
+        runsPerMinute: config.practiceRunsPerMinute,
+        maxActivePerActivity: config.practiceMaxActivePerActivity,
+      })
+      if (result.kind === 'activity_not_found') {
+        throw error(404, 'ACTIVITY_NOT_FOUND', 'Programming activity not found.')
+      }
+      if (result.kind === 'forbidden') {
+        throw error(403, 'FORBIDDEN', 'You are not authorized to run this code.')
+      }
+      if (result.kind === 'activity_not_accepting') {
+        throw error(409, 'ACTIVITY_NOT_ACCEPTING_EXECUTION', 'The activity is not accepting code runs.')
+      }
+      if (result.kind === 'rate_limited') {
+        throw error(429, 'RATE_LIMIT_EXCEEDED', 'Code was run too frequently. Wait briefly before trying again.')
+      }
+      if (result.kind === 'capacity_unavailable') {
+        throw error(503, 'EXECUTION_CAPACITY_UNAVAILABLE', 'Another code or visible-test run is still processing.')
+      }
+      logger.info(
+        {
+          event: 'code_execution.created',
+          actorId: caller.id,
+          activityId,
+          practiceExecutionId: result.practice.id,
+        },
+        'student code run created',
+      )
+      return codeRunProjection(result.practice)
+    },
+
+    async getCodeRun(caller, runId) {
+      if (caller.role !== 'STUDENT' || caller.status !== 'ACTIVE') {
+        throw error(404, 'CODE_RUN_NOT_FOUND', 'Code run not found.')
+      }
+      const record = await repository.findOwnCodeRun(runId, caller.id)
+      if (
+        !record
+        || !isCodeRunRecord(record)
+        || record.expiresAt <= now()
+      ) {
+        throw error(404, 'CODE_RUN_NOT_FOUND', 'Code run not found.')
+      }
+      return codeRunProjection(record)
     },
 
     async createReviewRun(caller, submissionId) {

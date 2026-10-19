@@ -10,6 +10,7 @@ import type {
   SubmissionListQuery,
 } from './submission.schemas.js'
 import { isOrdinarySubmissionOpen } from '../activities/activity.types.js'
+import { CODE_RUN_TEST_NAME } from '../../shared/code-run.js'
 import {
   selectCreditedReleasedAttempt,
   type AttemptCreditPolicyValue,
@@ -220,7 +221,19 @@ export interface SubmissionRepository {
     runsPerMinute: number
     maxActivePerActivity: number
   }): Promise<CreatePracticeResult>
+  createCodeRun(input: {
+    activityId: string
+    studentId: string
+    sourceCode: string
+    sourceHash: string
+    stdin: string
+    now: Date
+    expiresAt: Date
+    runsPerMinute: number
+    maxActivePerActivity: number
+  }): Promise<CreatePracticeResult>
   findPracticeById(runId: string): Promise<PracticeRecord | null>
+  findOwnCodeRun(runId: string, studentId: string): Promise<PracticeRecord | null>
   createReviewRun(input: {
     submissionId: string
     instructorId: string
@@ -1100,9 +1113,131 @@ export function createPrismaSubmissionRepository(
       )
     },
 
+    createCodeRun(input) {
+      return prisma.$transaction(
+        async (transaction) => {
+          await lockScope(
+            transaction,
+            `practice:${input.activityId}:${input.studentId}`,
+          )
+          await transaction.$queryRaw`
+            SELECT activity."activity_id", class_record."class_id"
+            FROM "programming_activities" AS activity
+            JOIN "classes" AS class_record ON class_record."class_id" = activity."class_id"
+            WHERE activity."activity_id" = ${input.activityId}::uuid
+            FOR SHARE OF activity, class_record
+          `
+          const activity = await transaction.programmingActivity.findUnique({
+            where: { id: input.activityId },
+            include: {
+              class: {
+                include: {
+                  members: {
+                    where: { studentId: input.studentId },
+                    take: 1,
+                    select: { status: true },
+                  },
+                },
+              },
+              testCases: {
+                where: { isHidden: false },
+                orderBy: { testCaseOrder: 'asc' },
+                take: 1,
+              },
+            },
+          })
+          if (!activity) return { kind: 'activity_not_found' } as const
+          const student = await transaction.user.findUnique({
+            where: { id: input.studentId },
+            select: { role: true, status: true },
+          })
+          if (
+            !student
+            || student.role !== 'STUDENT'
+            || student.status !== 'ACTIVE'
+            || activity.class.members[0]?.status !== 'ACTIVE'
+          ) {
+            return { kind: 'forbidden' } as const
+          }
+          if (
+            activity.class.status !== 'ACTIVE'
+            || !isOrdinarySubmissionOpen(activity.status, activity.dueDate, input.now)
+            || activity.testCases.length === 0
+          ) {
+            return { kind: 'activity_not_accepting' } as const
+          }
+          const minuteAgo = new Date(input.now.getTime() - 60_000)
+          const [active, recent] = await Promise.all([
+            transaction.practiceExecution.count({
+              where: {
+                activityId: input.activityId,
+                studentId: input.studentId,
+                status: { in: ['QUEUED', 'RUNNING'] },
+              },
+            }),
+            transaction.practiceExecution.count({
+              where: {
+                studentId: input.studentId,
+                createdAt: { gte: minuteAgo },
+              },
+            }),
+          ])
+          if (active >= input.maxActivePerActivity) {
+            return { kind: 'capacity_unavailable' } as const
+          }
+          if (recent >= input.runsPerMinute) {
+            return { kind: 'rate_limited' } as const
+          }
+          const anchor = activity.testCases[0]!
+          const practice = await transaction.practiceExecution.create({
+            data: {
+              activityId: activity.id,
+              studentId: input.studentId,
+              sourceCode: input.sourceCode,
+              sourceHash: input.sourceHash,
+              entryClassName: activity.entryClassName,
+              createdAt: input.now,
+              expiresAt: input.expiresAt,
+              cases: {
+                create: {
+                  testCaseId: anchor.id,
+                  testNameSnapshot: CODE_RUN_TEST_NAME,
+                  testOrderSnapshot: 1,
+                  inputSnapshot: input.stdin,
+                  expectedOutputSnapshot: '',
+                },
+              },
+              executionJob: { create: { jobType: 'VISIBLE_TEST_RUN' } },
+            },
+            select: { id: true },
+          })
+          return {
+            kind: 'created',
+            practice: await transaction.practiceExecution.findUniqueOrThrow({
+              where: { id: practice.id },
+              include: practiceInclude,
+            }),
+          } as const
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      )
+    },
+
     findPracticeById(runId) {
       return prisma.practiceExecution.findUnique({
         where: { id: runId },
+        include: practiceInclude,
+      })
+    },
+
+    findOwnCodeRun(runId, studentId) {
+      return prisma.practiceExecution.findFirst({
+        where: {
+          id: runId,
+          studentId,
+          student: { role: 'STUDENT', status: 'ACTIVE' },
+          activity: { class: { members: { some: { studentId, status: 'ACTIVE' } } } },
+        },
         include: practiceInclude,
       })
     },

@@ -53,6 +53,25 @@ describe('controlled local Java runner', () => {
     expect(await readdir(testRoot)).toEqual([])
   })
 
+  it('runs debug code with multiline or empty stdin and captures stdout and stderr without comparison', async () => {
+    const sourceCode = 'public class Main { public static void main(String[] args) { java.util.Scanner s = new java.util.Scanner(System.in); if (s.hasNextLine()) System.out.println("Hello " + s.nextLine()); else System.out.println("No input"); System.err.print("debug-note"); } }'
+    const withInput = await runner().execute({
+      entryClassName: 'Main',
+      sourceCode,
+      cases: [{ id: 'debug-input', input: 'Julius\n23', expectedOutput: '', compareOutput: false, captureStandardError: true }],
+    })
+    expect(withInput).toMatchObject({ compileStatus: 'SUCCESS', runtimeStatus: 'PASSED' })
+    expect(withInput.cases[0]).toMatchObject({ status: 'PASSED', actualOutput: 'Hello Julius\n', errorMessage: 'debug-note' })
+
+    const withoutInput = await runner().execute({
+      entryClassName: 'Main',
+      sourceCode,
+      cases: [{ id: 'debug-empty', input: '', expectedOutput: '', compareOutput: false, captureStandardError: true }],
+    })
+    expect(withoutInput.cases[0]).toMatchObject({ status: 'PASSED', actualOutput: 'No input\n', errorMessage: 'debug-note' })
+    expect(await readdir(testRoot)).toEqual([])
+  })
+
   it('treats compiler rejection as a student-code assessment outcome', async () => {
     const result = await runner().execute({
       entryClassName: 'Main',
@@ -64,6 +83,21 @@ describe('controlled local Java runner', () => {
       runtimeStatus: 'NOT_RUN',
     })
     expect(result.compilerOutput).not.toContain(testRoot)
+    expect(await readdir(testRoot)).toEqual([])
+  })
+
+  it('keeps debug runs bounded and reports compiler and runtime failures', async () => {
+    const cases = [{ id: 'debug', input: '', expectedOutput: '', compareOutput: false, captureStandardError: true }]
+    const compilerFailure = await runner().execute({ entryClassName: 'Main', sourceCode: 'public class Main { invalid }', cases })
+    expect(compilerFailure.compileStatus).toBe('STUDENT_ERROR')
+    expect(compilerFailure.compilerOutput).toContain('error')
+    const runtimeFailure = await runner().execute({ entryClassName: 'Main', sourceCode: 'public class Main { public static void main(String[] args) { throw new IllegalStateException("debug-failure"); } }', cases })
+    expect(runtimeFailure.runtimeStatus).toBe('ERROR')
+    expect(runtimeFailure.cases[0]?.errorMessage).toContain('debug-failure')
+    const timeout = await runner(16384, 300).execute({ entryClassName: 'Main', sourceCode: 'public class Main { public static void main(String[] args) { while (true) {} } }', cases })
+    expect(timeout.runtimeStatus).toBe('TIMEOUT')
+    const overflow = await runner(1024, 2000).execute({ entryClassName: 'Main', sourceCode: 'public class Main { public static void main(String[] args) { while (true) System.out.print("xxxxxxxxxxxxxxxxxxxx"); } }', cases })
+    expect(overflow.runtimeStatus).toBe('OUTPUT_LIMIT')
     expect(await readdir(testRoot)).toEqual([])
   })
 

@@ -198,6 +198,37 @@ describe('Phase 7 HTTP and PostgreSQL workflow', () => {
       .send({ email: owner.email, password })
       .expect(200)
     const ownerCsrf = csrfFrom(ownerLogin)
+    const activity = await prisma.programmingActivity.create({
+      data: {
+        classId: classRecord.id,
+        createdById: instructor.id,
+        title: 'API Activity Workspace',
+        instructions: 'Git saves remain separate from academic submission.',
+        dueDate: new Date(Date.now() + 86_400_000),
+        language: 'JAVA',
+        entryClassName: 'Main',
+        starterCode: 'class Main {}',
+        maxAttempts: 3,
+        totalPoints: 100,
+        status: 'PUBLISHED',
+        publishedAt: new Date(),
+      },
+    })
+    await ownerAgent.get(`/api/v1/activities/${activity.id}/repository`).expect(404)
+    await ownerAgent.post(`/api/v1/activities/${activity.id}/repository`).set('Content-Type', 'application/json').send({}).expect(403)
+    const activityWorkspace = await jsonMutation(
+      ownerAgent.post(`/api/v1/activities/${activity.id}/repository`),
+      ownerCsrf,
+    ).send({}).expect(201)
+    expect(activityWorkspace.body.data).toMatchObject({
+      repositoryType: 'ACTIVITY_WORKSPACE', activityId: activity.id, owner: { userId: owner.id },
+      visibility: 'PRIVATE', storageStatus: 'PENDING', defaultBranch: 'main',
+    })
+    for (const forbiddenField of ['storagePath', 'credentials', 'secretHash', 'storageFailureCode']) {
+      expect(activityWorkspace.body.data).not.toHaveProperty(forbiddenField)
+    }
+    expect((await ownerAgent.get(`/api/v1/activities/${activity.id}/repository`).expect(200)).body.data.id).toBe(activityWorkspace.body.data.id)
+    expect(await prisma.activitySubmission.count({ where: { activityId: activity.id, studentId: owner.id } })).toBe(0)
     await jsonMutation(
       ownerAgent.post(`/api/v1/project-tasks/${projectTaskId}/repositories`),
       ownerCsrf,
@@ -243,6 +274,7 @@ describe('Phase 7 HTTP and PostgreSQL workflow', () => {
       .get(`/api/v1/repositories/${repositoryId}`)
       .expect(200)
     expect(classmateView.body.data.visibility).toBe('CLASS_ONLY')
+    await classmateAgent.get(`/api/v1/activities/${activity.id}/repository`).expect(404)
     await classmateAgent.get(`/api/v1/repositories/${repositoryId}/activity`).expect(404)
 
     const outsiderAgent = request.agent(app)

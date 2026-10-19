@@ -3,6 +3,7 @@ import type {
   JavaAssessmentResult,
   JavaCaseInput,
 } from '../java/java-runner.js'
+import { isCodeRunRecord } from '../../shared/code-run.js'
 
 export interface ClaimedExecutionJob {
   id: string
@@ -211,6 +212,8 @@ export function createPostgresExecutionQueue(prisma: PrismaClient): ExecutionQue
             id: testCase.id,
             input: testCase.inputSnapshot,
             expectedOutput: testCase.expectedOutputSnapshot,
+            compareOutput: isCodeRunRecord(practice) ? false : undefined,
+            captureStandardError: isCodeRunRecord(practice) ? true : undefined,
           })),
         }
       })

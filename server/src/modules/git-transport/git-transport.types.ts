@@ -1,4 +1,5 @@
 import type {
+  ActivityStatus,
   ClassMemberStatus,
   ClassStatus,
   GitCredentialOperation,
@@ -44,6 +45,16 @@ export interface GitTransportAccess {
     instructorId: string | null
     teachingStaff: { instructorId: string; status: string }[]
     membership: { status: ClassMemberStatus } | null
+  } | null
+  activityWorkspace: {
+    status: ActivityStatus
+    dueDate: Date
+    class: {
+      status: ClassStatus
+      instructorId: string | null
+      teachingStaff: { instructorId: string; status: string }[]
+      membership: { status: ClassMemberStatus } | null
+    }
   } | null
   teamLeadStudentId: string | null
 }

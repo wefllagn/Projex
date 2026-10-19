@@ -5,9 +5,13 @@ import { EnvironmentValidationError, loadEnv } from './config/env.js'
 import { createPrismaClient } from './infrastructure/database/prisma.js'
 import { createGitCommandRunner } from './infrastructure/git/git-command-runner.js'
 import { createPostgresRepositoryProvisioningQueue } from './infrastructure/job-queue/repository-provisioning-queue.js'
+import { createPostgresRepositoryCheckpointQueue } from './infrastructure/job-queue/repository-checkpoint-queue.js'
 import { createLogger } from './infrastructure/logging/logger.js'
 import { createRepositoryStorage } from './infrastructure/storage/repository-storage.js'
 import { createRepositoryProvisioningService } from './modules/repositories/repository-provisioning.service.js'
+import { createGitActivityCheckpointWriter } from './infrastructure/git/git-activity-checkpoint-writer.js'
+import { createPrismaGitTransportRepository } from './modules/git-transport/git-transport.repository.js'
+import { createActivityWorkspaceCheckpointWorkerService } from './modules/activity-workspace-checkpoints/activity-workspace-checkpoint-worker.service.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
@@ -19,6 +23,7 @@ async function bootstrap(): Promise<void> {
   const logger = createLogger(env.logLevel)
   const prisma = createPrismaClient(env.databaseUrl)
   const queue = createPostgresRepositoryProvisioningQueue(prisma)
+  const checkpointQueue = createPostgresRepositoryCheckpointQueue(prisma)
   const git = createGitCommandRunner({
     executable: env.gitExecutable,
     timeoutMs: env.gitCommandTimeoutMs,
@@ -30,6 +35,15 @@ async function bootstrap(): Promise<void> {
     repositorySizeLimitBytes: env.gitRepositorySizeLimitBytes,
   })
   const service = createRepositoryProvisioningService({ queue, git, storage, logger })
+  const checkpointService = createActivityWorkspaceCheckpointWorkerService({
+    queue: checkpointQueue,
+    writer: createGitActivityCheckpointWriter({
+      git,
+      resolveRepository: (repositoryId, storagePath) => storage.resolveManagedRepository(repositoryId, storagePath),
+    }),
+    accessRepository: createPrismaGitTransportRepository(prisma),
+    logger,
+  })
   const workerId = randomUUID()
   let stopping = false
   const stop = () => {
@@ -49,6 +63,16 @@ async function bootstrap(): Promise<void> {
         leaseMs: env.gitProvisioningJobLeaseMs,
       })
       if (!job) {
+        const checkpoint = await checkpointQueue.claimNext({
+          workerId,
+          now: new Date(),
+          leaseMs: env.gitProvisioningJobLeaseMs,
+        })
+        if (checkpoint) {
+          logger.info({ event: 'activity_workspace.checkpoint_claimed', checkpointId: checkpoint.id, repositoryId: checkpoint.repositoryId, workerId, claimAttempt: checkpoint.claimAttempt }, 'activity workspace checkpoint claimed')
+          await checkpointService.process(checkpoint)
+          continue
+        }
         await delay(env.gitProvisioningWorkerPollMs)
         continue
       }
@@ -63,6 +87,15 @@ async function bootstrap(): Promise<void> {
         'repository provisioning job claimed',
       )
       await service.process(job)
+      const checkpoint = await checkpointQueue.claimNext({
+        workerId,
+        now: new Date(),
+        leaseMs: env.gitProvisioningJobLeaseMs,
+      })
+      if (checkpoint) {
+        logger.info({ event: 'activity_workspace.checkpoint_claimed', checkpointId: checkpoint.id, repositoryId: checkpoint.repositoryId, workerId, claimAttempt: checkpoint.claimAttempt }, 'activity workspace checkpoint claimed')
+        await checkpointService.process(checkpoint)
+      }
     }
   } finally {
     await prisma.$disconnect()

@@ -45,10 +45,21 @@ export function createSubmissionRouter(dependencies: {
     ...studentMutation,
     controller.createPractice,
   )
+  router.post(
+    '/activities/:activityId/code-runs',
+    ...studentMutation,
+    controller.createCodeRun,
+  )
   router.get(
     '/visible-test-runs/:runId',
     dependencies.requireAuthentication,
     controller.getPractice,
+  )
+  router.get(
+    '/code-runs/:runId',
+    dependencies.requireAuthentication,
+    requireAnyRole(['STUDENT']),
+    controller.getCodeRun,
   )
   router.get(
     '/submissions/:submissionId',
