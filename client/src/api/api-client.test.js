@@ -233,6 +233,7 @@ describe('API client', () => {
     ['SETUP_RESEND_COOLDOWN', 429, 'A setup link was sent recently. Try again later.'],
     ['VALIDATION_FAILED', 400, 'Check the form details and try again.'],
     ['VALIDATION_FAILED', 422, 'Check the form details and try again.'],
+    ['EMAIL_ALREADY_EXISTS', 409, 'An account with this email already exists. Use another email or manage the existing account.'],
     ['CLASS_HAS_UNFINISHED_PROJECT_WORK', 409, 'The class cannot be archived while project collaboration work remains unfinished.'],
     ['REPOSITORY_ARCHIVE_BLOCKED', 409, 'The repository cannot be archived until review and invitation blockers are resolved.'],
   ])('retains combined Admin/Group guidance for %s without using server text', (code, status, expected) => {

@@ -161,6 +161,26 @@ describe('Phase 10D.1 admin views', () => {
     expect(screen.queryByRole('button', { name: /add admin|change role/i })).not.toBeInTheDocument()
   })
 
+  it('keeps provisioning entries and gives accurate recovery for an existing email', async () => {
+    const api = {
+      listUsers: vi.fn().mockResolvedValue({ data: [directoryUser], pagination: { page: 1, totalPages: 1, totalItems: 1, hasPreviousPage: false, hasNextPage: false } }),
+      provisionStudent: vi.fn().mockRejectedValue(new ApiError({ status: 409, code: 'EMAIL_ALREADY_EXISTS', message: 'private database diagnostic', requestId: 'private-reference' })),
+    }
+    const user = userEvent.setup()
+    renderUsers(api)
+    await screen.findByText('Synthetic Student')
+    await user.click(screen.getByText('Add User'))
+    await user.click(screen.getByRole('button', { name: 'Add student' }))
+    await user.type(screen.getByLabelText('Full name'), 'Retained draft name')
+    await user.type(screen.getByLabelText('University email'), directoryUser.email)
+    await user.click(screen.getByRole('button', { name: 'Provision account' }))
+    expect(await screen.findByText('An account with this email already exists. Use another email or manage the existing account.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Full name')).toHaveValue('Retained draft name')
+    expect(screen.getByLabelText('University email')).toHaveValue(directoryUser.email)
+    expect(screen.queryByText(/private database diagnostic|private-reference|record changed/i)).not.toBeInTheDocument()
+    expect(api.provisionStudent).toHaveBeenCalledTimes(1)
+  })
+
   it('fails closed when account projections do not match the route identity', async () => {
     const api = detailApi({ ...account(), userId: 'different-user' })
     renderDetail(api)

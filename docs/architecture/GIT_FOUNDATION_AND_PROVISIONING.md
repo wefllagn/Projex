@@ -15,6 +15,14 @@ The tested Windows toolchain is Git for Windows `2.55.0.windows.3`. The worker a
 - The runner uses fixed typed operations, argument arrays, `shell: false`, bounded output, a timeout, hidden windows, non-interactive configuration, and a sanitized Git environment.
 - Absolute paths, Git arguments, storage keys, and Git output are omitted from logs and API responses.
 
+Gate B Windows compatibility: Git processes use a fixed, sanitized process-local
+`core.longpaths=true` setting. Newly initialized Windows bare repositories also
+store this flag locally because receive-pack clears caller config before its
+unpacker runs. Bare verification and read-only inspection use the validated
+repository as the working directory with `--git-dir .`, avoiding Git's separate
+absolute GIT_DIR limit. This does not relax UUID/ownership/containment checks,
+change global Git configuration, or rewrite any pre-existing repository.
+
 ## Storage layout
 
 `GIT_STORAGE_ROOT` is an absolute server-controlled root. Repository names, slugs, and client input never participate in path construction.

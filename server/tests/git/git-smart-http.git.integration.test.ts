@@ -137,6 +137,7 @@ function clientEnvironment(authorization?: string): NodeJS.ProcessEnv {
     ...environment,
     GIT_CONFIG_NOSYSTEM: '1',
     GIT_CONFIG_GLOBAL: process.platform === 'win32' ? 'NUL' : '/dev/null',
+    ...(process.platform === 'win32' ? { GIT_CONFIG_PARAMETERS: "'core.longpaths=true'" } : {}),
     GIT_TERMINAL_PROMPT: '0',
     GIT_PAGER: 'cat',
     GIT_EDITOR: 'true',

@@ -7,6 +7,7 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 const BUSINESS_MESSAGES = {
   SETUP_RESEND_COOLDOWN: 'A setup link was sent recently. Try again later.',
   VALIDATION_FAILED: 'Check the form details and try again.',
+  EMAIL_ALREADY_EXISTS: 'An account with this email already exists. Use another email or manage the existing account.',
   CLASS_ARCHIVED: 'This class is archived and read-only.',
   CLASS_CODE_INVALID: 'This class code is not valid. Check it and try again.',
   CLASS_HAS_UNFINISHED_PROJECT_WORK: 'The class cannot be archived while project collaboration work remains unfinished.',

@@ -38,6 +38,7 @@ describe('Git process environment', () => {
       SMTP_PASSWORD: 'SENTINEL_SMTP_PASSWORD',
       AUTH_COOKIE_SECRET: 'SENTINEL_COOKIE_SECRET',
       GIT_CONFIG_GLOBAL: 'SENTINEL_GIT_CONFIG',
+      GIT_CONFIG_PARAMETERS: 'SENTINEL_UNTRUSTED_GIT_CONFIG',
       SSH_ASKPASS: 'SENTINEL_ASKPASS',
     })
 
@@ -49,6 +50,7 @@ describe('Git process environment', () => {
     expect(environment.SSH_ASKPASS).toBeUndefined()
     expect(environment.GIT_CONFIG_NOSYSTEM).toBe('1')
     expect(environment.GIT_CONFIG_GLOBAL).toBe(process.platform === 'win32' ? 'NUL' : '/dev/null')
+    expect(environment.GIT_CONFIG_PARAMETERS).toBe(process.platform === 'win32' ? "'core.longpaths=true'" : undefined)
     expect(environment.GIT_TERMINAL_PROMPT).toBe('0')
   })
 })

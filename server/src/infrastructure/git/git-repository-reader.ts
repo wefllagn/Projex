@@ -145,7 +145,8 @@ export function createGitRepositoryReader(options: {
     }
     activeProcesses += 1
     return new Promise((resolve, reject) => {
-      const child = spawn(executable, ['--git-dir', repositoryPath, ...args], {
+      const child = spawn(executable, ['--git-dir', '.', ...args], {
+        cwd: repositoryPath,
         env: createSanitizedGitEnvironment(),
         shell: false,
         windowsHide: true,

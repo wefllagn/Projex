@@ -100,6 +100,14 @@ describe('real Git repository provisioning', () => {
     await expect(git.verifyEmptyBare(repositoryPath)).resolves.toBeUndefined()
   })
 
+  it('verifies empty bare storage beyond the legacy Windows GIT_DIR limit', async () => {
+    // A deep isolated root is legitimate; never shorten it into shared storage.
+    const longPath = path.join(env.gitStorageRoot, 'long-path-probe', 'a'.repeat(40), 'b'.repeat(40), 'empty.git')
+    await mkdir(path.dirname(longPath), { recursive: true })
+    await git.initializeBare(longPath)
+    await expect(git.verifyEmptyBare(longPath)).resolves.toBeUndefined()
+  })
+
   it('recovers after the final directory is published before database completion', async () => {
     const { created, job, service } = await fixture()
     const paths = storage.pathsFor(created.id, job.id)

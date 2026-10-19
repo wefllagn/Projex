@@ -62,6 +62,8 @@ export function createSanitizedGitEnvironment(
     ...environment,
     GIT_CONFIG_NOSYSTEM: '1',
     GIT_CONFIG_GLOBAL: process.platform === 'win32' ? 'NUL' : '/dev/null',
+    // Process-local only: managed UUID paths can exceed legacy Windows limits.
+    ...(process.platform === 'win32' ? { GIT_CONFIG_PARAMETERS: "'core.longpaths=true'" } : {}),
     GIT_TERMINAL_PROMPT: '0',
     GIT_PAGER: 'cat',
     GIT_EDITOR: 'true',
@@ -159,19 +161,27 @@ export function createGitCommandRunner(options: {
 
   async function initializeBare(repositoryPath: string): Promise<void> {
     await run(['init', '--bare', '--initial-branch=main', repositoryPath])
+    if (process.platform === 'win32') {
+      // Receive-pack clears caller Git config before unpacking; its own newly
+      // provisioned repository must retain this filesystem compatibility flag.
+      await run(['--git-dir', '.', 'config', 'core.longpaths', 'true'], repositoryPath)
+    }
   }
 
   async function verifyEmptyBare(repositoryPath: string): Promise<void> {
     try {
-      const bare = await run(['--git-dir', repositoryPath, 'rev-parse', '--is-bare-repository'])
+      // Git for Windows has a separate fixed limit for an absolute GIT_DIR,
+      // even with core.longpaths enabled. Keep the already validated directory
+      // as cwd, not in that argument; containment/ownership checks are unchanged.
+      const bare = await run(['--git-dir', '.', 'rev-parse', '--is-bare-repository'], repositoryPath)
       if (bare.stdout.trim() !== 'true') throw new GitInfrastructureError('GIT_REPOSITORY_NOT_BARE')
-      const head = await run(['--git-dir', repositoryPath, 'symbolic-ref', 'HEAD'])
+      const head = await run(['--git-dir', '.', 'symbolic-ref', 'HEAD'], repositoryPath)
       if (head.stdout.trim() !== 'refs/heads/main') {
         throw new GitInfrastructureError('GIT_DEFAULT_BRANCH_INVALID')
       }
-      const refs = await run(['--git-dir', repositoryPath, 'for-each-ref', '--format=%(refname)'])
+      const refs = await run(['--git-dir', '.', 'for-each-ref', '--format=%(refname)'], repositoryPath)
       if (refs.stdout.trim() !== '') throw new GitInfrastructureError('GIT_REPOSITORY_NOT_EMPTY')
-      await run(['--git-dir', repositoryPath, 'fsck', '--full', '--no-dangling'])
+      await run(['--git-dir', '.', 'fsck', '--full', '--no-dangling'], repositoryPath)
     } catch (error) {
       if (
         error instanceof GitInfrastructureError &&
