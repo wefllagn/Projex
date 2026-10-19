@@ -59,7 +59,7 @@ describe('Phase 10D.3 admin operational views', () => {
 
     renderRoute(<AdminOperationsOverviewPage api={api} />)
 
-    expect(await screen.findByText('Not observed')).toBeInTheDocument()
+    expect(await screen.findByText('Not monitored')).toBeInTheDocument()
     expect(screen.getByText('2 KB')).toBeInTheDocument()
     expect(screen.getByText('1 lease-derived stuck record')).toBeInTheDocument()
     expect(screen.queryByText(/capacity percentage|worker online|integrity verified/i)).not.toBeInTheDocument()
@@ -81,7 +81,7 @@ describe('Phase 10D.3 admin operational views', () => {
     renderRoute(<AdminOperationsOverviewPage api={api} />)
 
     expect(await screen.findByText('Unavailable')).toBeInTheDocument()
-    expect(screen.getByText('Not observed')).toBeInTheDocument()
+    expect(screen.getByText('Not monitored')).toBeInTheDocument()
     expect(screen.getAllByText(/temporarily unavailable/i)).toHaveLength(2)
     expect(screen.queryByText(/worker offline/i)).not.toBeInTheDocument()
   })

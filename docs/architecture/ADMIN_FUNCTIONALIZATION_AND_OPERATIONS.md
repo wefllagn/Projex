@@ -1,5 +1,28 @@
 # Admin Functionalization and Operations
 
+## Admin presentation simplification (2026-10-19; review pending)
+
+Focused presentation now uses compact task/state/action layouts, exclusive
+navigation, secondary Course maintenance and contextual operational/audit evidence.
+See [Admin UI standard](../design/ADMIN_UI_DESIGN_SYSTEM.md) and
+[review report](../ADMIN_UI_SIMPLIFICATION_REVIEW.md). Server filters/pagination
+remain authoritative. Read freshness uses entry/query changes and throttled stale
+focus/visibility, pauses for forms/dialogs and never replays writes or issues
+secrets. Audit identifiers remain in authorized details. This pass adds no backend
+contract, authorization, schema/migration or execution/review behavior changes.
+
+## Class provisioning MVP clarification (2026-10-19)
+
+Ordinary Class creation is Instructor self-service, without Admin approval or a
+Course prerequisite. Exceptional Admin creation requires an ACTIVE Instructor,
+Class name, standardized term and academic year. Existing account status/session
+oversight, Class corrections, roster/join-code governance and reasoned Primary
+assignment/recovery are reused, not rebuilt. No arbitrary role conversion or
+private Git source authority is added. Optional legacy catalog correction retains
+its Course/official-code/enum/history controls behind a secondary disclosure.
+See ../ADMIN_CLASS_PROVISIONING_MVP_DECISIONS.md and the current implementation
+report for the superseding product direction; historical Phase details follow.
+
 ## Phase 9 boundary
 
 Phase 9 is backend-focused. Phase 10D owns frontend integration using the student/instructor visual language. Phase 10D.1 replaces the temporary shell, overview, and account-management routes. Phase 10D.2 integrates class governance and bounded academic oversight. Phase 10D.3 integrates measured operations, narrowly controlled recovery, and the administrative audit ledger.
@@ -115,7 +138,7 @@ Read-only academic routes use the Phase 9 administrator projections for classes,
 
 ## Phase 10D.3 frontend boundary
 
-The operations overview consumes the Phase 9 health and storage contracts through explicit frontend allowlists. It reports only API reachability, direct PostgreSQL connectivity, persisted queue/lease observations, `workerHealth: not_observed`, storage-state totals, known measured bytes, and measured/unmeasured repository counts. Manual refresh replaces continuous polling. The interface does not infer uptime, worker availability, host capacity, utilization, integrity, retention, snapshot, export, or email-delivery status.
+The operations overview consumes the Phase 9 health and storage contracts through explicit frontend allowlists. It reports only API reachability, direct PostgreSQL connectivity, persisted queue/lease observations, `workerHealth: not_observed`, storage-state totals, known measured bytes, and measured/unmeasured repository counts. Entry and throttled stale focus/visibility reads replace routine manual refresh; explicit Retry remains, without continuous polling. The interface does not infer uptime, worker availability, host capacity, utilization, integrity, retention, snapshot, export, or email-delivery status.
 
 The shared API client retains fail-closed non-2xx behavior by default. Only the operational-health adapter opts into HTTP 503 as a potential data response, and only a valid standard success envelope is consumable; an error envelope, missing data, or null data still raises a safe `ApiError`. The returned metadata preserves the HTTP status so degraded transport is not represented as HTTP 200.
 

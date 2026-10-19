@@ -40,7 +40,6 @@ describe('Phase 10D.2 admin academic views', () => {
     const user = userEvent.setup()
     renderAt(<AdminAcademicListPage kind="repositories" api={api} />, '/admin/academic/repositories')
     await user.selectOptions(screen.getByLabelText('Type'), 'ACTIVITY_WORKSPACE')
-    await user.click(screen.getByRole('button', { name: 'Apply' }))
     await waitFor(() => expect(api.listAcademicRepositories).toHaveBeenLastCalledWith(expect.objectContaining({ repositoryType: 'ACTIVITY_WORKSPACE' }), expect.any(Object)))
     expect(screen.queryByRole('button', { name: /source|credential|clone/i })).not.toBeInTheDocument()
   })
@@ -60,7 +59,7 @@ describe('Phase 10D.2 admin academic views', () => {
     expect(screen.queryByText('12 active courses')).not.toBeInTheDocument()
   })
 
-  it('creates an official offering from the Course catalog with a selected ACTIVE instructor', async () => {
+  it('creates a Class for an ACTIVE Instructor without a Course prerequisite', async () => {
     const api = {
       listCourses: vi.fn().mockResolvedValue({ data: { items: [{ id: 'course-1', courseNumber: 'IT 112', courseName: 'Programming 1' }] } }),
       listUsers: vi.fn().mockResolvedValue({ data: [{ id: 'instructor-1', fullName: 'Synthetic Instructor', email: 'instructor@slu.edu.ph', role: 'INSTRUCTOR', status: 'ACTIVE' }], pagination }),
@@ -70,14 +69,38 @@ describe('Phase 10D.2 admin academic views', () => {
     renderAt(<AdminClassCreatePage api={api} />, '/admin/academic/classes/new', '/admin/academic/classes/new')
     await user.click(screen.getByRole('button', { name: 'Search instructors' }))
     await user.click(await screen.findByRole('radio'))
-    await user.selectOptions(await screen.findByLabelText('Course'), 'course-1')
+    expect(screen.queryByLabelText('Course')).not.toBeInTheDocument()
     await user.type(screen.getByLabelText(/Class name/), 'Java Programming')
     await user.type(screen.getByLabelText(/Section/), 'BSIT 2A')
-    await user.type(screen.getByLabelText('Official Class Code'), '9123A')
-    await user.selectOptions(screen.getByLabelText('Academic Period'), 'FIRST_SEMESTER')
-    await user.type(screen.getByLabelText('School year'), '2030-2031')
-    await user.click(screen.getByRole('button', { name: 'Create offering' }))
-    expect(api.createClass).toHaveBeenCalledWith(expect.objectContaining({ instructorId: 'instructor-1', className: 'Java Programming', courseId: 'course-1', officialClassCode: '9123A' }))
+    await user.selectOptions(screen.getByLabelText('Semester / Term'), 'Short Term')
+    await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
+    await user.click(screen.getByRole('button', { name: 'Create Class' }))
+    expect(api.createClass).toHaveBeenCalledWith({ instructorId: 'instructor-1', className: 'Java Programming', semester: 'Short Term', schoolYear: '2026-2027', section: 'BSIT 2A' })
+    expect(api.listCourses).not.toHaveBeenCalled()
+  })
+
+  it('retains Class inputs on failure and clears an Instructor selection when the search changes', async () => {
+    const api = {
+      listUsers: vi.fn().mockResolvedValue({ data: [{ id: 'instructor-1', fullName: 'Synthetic Instructor', email: 'instructor@slu.edu.ph', role: 'INSTRUCTOR', status: 'ACTIVE' }], pagination }),
+      createClass: vi.fn().mockRejectedValue(new ApiError({ status: 500, message: 'private database failure', requestId: 'private-reference' })),
+    }
+    const user = userEvent.setup()
+    renderAt(<AdminClassCreatePage api={api} />, '/admin/academic/classes/new')
+    expect(screen.getByRole('button', { name: 'Create Class' })).toBeDisabled()
+    await user.type(screen.getByLabelText('Class name'), 'Retained Class')
+    await user.selectOptions(screen.getByLabelText('Semester / Term'), 'Short Term')
+    await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
+    await user.click(screen.getByRole('button', { name: 'Search instructors' }))
+    await user.click(await screen.findByRole('radio'))
+    await user.click(screen.getByRole('button', { name: 'Create Class' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Please try again')
+    expect(screen.getByLabelText('Class name')).toHaveValue('Retained Class')
+    expect(screen.getByLabelText('Semester / Term')).toHaveValue('Short Term')
+    expect(screen.getByLabelText('Academic year')).toHaveValue('2026-2027')
+    expect(screen.queryByText(/private database|private-reference/)).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('Find an active instructor'), 'Another')
+    expect(screen.getByRole('button', { name: 'Create Class' })).toBeDisabled()
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
   })
 
   it('fails closed when class detail does not match the route identity', async () => {

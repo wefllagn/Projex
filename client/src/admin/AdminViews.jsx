@@ -15,6 +15,8 @@ import {
 } from './admin-projections.js'
 import { copySensitiveText } from './copy-sensitive-text.js'
 import { formatDate, humanize, pageNumber } from './admin-view-utils.js'
+import { useAdminFreshness } from './use-admin-freshness.js'
+import { AdminPagination, AdminSearch } from './AdminListControls.jsx'
 
 const PAGE_SIZE = 20
 const USER_ROLES = ['STUDENT', 'INSTRUCTOR', 'ADMIN']
@@ -34,9 +36,9 @@ export function AdminPageHeader({ eyebrow, title, summary, actions }) {
   return (
     <header className="admin-page-header">
       <div>
-        <p className="eyebrow">{eyebrow}</p>
+        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
         <h1>{title}</h1>
-        <p>{summary}</p>
+        {summary && <p>{summary}</p>}
       </div>
       {actions && <div className="admin-page-header__actions">{actions}</div>}
     </header>
@@ -46,36 +48,54 @@ export function AdminPageHeader({ eyebrow, title, summary, actions }) {
 export function AdminPanel({ title, eyebrow, children, actions, className = '' }) {
   return (
     <section className={`admin-panel ${className}`}>
-      <header className="admin-panel__header">
+      {title || actions ? <header className="admin-panel__header">
         <div>
           {eyebrow && <p className="eyebrow">{eyebrow}</p>}
           <h2>{title}</h2>
         </div>
         {actions && <div className="admin-panel__actions">{actions}</div>}
-      </header>
+      </header> : null}
       <div className="admin-panel__body">{children}</div>
     </section>
   )
 }
 
-export function AdminMetric({ label, value, detail, tone = 'default' }) {
+export function AdminMetric({ label, value, detail, tone = 'default', to }) {
+  const Tag = to ? Link : 'article'
   return (
-    <article className={`admin-metric admin-metric--${tone}`}>
+    <Tag to={to} className={`admin-metric admin-metric--${tone}`}>
       <p>{label}</p>
       <strong>{value}</strong>
-      <span>{detail}</span>
-    </article>
+      {detail && <span>{detail}</span>}
+    </Tag>
   )
 }
 
 export function AdminDialog({ title, summary, children, onClose, onSubmit, submitLabel, busy, submitDisabled = false, danger = false }) {
+  const formRef = useRef(null)
+  useEffect(() => {
+    const active = document.activeElement
+    const previous = active?.closest('details:not([open])')?.querySelector('summary') ?? active
+    const form = formRef.current
+    form.querySelector('input, textarea, select, button')?.focus()
+    const containFocus = (event) => {
+      if (event.key !== 'Tab') return
+      const controls = [...form.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href]')]
+      const first = controls[0], last = controls.at(-1)
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+    }
+    form.addEventListener('keydown', containFocus)
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { form.removeEventListener('keydown', containFocus); document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus() }
+  }, [])
   return (
     <div className="student-submit-backdrop" role="presentation">
-      <form className="admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title" onSubmit={onSubmit}>
-        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close dialog" />
-        <p className="eyebrow">Administrator action</p>
+      <form ref={formRef} className="admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title" onSubmit={onSubmit} onKeyDown={(event) => { if (event.key === 'Escape' && !busy) { event.preventDefault(); onClose() } }}>
+        <button type="button" className="student-modal-close" disabled={busy} onClick={onClose} aria-label="Close dialog" />
         <h2 id="admin-dialog-title">{title}</h2>
-        <p>{summary}</p>
+        {summary && <p>{summary}</p>}
         {children}
         <div className="admin-dialog__actions">
           <button type="button" className="student-outline-action" onClick={onClose} disabled={busy}>Cancel</button>
@@ -93,21 +113,17 @@ export function AdminOverviewPage({ api = adminApi }) {
 
   const load = useCallback(({ signal } = {}) => {
     return api.getOverview({ signal })
-      .then((response) => setState({ status: 'ready', data: projectAdminOverview(response.data), error: null }))
+      .then((response) => { if (!signal?.aborted) setState({ status: 'ready', data: projectAdminOverview(response.data), error: null }) })
       .catch((error) => {
-        if (error?.name !== 'AbortError') setState({ status: 'error', data: null, error })
+        if (!signal?.aborted && error?.name !== 'AbortError') setState({ status: 'error', data: null, error })
       })
   }, [api])
 
-  useEffect(() => {
-    const controller = new AbortController()
-    load({ signal: controller.signal })
-    return () => controller.abort()
-  }, [load])
+  const refresh = useAdminFreshness(load)
 
   if (state.status === 'loading' && !state.data) return <RequestState kind="loading" />
   if (state.status === 'error') {
-    return <RequestState error={state.error} action={<button type="button" onClick={() => { setState({ status: 'loading', data: null, error: null }); load() }}>Try again</button>} />
+    return <RequestState error={state.error} action={<button type="button" onClick={refresh}>Try again</button>} />
   }
 
   const overview = state.data
@@ -118,38 +134,30 @@ export function AdminOverviewPage({ api = adminApi }) {
 
   return (
     <div className="admin-page-stack">
-      <AdminPageHeader
-        eyebrow="Platform administration"
-        title="Overview"
-        summary="Authoritative account and academic record totals from Projex. Measured health and supported recovery actions are available in Operations."
-        actions={<button type="button" className="student-outline-action" onClick={() => load()}>Refresh</button>}
-      />
+      <AdminPageHeader title="Overview" />
       <div className="admin-metric-grid">
-        <AdminMetric label="Users" value={overview.users.total} detail={`${activeUsers} active accounts`} />
-        <AdminMetric label="Setup attention" value={pendingSetup} detail={`${overview.users.accountSetup.actionRequired} require a new setup link`} tone={pendingSetup ? 'attention' : 'good'} />
-        <AdminMetric label="Classes" value={classCount} detail={`${overview.academics.classesByStatus.ARCHIVED ?? 0} archived`} />
-        <AdminMetric label="Repositories" value={repositoryCount} detail={`${overview.repositories.unmeasuredRecords} without a storage measurement`} />
+        <AdminMetric label="Users" value={overview.users.total} detail={`${activeUsers} active`} to="/admin/users" />
+        <AdminMetric label="Classes" value={classCount} detail={`${overview.academics.classesByStatus.ARCHIVED ?? 0} archived`} to="/admin/academic/classes" />
+        <AdminMetric label="Repositories" value={repositoryCount} to="/admin/academic/repositories" />
+        <AdminMetric label="Setup attention" value={pendingSetup} detail={overview.users.accountSetup.actionRequired ? `${overview.users.accountSetup.actionRequired} need a new setup link` : pendingSetup ? 'Awaiting account setup' : 'No accounts awaiting setup'} tone={pendingSetup ? 'attention' : 'default'} to="/admin/users?status=SETUP_PENDING" />
       </div>
       <div className="admin-overview-grid">
-        <AdminPanel title="Account composition" eyebrow="Current records">
+        <AdminPanel title="Accounts by role">
           <div className="admin-breakdown-list">
             {USER_ROLES.map((role) => (
               <div key={role}><span>{humanize(role)}</span><strong>{overview.users.byRole[role] ?? 0}</strong></div>
             ))}
           </div>
-          <Link className="admin-text-link" to="/admin/users">Open user directory</Link>
         </AdminPanel>
-        <AdminPanel title="Academic lifecycle" eyebrow="Bounded summaries">
+        <AdminPanel title="Academic activity">
           <div className="admin-breakdown-list">
             <div><span>Activities</span><strong>{sumCounts(overview.academics.activitiesByStatus)}</strong></div>
             <div><span>Submissions</span><strong>{sumCounts(overview.academics.submissionsByStatus)}</strong></div>
             <div><span>Project tasks</span><strong>{sumCounts(overview.academics.projectTasksByStatus)}</strong></div>
             <div><span>Teams</span><strong>{sumCounts(overview.academics.teamsByStatus)}</strong></div>
           </div>
-          <p className="admin-panel-note"><Link to="/admin/academic">Open detailed academic administration.</Link></p>
         </AdminPanel>
       </div>
-      <p className="admin-generated-at">Summary generated {formatDate(overview.generatedAt)}.</p>
     </div>
   )
 }
@@ -242,6 +250,8 @@ export function AdminUsersPage({ api = adminApi }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [state, setState] = useState({ status: 'loading', users: [], pagination: null, error: null })
   const [provisionRole, setProvisionRole] = useState(null)
+  const provisionMenu = useRef(null)
+  const [searchReset, setSearchReset] = useState(0)
   const [notice, setNotice] = useState('')
   const page = pageNumber(searchParams)
   const role = searchParams.get('role') ?? ''
@@ -252,22 +262,18 @@ export function AdminUsersPage({ api = adminApi }) {
 
   const load = useCallback(({ signal } = {}) => {
     return api.listUsers(query, { signal })
-      .then((response) => setState({
+      .then((response) => { if (!signal?.aborted) setState({
         status: 'ready',
         users: response.data.map((user) => projectAdminUser(user)),
         pagination: response.pagination,
         error: null,
-      }))
+      }) })
       .catch((error) => {
-        if (error?.name !== 'AbortError') setState((current) => ({ ...current, status: 'error', error }))
+        if (!signal?.aborted && error?.name !== 'AbortError') setState({ status: 'error', users: [], pagination: null, error })
       })
   }, [api, query])
 
-  useEffect(() => {
-    const controller = new AbortController()
-    load({ signal: controller.signal })
-    return () => controller.abort()
-  }, [load])
+  const refresh = useAdminFreshness(load, !!provisionRole)
 
   const updateQuery = (updates) => {
     setState((current) => ({ ...current, status: 'loading', error: null }))
@@ -280,27 +286,24 @@ export function AdminUsersPage({ api = adminApi }) {
   return (
     <div className="admin-page-stack">
       <AdminPageHeader
-        eyebrow="Account administration"
         title="Users"
-        summary="Search and manage safe account records. Roles are assigned only through the approved student and instructor provisioning workflows."
         actions={(
-          <>
-            <button type="button" className="student-outline-action" onClick={() => setProvisionRole('STUDENT')}>Add student</button>
-            <button type="button" className="student-primary-action" onClick={() => setProvisionRole('INSTRUCTOR')}>Add instructor</button>
-          </>
+          <details ref={provisionMenu} className="admin-action-menu" onKeyDown={(event) => { if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary').focus() } }}>
+            <summary className="student-primary-action">Add User <span aria-hidden="true">⌄</span></summary>
+            <div>{['STUDENT', 'INSTRUCTOR'].map((role) => <button type="button" key={role} onClick={(event) => { event.currentTarget.closest('details').open = false; setProvisionRole(role) }}>Add {role.toLowerCase()}</button>)}</div>
+          </details>
         )}
       />
       {notice && <p className="admin-notice" role="status">{notice}</p>}
-      <AdminPanel title="User directory" eyebrow="Server-filtered records">
-        <form className="admin-filter-bar" onSubmit={(event) => { event.preventDefault(); updateQuery({ search: new FormData(event.currentTarget).get('search')?.toString().trim() }) }}>
-          <label className="admin-filter-search">Search<input key={querySearch} name="search" defaultValue={querySearch} maxLength="200" placeholder="Name or university email" /></label>
-          <label>Role<select value={role} onChange={(event) => updateQuery({ role: event.target.value })}><option value="">All roles</option>{USER_ROLES.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label>Status<select value={status} onChange={(event) => updateQuery({ status: event.target.value })}><option value="">All statuses</option>{USER_STATUSES.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <button type="submit" className="student-primary-action">Search</button>
-          {(querySearch || role || status) && <button type="button" className="student-outline-action" onClick={() => { setState((current) => ({ ...current, status: 'loading', error: null })); setSearchParams({}) }}>Clear</button>}
-        </form>
+      <AdminPanel>
+        <div className="admin-filter-bar">
+          <AdminSearch key={searchReset} initialValue={querySearch} onSearch={(search) => updateQuery({ search })} placeholder="Name or university email" />
+          <label>Role<select name="role" value={role} onChange={(event) => updateQuery({ role: event.target.value })}><option value="">All roles</option>{USER_ROLES.map((item) => <option key={item} value={item}>{humanize(item)}</option>)}</select></label>
+          <label>Status<select name="status" value={status} onChange={(event) => updateQuery({ status: event.target.value })}><option value="">All statuses</option>{USER_STATUSES.map((item) => <option key={item} value={item}>{humanize(item)}</option>)}</select></label>
+          {(querySearch || role || status) && <button type="button" className="student-outline-action" onClick={() => { setState((current) => ({ ...current, status: 'loading', error: null })); setSearchReset((value) => value + 1); setSearchParams({}) }}>Clear</button>}
+        </div>
         {state.status === 'loading' && !state.users.length && <RequestState kind="loading" compact />}
-        {state.status === 'error' && <RequestState compact error={state.error} action={<button type="button" onClick={() => { setState((current) => ({ ...current, status: 'loading', error: null })); load() }}>Try again</button>} />}
+        {state.status === 'error' && <RequestState compact error={state.error} action={<button type="button" onClick={refresh}>Try again</button>} />}
         {state.status === 'ready' && !state.users.length && <RequestState kind="empty" compact message="No users match these filters." />}
         {!!state.users.length && (
           <div className="admin-table-scroll">
@@ -318,24 +321,16 @@ export function AdminUsersPage({ api = adminApi }) {
             </table>
           </div>
         )}
-        {state.pagination && (
-          <div className="admin-pagination">
-            <span>Page {state.pagination.page} of {Math.max(1, state.pagination.totalPages)} · {state.pagination.totalItems} users</span>
-            <div>
-              <button type="button" className="student-outline-action" disabled={!state.pagination.hasPreviousPage} onClick={() => updateQuery({ page: String(page - 1) })}>Previous</button>
-              <button type="button" className="student-outline-action" disabled={!state.pagination.hasNextPage} onClick={() => updateQuery({ page: String(page + 1) })}>Next</button>
-            </div>
-          </div>
-        )}
+        <AdminPagination pagination={state.pagination} page={page} noun="users" onPage={(page) => updateQuery({ page: String(page) })} />
       </AdminPanel>
       {provisionRole && (
         <ProvisionUserDialog
           role={provisionRole}
           api={api}
-          onClose={() => setProvisionRole(null)}
+          onClose={() => { setProvisionRole(null); provisionMenu.current?.querySelector('summary')?.focus() }}
           onCreated={(user) => {
             setNotice(`${user.fullName} was provisioned and requires account setup.`)
-            load()
+            refresh()
           }}
         />
       )}

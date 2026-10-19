@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ApiError, describeApiError } from '../api/api-client.js'
 import RequestState from '../components/RequestState.jsx'
@@ -25,6 +25,9 @@ import {
   AdminPanel,
 } from './AdminViews.jsx'
 import { formatDate, humanize, pageNumber } from './admin-view-utils.js'
+import AcademicFields from '../classes/AcademicFields.jsx'
+import { useAdminFreshness } from './use-admin-freshness.js'
+import { AdminPagination, AdminSearch } from './AdminListControls.jsx'
 
 const PAGE_SIZE = 20
 const REASON_MIN = 10
@@ -40,16 +43,7 @@ function updateQuery(setSearchParams, current, changes) {
 }
 
 function Paginator({ pagination, page, onPage }) {
-  if (!pagination || pagination.totalItems === 0) return null
-  return (
-    <div className="admin-pagination">
-      <span>Page {page} of {Math.max(pagination.totalPages, 1)} · {pagination.totalItems} records</span>
-      <div>
-        <button type="button" className="student-outline-action" disabled={!pagination.hasPreviousPage} onClick={() => onPage(page - 1)}>Previous</button>
-        <button type="button" className="student-outline-action" disabled={!pagination.hasNextPage} onClick={() => onPage(page + 1)}>Next</button>
-      </div>
-    </div>
-  )
+  return <AdminPagination pagination={pagination} page={page} onPage={onPage} />
 }
 
 function ErrorNotice({ error }) {
@@ -58,23 +52,18 @@ function ErrorNotice({ error }) {
 
 export function AdminAcademicHomePage() {
   const areas = [
-    ['Course Catalog', 'Create, edit, and import reusable Course Number and Course Name records.', '/admin/academic/courses'],
-    ['Classes', 'Create and govern real class records, join codes, and memberships.', '/admin/academic/classes'],
-    ['Programming activities', 'Inspect lifecycle and aggregate assessment configuration without source or test definitions.', '/admin/academic/activities'],
-    ['Submissions', 'Inspect operational submission state and released scores only.', '/admin/academic/submissions'],
-    ['Project tasks', 'Inspect project lifecycle and bounded collaboration counts.', '/admin/academic/project-tasks'],
-    ['Repositories', 'Inspect lifecycle, review, provisioning, ownership, and measured-storage metadata.', '/admin/academic/repositories'],
+    ['Programming activities', 'View Activities', '/admin/academic/activities'],
+    ['Submissions', 'View Submissions', '/admin/academic/submissions'],
+    ['Project tasks', 'View Projects', '/admin/academic/project-tasks'],
+    ['Repositories', 'View Repositories', '/admin/academic/repositories'],
   ]
   return (
     <div className="admin-page-stack">
-      <AdminPageHeader eyebrow="Institutional academic records" title="Academic administration" summary="Govern classes and inspect minimized academic metadata. Administrators cannot author, grade, release, or inspect source through this area." />
-      <div className="admin-academic-cards">
-        {areas.map(([title, summary, to]) => (
-          <Link key={to} to={to} className="admin-academic-card">
-            <h2>{title}</h2><p>{summary}</p><span>Open area</span>
-          </Link>
-        ))}
-      </div>
+      <AdminPageHeader title="Academic Records" />
+      <AdminPanel><div className="admin-record-links">
+        {areas.map(([title, action, to]) => <Link key={to} to={to}><strong>{title}</strong><span>{action} <span aria-hidden="true">→</span></span></Link>)}
+      </div></AdminPanel>
+      <div className="admin-secondary-links"><Link to="/admin/academic/classes">Classes</Link><Link to="/admin/academic/courses">Course Catalog</Link></div>
     </div>
   )
 }
@@ -90,47 +79,36 @@ export function AdminClassListPage({ api = adminApi }) {
 
   const load = useCallback(({ signal } = {}) => {
     return api.listAcademicClasses({ page, pageSize: PAGE_SIZE, search, status, sortBy, sortOrder }, { signal })
-      .then((response) => setState({ status: 'ready', items: response.data.map(projectAcademicClass), pagination: response.pagination, error: null }))
+      .then((response) => { if (!signal?.aborted) setState({ status: 'ready', items: response.data.map(projectAcademicClass), pagination: response.pagination, error: null }) })
       .catch((error) => {
-        if (error?.name !== 'AbortError') setState({ status: 'error', items: [], pagination: null, error })
+        if (!signal?.aborted && error?.name !== 'AbortError') setState({ status: 'error', items: [], pagination: null, error })
       })
   }, [api, page, search, sortBy, sortOrder, status])
 
-  useEffect(() => {
-    const controller = new AbortController()
-    load({ signal: controller.signal })
-    return () => controller.abort()
-  }, [load])
-
-  const submit = (event) => {
-    event.preventDefault()
-    const form = new FormData(event.currentTarget)
-    updateQuery(setSearchParams, searchParams, { page: 1, search: form.get('search'), status: form.get('status'), sortBy: form.get('sortBy'), sortOrder: form.get('sortOrder') })
-  }
+  const refresh = useAdminFreshness(load)
+  const filter = (changes) => updateQuery(setSearchParams, searchParams, { page: 1, ...changes })
 
   return (
     <div className="admin-page-stack">
-      <AdminPageHeader eyebrow="Class governance" title="Classes" summary="Real class records, ownership, membership totals, and lifecycle state." actions={<Link className="student-primary-action" to="/admin/academic/classes/new">Create class</Link>} />
-      <AdminPanel title="Class catalog" eyebrow="Server-filtered records">
-        <form className="admin-filter-bar admin-filter-bar--wide" onSubmit={submit} key={searchParams.toString()}>
-          <label className="admin-filter-search">Search<input name="search" maxLength="200" defaultValue={search} placeholder="Name, section, semester, or year" /></label>
-          <label>Status<select name="status" defaultValue={status}><option value="">All statuses</option><option>PREPARED</option><option>ACTIVE</option><option>ARCHIVED</option></select></label>
-          <label>Sort<select name="sortBy" defaultValue={sortBy}><option value="createdAt">Created</option><option value="updatedAt">Updated</option><option value="className">Name</option></select></label>
-          <label>Order<select name="sortOrder" defaultValue={sortOrder}><option value="desc">Descending</option><option value="asc">Ascending</option></select></label>
-          <button className="student-primary-action" type="submit">Apply</button>
-        </form>
+      <AdminPageHeader title="Classes" actions={<Link className="student-primary-action" to="/admin/academic/classes/new">Create class</Link>} />
+      <AdminPanel>
+        <div className="admin-filter-bar">
+          <AdminSearch initialValue={search} onSearch={(search) => filter({ search })} placeholder="Name, section, semester, or year" />
+          <label>Status<select name="status" value={status} onChange={(event) => filter({ status: event.target.value })}><option value="">All statuses</option>{['PREPARED', 'ACTIVE', 'ARCHIVED'].map((value) => <option key={value} value={value}>{humanize(value)}</option>)}</select></label>
+          <label>Sort<select name="sort" value={`${sortBy}:${sortOrder}`} onChange={(event) => { const [sortBy, sortOrder] = event.target.value.split(':'); filter({ sortBy, sortOrder }) }}><option value="createdAt:desc">Newest first</option><option value="createdAt:asc">Oldest first</option><option value="updatedAt:desc">Recently updated</option><option value="updatedAt:asc">Least recently updated</option><option value="className:asc">Name A–Z</option><option value="className:desc">Name Z–A</option></select></label>
+        </div>
         {state.status === 'loading' && !state.items.length ? <RequestState kind="loading" compact /> : null}
-        {state.status === 'error' ? <RequestState error={state.error} compact action={<button type="button" onClick={() => load()}>Try again</button>} /> : null}
+        {state.status === 'error' ? <RequestState error={state.error} compact action={<button type="button" onClick={refresh}>Try again</button>} /> : null}
         {state.status === 'ready' && !state.items.length ? <RequestState kind="empty" compact message="No classes match these filters." /> : null}
         {state.items.length ? (
-          <div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>Class</th><th>Instructor</th><th>Term</th><th>Memberships</th><th>Status</th><th /></tr></thead><tbody>
+          <div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>Class</th><th>Instructor</th><th>Term / Year</th><th>Students</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>
             {state.items.map((item) => <tr key={item.classId}>
               <td><strong>{item.className}</strong><span>{item.section}</span></td>
               <td><strong>{item.instructor?.fullName ?? 'Unassigned'}</strong><span>{item.instructor?.universityEmail ?? ''}</span></td>
-              <td>{item.academicPeriod ? humanize(item.academicPeriod) : item.semester || 'Informal'}<span>{item.schoolYear || 'No school year'}</span></td>
-              <td>{Object.entries(item.membershipCounts).map(([key, value]) => `${humanize(key)} ${value}`).join(' · ') || 'None'}</td>
+              <td>{item.academicPeriod ? humanize(item.academicPeriod) : item.semester || 'Term not set'}<span>{item.schoolYear || 'Year not set'}</span></td>
+              <td>{item.membershipCounts.ACTIVE ?? 0} enrolled</td>
               <td><StatusBadge label={humanize(item.status)} /></td>
-              <td><Link to={`/admin/academic/classes/${item.classId}`}>Manage</Link></td>
+              <td><Link className="admin-row-link" to={`/admin/academic/classes/${item.classId}`}>Manage</Link></td>
             </tr>)}
           </tbody></table></div>
         ) : null}
@@ -146,41 +124,39 @@ export function AdminClassCreatePage({ api = adminApi }) {
   const [instructors, setInstructors] = useState([])
   const [selectedInstructorId, setSelectedInstructorId] = useState('')
   const [searching, setSearching] = useState(false)
+  const [searched, setSearched] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
-  const [courses, setCourses] = useState([])
-  const [courseSearch, setCourseSearch] = useState('')
-  useEffect(() => {
-    const controller = new AbortController()
-    api.listCourses({ pageSize: 100, ...(courseSearch.trim() ? { search: courseSearch.trim() } : {}) }, { signal: controller.signal })
-      .then((response) => setCourses(response.data.items))
-      .catch((cause) => { if (cause?.name !== 'AbortError') setError(cause) })
-    return () => controller.abort()
-  }, [api, courseSearch])
+  const searchGeneration = useRef(0)
+  useEffect(() => () => { searchGeneration.current += 1 }, [])
 
   const findInstructors = async (event) => {
     event?.preventDefault()
     setSearching(true)
+    setSelectedInstructorId('')
+    setInstructors([])
+    const generation = ++searchGeneration.current
     setError(null)
     try {
       const response = await api.listUsers({ page: 1, pageSize: 20, role: 'INSTRUCTOR', status: 'ACTIVE', search })
-      setInstructors(response.data.map((item) => projectAdminUser(item)))
+      if (generation === searchGeneration.current) { setInstructors(response.data.map((item) => projectAdminUser(item))); setSearched(true) }
     } catch (requestError) {
-      setError(requestError)
+      if (generation === searchGeneration.current) setError(requestError)
     } finally {
-      setSearching(false)
+      if (generation === searchGeneration.current) setSearching(false)
     }
   }
 
   const submit = async (event) => {
     event.preventDefault()
+    if (!selectedInstructorId || busy || searching) return
     const form = new FormData(event.currentTarget)
     setBusy(true)
     setError(null)
     try {
       const response = await api.createClass({
-        className: form.get('className') || courses.find((course) => course.id === form.get('courseId'))?.courseName,
-        courseId: form.get('courseId'), officialClassCode: form.get('officialClassCode'), academicPeriod: form.get('academicPeriod'), schoolYear: form.get('schoolYear'),
+        className: form.get('className'),
+        semester: form.get('semester'), schoolYear: form.get('schoolYear'),
         ...(form.get('section') ? { section: form.get('section') } : {}),
         ...(form.get('schedule') ? { schedule: form.get('schedule') } : {}),
         ...(form.get('days') ? { days: form.get('days') } : {}),
@@ -197,26 +173,22 @@ export function AdminClassCreatePage({ api = adminApi }) {
 
   return (
     <div className="admin-page-stack">
-      <AdminPageHeader eyebrow="Class governance" title="Create official offering" summary="Choose a Course and official metadata. Without an initial Instructor, the offering stays prepared and its join code is inactive." actions={<Link className="student-outline-action" to="/admin/academic/classes">Cancel</Link>} />
-      <AdminPanel title="Class details" eyebrow="Supported fields only">
-        <form className="admin-form-grid" onSubmit={submit}>
-          <label>Find Course<input value={courseSearch} onChange={(event) => setCourseSearch(event.target.value)} placeholder="Search number or name" /></label>
-          <label>Course<select name="courseId" required defaultValue=""><option value="">Select Course</option>{courses.map((course) => <option value={course.id} key={course.id}>{course.courseNumber} — {course.courseName}</option>)}</select></label>
-          <label>Class name (optional display title)<input name="className" maxLength="200" /></label>
-          <label>Official Class Code<input name="officialClassCode" required maxLength="100" /></label>
-          <label>Academic Period<select name="academicPeriod" required defaultValue=""><option value="">Select period</option><option value="FIRST_SEMESTER">1st Semester</option><option value="SECOND_SEMESTER">2nd Semester</option></select></label>
-          <label>School year<input name="schoolYear" required maxLength="20" /></label>
-          <label>Section (optional)<input name="section" maxLength="100" /></label>
-          <label>Schedule (optional)<input name="schedule" maxLength="200" /></label>
-          <label>Days (optional)<input name="days" maxLength="100" /></label>
-          <label>Room (optional)<input name="room" maxLength="100" /></label>
+      <AdminPageHeader eyebrow="Classes" title="Create Class" summary="Create a Class on behalf of an active Instructor." actions={<Link className="student-outline-action" to="/admin/academic/classes">Cancel</Link>} />
+      <AdminPanel title="Class details">
+        <form className="admin-form-grid" onSubmit={submit} aria-busy={busy}>
+          <label>Class name<input name="className" required maxLength="200" autoComplete="off" disabled={busy} /></label>
+          <AcademicFields disabled={busy} />
+          <label>Section (optional)<input name="section" maxLength="100" disabled={busy} /></label>
+          <label>Schedule (optional)<input name="schedule" maxLength="200" disabled={busy} /></label>
+          <label>Days (optional)<input name="days" maxLength="100" disabled={busy} /></label>
+          <label>Room (optional)<input name="room" maxLength="100" disabled={busy} /></label>
           <div className="admin-form-span admin-instructor-picker">
-            <label>Find an active instructor<input value={search} maxLength="200" onChange={(event) => setSearch(event.target.value)} placeholder="Name or university email" /></label>
-            <button type="button" className="student-outline-action" onClick={findInstructors} disabled={searching}>{searching ? 'Searching…' : 'Search instructors'}</button>
-            {instructors.length ? <div className="admin-choice-list">{instructors.map((item) => <label key={item.id}><input type="radio" name="instructorId" value={item.id} checked={selectedInstructorId === item.id} onChange={() => setSelectedInstructorId(item.id)} /><span><strong>{item.fullName}</strong><small>{item.universityEmail}</small></span></label>)}</div> : <p className="admin-panel-note">An initial Primary Instructor is optional. Assignment activates the prepared offering.</p>}
+            <label>Find an active instructor<input value={search} maxLength="200" disabled={busy} onChange={(event) => { searchGeneration.current += 1; setSearch(event.target.value); setSelectedInstructorId(''); setInstructors([]); setSearching(false); setSearched(false) }} placeholder="Name or university email…" autoComplete="off" /></label>
+            <button type="button" className="student-outline-action" onClick={findInstructors} disabled={busy || searching}>{searching ? 'Searching…' : 'Search instructors'}</button>
+            {instructors.length ? <div className="admin-choice-list">{instructors.map((item) => <label key={item.id}><input type="radio" name="instructorId" value={item.id} checked={selectedInstructorId === item.id} onChange={() => setSelectedInstructorId(item.id)} disabled={busy || searching} /><span><strong>{item.fullName}</strong><small>{item.universityEmail}</small></span></label>)}</div> : <p className="admin-panel-note" role="status">{searching ? 'Finding Instructors…' : searched ? 'No active Instructors found. Try another name or email.' : 'Search for and select the responsible Instructor.'}</p>}
           </div>
           <ErrorNotice error={error} />
-          <div className="admin-form-span admin-dialog__actions"><button type="submit" className="student-primary-action" disabled={busy || !courses.length}>{busy ? 'Creating…' : 'Create offering'}</button></div>
+          <div className="admin-form-span admin-dialog__actions"><button type="submit" className="student-primary-action" disabled={busy || searching || !selectedInstructorId}>{busy ? 'Creating…' : 'Create Class'}</button></div>
         </form>
       </AdminPanel>
     </div>
@@ -243,17 +215,16 @@ function MetadataDialog({ classRecord, api, onClose, onSaved }) {
     event.preventDefault(); setBusy(true); setError(null)
     const form = new FormData(event.currentTarget)
     try {
-      await api.updateClass(classRecord.classId, { className: form.get('className'), section: form.get('section'), semester: form.get('semester'), schoolYear: form.get('schoolYear'), reason: form.get('reason') })
+      await api.updateClass(classRecord.classId, { className: form.get('className'), section: form.get('section') || null, ...(form.get('semester') !== (classRecord.semester ?? '') ? { semester: form.get('semester') } : {}), ...(form.get('schoolYear') !== (classRecord.schoolYear ?? '') ? { schoolYear: form.get('schoolYear') } : {}), reason: form.get('reason') })
       await onSaved()
       onClose()
     } catch (requestError) { setError(requestError); setBusy(false) }
   }
-  return <AdminDialog title="Edit class metadata" summary="Instructor ownership cannot be changed after class creation." submitLabel="Save changes" onClose={onClose} onSubmit={submit} busy={busy}>
+  return <AdminDialog title="Edit Class details" summary="Teaching staff changes are managed separately." submitLabel="Save changes" onClose={onClose} onSubmit={submit} busy={busy}>
     <div className="admin-form-grid">
       <label>Class name<input name="className" required maxLength="200" defaultValue={classRecord.className} /></label>
-      <label>Section<input name="section" required maxLength="100" defaultValue={classRecord.section} /></label>
-      <label>Semester<input name="semester" required maxLength="100" defaultValue={classRecord.semester} /></label>
-      <label>School year<input name="schoolYear" required maxLength="20" defaultValue={classRecord.schoolYear} /></label>
+      <label>Section (optional)<input name="section" maxLength="100" defaultValue={classRecord.section ?? ''} /></label>
+      <AcademicFields semester={classRecord.semester ?? ''} schoolYear={classRecord.schoolYear ?? ''} legacy />
       <label className="admin-form-span">Reason<textarea name="reason" required minLength={REASON_MIN} maxLength={REASON_MAX} /></label>
     </div><ErrorNotice error={error} />
   </AdminDialog>
@@ -348,19 +319,19 @@ export function AdminClassDetailPage({ api = adminApi }) {
   }
 
   return <div className="admin-page-stack">
-    <AdminPageHeader eyebrow="Class governance" title={classRecord.className} summary={[classRecord.officialClassCode, classRecord.academicPeriod ? humanize(classRecord.academicPeriod) : classRecord.semester, classRecord.schoolYear].filter(Boolean).join(' · ') || 'Informal teaching class'} actions={<Link className="student-outline-action" to="/admin/academic/classes">Back to classes</Link>} />
+    <AdminPageHeader eyebrow="Classes" title={classRecord.className} summary={[classRecord.officialClassCode, classRecord.academicPeriod ? humanize(classRecord.academicPeriod) : classRecord.semester, classRecord.schoolYear].filter(Boolean).join(' · ') || 'Class details'} actions={<Link className="student-outline-action" to="/admin/academic/classes">Back to classes</Link>} />
     {notice ? <p className="admin-notice" role="status">{notice}</p> : null}
     <div className="admin-detail-grid">
       <AdminPanel title="Class record" eyebrow="Authoritative metadata">
         <div className="admin-detail-values"><div className="admin-detail-value"><span>Status</span><strong><StatusBadge label={humanize(classRecord.status)} /></strong></div><div className="admin-detail-value"><span>Primary Instructor</span><strong>{classRecord.instructor?.fullName ?? 'Unassigned'}</strong></div><div className="admin-detail-value"><span>Created</span><strong>{formatDate(classRecord.createdAt)}</strong></div><div className="admin-detail-value"><span>Updated</span><strong>{formatDate(classRecord.updatedAt)}</strong></div></div>
-        <div className="admin-action-row">{!archived && !classRecord.officialClassCode ? <button type="button" className="student-outline-action" onClick={() => setDialog('metadata')}>Edit informal details</button> : null}<button type="button" className={archived ? 'student-primary-action' : 'admin-danger-outline'} onClick={() => setDialog(archived ? 'restore' : 'archive')}>{archived ? 'Restore class' : 'Archive class'}</button></div>
+        <div className="admin-action-row">{!archived && !classRecord.officialClassCode ? <button type="button" className="student-outline-action" onClick={() => setDialog('metadata')}>Edit Class details</button> : null}<button type="button" className={archived ? 'student-primary-action' : 'admin-danger-outline'} onClick={() => setDialog(archived ? 'restore' : 'archive')}>{archived ? 'Restore class' : 'Archive class'}</button></div>
         <div className="admin-record-links"><Link to={`/admin/academic/activities?classId=${classId}`}>View activities</Link><Link to={`/admin/academic/submissions?classId=${classId}`}>View submissions</Link><Link to={`/admin/academic/project-tasks?classId=${classId}`}>View project tasks</Link></div>
       </AdminPanel>
       <AdminPanel title="Join code" eyebrow="Server-owned secret">
         {!joinCode ? <button type="button" className="student-outline-action" onClick={revealCode}>Reveal join code</button> : joinCode.active ? <div className="admin-join-code"><strong>{joinCode.classCode}</strong><StatusBadge label="Active" /><button type="button" className="student-outline-action" onClick={() => navigator.clipboard?.writeText(joinCode.classCode)}>Copy active code</button></div> : <div className="admin-join-code"><StatusBadge label="Inactive" /><p>The previous code is not usable and is intentionally hidden.</p></div>}
         {classRecord.status === 'ACTIVE' ? <div className="admin-action-row"><button type="button" className="student-outline-action" onClick={() => setDialog('rotate')}>Rotate code</button><button type="button" className="admin-danger-outline" onClick={() => setDialog('revoke')}>Revoke code</button></div> : <p className="admin-panel-note">Join code actions require an ACTIVE class.</p>}
       </AdminPanel>
-      {!archived ? <div className="admin-detail-grid__wide"><AdminOfficialMetadataPanel classRecord={classRecord} onSaved={loadClass} api={api} /><AdminTeachingStaffPanel classRecord={classRecord} onSaved={loadClass} api={api} /><AdminStudentInvitationCsvPanel classRecord={classRecord} api={api} /></div> : null}
+      {!archived ? <div className="admin-detail-grid__wide"><AdminTeachingStaffPanel classRecord={classRecord} onSaved={loadClass} api={api} /><AdminStudentInvitationCsvPanel classRecord={classRecord} api={api} /><details><summary>Catalog metadata (optional)</summary><AdminOfficialMetadataPanel classRecord={classRecord} onSaved={loadClass} api={api} /></details></div> : null}
       <AdminPanel title="Class roster" eyebrow="Detailed administrative projection" className="admin-detail-grid__wide">
         {roster.status === 'loading' && !roster.members.length ? <RequestState kind="loading" compact /> : null}
         {roster.status === 'error' ? <RequestState error={roster.error} compact action={<button type="button" onClick={() => loadRoster()}>Try again</button>} /> : null}
@@ -402,13 +373,13 @@ export function AdminAcademicListPage({ kind, api = adminApi }) {
   const [state, setState] = useState({ status: 'loading', items: [], pagination: null, error: null })
   const query = useMemo(() => ({ page, pageSize: PAGE_SIZE, search: config.noSearch ? '' : search, status, sortBy, sortOrder, repositoryType, classId }), [classId, config.noSearch, page, repositoryType, search, sortBy, sortOrder, status])
   const load = useCallback(({ signal } = {}) => {
-    return api[config.list](query, { signal }).then((response) => setState({ status: 'ready', items: response.data.map(config.project), pagination: response.pagination, error: null })).catch((error) => { if (error?.name !== 'AbortError') setState({ status: 'error', items: [], pagination: null, error }) })
+    return api[config.list](query, { signal }).then((response) => { if (!signal?.aborted) setState({ status: 'ready', items: response.data.map(config.project), pagination: response.pagination, error: null }) }).catch((error) => { if (!signal?.aborted && error?.name !== 'AbortError') setState({ status: 'error', items: [], pagination: null, error }) })
   }, [api, config, query])
-  useEffect(() => { const controller = new AbortController(); load({ signal: controller.signal }); return () => controller.abort() }, [load])
-  const submit = (event) => { event.preventDefault(); const form = new FormData(event.currentTarget); updateQuery(setSearchParams, searchParams, { page: 1, search: form.get('search'), status: form.get('status'), sortBy: form.get('sortBy'), sortOrder: form.get('sortOrder'), repositoryType: form.get('repositoryType'), classId: form.get('classId') }) }
-  return <div className="admin-page-stack"><AdminPageHeader eyebrow="Read-only academic oversight" title={config.title} summary={config.summary} actions={<Link className="student-outline-action" to="/admin/academic">All academic areas</Link>} /><AdminPanel title={config.title} eyebrow="Safe administrator projection">
+  const refresh = useAdminFreshness(load)
+  const filter = (changes) => updateQuery(setSearchParams, searchParams, { page: 1, ...changes })
+  return <div className="admin-page-stack"><AdminPageHeader title={config.title} actions={<Link className="student-outline-action" to="/admin/academic">Academic Records</Link>} /><AdminPanel>
     {classId ? <p className="admin-filter-context">Filtered to the selected class record. <Link to={`/admin/academic/${kind}`}>Clear class filter</Link></p> : null}
-    <form className="admin-filter-bar admin-filter-bar--wide" onSubmit={submit} key={searchParams.toString()}>{!config.noSearch ? <label className="admin-filter-search">Search<input name="search" defaultValue={search} maxLength="200" /></label> : <input type="hidden" name="search" value="" />}<label>Status<select name="status" defaultValue={status}><option value="">All statuses</option>{config.statuses.map((item) => <option key={item}>{item}</option>)}</select></label>{config.repositoryTypes ? <label>Type<select name="repositoryType" defaultValue={repositoryType}><option value="">All types</option>{config.repositoryTypes.map((item) => <option key={item}>{item}</option>)}</select></label> : null}<input type="hidden" name="classId" value={kind === 'repositories' ? '' : classId} /><label>Sort<select name="sortBy" defaultValue={sortBy}>{config.sort.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Order<select name="sortOrder" defaultValue={sortOrder}><option value="desc">Descending</option><option value="asc">Ascending</option></select></label><button className="student-primary-action" type="submit">Apply</button></form>
-    {state.status === 'loading' && !state.items.length ? <RequestState kind="loading" compact /> : null}{state.status === 'error' ? <RequestState error={state.error} compact action={<button type="button" onClick={() => load()}>Try again</button>} /> : null}{state.status === 'ready' && !state.items.length ? <RequestState kind="empty" compact message="No records match these filters." /> : null}{state.items.length ? <div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>Record</th><th>{kind === 'repositories' ? 'Owner' : kind === 'submissions' ? 'Activity' : 'Status'}</th><th>State</th><th>Summary</th></tr></thead><tbody>{state.items.map((item) => <tr key={item.activityId ?? item.submissionId ?? item.projectTaskId ?? item.repositoryId}><AcademicRow kind={kind} item={item} /></tr>)}</tbody></table></div> : null}<Paginator pagination={state.pagination} page={page} onPage={(next) => updateQuery(setSearchParams, searchParams, { page: next })} />
+    <div className="admin-filter-bar">{!config.noSearch ? <AdminSearch initialValue={search} onSearch={(search) => filter({ search })} placeholder="Search records" /> : null}<label>Status<select name="status" value={status} onChange={(event) => filter({ status: event.target.value })}><option value="">All statuses</option>{config.statuses.map((item) => <option key={item} value={item}>{humanize(item)}</option>)}</select></label>{config.repositoryTypes ? <label>Type<select name="repositoryType" value={repositoryType} onChange={(event) => filter({ repositoryType: event.target.value })}><option value="">All types</option>{config.repositoryTypes.map((item) => <option key={item} value={item}>{humanize(item)}</option>)}</select></label> : null}<label>Sort<select name="sortBy" value={sortBy} onChange={(event) => filter({ sortBy: event.target.value })}>{config.sort.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Order<select name="sortOrder" value={sortOrder} onChange={(event) => filter({ sortOrder: event.target.value })}><option value="desc">Descending</option><option value="asc">Ascending</option></select></label></div>
+    {state.status === 'loading' && !state.items.length ? <RequestState kind="loading" compact /> : null}{state.status === 'error' ? <RequestState error={state.error} compact action={<button type="button" onClick={refresh}>Try again</button>} /> : null}{state.status === 'ready' && !state.items.length ? <RequestState kind="empty" compact message="No records match these filters." /> : null}{state.items.length ? <div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>Record</th><th>{kind === 'repositories' ? 'Owner' : kind === 'submissions' ? 'Activity' : 'Status'}</th><th>State</th><th>Summary</th></tr></thead><tbody>{state.items.map((item) => <tr key={item.activityId ?? item.submissionId ?? item.projectTaskId ?? item.repositoryId}><AcademicRow kind={kind} item={item} /></tr>)}</tbody></table></div> : null}<Paginator pagination={state.pagination} page={page} onPage={(next) => updateQuery(setSearchParams, searchParams, { page: next })} />
   </AdminPanel></div>
 }

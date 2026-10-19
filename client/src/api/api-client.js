@@ -81,14 +81,17 @@ export function describeApiError(error) {
   if (error.code === 'NETWORK_ERROR') {
     return 'Projex could not reach the server. Check the connection and try again.'
   }
+  if (error.code === 'SETUP_RESEND_COOLDOWN') return 'A setup link was sent recently. Try again later.'
+  if (error.code === 'VALIDATION_FAILED') return 'Check the form details and try again.'
+  if (error.status === 429) return 'Too many requests. Please wait and try again.'
   if (SAFE_BUSINESS_MESSAGE_CODES.has(error.code)) return error.message
   if (error.status === 401) return 'Your session has expired. Please sign in again.'
   if (error.status === 403) return 'You do not have permission to perform this action.'
   if (error.status === 404) return 'The requested Projex record was not found.'
   if (error.status === 409) return 'This record changed while you were working. Refresh it before trying again.'
-  if (error.status === 422) return error.message
+  if (error.status === 422) return 'Check the form details and try again.'
   if (error.status === 503) return 'This Projex service is temporarily unavailable. Please try again later.'
-  return error.message
+  return 'The request could not be completed. Please try again.'
 }
 
 export function createApiClient({

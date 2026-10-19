@@ -10,7 +10,33 @@ Phase 10A completed shared infrastructure, authentication, classes, and membersh
 
 ## Shared client contract
 
+### Class provisioning MVP (2026-10-19, pending review)
+
+Instructor and Admin-assisted Class creation use native required dropdowns for
+the three supported terms and consecutive academic years, without Course loading
+as a prerequisite. Admin search discards obsolete Instructor results and clears
+selection when the query changes. Failed creation retains form values; controls
+are locked during submission. Saved legacy term/year values remain visible on
+correction forms; unchanged legacy values are omitted from update payloads.
+Formal/Informal labels are removed. Optional catalog corrections remain secondary.
+
+Ordinary RequestState feedback omits diagnostic request IDs. Unknown exception,
+validation and server text use UI-owned recovery messages; the known setup resend
+cooldown still has actionable copy. HTTP errors/correlation and logging contracts
+are unchanged. Existing allowlisted business guidance remains compatible. This
+is not a claim that every old feature's field errors or boundaries were redesigned.
+
+The existing Projex brand, native controls, CSS and scoped responsive rules remain.
+No unreviewed Group implementation or generated icon kit was imported into Admin.
+
 ### Overnight Admin foundation reconciliation (pending Product Owner review)
+
+The 2026-10-19 Admin simplification adds compact landing screens, secondary Course
+dialogs, exclusive sidebar selection, debounced URL/server search and event-driven
+read freshness. Ordinary errors remain separate from authorized Audit diagnostics.
+See `docs/design/ADMIN_UI_DESIGN_SYSTEM.md` for permanent content, focus, density,
+recovery and safe-refetch rules, and `docs/ADMIN_UI_SIMPLIFICATION_REVIEW.md` for
+evidence. No new backend authority, Course prerequisite or non-Admin redesign.
 
 The independent 2026-10-18 Admin slice reuses existing Phase 10D authority and
 Iteration 2 Course/offering APIs. Course catalog pagination/search are URL-owned;

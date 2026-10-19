@@ -209,7 +209,7 @@ describe('API client', () => {
     [403, 'You do not have permission to perform this action.'],
     [404, 'The requested Projex record was not found.'],
     [409, 'This record changed while you were working. Refresh it before trying again.'],
-    [422, 'Lifecycle correction'],
+    [422, 'Check the form details and try again.'],
     [503, 'This Projex service is temporarily unavailable. Please try again later.'],
   ])('provides a safe status message for HTTP %s', (status, expected) => {
     expect(describeApiError(new ApiError({ status, message: 'Lifecycle correction' }))).toBe(expected)

@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -10,6 +10,32 @@ const deferred = () => { let resolve; const promise = new Promise((done) => { re
 const renderCatalog = (api, path = '/admin/academic/courses') => render(<MemoryRouter initialEntries={[path]}><AdminCourseCatalog api={api} /></MemoryRouter>)
 
 describe('Admin Course catalog', () => {
+  it('rejects oversized imports with inline validation, never a success notice', async () => {
+    const api = { listCourses: vi.fn().mockResolvedValue(response()), previewCourseCsv: vi.fn() }
+    const user = userEvent.setup()
+    renderCatalog(api)
+    await user.click(screen.getByRole('button', { name: 'Import Courses' }))
+    await user.upload(screen.getByLabelText('Course CSV'), new File(['x'.repeat(262_145)], 'large.csv', { type: 'text/csv' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('at most 256 KiB')
+    expect(screen.getByLabelText('Course CSV')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('button', { name: 'Preview import' })).toBeDisabled()
+    expect(api.previewCourseCsv).not.toHaveBeenCalled()
+  })
+  it('keeps maintenance secondary and retains form inputs on a safe failure', async () => {
+    const api = { listCourses: vi.fn().mockResolvedValue(response()), createCourse: vi.fn().mockRejectedValue(new Error('private diagnostics')) }
+    const user = userEvent.setup()
+    renderCatalog(api)
+    await screen.findByText('Programming 1')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Course CSV')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Add Course' }))
+    await user.type(screen.getByLabelText('Course Number'), 'IT 130')
+    await user.type(screen.getByLabelText('Course Name'), 'Retained draft')
+    await user.click(screen.getByRole('button', { name: 'Save Course' }))
+    expect(await screen.findByRole('alert')).not.toHaveTextContent('private diagnostics')
+    expect(screen.getByLabelText('Course Name')).toHaveValue('Retained draft')
+    expect(screen.getByLabelText('Course Number')).toHaveValue('IT 130')
+  })
   it('uses URL filters and reaches records beyond the first page', async () => {
     const api = { listCourses: vi.fn().mockResolvedValue(response([course], 101)) }
     const user = userEvent.setup()
@@ -35,20 +61,18 @@ describe('Admin Course catalog', () => {
     expect(await screen.findByText('Programming 1')).toBeInTheDocument()
   })
 
-  it('resets search to page one, ignores obsolete results, and refreshes identical filters', async () => {
+  it('debounces search to page one and ignores obsolete results without a manual submit', async () => {
     const pending = deferred()
     const api = { listCourses: vi.fn().mockReturnValueOnce(pending.promise).mockResolvedValue(response([{ ...course, courseName: 'Current result' }])) }
     const user = userEvent.setup()
     renderCatalog(api, '/admin/academic/courses?page=3')
     await user.type(screen.getByLabelText('Find Course'), 'IT')
-    await user.click(screen.getByRole('button', { name: 'Search Courses' }))
     expect(await screen.findByText('Current result')).toBeInTheDocument()
     await act(async () => pending.resolve(response([{ ...course, courseName: 'Obsolete result' }])))
     expect(screen.queryByText('Obsolete result')).not.toBeInTheDocument()
     expect(api.listCourses).toHaveBeenLastCalledWith({ search: 'IT', page: 1, pageSize: 20 }, expect.any(Object))
-    const count = api.listCourses.mock.calls.length
-    await user.click(screen.getByRole('button', { name: 'Search Courses' }))
-    await waitFor(() => expect(api.listCourses.mock.calls.length).toBeGreaterThan(count))
+    expect(api.listCourses).toHaveBeenCalledTimes(2)
+    expect(screen.getByLabelText('Find Course')).toHaveFocus()
     expect(await screen.findByText('Current result')).toBeInTheDocument()
   })
 
@@ -62,7 +86,7 @@ describe('Admin Course catalog', () => {
     await user.type(screen.getByLabelText('Course Name'), 'Programming fundamentals')
     await user.click(screen.getByRole('button', { name: 'Save Course' }))
     expect(api.updateCourse).toHaveBeenCalledWith('course-1', { courseNumber: 'IT 112', courseName: 'Programming fundamentals' })
-    expect(screen.getByRole('button', { name: 'Cancel edit' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Edit IT 112' })).toBeDisabled()
     await act(async () => pending.resolve({ data: course }))
     expect(await screen.findByText('Course saved.')).toBeInTheDocument()
@@ -77,6 +101,7 @@ describe('Admin Course catalog', () => {
     }
     const user = userEvent.setup()
     renderCatalog(api)
+    await user.click(screen.getByRole('button', { name: 'Import Courses' }))
     const file = new File([csv], 'courses.csv', { type: 'text/csv' })
     Object.defineProperty(file, 'text', { value: async () => csv })
     await user.upload(screen.getByLabelText('Course CSV'), file)

@@ -18,6 +18,52 @@ Runtime credentials, environment files, and test storage are not in Git.
 
 ## Current milestone
 
+Latest authorized pass (2026-10-19): Admin UI/UX simplification is implemented,
+pending Product Owner review. See [A–R review report](ADMIN_UI_SIMPLIFICATION_REVIEW.md)
+and [permanent Admin UI guidance](design/ADMIN_UI_DESIGN_SYSTEM.md). Admin branch
+remains `codex/julius-overnight-admin-mvp` at `c6b50ab`, with prior provisioning
+and this pass unstaged/uncommitted. No Group/Activity implementation, backend
+contract, schema/migration, normal database or persisted environment changes.
+
+Latest checks supersede the counts below: client 57 files / 377 tests; server unit
+42 / 298; both lint/builds, server type-check and integration type-check pass.
+Existing frontend bundle warning remains. No database suite was run in this UX
+pass. All seven screens inspected at 1366×768, 1920×1080 and 390×844; no page
+horizontal overflow, exclusive selected navigation, contained mobile table scroll.
+Private screenshots remain outside Git. Event-driven stale focus refresh replaces
+routine landing-page Refresh; form/dialog state and deliberate writes are protected.
+No commit, push, merge, reset or Product Owner final approval has occurred.
+
+Current work order (2026-10-19): Admin and Instructor Class Provisioning MVP is
+implemented and verified, pending Product Owner review on the existing
+codex/julius-overnight-admin-mvp worktree at c6b50ab. Current changes remain
+unstaged/uncommitted; prior overnight work and installed skills preserved.
+See [current report](ADMIN_CLASS_PROVISIONING_MVP_REPORT.md) and
+[approved decisions](ADMIN_CLASS_PROVISIONING_MVP_DECISIONS.md).
+
+Instructor self-service and exceptional Admin creation use standardized term/year
+without mandatory Course selection or Admin approval. Internal catalog/official
+constraints, Primary/Co-Instructor rules, account/Class oversight and generated
+Student join codes remain. No schema, migration or authority expansion.
+
+Latest checks: client 55 files / 359 tests; server unit 42 / 298; serial PG 23 / 110;
+both lint/builds and server type checks pass. Browser verified creation/join/Admin
+support flows at desktop/mobile sizes. Existing bundle warning remains.
+PG tests use a NEW exclusive temporary cluster on loopback port 54873, NOT the
+original shared projex_test. Review UI/API use 5190/3317 and a separate fresh
+review database there; temporary accounts/credential file explicitly approved.
+No saved environment, normal database, frozen Activity or Group implementation
+change. Never infer safe cleanup from the database name alone.
+
+Group is paused for acceptance with its 23 tracked modifications/128 untracked
+files preserved, not represented solely by 9203a2c. See
+[preservation checklist](GROUP_PRESERVATION_CHECKLIST.md). Browser editing and
+missing-demo recovery remain deferred. Do not reconstruct records or touch Git
+storage; no Group merge/copy into Admin. Historical checkpoint text below is not
+permission to resume old work or target the original demo database.
+
+### Prior overnight checkpoint (historical)
+
 Activity Workflow MVP — COMPLETE / APPROVED FOR BASELINE
 
 Overnight continuation: Group is **IMPLEMENTED — PENDING PRODUCT OWNER REVIEW**
@@ -62,6 +108,10 @@ Stop demo APIs/workers before any future shared mutable test-database suite.
 9. Post-MVP Projex IDE / richer functionality
 
 ## Next major task
+
+Current next gate: review ADMIN_CLASS_PROVISIONING_MVP_REPORT.md and the preserved
+Group handoff independently. No commit, push, integration, normal-data migration
+or deployment is authorized. The following overnight instruction is historical:
 
 Product Owner reviews independent Group and Admin checkpoints, locks remaining
 Admin decisions and explicitly authorizes an integration target/SHAs before

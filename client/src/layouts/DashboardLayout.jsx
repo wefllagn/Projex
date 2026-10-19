@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref, classInitial, classOfferingLabel } from '../classes/class-links.js'
 import { courseOptions, sectionOptions } from '../data/projexData.js'
+import AcademicFields from '../classes/AcademicFields.jsx'
+import '../admin/admin-refinement.css'
 
 function StudentSidebarLink({ to, children, end = false, count, icon }) {
   return (
@@ -144,20 +146,10 @@ export function CreateClassModal({ onClose, onCreated }) {
     section: '',
     semester: '',
     schoolYear: '',
-    courseId: '',
     schedule: '',
     days: '',
     room: '',
   })
-  const [courses, setCourses] = useState([])
-  const [courseSearch, setCourseSearch] = useState('')
-  useEffect(() => {
-    const controller = new AbortController()
-    api.listCourses({ pageSize: 100, ...(courseSearch.trim() ? { search: courseSearch.trim() } : {}) }, { signal: controller.signal })
-      .then((response) => setCourses(response.data.items))
-      .catch((cause) => { if (cause?.name !== 'AbortError') setCourses([]) })
-    return () => controller.abort()
-  }, [api, courseSearch])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [invitationEmail, setInvitationEmail] = useState('')
@@ -214,36 +206,26 @@ export function CreateClassModal({ onClose, onCreated }) {
 
   return (
     <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="create-class-title">
-      <form className="instructor-action-modal" onSubmit={submit}>
-        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close create class" />
+      <form className="instructor-action-modal" onSubmit={submit} aria-busy={saving}>
+        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close create class" disabled={saving} />
         <p>Create Class</p>
-        <h2 id="create-class-title">New teaching class</h2>
+        <h2 id="create-class-title">New Class</h2>
         <div className="instructor-form-grid">
           <label>
             Class Name
-            <input value={form.className} onChange={updateField('className')} maxLength={200} required />
+            <input value={form.className} onChange={updateField('className')} maxLength={200} required disabled={saving} />
           </label>
-          <label>Find Course (optional)<input value={courseSearch} onChange={(event) => setCourseSearch(event.target.value)} placeholder="Search number or name" /></label>
-          <label>Course (optional)<select value={form.courseId} onChange={updateField('courseId')}><option value="">No catalog Course</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.courseNumber} — {course.courseName}</option>)}</select></label>
           <label>
             Section (optional)
-            <input value={form.section} onChange={updateField('section')} maxLength={100} />
+            <input value={form.section} onChange={updateField('section')} maxLength={100} disabled={saving} />
           </label>
-          <label>
-            Informal term label (optional)
-            <input value={form.semester} onChange={updateField('semester')} maxLength={100} placeholder="Practice term" />
-          </label>
-          <label>
-            School year (optional)
-            <input value={form.schoolYear} onChange={updateField('schoolYear')} maxLength={20} placeholder="2026-2027" />
-          </label>
-          <label>Schedule (optional)<input value={form.schedule} onChange={updateField('schedule')} maxLength={200} /></label>
-          <label>Days (optional)<input value={form.days} onChange={updateField('days')} maxLength={100} /></label>
-          <label>Room (optional)<input value={form.room} onChange={updateField('room')} maxLength={100} /></label>
+          <AcademicFields semester={form.semester} schoolYear={form.schoolYear} onChange={(field, value) => setForm((current) => ({ ...current, [field]: value }))} disabled={saving} />
+          <label>Schedule (optional)<input value={form.schedule} onChange={updateField('schedule')} maxLength={200} disabled={saving} /></label>
+          <label>Days (optional)<input value={form.days} onChange={updateField('days')} maxLength={100} disabled={saving} /></label>
+          <label>Room (optional)<input value={form.room} onChange={updateField('room')} maxLength={100} disabled={saving} /></label>
         </div>
-        <section className="class-create-invitations">
+        <details className="class-create-invitations"><summary>Invite Students (optional)</summary>
           <div>
-            <strong>Invite Students (optional)</strong>
             <span>Only existing registered Projex Students can be invited.</span>
             <span>If any listed Student is no longer eligible, the class and all invitations will not be created.</span>
           </div>
@@ -292,11 +274,11 @@ export function CreateClassModal({ onClose, onCreated }) {
               ))}
             </ul>
           )}
-        </section>
+        </details>
         <p className="class-form-note">Projex creates the join code securely on the server. Manage it after the class is created.</p>
         {error && <p className="class-form-error" role="alert">{describeApiError(error)}</p>}
         <div className="student-submit-modal-actions">
-          <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
+          <button type="button" className="student-outline-action" onClick={onClose} disabled={saving}>Cancel</button>
           <button type="submit" className="student-primary-action" disabled={saving}>
             {saving ? 'Creating…' : 'Create Class'}
           </button>
@@ -447,6 +429,8 @@ function StudentDashboardLayout() {
 }
 
 function AdminDashboardLayout() {
+  const { pathname } = useLocation()
+  const academicActive = pathname === '/admin/academic' || ['/activities', '/submissions', '/project-tasks', '/repositories'].some((suffix) => pathname.startsWith(`/admin/academic${suffix}`))
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const navigate = useNavigate()
@@ -477,16 +461,16 @@ function AdminDashboardLayout() {
         <nav className="student-sidebar__nav" aria-label="Administrator navigation" onClick={(event) => closeMobileNavigationOnLink(event, mobileNavigation.close)}>
           <StudentSidebarLink to="/admin" end icon="home">Overview</StudentSidebarLink>
           <StudentSidebarLink to="/admin/users" icon="people">Users</StudentSidebarLink>
+          <StudentSidebarLink to="/admin/academic/classes" icon="people">Classes</StudentSidebarLink>
+          <Link to="/admin/academic" className={`student-sidebar__link${academicActive ? ' active' : ''}`} aria-current={academicActive ? 'page' : undefined}><span className="student-sidebar__icon student-sidebar__icon--activity" aria-hidden="true" /><span>Academic Records</span></Link>
           <div className="student-sidebar__group">
-            <p>ACADEMIC ADMINISTRATION</p>
-            <StudentSidebarLink to="/admin/academic/classes" icon="people">Classes</StudentSidebarLink>
-              <StudentSidebarLink to="/admin/academic/courses" icon="folder">Course Catalog</StudentSidebarLink>
-            <StudentSidebarLink to="/admin/academic" icon="activity">Academic records</StudentSidebarLink>
+            <p>System</p>
+            <StudentSidebarLink to="/admin/operations" icon="folder">Operations</StudentSidebarLink>
+            <StudentSidebarLink to="/admin/audit-events" icon="todo">Audit Events</StudentSidebarLink>
           </div>
           <div className="student-sidebar__group">
-              <p>OPERATIONS AND AUDIT</p>
-            <StudentSidebarLink to="/admin/operations" icon="folder">Operations</StudentSidebarLink>
-            <StudentSidebarLink to="/admin/audit-events" icon="todo">Audit events</StudentSidebarLink>
+            <p>Tools</p>
+            <StudentSidebarLink to="/admin/academic/courses" icon="folder">Course Catalog</StudentSidebarLink>
           </div>
           <div className="student-sidebar__lower admin-sidebar__account">
             <div className="admin-sidebar-identity">
