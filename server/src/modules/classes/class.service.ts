@@ -196,7 +196,7 @@ export function createClassService(dependencies: {
         throw new AppError({
           statusCode: 400,
           code: 'INSTRUCTOR_ID_REQUIRED',
-          message: 'An active instructor is required for an informal class.',
+          message: 'Select an active Instructor for this Class.',
         })
       }
       if (caller.role === 'INSTRUCTOR' && (input.officialClassCode || input.academicPeriod)) {

@@ -6,6 +6,7 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 // diagnostics; never pass arbitrary server/transport messages into the UI.
 const BUSINESS_MESSAGES = {
   SETUP_RESEND_COOLDOWN: 'A setup link was sent recently. Try again later.',
+  VALIDATION_FAILED: 'Check the form details and try again.',
   CLASS_ARCHIVED: 'This class is archived and read-only.',
   CLASS_CODE_INVALID: 'This class code is not valid. Check it and try again.',
   CLASS_HAS_UNFINISHED_PROJECT_WORK: 'The class cannot be archived while project collaboration work remains unfinished.',
@@ -92,7 +93,7 @@ export function describeApiError(error) {
   if (error.status === 409) return 'This record changed while you were working. Refresh it before trying again.'
   if (error.status === 400 || error.status === 422) return 'Please check the highlighted fields and try again.'
   if (error.status === 503) return 'This Projex service is temporarily unavailable. Please try again later.'
-  if (error.status === 429) return 'Please wait a moment before trying again.'
+  if (error.status === 429) return 'Too many requests. Please wait and try again.'
   return 'We couldn’t complete this right now. Please try again.'
 }
 

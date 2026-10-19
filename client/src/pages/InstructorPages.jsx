@@ -8,6 +8,7 @@ import RequestState from '../components/RequestState.jsx'
 import { WorkHubList } from '../work-hub/WorkHubViews.jsx'
 import { InstructorClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
 import CsvInvitationPanel from '../classes/CsvInvitationPanel.jsx'
+import AcademicFields from '../classes/AcademicFields.jsx'
 import { ClassStaffPanel, StaffInvitationsPanel } from '../classes/ClassStaffPanel.jsx'
 import { InstructorActivityEditor, InstructorActivityList } from '../activities/InstructorActivityViews.jsx'
 import {
@@ -501,7 +502,7 @@ function ClassInfoForm({ classRecord }) {
     try {
       const response = await api.updateClass(classRecord.id, official
         ? { schedule: form.schedule || null, days: form.days || null, room: form.room || null }
-        : { className: form.className, section: form.section || null, semester: form.semester || null, schoolYear: form.schoolYear || null, schedule: form.schedule || null, days: form.days || null, room: form.room || null })
+        : { className: form.className, section: form.section || null, ...(form.semester !== (classRecord.semester ?? '') ? { semester: form.semester } : {}), ...(form.schoolYear !== (classRecord.schoolYear ?? '') ? { schoolYear: form.schoolYear } : {}), schedule: form.schedule || null, days: form.days || null, room: form.room || null })
       upsertClass(response.data)
       setMessage('Class information updated.')
     } catch (requestError) {
@@ -536,14 +537,13 @@ function ClassInfoForm({ classRecord }) {
     <div className="student-people-panel instructor-info-panel">
       <section>
         <h2>Class Info</h2>
-        <p>Official identity is corrected by Admin through the audited workflow. Teaching logistics remain editable.</p>
+        {official ? <p>Contact Admin to correct catalog details.</p> : null}
       </section>
       <form className="instructor-form-grid class-info-form" onSubmit={save}>
         <label>Class Name<input value={form.className} onChange={updateField('className')} maxLength={200} required disabled={official || !isPrimary || classRecord.status !== 'ACTIVE'} /></label>
         {official ? <p>Official: {classRecord.courseName} · {classOfferingLabel(classRecord)}</p> : <>
           <label>Section<input value={form.section} onChange={updateField('section')} maxLength={100} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
-          <label>Semester<input value={form.semester} onChange={updateField('semester')} maxLength={100} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
-          <label>School year<input value={form.schoolYear} onChange={updateField('schoolYear')} maxLength={20} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
+          <AcademicFields semester={form.semester} schoolYear={form.schoolYear} onChange={(field, value) => setForm((current) => ({ ...current, [field]: value }))} legacy disabled={!isPrimary || classRecord.status !== 'ACTIVE'} />
         </>}
         <label>Schedule<input value={form.schedule} onChange={updateField('schedule')} maxLength={200} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
         <label>Days<input value={form.days} onChange={updateField('days')} maxLength={100} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>

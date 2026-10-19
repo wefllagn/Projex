@@ -1,5 +1,32 @@
 # User and Class Management
 
+## Approved Class provisioning MVP clarification (2026-10-19)
+
+The Product Owner's current normal workflow is Instructor self-service Class
+creation, a server-generated join code, Student joining, then existing Activities
+and Group Projects. No Admin approval or mandatory Course catalog. Admin may
+create a Class exceptionally for an ACTIVE Instructor. See
+../ADMIN_CLASS_PROVISIONING_MVP_DECISIONS.md for the approved scope.
+
+Creation requires Class name, one of First Semester / Second Semester / Short
+Term, and a consecutive academic year (YYYY-YYYY). Normal Classes use the existing
+semester text and schoolYear columns; Short Term does not require an enum change.
+The older Admin official-catalog request may supply its existing academicPeriod
+instead of semester. Its Course/official-code constraint remains unchanged.
+Changed term/year metadata is validated; saved legacy values remain readable and
+unrelated edits do not rewrite them. No schema or migration change is introduced.
+
+Instructor and Admin creation forms have no Formal/Informal labels. Existing
+Course-backed records, PREPARED recovery/assignment, audited official correction,
+Primary/Co-Instructor authority and academic UUID/history compatibility remain.
+The historical classifications below describe internal compatibility, not UI or
+new prerequisites. No curriculum/assignment approval subsystem is authorized.
+
+Mutable test suites must use verified disposable cluster/database/storage
+separation from all demos. Recognizing the projex_test name alone is insufficient.
+The shared demo database incident/recovery remains deferred; this milestone's
+tests use a fresh isolated cluster and do not reconstruct missing records.
+
 ## Iteration 2 Course and Class Offering extension (unaccepted WIP)
 
 The approved foundation extends the historical Phase 4/10/11 contract below. `Course` is an Admin-managed reusable catalog entry containing Course Number and Course Name only. A `Class` remains the offering and all existing academic relationships continue to use its UUID. The nullable Course relationship, Course Number/Name snapshots, Official Class Code, Academic Period (`FIRST_SEMESTER` or `SECOND_SEMESTER`), School Year, Schedule, Days and Room are offering attributes. The generated, revocable `Class.classCode` remains the private Projex **join code**. There is no global uniqueness constraint on Official Class Code and no Course semester restriction. Legacy Classes remain valid without structured official fields.

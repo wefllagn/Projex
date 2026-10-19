@@ -96,6 +96,23 @@ describe('student class workflows', () => {
 })
 
 describe('instructor class workflows', () => {
+  it('keeps self-service Class inputs after a failed save without a Course or approval requirement', async () => {
+    const client = { get: vi.fn().mockResolvedValue({ data: [], pagination }), post: vi.fn().mockRejectedValue(new Error('private failure')), patch: vi.fn() }
+    const onCreated = vi.fn()
+    const user = userEvent.setup()
+    renderWorkflow({ client, entry: '/instructor', page: <CreateClassModal onClose={vi.fn()} onCreated={onCreated} />, role: 'INSTRUCTOR' })
+    await user.type(screen.getByLabelText('Class Name'), 'Retained Class')
+    await user.selectOptions(screen.getByLabelText('Semester / Term'), 'Short Term')
+    await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
+    await user.click(screen.getByRole('button', { name: 'Create Class' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Please try again')
+    expect(screen.getByLabelText('Class Name')).toHaveValue('Retained Class')
+    expect(screen.getByLabelText('Semester / Term')).toHaveValue('Short Term')
+    expect(screen.getByLabelText('Academic year')).toHaveValue('2026-2027')
+    expect(screen.queryByLabelText(/Course/)).not.toBeInTheDocument()
+    expect(onCreated).not.toHaveBeenCalled()
+  })
+
   it('creates a class with only supported fields and no browser-generated code', async () => {
     const client = {
       get: vi.fn((path) => Promise.resolve(path.startsWith('/courses') ? { data: { items: [] } } : { data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } })),
@@ -113,8 +130,8 @@ describe('instructor class workflows', () => {
 
     await user.type(screen.getByLabelText('Class Name'), 'Programming Fundamentals')
     await user.type(screen.getByLabelText('Section (optional)'), 'BSIT 1A')
-    await user.type(screen.getByLabelText('Informal term label (optional)'), 'First Semester')
-    await user.type(screen.getByLabelText('School year (optional)'), '2026-2027')
+    await user.selectOptions(screen.getByLabelText('Semester / Term'), 'First Semester')
+    await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
     expect(screen.queryByRole('button', { name: /generate/i })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Create Class' }))
 
@@ -151,11 +168,12 @@ describe('instructor class workflows', () => {
       role: 'INSTRUCTOR',
     })
 
+    await user.click(screen.getByText('Invite Students (optional)'))
     expect(screen.getByText(/the class and all invitations will not be created/i)).toBeInTheDocument()
     await user.type(screen.getByLabelText('Class Name'), 'Programming Fundamentals')
     await user.type(screen.getByLabelText('Section (optional)'), 'BSIT 1A')
-    await user.type(screen.getByLabelText('Informal term label (optional)'), 'First Semester')
-    await user.type(screen.getByLabelText('School year (optional)'), '2026-2027')
+    await user.selectOptions(screen.getByLabelText('Semester / Term'), 'First Semester')
+    await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
     await user.type(screen.getByLabelText('University email'), 'INVITEE@SLU.EDU.PH')
     await user.click(screen.getByRole('button', { name: '+ Add Student' }))
     expect(await screen.findByText('Synthetic Invitee added.')).toBeInTheDocument()

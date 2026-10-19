@@ -2,6 +2,13 @@
 
 ## Ownership and current boundary
 
+2026-10-19: isolated MVP integration Gate A combines approved Activity 42666278,
+Group 3105cbb and Admin 332e6b5 on `codex/mvp-integration-readiness`, not on a
+protected integration/stable branch. See ../MVP_INTEGRATION_GATE_A_REPORT.md.
+Historical Phase acceptance below does not establish combined MVP acceptance.
+Only non-database verification/local checkpoints are authorized; Gate B remains
+separate, with no database migration/recovery or deployment implied.
+
 This is the single current owner for Projex frontend integration: API-client behavior, browser authentication and CSRF, role routing, frontend state ownership, mock retirement, visual preservation, frontend testing, backend-gap handling, and Phase 10 milestone tracking.
 
 The client remains React 19, Vite 8, JavaScript/JSX, React Router, and the existing CSS. Phase 10 does not authorize a TypeScript migration, a general state/query/form library, or a student/instructor redesign. Phase 10D replaces the old admin prototype with foundation/accounts, class/academic governance, and bounded operational administration using the same visual language.
@@ -9,6 +16,46 @@ The client remains React 19, Vite 8, JavaScript/JSX, React Router, and the exist
 Phase 10A completed shared infrastructure, authentication, classes, and memberships. Phase 10B completed activity/test-case authoring, student practice/submissions, and instructor assessment/release. Phase 10C completed project tasks, repository foundation, collaboration/review, read-only Git inspection, and controlled local Git access. Phase 10D completed the backend-connected admin foundation, accounts, class governance, bounded academic oversight, measured operations, controlled recovery, and audit events. Phase 10 is accepted and integrated into `development/fullstack`; Phase 11 remains a separate planning boundary. Backend records are authoritative; production routes never fall back to mocks after an API failure.
 
 ## Shared client contract
+
+### Class provisioning MVP (2026-10-19, pending review)
+
+Instructor and Admin-assisted Class creation use native required dropdowns for
+the three supported terms and consecutive academic years, without Course loading
+as a prerequisite. Admin search discards obsolete Instructor results and clears
+selection when the query changes. Failed creation retains form values; controls
+are locked during submission. Saved legacy term/year values remain visible on
+correction forms; unchanged legacy values are omitted from update payloads.
+Formal/Informal labels are removed. Optional catalog corrections remain secondary.
+
+Ordinary RequestState feedback omits diagnostic request IDs. Unknown exception,
+validation and server text use UI-owned recovery messages; the known setup resend
+cooldown still has actionable copy. HTTP errors/correlation and logging contracts
+are unchanged. Existing allowlisted business guidance remains compatible. This
+is not a claim that every old feature's field errors or boundaries were redesigned.
+
+The existing Projex brand, native controls, CSS and scoped responsive rules remain.
+No unreviewed Group implementation or generated icon kit was imported into Admin.
+
+### Overnight Admin foundation reconciliation (pending Product Owner review)
+
+The 2026-10-19 Admin simplification adds compact landing screens, secondary Course
+dialogs, exclusive sidebar selection, debounced URL/server search and event-driven
+read freshness. Ordinary errors remain separate from authorized Audit diagnostics.
+See `docs/design/ADMIN_UI_DESIGN_SYSTEM.md` for permanent content, focus, density,
+recovery and safe-refetch rules, and `docs/ADMIN_UI_SIMPLIFICATION_REVIEW.md` for
+evidence. No new backend authority, Course prerequisite or non-Admin redesign.
+
+The independent 2026-10-18 Admin slice reuses existing Phase 10D authority and
+Iteration 2 Course/offering APIs. Course catalog pagination/search are URL-owned;
+loading/failure never stands in for an empty catalog. Official correction requires
+history impact matching the displayed Class identity and version; stale Class
+forms cannot adopt a newer impact version implicitly. Late reads are discarded,
+Class context retries refresh the displayed record, and current Course selection
+survives asynchronous option loading. Teaching staff failures do not imply an
+unassigned Primary. Admin repository metadata filters include ACTIVITY_WORKSPACE
+without source or credential issuance. No new Admin policy or full milestone
+acceptance is implied; audit, tests and pending decisions are under
+`docs/ADMIN_MVP_AUDIT_AND_PLAN.md`.
 
 ### API client
 
@@ -39,9 +86,15 @@ Phase 10A completed shared infrastructure, authentication, classes, and membersh
 | `403` | Honest permission/account state |
 | `404` | Safe not-found state without existence disclosure |
 | `409` | Stale/conflict state; later forms retain unsent values |
-| `422` | Show backend-approved lifecycle/business correction |
+| `422` | UI-owned validation guidance or explicitly allowlisted business correction; retain field details in their existing form-owned contract |
 | `503` | Service/worker unavailable state, not fabricated health |
-| Unknown | Safe message plus request ID, never raw payload/stack |
+| Unknown | UI-owned safe message, never raw payload/stack or diagnostic request ID in ordinary feedback |
+
+The combined helper retains Admin setup cooldown, VALIDATION_FAILED and rate-limit
+copy alongside Group timeout/temporary-read recovery and static lifecycle messages.
+Do not restore arbitrary error.message fallbacks when resolving copy differences.
+ApiError status/code/message/details/requestId remain intact for diagnostics;
+authorized Audit details are distinct from ordinary error notices.
 
 ## State ownership
 

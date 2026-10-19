@@ -1,0 +1,90 @@
+/* Admin-only adoption of Projex's compact, light design language. */
+.admin-app-shell { color: #122350; background: #f8faff; }
+.admin-app-shell .admin-main { padding: 28px clamp(16px, 3vw, 40px) 40px; }
+.admin-app-shell .admin-page-stack { gap: 20px; }
+.admin-app-shell .admin-page-header { align-items: center; gap: 16px; padding-bottom: 16px; }
+.admin-app-shell .admin-page-header h1 { margin: 0; font-size: 28px; letter-spacing: -.025em; }
+.admin-app-shell .admin-page-header__actions { flex-direction: row; justify-content: flex-end; }
+.admin-app-shell .admin-page-header__actions > *, .admin-app-shell .admin-dialog__actions > *, .admin-app-shell .admin-pagination button { width: auto; flex: none; }
+.admin-app-shell :is(.student-primary-action, .student-outline-action) { width: auto; min-height: 40px; border-radius: 6px; box-shadow: none; font-weight: 700; }
+.admin-app-shell .admin-panel, .admin-app-shell .admin-metric { border-radius: 10px; box-shadow: none; }
+.admin-app-shell .admin-panel { overflow: visible; }
+.admin-app-shell .admin-panel__header { padding: 14px 18px; }
+.admin-app-shell .admin-panel__header h2 { margin: 0; font-size: 16px; }
+.admin-app-shell .admin-panel__body { padding: 18px; }
+.admin-app-shell .admin-metric { padding: 18px; gap: 6px; text-decoration: none; }
+.admin-app-shell a.admin-metric:hover { border-color: #0961ed; background: #f4f8ff; }
+.admin-app-shell .admin-metric p { color: #53647d; font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.admin-app-shell .admin-metric strong { font-size: 28px; font-variant-numeric: tabular-nums; }
+.admin-app-shell .admin-metric span, .admin-app-shell .admin-table td > span, .admin-app-shell .admin-breakdown-list span { color: #53647d; }
+.admin-app-shell .admin-breakdown-list { gap: 0; }
+.admin-app-shell .admin-breakdown-list > div { padding: 10px 0; }
+.admin-app-shell .admin-filter-bar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+.admin-app-shell .admin-filter-bar label { flex: 0 1 170px; min-width: 0; color: #53647d; text-transform: none; }
+.admin-app-shell .admin-filter-bar .admin-filter-search { flex: 1 1 240px; }
+.admin-app-shell .admin-filter-bar--search-only { max-width: 440px; }
+.admin-app-shell .admin-filter-bar input, .admin-app-shell .admin-filter-bar select { min-height: 40px; font-size: 14px; border-radius: 6px; }
+.admin-app-shell .admin-table { min-width: 690px; font-size: 14px; }
+.admin-app-shell .admin-table-scroll { position: relative; min-width: 0; }
+.admin-app-shell .admin-table th { font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0; color: #53647d; }
+.admin-app-shell .admin-table th, .admin-app-shell .admin-table td { padding: 12px 10px; }
+.admin-app-shell .admin-table td:first-child { display: table-cell; }
+.admin-app-shell .admin-table td { overflow-wrap: anywhere; }
+.admin-app-shell .admin-table td > span { margin-top: 4px; }
+.admin-app-shell .admin-table tbody tr:hover { background: #f8faff; }
+.admin-app-shell .admin-table .status-badge { display: inline-flex; width: fit-content; margin: 0; }
+.admin-app-shell .admin-table .student-outline-action { width: auto; min-width: 0; min-height: 36px; padding: 8px 12px; font-size: 13px; white-space: nowrap; }
+.admin-app-shell .admin-pagination { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+.admin-app-shell .admin-pagination > div { flex-direction: row; width: auto; gap: 8px; }
+.admin-app-shell .admin-row-link, .admin-app-shell .admin-secondary-links a { color: #0961ed; font-weight: 600; text-decoration: none; }
+.admin-app-shell .admin-row-link:hover, .admin-app-shell .admin-secondary-links a:hover { text-decoration: underline; }
+.admin-app-shell .admin-record-links { display: grid; }
+.admin-app-shell .admin-record-links > a { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 4px; border-bottom: 1px solid #e4ebf4; text-decoration: none; color: #122350; }
+.admin-app-shell .admin-record-links > a:last-child { border-bottom: 0; }
+.admin-app-shell .admin-record-links > a:hover { background: #f4f8ff; }
+.admin-app-shell .admin-record-links span { color: #0961ed; font-size: 14px; }
+.admin-app-shell .admin-secondary-links { display: flex; flex-wrap: wrap; gap: 16px 24px; font-size: 14px; }
+.admin-app-shell .admin-metric-grid--compact { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.admin-app-shell .admin-metric-grid--compact .admin-metric { padding: 12px; }
+.admin-app-shell .admin-metric-grid--compact strong { font-size: 19px; }
+.admin-app-shell .admin-observation-grid { gap: 10px; margin-top: 14px; }
+.admin-app-shell .admin-observation { padding: 12px; gap: 8px; }
+.admin-app-shell .admin-context-details { margin-top: 14px; font-size: 12px; color: #53647d; }
+.admin-app-shell .admin-context-details summary { cursor: pointer; width: fit-content; padding: 4px 0; }
+.admin-app-shell .admin-context-details p { line-height: 1.6; }
+.admin-app-shell :is(a, button, summary, input, select, textarea):focus-visible { outline: 3px solid #245ec7; outline-offset: 3px; }
+.admin-app-shell .student-sidebar__nav { gap: 8px; }
+.admin-app-shell .student-sidebar__group { margin-top: 12px; gap: 6px; }
+.admin-app-shell .student-sidebar__group > p { margin: 4px 10px; color: #53647d; font-size: 12px; text-transform: none; }
+.admin-app-shell .student-sidebar__link { min-height: 44px; }
+.admin-app-shell .student-sidebar__link.active { color: #0961ed; background: #eaf1ff; font-weight: 800; }
+.admin-app-shell .admin-action-menu { position: relative; }
+.admin-app-shell .admin-action-menu summary { display: flex; align-items: center; justify-content: center; gap: 10px; list-style: none; cursor: pointer; }
+.admin-app-shell .admin-action-menu summary::-webkit-details-marker { display: none; }
+.admin-app-shell .admin-action-menu > div { position: absolute; z-index: 12; right: 0; top: calc(100% + 6px); display: grid; min-width: 180px; padding: 6px; background: white; border: 1px solid #dce6f4; border-radius: 8px; box-shadow: 0 8px 24px #1223501a; }
+.admin-app-shell .admin-action-menu:not([open]) > div { display: none; }
+.admin-app-shell .admin-action-menu button { text-align: left; padding: 12px; border: 0; border-radius: 5px; color: #122350; background: white; font: inherit; cursor: pointer; }
+.admin-app-shell .admin-action-menu button:hover { background: #eaf1ff; }
+.admin-app-shell .admin-dialog { border-radius: 14px; padding: 24px; }
+.admin-app-shell .admin-dialog input[type=file] { max-width: 100%; }
+.admin-app-shell .admin-dialog__actions { flex-direction: row; }
+@media (max-width: 1100px) {
+  .admin-app-shell .admin-detail-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .admin-app-shell .admin-main { padding: 20px 14px 32px; }
+  .admin-app-shell .admin-page-header { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .admin-app-shell .admin-page-header h1 { font-size: 24px; }
+  .admin-app-shell .admin-page-header__actions { justify-content: flex-start; }
+  .admin-app-shell .admin-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-app-shell .admin-metric { padding: 14px; }
+  .admin-app-shell .admin-metric-grid--compact { grid-template-columns: minmax(0, 1fr); }
+  .admin-app-shell .admin-panel__body { padding: 14px; }
+  .admin-app-shell .admin-filter-bar label, .admin-app-shell .admin-filter-bar .admin-filter-search { flex: 1 1 100%; }
+  .admin-app-shell .admin-filter-bar input, .admin-app-shell .admin-filter-bar select { min-height: 44px; font-size: 16px; }
+  .admin-app-shell .admin-record-links > a { align-items: flex-start; }
+  .admin-app-shell .admin-table-scroll { overscroll-behavior-x: contain; }
+  .admin-app-shell .admin-dialog { padding: 20px; }
+  .admin-app-shell :is(.student-primary-action, .student-outline-action) { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .admin-app-shell *, .admin-app-shell *::before { scroll-behavior: auto; transition: none; } }

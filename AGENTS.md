@@ -6,6 +6,15 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Boundary
 
+2026-10-19: the Product Owner authorized isolated MVP integration Gate A on
+`codex/mvp-integration-readiness`, from 25235b1 with pinned Activity 42666278,
+Group 3105cbb and Admin 332e6b5. Follow `docs/CODEX_HANDOFF.md` and
+`docs/MVP_INTEGRATION_GATE_A_REPORT.md` for current reconciliation/check evidence.
+Local scoped merges, related fixes, safe non-database checks and reviewed local
+commits are permitted only in this dedicated worktree. Database tests/migrations,
+recovery, original worktree changes, push, protected merges and deployment remain
+separate gates. The Iteration 2 paragraph below is historical, not broader authority.
+
 Phase 0 through the accepted pre-tunnel Phase 11 baseline are historical. Iteration 2 is current on `iteration-2/julius-i2-1-academic-workspace`: the I2.1 core is verified and committed on that task branch, branch integration remains separate, and bounded Instructor rerun implementation is authorized but stops at pre-commit review. I2.2 has not started. `docs/team/ITERATION_2_ROADMAP.md` owns current scope and dependency order; `docs/team/ITERATION_2_CHECKLIST.md` owns current execution status. Recovery proof, Java isolation, laboratory Git networking, deployment, public exposure, and branch integration remain separate approval boundaries.
 
 ## Live-State Authority

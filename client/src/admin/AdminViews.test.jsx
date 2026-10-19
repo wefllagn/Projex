@@ -101,7 +101,8 @@ describe('Phase 10D.1 admin views', () => {
     const api = { getOverview: vi.fn().mockResolvedValue({ data: overview() }) }
     render(<MemoryRouter><AdminOverviewPage api={api} /></MemoryRouter>)
     expect(await screen.findByText('4')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Open detailed academic administration.' })).toHaveAttribute('href', '/admin/academic')
+    expect(screen.getByRole('link', { name: /Repositories 1/ })).toHaveAttribute('href', '/admin/academic/repositories')
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument()
     expect(screen.queryByText(/74%|worker healthy|integrity verified/i)).not.toBeInTheDocument()
   })
 
@@ -139,6 +140,7 @@ describe('Phase 10D.1 admin views', () => {
     const user = userEvent.setup()
     renderUsers(api)
     await screen.findByText('No users match these filters.')
+    await user.click(screen.getByText('Add User'))
     await user.click(screen.getByRole('button', { name: 'Add student' }))
     await user.type(screen.getByLabelText('Full name'), 'Synthetic Student')
     await user.type(screen.getByLabelText('University email'), 'synthetic.student@slu.edu.ph')
@@ -148,6 +150,7 @@ describe('Phase 10D.1 admin views', () => {
     expect(screen.getByLabelText('Setup link')).toHaveValue(setupLink)
     expect(api.provisionStudent).toHaveBeenCalledWith({ fullName: 'Synthetic Student', universityEmail: 'synthetic.student@slu.edu.ph' })
     await user.click(screen.getByRole('button', { name: 'Close' }))
+    await user.click(screen.getByText('Add User'))
     await user.click(screen.getByRole('button', { name: 'Add instructor' }))
     await user.type(screen.getByLabelText('Full name'), 'Synthetic Instructor')
     await user.type(screen.getByLabelText('University email'), 'instructor@slu.edu.ph')

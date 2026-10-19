@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client'
 import { Router, type RequestHandler } from 'express'
 import { z } from 'zod'
+import { schoolYearSchema } from './academic-fields.js'
 import { AppError } from '../../shared/errors/app-error.js'
 import { successResponse } from '../../shared/http/response.js'
 import { parseRequest } from '../../shared/http/validation.js'
@@ -14,7 +15,7 @@ const body = z.object({
   courseId: z.uuid(),
   officialClassCode: text(100),
   academicPeriod: z.enum(['FIRST_SEMESTER', 'SECOND_SEMESTER']),
-  schoolYear: text(20),
+  schoolYear: schoolYearSchema,
   schedule: text(200).nullable().optional(),
   days: text(100).nullable().optional(),
   room: text(100).nullable().optional(),
