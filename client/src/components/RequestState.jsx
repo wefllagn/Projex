@@ -22,7 +22,6 @@ export default function RequestState({
     <section className={compact ? 'request-state request-state--compact' : 'request-state'} role={kind === 'loading' ? 'status' : 'alert'}>
       <p>{title || fallback[0]}</p>
       <h1>{message || (error ? describeApiError(error) : fallback[1])}</h1>
-      {error?.requestId && <small>Request ID: {error.requestId}</small>}
       {action}
     </section>
   )

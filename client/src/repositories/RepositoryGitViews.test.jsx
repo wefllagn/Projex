@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
 import { CapabilityContext } from '../capabilities/capability-context.js'
-import { RepositoryGitPanel } from './RepositoryGitViews.jsx'
+import { HistoryView, BranchesView, RepositoryGitPanel } from './RepositoryGitViews.jsx'
 
 const commitA = 'a'.repeat(40)
 const commitB = 'b'.repeat(40)
@@ -47,6 +47,42 @@ afterEach(() => {
 })
 
 describe('repository Git panel', () => {
+  it('groups Group commits by local date and retains copy, selection and parent comparisons', async () => {
+    const commitC = 'c'.repeat(40)
+    const patch = 'diff --git a/a b/a\n--- a/a\n+++ b/a\n@@ -1 +1 @@\n-old\n+new\n'
+    const api = apiMock({
+      listCommits: vi.fn().mockResolvedValue({ data: [summary.latestCommit, { ...summary.latestCommit, commitId: commitA, authoredAt: '2026-07-20T00:00:00Z', subject: 'Earlier' }], pagination: { page: 1, totalPages: 2, hasNextPage: true } }),
+      getCommit: vi.fn().mockResolvedValue({ data: { ...summary.latestCommit, parentCommitIds: [commitA, commitC], files: [{ status: 'M', path: 'a' }] } }),
+      getDiff: vi.fn((_id, query) => Promise.resolve({ data: { ...query, patch } })),
+    })
+    const copy = vi.fn().mockResolvedValue()
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: copy } })
+    render(<HistoryView group api={api} repositoryId={repository.id} summary={summary} branches={[]} selectedBranch="main" onSelectBranch={vi.fn()} />)
+    await screen.findByText('Earlier')
+    expect(screen.getAllByRole('heading', { name: /Commits on/ })).toHaveLength(2)
+    expect(document.querySelector('.repository-git-commit-detail')).toBeNull()
+    expect(screen.queryByText('About Git authors')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Copy commit hash bbbbbbbb' }))
+    await screen.findByText('Copied!')
+    expect(screen.queryByText('Commit hash copied.')).not.toBeInTheDocument()
+    expect(document.querySelector('.group-copy-feedback')).toHaveAttribute('role', 'status')
+    expect(copy).toHaveBeenCalledWith(commitB)
+    fireEvent.click(screen.getByRole('button', { name: 'View commit bbbbbbbb' }))
+    expect(screen.getByRole('button', { name: 'View commit bbbbbbbb' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByLabelText('Commit diff')).toHaveTextContent('new')
+    fireEvent.change(screen.getByLabelText('Compare with parent'), { target: { value: commitC } })
+    await waitFor(() => expect(api.getDiff).toHaveBeenLastCalledWith(repository.id, { baseCommitId: commitC, targetCommitId: commitB }, expect.any(Object)))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(api.listCommits).toHaveBeenLastCalledWith(repository.id, expect.objectContaining({ page: 2 }), expect.any(Object)))
+  })
+
+  it('presents Group branches as compact rows with main protection and no invented actions', () => {
+    render(<BranchesView group summary={summary} branches={[{ ...summary.latestCommit, branchName: 'main', isDefault: true }]} />)
+    expect(screen.getByText('Protected')).toBeInTheDocument()
+    expect(screen.getByText('Default')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Merge|Pull Request/ })).not.toBeInTheDocument()
+  })
+
   it('loads real tree and text content without mock fallback', async () => {
     const api = apiMock()
     render(<RepositoryGitPanel repository={repository} api={api} />)

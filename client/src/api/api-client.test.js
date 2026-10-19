@@ -209,7 +209,7 @@ describe('API client', () => {
     [403, 'You do not have permission to perform this action.'],
     [404, 'The requested Projex record was not found.'],
     [409, 'This record changed while you were working. Refresh it before trying again.'],
-    [422, 'Lifecycle correction'],
+    [422, 'Please check the highlighted fields and try again.'],
     [503, 'This Projex service is temporarily unavailable. Please try again later.'],
   ])('provides a safe status message for HTTP %s', (status, expected) => {
     expect(describeApiError(new ApiError({ status, message: 'Lifecycle correction' }))).toBe(expected)
@@ -220,5 +220,11 @@ describe('API client', () => {
     ['REPOSITORY_ARCHIVE_BLOCKED', 'The repository cannot be archived until review and invitation blockers are resolved.'],
   ])('preserves allowlisted %s lifecycle guidance without broadening generic errors', (code, message) => {
     expect(describeApiError(new ApiError({ status: 409, code, message }))).toBe(message)
+  })
+  it.each([400, 422, 500, 505, 0])('does not expose raw messages for status %s and retains diagnostics on the error', (status) => {
+    const error = new ApiError({ status, message: 'PrismaError internal endpoint secret', requestId: 'diagnostic-uuid', details: { trace: 'private' } })
+    expect(describeApiError(error)).not.toMatch(/PrismaError|endpoint|secret|diagnostic|private/)
+    expect(error.requestId).toBe('diagnostic-uuid')
+    expect(error.details.trace).toBe('private')
   })
 })

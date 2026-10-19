@@ -532,6 +532,50 @@ describe('PostgreSQL repository collaboration', () => {
     expect(await prisma.repositoryActivity.count()).toBe(0)
   })
 
+  it('permits eight active members including the Maintainer and denies a ninth', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const students = await Promise.all(Array.from({ length: 9 }, () => createActiveUser(prisma, 'STUDENT')))
+    const owner = students[0]!
+    const { classRecord, projectTask } = await publishedTask(instructor.id, 'Eight-member group', 8)
+    for (const student of students) await createActiveMembership(prisma, classRecord.id, student.id)
+    const { repositories } = services()
+    const created = await repositories.createClassProject(owner, projectTask.id, { teamName: 'Eight places', repositoryName: 'Eight members' })
+    for (const student of students.slice(1, 8)) {
+      const invitation = await repositories.createInvitation(owner, created.id, { inviteeUserId: student.id })
+      await repositories.acceptInvitation(student, invitation.invitationId)
+    }
+    expect(await prisma.teamMember.count({ where: { teamId: created.teamId!, status: 'ACTIVE' } })).toBe(8)
+    expect(await prisma.repositoryMember.count({ where: { repositoryId: created.id, status: 'ACTIVE' } })).toBe(8)
+    expect(await prisma.teamMember.count({ where: { teamId: created.teamId!, memberRole: 'LEAD', status: 'ACTIVE' } })).toBe(1)
+    await expect(repositories.createInvitation(owner, created.id, { inviteeUserId: students[8]!.id })).rejects.toMatchObject({ code: 'TEAM_CAPACITY_REACHED' })
+    expect(await prisma.repositoryInvitation.count({ where: { repositoryId: created.id, status: 'PENDING' } })).toBe(0)
+  })
+
+  it('reserves the eighth place for pending invitations and prevents concurrent overfill', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const students = await Promise.all(Array.from({ length: 9 }, () => createActiveUser(prisma, 'STUDENT')))
+    const owner = students[0]!
+    const { classRecord, projectTask } = await publishedTask(instructor.id, 'Reserved eighth place', 8)
+    for (const student of students) await createActiveMembership(prisma, classRecord.id, student.id)
+    const { repositories } = services()
+    const created = await repositories.createClassProject(owner, projectTask.id, { teamName: 'Reserved places', repositoryName: 'Reserved capacity' })
+    for (const student of students.slice(1, 7)) {
+      const invitation = await repositories.createInvitation(owner, created.id, { inviteeUserId: student.id })
+      await repositories.acceptInvitation(student, invitation.invitationId)
+    }
+    const outcomes = await Promise.allSettled(students.slice(7).map((student) => repositories.createInvitation(owner, created.id, { inviteeUserId: student.id })))
+    expect(outcomes.filter((item) => item.status === 'fulfilled')).toHaveLength(1)
+    expect(outcomes.filter((item) => item.status === 'rejected')).toHaveLength(1)
+    expect(await prisma.teamMember.count({ where: { teamId: created.teamId!, status: 'ACTIVE' } })).toBe(7)
+    expect(await prisma.repositoryInvitation.count({ where: { repositoryId: created.id, status: 'PENDING' } })).toBe(1)
+    const reserved = await prisma.repositoryInvitation.findFirstOrThrow({ where: { repositoryId: created.id, status: 'PENDING' } })
+    const blocked = students.find((student) => students.slice(7).includes(student) && student.id !== reserved.inviteeId)!
+    await expect(repositories.createInvitation(owner, created.id, { inviteeUserId: blocked.id })).rejects.toMatchObject({ code: 'TEAM_CAPACITY_REACHED' })
+    await repositories.acceptInvitation(students.find((student) => student.id === reserved.inviteeId)!, reserved.id)
+    expect(await prisma.teamMember.count({ where: { teamId: created.teamId!, status: 'ACTIVE' } })).toBe(8)
+    expect(await prisma.repositoryMember.count({ where: { repositoryId: created.id, status: 'ACTIVE' } })).toBe(8)
+  })
+
   it('serializes duplicate invitations and enforces pending-invitation capacity', async () => {
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const owner = await createActiveUser(prisma, 'STUDENT')

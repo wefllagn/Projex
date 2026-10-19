@@ -13,6 +13,22 @@ const first = {
 }
 
 describe('recorded repository activity', () => {
+  it('keeps Group activity concise without hiding real events or push totals', async () => {
+    const api = { listRecordedActivity: vi.fn().mockResolvedValue({ data: { ...first, events: [first.events[1]], contributions: [] } }) }
+    const view = render(<RepositoryActivityPanel compact repositoryId="repo-1" api={api} />)
+    expect(await screen.findByText('Repository provisioned')).toBeInTheDocument()
+    expect(screen.getByText('No Git pushes yet.')).toBeInTheDocument()
+    expect(screen.queryByText('Accepted pushes by user')).not.toBeInTheDocument()
+    expect(screen.queryByText('About push activity')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument()
+    view.unmount()
+    api.listRecordedActivity.mockResolvedValue({ data: first })
+    render(<RepositoryActivityPanel compact repositoryId="repo-1" api={api} />)
+    expect(await screen.findByText('Accepted push')).toBeInTheDocument()
+    expect(screen.getByText('1 accepted push')).toBeInTheDocument()
+    expect(screen.getByText('Repository provisioned')).toBeInTheDocument()
+    expect(screen.queryByText('No Git pushes yet.')).not.toBeInTheDocument()
+  })
   it('shows authenticated push evidence without projecting raw metadata or percentages and pages explicitly', async () => {
     const api = { listRecordedActivity: vi.fn()
       .mockResolvedValueOnce({ data: first })

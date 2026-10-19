@@ -4,6 +4,17 @@ Status: APPROVED / LOCKED FOR MVP
 Approved by: Product Owner
 Date: 2026-10-18
 
+## Product Owner scope clarification (2026-10-19)
+
+Native Git clone/commit/push is sufficient for Group Repository MVP. Browser
+editing of .java/.md is deferred to a later milestone. Preserve
+architecture/GROUP_REPOSITORY_BROWSER_EDITING_PROPOSAL.md with unresolved queued
+source retention, job expiry and ambiguous commit recovery. Do not implement its
+schema, commit-job system or write endpoints now. UI acceptance remains separate.
+Demo database recovery is also deferred; preserve existing Git storage and follow
+DEMO_DATABASE_RECOVERY_ISSUE.md. The next development milestone is the previously
+approved Admin and Instructor Class Provisioning MVP, not browser editing.
+
 ## Identity and domain
 
 Familiar GitHub/GitLab concepts, existing light Projex design and academic context.

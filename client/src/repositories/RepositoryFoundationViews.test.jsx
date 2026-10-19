@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext } from '../auth/auth-context.js'
 import { ClassContext } from '../classes/class-context.js'
 import { RepositoryFoundationDetail, StudentRepositoryCatalog } from './RepositoryFoundationViews.jsx'
+import { ApiError } from '../api/api-client.js'
 
 const selectedClass = { id: 'class-1', className: 'Synthetic Class', status: 'ACTIVE' }
 const project = { id: 'task-1', classId: 'class-1', title: 'Project', instructions: 'Build it', dueDate: '2026-12-01T00:00:00.000Z', dueState: 'OPEN', maxTeamSize: 4, status: 'PUBLISHED', createdAt: '2026-08-01T00:00:00.000Z', updatedAt: '2026-08-01T00:00:00.000Z', createdBy: { userId: 'instructor-1', fullName: 'Synthetic Instructor' } }
@@ -39,6 +40,21 @@ function repositoryApiMock(overrides = {}) {
 afterEach(() => vi.useRealTimers())
 
 describe('Phase 10C.1 repository views', () => {
+  it('retains a loaded Group on transient metadata failure but hides it on confirmed denial', async () => {
+    const api = repositoryApiMock({ getRepository: vi.fn().mockResolvedValue({ data: { ...repository, storageStatus: 'READY' } }) })
+    const projects = { getProjectTask: vi.fn().mockResolvedValue({ data: project }) }
+    wrapper(<Routes><Route path="/student/projects/:projectTaskId/repositories/:repositoryId" element={<RepositoryFoundationDetail api={api} projects={projects} />} /></Routes>, '/student/projects/task-1/repositories/repo-1?classId=class-1')
+    await screen.findByRole('heading', { name: 'team-repo' })
+    api.getRepository.mockRejectedValueOnce(new ApiError({ status: 503 }))
+    fireEvent.click(screen.getByText('More'))
+    fireEvent.click(screen.getByRole('button', { name: 'Reload repository' }))
+    await screen.findByRole('button', { name: 'Retry refresh' })
+    expect(screen.getByRole('heading', { name: 'team-repo' })).toBeInTheDocument()
+    api.getRepository.mockRejectedValueOnce(new ApiError({ status: 404 }))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry refresh' }))
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'team-repo' })).not.toBeInTheDocument())
+    expect(screen.getByText('The requested Projex record was not found.')).toBeInTheDocument()
+  })
   it('creates a Student class workspace from an active enrolled Class without academic submission', async () => {
     const workspace = { ...repository, id: 'workspace-1', classId: selectedClass.id, projectTaskId: null, teamId: null, repositoryType: 'CLASS_WORKSPACE', visibility: 'PRIVATE' }
     const api = repositoryApiMock({
@@ -108,8 +124,11 @@ describe('Phase 10C.1 repository views', () => {
     })
     const projects = { getProjectTask: vi.fn().mockResolvedValue({ data: project }) }
     wrapper(<Routes><Route path="/student/projects/:projectTaskId/repositories/:repositoryId" element={<RepositoryFoundationDetail api={api} projects={projects} />} /></Routes>, '/student/projects/task-1/repositories/repo-1?classId=class-1')
-    expect(await screen.findByText(/Repository read-only · Pending/)).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByText(/Repository read-only · Ready/)).toBeInTheDocument(), { timeout: 3500 })
+    expect(await screen.findByText(/^(Pending|Provisioning)$/)).toBeInTheDocument()
+    expect(screen.getByText('Git read-only')).toBeInTheDocument()
+    await waitFor(() => expect(api.getRepository).toHaveBeenCalledTimes(3), { timeout: 3500 })
+    await waitFor(() => expect(screen.queryByText(/^(Pending|Provisioning)$/)).not.toBeInTheDocument())
+    expect(screen.getByText('Git read-only')).toBeInTheDocument()
     expect(api.getRepository).toHaveBeenCalledTimes(3)
     expect(screen.queryByText('Copy clone URL')).not.toBeInTheDocument()
     expect(screen.queryByText('New branch')).not.toBeInTheDocument()
@@ -120,8 +139,10 @@ describe('Phase 10C.1 repository views', () => {
     const api = repositoryApiMock({ getRepository: vi.fn().mockResolvedValue({ data: archived }) })
     const projects = { getProjectTask: vi.fn().mockRejectedValue({ status: 404 }) }
     wrapper(<Routes><Route path="/student/repositories/:repositoryId" element={<RepositoryFoundationDetail api={api} projects={projects} />} /></Routes>, '/student/repositories/repo-1')
-    expect(await screen.findByText(/Repository read-only · Failed/)).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Project' })).toBeInTheDocument()
+    expect(await screen.findByText('Failed')).toBeInTheDocument()
+    expect(screen.getByText('Archived')).toBeInTheDocument()
+    expect(screen.getByText('Git read-only')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: repository.repositoryName })).toBeInTheDocument()
     expect(screen.queryByText(/Prelim Group Project/i)).not.toBeInTheDocument()
   })
 
