@@ -1,10 +1,52 @@
 # Projex Codex Handoff
 
-## Current milestone — isolated MVP integration Gate A
+## Current milestone — macOS compatibility slice for Gate B
 
-Product Owner authorization: 2026-10-19, Gate A only. Branch:
-`codex/mvp-integration-readiness`, in its dedicated managed worktree.
-Current HEAD/status are owned by Git, not the historical handoff excerpts below.
+Product Owner authorization: 2026-10-20, bounded compatibility fixes only, on
+`codex/mvp-gate-b-macos`. Starting transferred handoff:
+`5da3ef767fa29a0c01294788ee941dc885bc0fbc`, whose parent is Gate A integration
+`870e6b93d7b18606a93ff4006653aaab49b5a798`. Git owns current HEAD/status; compatibility
+changes remain unstaged and uncommitted pending separate authorization.
+
+The original Mac checkout and its PostgreSQL/storage remain preserved. The
+continuation worktree is `projex-gate-b-macos` under the chat workspace, separate
+from the original checkout. Reuse the existing local dependencies; no package
+installation/upgrade or private environment copy was required.
+
+Implemented in the compatibility slice:
+
+- Platform-aware Git detection retains Windows `.windows.N` validation and the
+  `2.55.0` minimum; macOS accepts verified upstream/Homebrew release output at the
+  same minimum. Unknown vendor formats/host platforms remain unsupported.
+- Successful environment fixtures use native absolute paths; negative cases keep
+  production validation strict. Production `env.ts` is unchanged.
+- Unit-test workers receive a canonical existing temporary root; filesystem link
+  rejection, ownership and containment guards remain unchanged.
+- Windows long paths and the Git environment allowlist are retained. No academic
+  assessment, transport authorization, schema, dependency or frontend change.
+
+Actual October 20 macOS evidence: targeted Git/config/path/operations 50 tests;
+full server unit suite 43 files / 326 tests passed; backend lint, both type checks
+and build passed. The full unit run used the disclosed review-only loopback
+preload and approved socket access, with canonical temp supplied by Vitest itself.
+Actual canonical Homebrew Git 2.55.0 detection and a temporary empty-bare smoke
+check passed without a database; the owned fixture was removed. Targeted client
+Admin/API regression: 2 files / 61 tests passed, including duplicate-email
+recovery. Frontend source is unchanged; the earlier October 20 Mac 67-file /
+486-test full run and client lint/build remain prior evidence, not new runs.
+
+Windows PostgreSQL 114 / Java 26 / native Git 11 / Smart HTTP 12 and the reported
+browser flows are historical user-supplied handoff results, not Mac runs. No Mac
+database-dependent suite or browser walkthrough has run. Real Windows execution
+was not repeated; platform-policy Windows cases are tested on this Mac.
+
+The Product Owner transfers this report to the separate Development Reviewer;
+preserve the Developer/checker arrangement in the existing team workflow. This
+technical status update changes no governance or approval policy.
+
+## Historical Gate A integration
+
+The October 19 Gate A reconciliation ran on `codex/mvp-integration-readiness`.
 
 Approved pinned inputs, integrated in this order:
 
@@ -22,11 +64,10 @@ parents, actual conflicts, resolution details and executed verification.
 
 ## Current authority and next gate
 
-Gate A permits this isolated local reconciliation, related fixes, safe unit/
-component checks, lint, type checks, builds and reviewed local checkpoints.
-It does NOT permit push, merge to development/fullstack or main, original
-worktree/branch changes, destructive database suites, migrations, database
-recovery, deployment or feature expansion.
+Current authorization permits only the described compatibility changes, related
+safe checks and technical documentation. It does NOT permit staging, committing,
+push, any merge, original worktree changes, database resources/records, destructive
+suites, migrations, recovery, deployment or new features.
 
 Gate B is separate. [The exact resource and safety proposal](MVP_INTEGRATION_GATE_B_PLAN.md)
 requires approval before any cluster/database/fixture creation, migration or
@@ -70,10 +111,12 @@ Git in place. [The recovery issue](DEMO_DATABASE_RECOVERY_ISSUE.md) records the
 destructive shared-test-data incident; native Git alone cannot recover DB history.
 Do not restore, reconstruct, reseed or overwrite original storage.
 
-Combined real PostgreSQL/cookie/CSRF, Java, Git/Smart HTTP and role/viewport proof
-remain Gate B work. Group's latest interrupted Smart HTTP and current search-
-popover 1366/wide/390px walkthrough are not passing results. Independent historical
-matrices and older screenshots are not combined verification or final acceptance.
+Combined Mac PostgreSQL/cookie/CSRF, Java, Git/Smart HTTP and role/viewport proof
+remain Gate B work under a separately approved resource plan. Explicitly verify
+the Activity publishing confirmation dialog (the historical API workaround is
+not dialog proof), all seven Admin screens, duplicate-email recovery against the
+review API, and Group search/recovery at 1366/wide/390px. Independent Windows
+matrices and older screenshots are not Mac proof or final acceptance.
 Existing frontend bundle-size warnings remain outside this integration's scope.
 
 ## Historical milestone evidence — not live worktree status

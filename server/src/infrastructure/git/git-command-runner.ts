@@ -17,6 +17,9 @@ export function parseGitVersion(output: string): DetectedGitVersion {
     output.trim(),
   )
   if (!match) throw new GitInfrastructureError('GIT_VERSION_UNRECOGNIZED')
+  if (match.slice(1).some((part) => part !== undefined && !Number.isSafeInteger(Number(part)))) {
+    throw new GitInfrastructureError('GIT_VERSION_UNRECOGNIZED')
+  }
   return {
     raw: output.trim().slice('git version '.length),
     major: Number(match[1]),
@@ -26,13 +29,28 @@ export function parseGitVersion(output: string): DetectedGitVersion {
   }
 }
 
+function meetsMinimumGitVersion(version: DetectedGitVersion): boolean {
+  return version.major > 2 ||
+    (version.major === 2 &&
+      (version.minor > 55 || (version.minor === 55 && version.patch >= 0)))
+}
+
 export function assertSupportedGitForWindows(version: DetectedGitVersion): void {
-  const supported =
-    version.windowsBuild !== null &&
-    (version.major > 2 ||
-      (version.major === 2 &&
-        (version.minor > 55 || (version.minor === 55 && version.patch >= 0))))
-  if (!supported) throw new GitInfrastructureError('GIT_VERSION_UNSUPPORTED')
+  if (version.windowsBuild === null || !meetsMinimumGitVersion(version)) {
+    throw new GitInfrastructureError('GIT_VERSION_UNSUPPORTED')
+  }
+}
+
+export function assertSupportedGitVersion(
+  version: DetectedGitVersion,
+  platform: NodeJS.Platform = process.platform,
+): void {
+  if (platform === 'win32') return assertSupportedGitForWindows(version)
+  // Verified macOS profile: upstream release output, as emitted by Homebrew Git.
+  // Other vendor formats and other operating systems remain unsupported.
+  if (platform !== 'darwin' || version.windowsBuild !== null || !meetsMinimumGitVersion(version)) {
+    throw new GitInfrastructureError('GIT_VERSION_UNSUPPORTED')
+  }
 }
 
 const INHERITED_ENVIRONMENT_ALLOWLIST = new Set([
@@ -155,7 +173,7 @@ export function createGitCommandRunner(options: {
     await validateExecutable()
     const result = await run(['--version'])
     const version = parseGitVersion(result.stdout)
-    assertSupportedGitForWindows(version)
+    assertSupportedGitVersion(version)
     return version
   }
 

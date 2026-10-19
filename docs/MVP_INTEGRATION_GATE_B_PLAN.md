@@ -1,5 +1,77 @@
 # Gate B — exact isolated verification resources proposed for approval
 
+## macOS continuation proposal — October 20, 2026
+
+PROPOSAL ONLY. The compatibility slice permits no cluster, database, migration,
+fixture account or database-dependent test. The Windows inventory below is
+historical and is not a Mac resource approval. This section carries forward the
+Mac onboarding proposal into this existing source of truth. No resource below
+has been created. Recheck absence/ports/canonical paths immediately before any
+approved execution; observations are not reservations.
+
+Root **R = `/private/tmp/projex-mvp-gate-b-macos-20261020-5da3ef7`**.
+
+| Resource | Exact proposed Mac identity |
+| --- | --- |
+| Exclusive root | R, mode 0700, new task ownership marker |
+| New cluster / private socket | R/pgdata; R/pgsocket |
+| PostgreSQL listener | 127.0.0.1:55483 only |
+| Private log / PID inventory | R/private/postgres.log; R/private/processes.json |
+| New cluster operator | projex_macos_gate_b_operator; private generated authentication |
+| Destructive DB / restricted owner | projex_test / projex_macos_gate_b_test |
+| Separate review DB / restricted owner | projex_mvp_review / projex_macos_gate_b_review |
+| Suite temporary parent | R/test-temp, supplied process-locally as TMPDIR/TMP/TEMP |
+| Guarded Git suite parent | R/tests/projex_git_test; existing UUID/sentinel cleanup |
+| Review Git / Java / mail | R/review/git; R/review/java-jobs; R/review/mail |
+| Review client / API | 127.0.0.1:5192 / 127.0.0.1:3321 |
+| Private new fictional logins | R/private/review-credentials.json, mode 0600 |
+
+Verified installed tool candidates, to be re-resolved/rechecked before execution:
+
+- PostgreSQL 18.6 under `/opt/homebrew/Cellar/postgresql@18/18.6/bin/`.
+- Git `/opt/homebrew/Cellar/git/2.55.0/bin/git` and backend
+  `/opt/homebrew/Cellar/git/2.55.0/libexec/git-core/git-http-backend`.
+- JDK binaries under
+  `/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home/bin/`.
+
+Use canonical files rather than Homebrew symlinks for Smart HTTP's existing
+plain-file checks. The compatibility slice verified real Homebrew detection and
+empty-bare execution only; database-backed Git/transport remains unverified.
+Use canonical `/private/...` temporary paths without relaxing path guards.
+
+All mandatory identity/cleanup controls in the original proposal below still
+apply. Additional exact Mac preconditions:
+
+- R must be new, plain and disjoint from every checkout and existing runtime
+  root. Never reuse a collision, follow a link or kill a conflicting listener.
+- Create only the approved new cluster with SCRAM and private authentication;
+  do not touch the running Homebrew service. Independently attest control system
+  ID, canonical data directory, PID/start and listener, then operator SQL settings
+  and restricted-role database/user identities before migrations and every suite.
+  Explicitly reject the original `/opt/homebrew/var/postgresql@18`, system ID
+  `7681333450351963468` and port 5432. Do not connect to the original cluster.
+- Test/review roles remain non-superusers without CREATEDB/CREATEROLE. Revoke
+  PUBLIC database CONNECT, grant only each role's own DB access, and verify
+  cross-database denial. Operator credentials never enter suite/review processes.
+- Explicit child environments must exclude original `.env`, original credentials
+  and review credentials from destructive suites. Separate review roots from
+  all suite temp/storage roots. Inspect active consumers before each serial run.
+- Approval must explicitly cover all 24 existing committed migrations on these
+  two new databases, migrate-deploy in the existing runners, serial PostgreSQL /
+  Java / Git / Smart HTTP suites, fictional fixtures and loopback browser proof.
+  Stop on drift or privilege issues; no reset, db-push or silent escalation.
+- The reviewed source candidate will include compatibility changes after their
+  acceptance. Verify its exact HEAD and reviewed diff; the root's `5da3ef7`
+  suffix identifies its proposal origin, not permission to test stale source.
+- Stop only recorded task-owned processes; preserve private review evidence.
+  Whole-root/cluster deletion and all original storage cleanup remain separate.
+
+This inventory remains technically valid after the bounded compatibility fix;
+availability must be rechecked and resource execution still needs explicit
+Product Owner approval. No new approval is implied by passing unit checks.
+
+## Historical Windows Gate A proposal — not Mac authority
+
 2026-10-19. PROPOSAL ONLY. None of these resources was created or started in
 Gate A. No migration, database test, fixture reconstruction or cleanup ran.
 The combined code passed the non-database checks in MVP_INTEGRATION_GATE_A_REPORT.
