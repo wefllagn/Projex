@@ -1,0 +1,29 @@
+@import '../design/projex-tokens.css';
+.group-project-detail { align-items: start; gap: var(--px-space-6); }
+.group-project-detail.student-project-detail-layout .student-work-rail { margin-top: 32px; min-width: 0; }
+.group-project-detail .student-detail-heading { align-items: start; gap: 12px; }
+.group-project-detail .student-project-detail-card { min-height: 0; }
+.group-project-detail .student-project-instructions p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.group-project-detail .group-project-collaboration { padding: 20px; display: block; }
+.group-project-collaboration h2 { overflow-wrap: anywhere; margin: 10px 0; font-size: 20px; line-height: 1.35; }
+.group-project-collaboration p { margin: 10px 0; }
+.group-project-collaboration .student-primary-action { margin-top: 16px; display: flex; justify-content: center; align-items: center; min-height: 42px; }
+.group-project-states { display: flex; flex-wrap: wrap; gap: 8px; }
+.group-project-detail .group-help { font-size: 13px; color: var(--px-muted); line-height: 1.6; }
+.group-class-metadata { padding: 16px 4px; font-size: 13px; }
+.group-class-metadata summary { cursor: pointer; color: var(--px-muted); }
+.group-project-detail .repository-invitation-inbox { border: 0; padding: 0; box-shadow: none; margin: 0; }
+.group-project-detail .repository-invitation-list article { padding: 12px 0; display: flex; flex-wrap: wrap; gap: 8px; border: 0; border-top: 1px solid var(--px-border); border-radius: 0; box-shadow: none; background: transparent; }
+.group-project-detail .repository-invitation-list em { width: fit-content; padding: 4px 8px; border-radius: 6px; color: var(--px-warning); background: var(--px-warning-bg); }
+.group-project-detail .repository-inline-actions { display: flex; gap: 8px; }
+.group-project-detail .project-repository-create label { display: block; margin-top: 12px; }
+.group-project-detail .project-repository-create { display: block; }
+.group-project-detail input, .group-project-detail textarea { box-sizing: border-box; width: 100%; min-width: 0; }
+.group-project-detail textarea { min-height: 64px; }
+.group-project-detail :is(button,a,input,textarea,summary):focus-visible { outline: 3px solid var(--px-focus); outline-offset: 3px; }
+@media (max-width: 1100px) {
+  .group-project-detail.student-detail-layout { display: grid; grid-template-columns: minmax(0,1fr); }
+  .group-project-detail .student-work-rail { grid-row: 1; }
+  .group-project-detail.student-project-detail-layout .student-work-rail { margin-top: 0; }
+  .group-project-detail .student-work-rail a, .group-project-detail button { min-height: 44px; }
+}

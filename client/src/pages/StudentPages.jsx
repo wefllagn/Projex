@@ -337,7 +337,7 @@ function AssignmentSubTabs({ active }) {
       </NavLink>
       <NavLink to={classHref('/student/projects', selectedClass?.id)} className={active === 'projects' ? 'is-active' : undefined}>
         <span aria-hidden="true" />
-        Group Projects
+        My Projects
       </NavLink>
     </div>
   )
@@ -602,11 +602,11 @@ function DeferredStudentPage({ title, message }) {
 }
 
 function ProjectListPage() {
-  return <StudentClassPage activeTab="assignments"><StudentProjectList /></StudentClassPage>
+  return <StudentClassPage activeTab="assignments" deferredLabel=""><AssignmentSubTabs active="projects" /><StudentProjectList /></StudentClassPage>
 }
 
 function ProjectDetailPage() {
-  return <StudentClassPage activeTab="assignments" wide><StudentProjectDetail /></StudentClassPage>
+  return <StudentClassPage activeTab="assignments" deferredLabel="" wide><StudentProjectDetail /></StudentClassPage>
 }
 
 function RepositoryCatalogPage({ archived = false }) {

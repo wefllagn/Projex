@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import RequestState from '../components/RequestState.jsx'
+import { ProjexIcon } from '../design/ProjexIcon.jsx'
 import { formatProjectDate } from '../projects/project-projections.js'
 import { repositoryActivityProjection, repositoryContributionProjection } from './repository-projections.js'
 
-export function RepositoryActivityPanel({ repositoryId, api }) {
+export function RepositoryActivityPanel({ repositoryId, api, compact = false }) {
   const [page, setPage] = useState(1)
   const [state, setState] = useState({ status: 'loading', events: [], contributions: [], pagination: null, error: null })
   const latestRequest = useRef(0)
@@ -34,16 +35,16 @@ export function RepositoryActivityPanel({ repositoryId, api }) {
   }, [load])
 
   return (
-    <section className="student-repo-card repository-activity-panel">
-      <div className="student-side-card-heading"><h2>Recorded Repository Activity</h2><button type="button" className="student-outline-action" onClick={() => load()}>Refresh</button></div>
-      <p>These are server-recorded provisioning and accepted push operations. Push counts identify authenticated Projex users, not Git commit authors or code contributions.</p>
+    <section className={compact ? "student-repo-card repository-activity-panel group-activity" : "student-repo-card repository-activity-panel"}>
+      <div className="student-side-card-heading"><h2>{compact ? 'Activity' : 'Recorded Repository Activity'}</h2>{!compact && <button type="button" className="student-outline-action" onClick={() => load()}>Refresh</button>}</div>
+      {!compact && <p>These are server-recorded provisioning and accepted push operations. Push counts identify authenticated Projex users, not Git commit authors or code contributions.</p>}
       {state.status === 'loading' && <RequestState kind="loading" compact message="Loading recorded activity." />}
       {state.status === 'error' && <RequestState kind="unavailable" compact error={state.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />}
       {state.status === 'ready' && <>
-        {state.events.length === 0 ? <RequestState kind="empty" compact message="No supported repository operations have been recorded yet." /> : <ul className="repository-activity-list">{state.events.map((event) => <li key={event.id}><strong>{event.activityType === 'PUSH' ? 'Accepted push' : 'Repository provisioned'}</strong><span>{event.actor?.fullName || 'Projex system'}</span><time dateTime={event.activityAt}>{formatProjectDate(event.activityAt)}</time></li>)}</ul>}
+        {state.events.length === 0 ? (!compact && <RequestState kind="empty" compact message="No supported repository operations have been recorded yet." />) : <ul className="repository-activity-list">{state.events.map((event) => <li key={event.id}>{compact && <ProjexIcon name={event.activityType === 'PUSH' ? 'submission' : 'repository'} size={18} />}<strong>{event.activityType === 'PUSH' ? 'Accepted push' : 'Repository provisioned'}</strong><span>{event.actor?.fullName || 'Projex system'}</span><time dateTime={event.activityAt}>{formatProjectDate(event.activityAt)}</time></li>)}</ul>}
         {state.pagination?.totalPages > 1 && <nav className="activity-pagination" aria-label="Repository activity pages"><button type="button" className="student-outline-action" disabled={!state.pagination.hasPreviousPage} onClick={() => setPage((current) => current - 1)}>Previous</button><span>Page {page} of {state.pagination.totalPages}</span><button type="button" className="student-outline-action" disabled={!state.pagination.hasNextPage} onClick={() => setPage((current) => current + 1)}>Next</button></nav>}
-        <h3>Accepted pushes by user</h3>
-        {state.contributions.length === 0 ? <p>No authenticated pushes have been recorded.</p> : <ul className="repository-activity-list">{state.contributions.map((item) => <li key={item.userId}><strong>{item.fullName}</strong><span>{item.acceptedPushes} accepted {item.acceptedPushes === 1 ? 'push' : 'pushes'}</span></li>)}</ul>}
+        {(!compact || state.contributions.length > 0) && <h3 title={compact ? 'Pushes identify signed-in users, not verified code authorship or grades.' : undefined}>{compact ? 'Pushes by member' : 'Accepted pushes by user'}</h3>}
+        {state.contributions.length === 0 ? <p className={compact ? 'group-help' : undefined}>{compact ? 'No Git pushes yet.' : 'No authenticated pushes have been recorded.'}</p> : <ul className="repository-activity-list">{state.contributions.map((item) => <li key={item.userId}><strong>{item.fullName}</strong><span>{item.acceptedPushes} accepted {item.acceptedPushes === 1 ? 'push' : 'pushes'}</span></li>)}</ul>}
       </>}
     </section>
   )

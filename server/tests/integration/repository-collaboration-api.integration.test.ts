@@ -253,6 +253,10 @@ describe('Phase 7 HTTP and PostgreSQL workflow', () => {
     })
     expect(created.body.data).not.toHaveProperty('storagePath')
     const repositoryId = created.body.data.id as string
+    await request(app).get(`/api/v1/repositories/${repositoryId}/group-context`).expect(401)
+    const groupContext = await ownerAgent.get(`/api/v1/repositories/${repositoryId}/group-context`).expect(200)
+    expect(groupContext.body.data).toMatchObject({ repositoryId, currentRole: 'MAINTAINER', permissions: { canRead: false, canWrite: false, canManageMembers: true } })
+    expect(JSON.stringify(groupContext.body)).not.toMatch(/storagePath|secretHash|gitAccess|classCode/)
 
     await request(app).get(`/api/v1/repositories/${repositoryId}/activity`).expect(401)
     await prisma.repositoryActivity.create({ data: {
@@ -274,6 +278,7 @@ describe('Phase 7 HTTP and PostgreSQL workflow', () => {
       .get(`/api/v1/repositories/${repositoryId}`)
       .expect(200)
     expect(classmateView.body.data.visibility).toBe('CLASS_ONLY')
+    expect((await classmateAgent.get(`/api/v1/repositories/${repositoryId}/group-context`).expect(200)).body.data).toMatchObject({ currentRole: 'METADATA_ONLY', permissions: { canRead: false, canWrite: false, canManageMembers: false, canViewActivity: false } })
     await classmateAgent.get(`/api/v1/activities/${activity.id}/repository`).expect(404)
     await classmateAgent.get(`/api/v1/repositories/${repositoryId}/activity`).expect(404)
 

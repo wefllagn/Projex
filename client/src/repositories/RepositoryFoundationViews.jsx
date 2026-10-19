@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, useParams, useSearchParams } from 'react-router-dom'
-import { ApiError, describeApiError } from '../api/api-client.js'
+import { ApiError, describeApiError, isTemporaryApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref } from '../classes/class-links.js'
@@ -14,6 +14,7 @@ import useBoundedPolling from '../submissions/use-bounded-polling.js'
 import { repositoryApi } from './repository-api.js'
 import { RepositoryGitPanel } from './RepositoryGitViews.jsx'
 import { RepositoryActivityPanel } from './RepositoryActivityPanel.jsx'
+import { GroupRepositoryView } from './GroupRepositoryView.jsx'
 import {
   RepositoryCollaborationPanel,
   RepositoryLifecyclePanel,
@@ -65,7 +66,7 @@ function RepositoryRow({ repository, role = 'student' }) {
       ? 'Class workspace'
       : repository.repositoryType === 'ACTIVITY_WORKSPACE'
         ? 'Activity workspace'
-        : 'Class project repository'
+        : repository.groupRelationship === 'MY_GROUP' ? 'My group repository' : 'Class metadata · no source access'
   const content = <>
       <span className="repository-catalog-row__identity">
         <span className="student-repository-row-icon" aria-hidden="true" />
@@ -269,7 +270,9 @@ export function RepositoryFoundationDetail({ role = 'student', api = repositoryA
       setState({ identity: repositoryId, status: 'ready', repository, project, projectUnavailable, activity, activityUnavailable, error: null })
       setPollingStopped(false)
     } catch (error) {
-      if (error?.name !== 'AbortError') setState({ identity: repositoryId, status: 'error', repository: null, project: null, projectUnavailable: false, activity: null, activityUnavailable: false, error })
+      if (error?.name !== 'AbortError') setState((current) => current.identity === repositoryId && current.status === 'ready' && current.repository?.repositoryType === 'CLASS_PROJECT' && (!projectTaskId || current.project?.id === projectTaskId) && (!selectedClass || current.project?.classId === selectedClass.id) && isTemporaryApiError(error)
+        ? { ...current, refreshError: error }
+        : { identity: repositoryId, status: 'error', repository: null, project: null, projectUnavailable: false, activity: null, activityUnavailable: false, error })
     }
   }, [activities, api, projectTaskId, projects, repositoryId, role, selectedClass])
 
@@ -316,6 +319,7 @@ export function RepositoryFoundationDetail({ role = 'student', api = repositoryA
   const repository = current.repository
   const activityWorkspace = repository.repositoryType === 'ACTIVITY_WORKSPACE'
   const owner = auth.user?.id === repository.owner.userId
+  if (repository.repositoryType === 'CLASS_PROJECT') return <GroupRepositoryView key={repository.id} repository={repository} project={current.project} role={role} api={api} classApi={classApi} gitApi={gitApi} onReload={load} metadataError={current.refreshError} />
   const backPath = activityWorkspace && current.activity
     ? classHref(role === 'instructor' ? `/instructor/activity/${repository.activityId}/settings` : `/student/activity/${repository.activityId}`, current.activity.classId)
     : role === 'instructor'

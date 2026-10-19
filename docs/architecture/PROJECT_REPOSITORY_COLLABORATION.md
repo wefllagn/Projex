@@ -1,5 +1,79 @@
 # Project and Repository Collaboration
 
+## Approved Group Repository MVP extension (2026-10-18)
+
+Product Owner clarification (2026-10-19): native Git clone/commit/push is
+sufficient for Group MVP. Browser .java/.md editing is deferred; the retained
+GROUP_REPOSITORY_BROWSER_EDITING_PROPOSAL.md is not an approved schema/job/write
+contract. Source retention, job expiry and ambiguous commit recovery remain
+unresolved future decisions. Current file navigation uses bounded filename search
+separately from explicit exact-path fallback; unsupported Add File is hidden.
+Demo database restoration/reconstruction is separately deferred; see
+../DEMO_DATABASE_RECOVERY_ISSUE.md. Existing Git storage must remain untouched.
+
+`docs/GROUP_REPOSITORY_MVP_DECISIONS.md` locks Student-led Team formation,
+Maintainer (LEAD/OWNER), Developer (MEMBER), native local merge and read-only
+Primary/active Co-Instructor Git oversight. Instructor assignment remains deferred.
+These current details supersede historical exact-owner-only staff wording below.
+
+`GET /repositories/:repositoryId/group-context` returns only academic identity,
+current teaching-staff display names, active member count, current product role,
+and effective source/member/review capabilities. Git capabilities reuse
+`evaluateGitPermission`; action endpoints still authorize independently. Source
+capabilities require READY storage; membership/review capabilities are distinct.
+No storage locator, credential/verifier, email, join code or raw Git access record
+is projected. Class-visible nonmembers receive metadata-only capabilities.
+
+Student catalog `groupScope=MINE` selects active repository memberships within
+current Class eligibility; `CLASS_METADATA` selects eligible same-Class metadata
+without repository membership. Removed repository members are excluded from both
+catalog and detail. Former Class members lose group metadata/activity authority,
+including owner shortcuts; current teaching staff retain academic oversight.
+Other repository types retain their existing policies.
+
+Group UI is Code-first with academic header, five tabs and automatic-scope Code
+menu. README is bounded escaped plain text, not executable HTML/Markdown. Recorded
+accepted pushes are authenticated account signals, never verified authored commits
+or grades. Existing review freeze and local Git/ref protections remain unchanged.
+
+The approved compact UX work order retains that backend contract: one Group
+route with Code, Commits, Branches, Members and Activity tabs; commit-pinned
+folder/breadcrumb and bounded inline file inspection; escaped root README;
+compact Members with an accessible Class-roster invitation dialog; header
+ready/resubmit confirmation and existing Instructor review in a dialog.
+Invitation eligibility and pending reservations remain server-authorized.
+New Group Project forms default to eight members including the Maintainer, with
+the existing 2–8 selector. Existing project limits and the database default of
+four are unchanged; this presentation change requires no migration. Product
+Owner visual acceptance of the implemented redesign remains pending.
+
+The subsequent approved UX refinement keeps the same contracts: Project Detail's
+Collaboration rail owns member/invited/unassigned/restricted entry states; Group
+history groups by date, diffs retain escaped unified text with semantic color,
+and branch/event lists remain truthful. Group event-driven revalidation uses a
+15-second freshness window on tab/focus/visibility return, cancellation and
+in-flight deduplication, with no background polling or credential issuance.
+Dirty review/creation and open invitation/confirmation interactions defer
+revalidation. Production backend authority and review-freeze policy are unchanged.
+Design System v1 is documented under docs/design; broader adoption is not implied.
+
+The final GitHub-familiar Group UI work order moves the sole Code menu and
+existing exact-path file opener into the file toolbar. Selected-branch commit
+totals come from history pagination.totalItems, not the all-head summary count;
+inconsistent/moving-tip reads omit the number instead of guessing. Tab and branch
+are URL-backed. Group commit details render only after selection, push activity
+stays concise and truthful, and unfinished file-path input defers background
+refresh. No general Group Add File API, schema, transport, review or authorization
+change is implied. Product Owner visual acceptance remains pending.
+
+The subsequent approved interaction refinement permits a truthful Add file
+preview dialog without implementing browser file writes. The exact branch count
+moves to the latest-commit row; real author/message/hash links open selected
+commit details using URL state. Group copy feedback is transient and contains no
+copied values. Group error views provide safe 404/5xx recovery and an exit;
+authorization denials are never relabelled as work in progress. Credential
+issuance, expiry, scope and secret lifetime remain governed by the same contract.
+
 ## Scope
 
 This document is the authoritative Phase 7 backend contract for instructor-created project tasks, student-created repository metadata, teams, synchronized collaborators, invitations, textual project feedback, review lifecycle, monitoring, and archive protection.
@@ -201,7 +275,7 @@ Class archive enforces the same Phase 7 blockers in addition to prior activity/s
 
 ## Verification strategy
 
-The isolated suite remains `npm test`. Real PostgreSQL behavior runs serially through `npm run test:integration`; the runner accepts only an explicitly recognized `projex_test`, deploys committed migrations, never falls back to `DATABASE_URL`, and performs dependency-ordered fixture cleanup while preserving Prisma migration history.
+The isolated suite remains `npm test`. Real PostgreSQL behavior runs serially through `npm run test:integration`; the runner accepts only an explicitly recognized `projex_test`, deploys committed migrations, never falls back to `DATABASE_URL`, and performs dependency-ordered fixture cleanup while preserving Prisma migration history. WARNING: that cleanup deletes application records across the target database. A recognized database name is not sufficient isolation; do not run mutable suites while any live demo shares that target. Verify disposable database/storage separation before any future run. Demo recovery remains deferred under the separate issue above.
 
 Phase 7 database-backed coverage includes:
 

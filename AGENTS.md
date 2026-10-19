@@ -101,6 +101,7 @@ Begin with this file, actual Git state, the target source files and nearest test
 
 ## Implementation Expectations
 
+- Every feature must follow `docs/design/PROJEX_ERROR_AND_RECOVERY_STANDARD.md`: present safe contextual errors without technical diagnostics, recover at the nearest useful screen, and preserve unsaved input and navigation. Keep backend structured errors/correlation/logging intact; test actual retry/back actions and failure-state preservation.
 - Prefer existing project patterns and keep changes scoped.
 - Use the feature-based backend structure, Zod validation, Prisma migrations, service-level authorization, transactions, and database constraints where applicable.
 - Never use `prisma db push` or `prisma migrate reset`; stop on drift or a reset request.

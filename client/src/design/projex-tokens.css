@@ -1,0 +1,27 @@
+:root {
+  --px-primary: #0961ed;
+  --px-ink: #122350;
+  --px-muted: #53647d;
+  --px-surface: #ffffff;
+  --px-subtle: #f6f9ff;
+  --px-border: #dce6f4;
+  --px-success: #17653c;
+  --px-success-bg: #edf8f0;
+  --px-warning: #85520b;
+  --px-warning-bg: #fff6df;
+  --px-danger: #a52c37;
+  --px-danger-bg: #fff0f1;
+  --px-neutral-bg: #eff2f6;
+  --px-focus: #245ec7;
+  --px-space-1: 4px;
+  --px-space-2: 8px;
+  --px-space-3: 12px;
+  --px-space-4: 16px;
+  --px-space-6: 24px;
+  --px-radius: 10px;
+}
+.projex-icon { display: inline-block; flex: 0 0 auto; vertical-align: middle; }
+.projex-status { display: inline-flex; align-items: center; gap: 4px; width: fit-content; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-style: normal; font-weight: 600; background: var(--px-neutral-bg); color: var(--px-muted); }
+.projex-status--success { color: var(--px-success); background: var(--px-success-bg); }
+.projex-status--warning { color: var(--px-warning); background: var(--px-warning-bg); }
+.projex-status--danger { color: var(--px-danger); background: var(--px-danger-bg); }

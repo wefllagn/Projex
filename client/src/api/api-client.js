@@ -2,15 +2,18 @@ import { CSRF_HEADER_NAME, readCsrfToken } from './csrf.js'
 
 const DEFAULT_API_BASE_URL = '/api/v1'
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
-const SAFE_BUSINESS_MESSAGE_CODES = new Set([
-  'CLASS_ARCHIVED',
-  'CLASS_CODE_INVALID',
-  'CLASS_HAS_UNFINISHED_PROJECT_WORK',
-  'CLASS_HAS_UNFINISHED_SUBMISSION_WORK',
-  'CLASS_MEMBERSHIP_PENDING',
-  'CLASS_MEMBERSHIP_REMOVED',
-  'REPOSITORY_ARCHIVE_BLOCKED',
-])
+// UI-owned copy only. Keep the original error, details and requestId intact for
+// diagnostics; never pass arbitrary server/transport messages into the UI.
+const BUSINESS_MESSAGES = {
+  SETUP_RESEND_COOLDOWN: 'A setup link was sent recently. Try again later.',
+  CLASS_ARCHIVED: 'This class is archived and read-only.',
+  CLASS_CODE_INVALID: 'This class code is not valid. Check it and try again.',
+  CLASS_HAS_UNFINISHED_PROJECT_WORK: 'The class cannot be archived while project collaboration work remains unfinished.',
+  CLASS_HAS_UNFINISHED_SUBMISSION_WORK: 'The class cannot be archived while submission work remains unfinished.',
+  CLASS_MEMBERSHIP_PENDING: 'Your class membership is awaiting approval.',
+  CLASS_MEMBERSHIP_REMOVED: 'Your class membership has been removed.',
+  REPOSITORY_ARCHIVE_BLOCKED: 'The repository cannot be archived until review and invitation blockers are resolved.',
+}
 
 function normalizeBaseUrl(value) {
   const baseUrl = String(value || DEFAULT_API_BASE_URL).trim()
@@ -81,14 +84,20 @@ export function describeApiError(error) {
   if (error.code === 'NETWORK_ERROR') {
     return 'Projex could not reach the server. Check the connection and try again.'
   }
-  if (SAFE_BUSINESS_MESSAGE_CODES.has(error.code)) return error.message
+  if (error.code === 'REQUEST_TIMEOUT' || error.code === 'TIMEOUT') return 'This is taking longer than expected. Please try again.'
+  if (BUSINESS_MESSAGES[error.code] && Object.hasOwn(BUSINESS_MESSAGES, error.code)) return BUSINESS_MESSAGES[error.code]
   if (error.status === 401) return 'Your session has expired. Please sign in again.'
   if (error.status === 403) return 'You do not have permission to perform this action.'
   if (error.status === 404) return 'The requested Projex record was not found.'
   if (error.status === 409) return 'This record changed while you were working. Refresh it before trying again.'
-  if (error.status === 422) return error.message
+  if (error.status === 400 || error.status === 422) return 'Please check the highlighted fields and try again.'
   if (error.status === 503) return 'This Projex service is temporarily unavailable. Please try again later.'
-  return error.message
+  if (error.status === 429) return 'Please wait a moment before trying again.'
+  return 'We couldn’t complete this right now. Please try again.'
+}
+
+export function isTemporaryApiError(error) {
+  return error?.status >= 500 || ['NETWORK_ERROR', 'REQUEST_TIMEOUT', 'TIMEOUT'].includes(error?.code)
 }
 
 export function createApiClient({

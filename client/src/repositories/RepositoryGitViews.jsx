@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, describeApiError } from '../api/api-client.js'
 import RequestState from '../components/RequestState.jsx'
+import { GroupDiff } from './GroupDiff.jsx'
+import GroupRequestState from './GroupRequestState.jsx'
+import { useGroupCopyFeedback } from './GroupCopyFeedback.jsx'
+import { ProjexIcon } from '../design/ProjexIcon.jsx'
 import { useCapabilities } from '../capabilities/capability-context.js'
 import { formatProjectDate } from '../projects/project-projections.js'
 import { repositoryContentApi } from './repository-content-api.js'
@@ -104,19 +108,19 @@ function EmptyRepositoryGuidance({ repository, role, owner, writeLikely, smartHt
   )
 }
 
-function BranchSelector({ branches, value, onChange }) {
+function BranchSelector({ branches, value, onChange, group = false }) {
   const options = branches.length > 0 ? branches : value ? [{ branchName: value, isDefault: true }] : []
   return (
-    <label className="repository-git-branch-select">
-      Branch
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
+    <label className={group ? "group-branch-select" : "repository-git-branch-select"}>
+      {group ? <ProjexIcon name="branch" size={16} /> : 'Branch'}
+      <select aria-label="Branch" value={value} onChange={(event) => onChange(event.target.value)}>
         {options.map((branch) => <option value={branch.branchName} key={branch.branchName}>{branch.branchName}{branch.isDefault ? ' (default)' : ''}</option>)}
       </select>
     </label>
   )
 }
 
-function FilesView({ api, repositoryId, summary, branches, selectedBranch, onSelectBranch }) {
+export function FilesView({ api, repositoryId, summary, branches, selectedBranch, onSelectBranch }) {
   const [path, setPath] = useState('')
   const [tree, setTree] = useState(state())
   const [file, setFile] = useState(state())
@@ -189,13 +193,17 @@ function FilesView({ api, repositoryId, summary, branches, selectedBranch, onSel
   )
 }
 
-function HistoryView({ api, repositoryId, summary, branches, selectedBranch, onSelectBranch }) {
+export function HistoryView({ api, repositoryId, summary, branches, selectedBranch, onSelectBranch, group = false, refreshVersion = 0, selectedCommitId = null, onSelectCommit }) {
   const [page, setPage] = useState(1)
   const [history, setHistory] = useState(state())
   const [detail, setDetail] = useState(state())
   const [selectedParent, setSelectedParent] = useState('')
   const [diff, setDiff] = useState(state())
   const detailController = useRef(null)
+  const [selectedId, setSelectedId] = useState('')
+  const { copy, feedback } = useGroupCopyFeedback()
+  const State = group ? GroupRequestState : RequestState
+  const [retryVersion, setRetryVersion] = useState(0)
 
   useEffect(() => {
     if (!selectedBranch || summary.empty) return undefined
@@ -209,7 +217,7 @@ function HistoryView({ api, repositoryId, summary, branches, selectedBranch, onS
       })
       .catch((error) => { if (error?.name !== 'AbortError') setHistory(state('error', null, error)) })
     return () => controller.abort()
-  }, [api, page, repositoryId, selectedBranch, summary.empty])
+  }, [api, page, repositoryId, selectedBranch, summary.empty, refreshVersion, retryVersion])
 
   useEffect(() => () => detailController.current?.abort(), [])
 
@@ -217,6 +225,7 @@ function HistoryView({ api, repositoryId, summary, branches, selectedBranch, onS
     detailController.current?.abort()
     const controller = new AbortController()
     detailController.current = controller
+    setSelectedId(commitId)
     setDetail(state('loading'))
     setDiff(state())
     try {
@@ -231,6 +240,14 @@ function HistoryView({ api, repositoryId, summary, branches, selectedBranch, onS
   }, [api, repositoryId])
 
   useEffect(() => {
+    if (!group || !selectedCommitId || !/^[a-f0-9]{40}$/i.test(selectedCommitId)) return undefined
+    let active = true
+    Promise.resolve().then(() => { if (active) selectCommit(selectedCommitId) })
+    return () => { active = false; detailController.current?.abort() }
+  }, [group, selectedCommitId, selectCommit])
+  const openCommit = (id) => onSelectCommit ? onSelectCommit(id) : selectCommit(id)
+
+  useEffect(() => {
     if (detail.status !== 'ready' || !selectedParent) return undefined
     const controller = new AbortController()
     Promise.resolve().then(() => { if (!controller.signal.aborted) setDiff(state('loading')) })
@@ -242,25 +259,32 @@ function HistoryView({ api, repositoryId, summary, branches, selectedBranch, onS
       })
       .catch((error) => { if (error?.name !== 'AbortError') setDiff(state('error', null, error)) })
     return () => controller.abort()
-  }, [api, detail, repositoryId, selectedParent])
+  }, [api, detail, repositoryId, selectedParent, retryVersion])
 
-  if (summary.empty) return <RequestState kind="empty" compact title="No commit history" message="This empty repository has no commits to inspect." />
+  if (summary.empty) return <State kind="empty" compact title="No commit history" message="This empty repository has no commits to inspect." />
+  const groups = new Map()
+  for (const commit of group ? history.data?.commits || [] : []) {
+    const day = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(commit.authoredAt))
+    groups.set(day, [...(groups.get(day) || []), commit])
+  }
+  const groupList = group && <div className="group-commit-list">{[...groups].map(([day, commits]) => <section key={day}><h3><ProjexIcon name="commit" size={16} /> Commits on {day}</h3><ul>{commits.map((commit) => <li key={commit.commitId} data-selected={selectedId === commit.commitId}><button type="button" className="group-commit-select" aria-pressed={selectedId === commit.commitId} onClick={() => openCommit(commit.commitId)}><strong>{commit.subject || 'Untitled commit'}</strong>{' '}<small title="Git identity is supplied by the commit author, not verified by Projex.">{commit.authorName} · <time dateTime={commit.authoredAt}>{formatProjectDate(commit.authoredAt)}</time></small></button><div className="group-commit-hash"><button type="button" aria-label={`View commit ${shortCommit(commit.commitId)}`} aria-pressed={selectedId === commit.commitId} title={commit.commitId} onClick={() => openCommit(commit.commitId)}><code>{shortCommit(commit.commitId)}</code></button><button type="button" aria-label={`Copy commit hash ${shortCommit(commit.commitId)}`} onClick={(event) => copy(commit.commitId, event)}>Copy</button></div></li>)}</ul></section>)}{feedback}</div>
   return (
-    <div className="repository-git-history">
-      <BranchSelector branches={branches} value={selectedBranch} onChange={onSelectBranch} />
-      {history.status === 'loading' && <RequestState kind="loading" compact message="Loading commit history." />}
-      {history.status === 'error' && <RequestState kind="unavailable" compact title="Commit history unavailable" message={gitErrorMessage(history.error)} />}
-      {history.status === 'ready' && <div className="repository-git-history-grid"><div className="repository-git-commit-list">{history.data.commits.map((commit) => <button type="button" key={commit.commitId} onClick={() => selectCommit(commit.commitId)}><code>{shortCommit(commit.commitId)}</code><strong>{commit.subject || 'Untitled commit'}</strong><span>{commit.authorName} · self-asserted Git author</span><small>{formatProjectDate(commit.authoredAt)}</small></button>)}</div><section className="repository-git-commit-detail">{detail.status === 'idle' && <p>Select a commit to view bounded metadata and its parent diff.</p>}{detail.status === 'loading' && <RequestState kind="loading" compact message="Loading commit detail." />}{detail.status === 'error' && <RequestState kind="unavailable" compact message={gitErrorMessage(detail.error)} />}{detail.status === 'ready' && <><h3>{detail.data.subject || 'Untitled commit'}</h3><p><code>{detail.data.commitId}</code></p><p>{detail.data.authorName} · self-asserted Git author · {formatProjectDate(detail.data.authoredAt)}</p><h4>Changed files</h4><ul>{detail.data.files.map((change) => <li key={`${change.status}:${change.path}`}><strong>{change.status}</strong> {change.path}{change.previousPath ? ` (from ${change.previousPath})` : ''}</li>)}</ul>{detail.data.parentCommitIds.length === 0 ? <p className="activity-lifecycle-note">This is a root commit, so there is no parent diff.</p> : <><label>Compare with parent<select value={selectedParent} onChange={(event) => setSelectedParent(event.target.value)}>{detail.data.parentCommitIds.map((parent) => <option key={parent} value={parent}>{shortCommit(parent)}</option>)}</select></label>{diff.status === 'loading' && <RequestState kind="loading" compact message="Loading bounded diff." />}{diff.status === 'error' && <RequestState kind="unavailable" compact title="Diff unavailable" message={gitErrorMessage(diff.error)} />}{diff.status === 'ready' && <pre className="repository-git-diff">{diff.data.patch || 'No textual changes in this comparison.'}</pre>}</>}</>}</section></div>}
+    <div className={group ? "repository-git-history group-history" : "repository-git-history"}>
+      <BranchSelector group={group} branches={branches} value={selectedBranch} onChange={onSelectBranch} />
+      {history.status === 'loading' && <State kind="loading" compact message="Loading commit history." />}
+      {history.status === 'error' && <State kind="unavailable" compact title="Commit history unavailable" error={group ? history.error : undefined} message={gitErrorMessage(history.error)} action={group && <button type="button" onClick={() => setRetryVersion((value) => value + 1)}>Retry history</button>} />}
+      {history.status === 'ready' && <div className="repository-git-history-grid">{group ? groupList : <div className="repository-git-commit-list">{history.data.commits.map((commit) => <button type="button" key={commit.commitId} onClick={() => openCommit(commit.commitId)}><code>{shortCommit(commit.commitId)}</code><strong>{commit.subject || 'Untitled commit'}</strong><span>{commit.authorName} · self-asserted Git author</span><small>{formatProjectDate(commit.authoredAt)}</small></button>)}</div>}{(!group || detail.status !== 'idle') && <section className="repository-git-commit-detail">{detail.status === 'idle' && <p>Select a commit to view bounded metadata and its parent diff.</p>}{detail.status === 'loading' && <State kind="loading" compact message="Loading commit detail." />}{detail.status === 'error' && <State kind="unavailable" compact error={group ? detail.error : undefined} message={gitErrorMessage(detail.error)} action={group && <button type="button" onClick={() => selectCommit(selectedId)}>Retry commit</button>} />}{detail.status === 'ready' && <><h3>{detail.data.subject || 'Untitled commit'}</h3><p><code>{detail.data.commitId}</code></p><p title="Git identity is supplied by the commit author, not verified by Projex.">{detail.data.authorName}{!group && ' · self-asserted Git author'} · {formatProjectDate(detail.data.authoredAt)}</p><h4>Changed files</h4><ul>{detail.data.files.map((change) => <li key={`${change.status}:${change.path}`}><strong>{change.status}</strong> {change.path}{change.previousPath ? ` (from ${change.previousPath})` : ''}</li>)}</ul>{detail.data.parentCommitIds.length === 0 ? <p className="activity-lifecycle-note">This is a root commit, so there is no parent diff.</p> : <><label>Compare with parent<select value={selectedParent} onChange={(event) => setSelectedParent(event.target.value)}>{detail.data.parentCommitIds.map((parent) => <option key={parent} value={parent}>{shortCommit(parent)}</option>)}</select></label>{diff.status === 'loading' && <State kind="loading" compact message={group ? "Loading comparison…" : "Loading bounded diff."} />}{diff.status === 'error' && <State kind="unavailable" compact title="Diff unavailable" error={group ? diff.error : undefined} message={gitErrorMessage(diff.error)} action={group && <button type="button" onClick={() => setRetryVersion((value) => value + 1)}>Retry comparison</button>} />}{diff.status === 'ready' && (group ? <GroupDiff patch={diff.data.patch || 'No textual changes in this comparison.'} /> : <pre className="repository-git-diff">{diff.data.patch || 'No textual changes in this comparison.'}</pre>)}</>}</>}</section>}</div>}
       {history.status === 'ready' && history.data.pagination?.totalPages > 1 && <nav className="activity-pagination" aria-label="Commit history pages"><button type="button" className="student-outline-action" disabled={!history.data.pagination.hasPreviousPage} onClick={() => setPage((current) => current - 1)}>Previous</button><span>Page {history.data.pagination.page} of {history.data.pagination.totalPages}</span><button type="button" className="student-outline-action" disabled={!history.data.pagination.hasNextPage} onClick={() => setPage((current) => current + 1)}>Next</button></nav>}
     </div>
   )
 }
 
-function BranchesView({ summary, branches, loading, error }) {
+export function BranchesView({ summary, branches, loading, error, group = false }) {
   if (summary.empty) return <RequestState kind="empty" compact title="No branches" message="This empty repository has no branches yet." />
   if (loading) return <RequestState kind="loading" compact message="Loading branches." />
   if (error) return <RequestState kind="unavailable" compact title="Branches unavailable" message={gitErrorMessage(error)} />
-  return <div className="repository-git-branch-list">{branches.map((branch) => <article key={branch.branchName}><div><strong>{branch.branchName}</strong>{branch.isDefault && <span>Default</span>}</div><code>{shortCommit(branch.commitId)}</code><p>{branch.subject || 'Untitled commit'}</p><small>{branch.authorName} · self-asserted Git author · {formatProjectDate(branch.authoredAt)}</small></article>)}</div>
+  if (group) return <ul className="group-branch-list">{[...branches].sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || a.branchName.localeCompare(b.branchName)).map((branch) => <li key={branch.branchName}><ProjexIcon name="branch" /><div><strong>{branch.branchName}</strong><small>{branch.subject || 'Untitled commit'}</small></div><span className="group-branch-labels">{branch.isDefault && <span className="projex-status">Default</span>}{branch.branchName === 'main' && <span className="projex-status projex-status--success">Protected</span>}</span><code title={branch.commitId}>{shortCommit(branch.commitId)}</code></li>)}</ul>
+  return <div className="repository-git-branch-list">{branches.map((branch) => <article key={branch.branchName}><div><strong>{branch.branchName}</strong>{branch.isDefault && <span>Default</span>}{group && branch.branchName === 'main' && <span>Protected</span>}</div><code>{shortCommit(branch.commitId)}</code><p>{branch.subject || 'Untitled commit'}</p><small>{branch.authorName} · self-asserted Git author · {formatProjectDate(branch.authoredAt)}</small></article>)}</div>
 }
 
 function credentialLifecycle(credential) {

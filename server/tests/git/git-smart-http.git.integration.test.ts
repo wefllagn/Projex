@@ -23,6 +23,10 @@ import { createGitTransportService } from '../../src/modules/git-transport/git-t
 import { createRepositoryContentService } from '../../src/modules/repository-content/repository-content.service.js'
 import { createRepositoryProvisioningService } from '../../src/modules/repositories/repository-provisioning.service.js'
 import { createPrismaRepositoryRepository } from '../../src/modules/repositories/repository.repository.js'
+import { createRepositoryService } from '../../src/modules/repositories/repository.service.js'
+import { createPrismaClassRepository } from '../../src/modules/classes/class.repository.js'
+import { createPrismaProjectTaskRepository } from '../../src/modules/project-tasks/project-task.repository.js'
+import { createProjectTaskService } from '../../src/modules/project-tasks/project-task.service.js'
 import {
   cleanIntegrationDatabase,
   createActiveClass,
@@ -665,10 +669,11 @@ describe('authenticated Git Smart HTTP', () => {
     for (const student of [owner, member, classmate]) {
       await createActiveMembership(prisma, classRecord.id, student.id)
     }
-    const projectTask = await prisma.projectTask.create({
-      data: { classId: classRecord.id, createdById: instructor.id, title: 'Branch Policy Project', instructions: 'Test branch policy.', dueDate: new Date(Date.now() + 86_400_000), maxTeamSize: 4, status: 'PUBLISHED', publishedAt: new Date() },
-    })
+    const tasks = createProjectTaskService({ repository: createPrismaProjectTaskRepository(prisma), classRepository: createPrismaClassRepository(prisma), logger })
+    const draft = await tasks.create(instructor, classRecord.id, { title: 'Branch Policy Project', instructions: 'Test branch policy.', dueDate: new Date(Date.now() + 86_400_000), maxTeamSize: 4 })
+    const projectTask = await tasks.publish(instructor, draft.id, { expectedUpdatedAt: draft.updatedAt })
     const repositoryRecord = createPrismaRepositoryRepository(prisma)
+    const collaboration = createRepositoryService({ repository: repositoryRecord, logger })
     const created = await repositoryRecord.createClassProject({
       projectTaskId: projectTask.id,
       ownerId: owner.id,
@@ -676,14 +681,8 @@ describe('authenticated Git Smart HTTP', () => {
       now: new Date(),
     })
     if (created.kind !== 'ok' || !created.repository.teamId) throw new Error('CLASS_REPOSITORY_FIXTURE_FAILED')
-    await prisma.$transaction(async (transaction) => {
-      await transaction.teamMember.create({
-        data: { teamId: created.repository.teamId!, projectTaskId: projectTask.id, studentId: member.id, memberRole: 'MEMBER', status: 'ACTIVE' },
-      })
-      await transaction.repositoryMember.create({
-        data: { repositoryId: created.repository.id, studentId: member.id, memberRole: 'MEMBER', status: 'ACTIVE' },
-      })
-    })
+    const invitation = await collaboration.createInvitation(owner, created.repository.id, { inviteeUserId: member.id })
+    await collaboration.acceptInvitation(member, invitation.invitationId)
     const queue = createPostgresRepositoryProvisioningQueue(prisma)
     const job = await queue.claimNext({ workerId: crypto.randomUUID(), now: new Date(), leaseMs: 60_000 })
     if (!job) throw new Error('CLASS_PROVISIONING_JOB_MISSING')
@@ -721,6 +720,26 @@ describe('authenticated Git Smart HTTP', () => {
     expect(atomicRef.code).toBe(0)
     expect(atomicRef.stdout.trim()).toBe('')
     expect(await prisma.repositoryActivity.count({ where: { repositoryId: created.repository.id, activityType: 'PUSH' } })).toBe(2)
+
+    // Full local integration: Developer feature -> Maintainer fetch/merge -> protected main.
+    expect((await runGit(['fetch', 'origin'], ownerWork, ownerAuthorization)).code).toBe(0)
+    expect((await runGit(['merge', '--no-ff', 'origin/feature/member-work', '-m', 'Integrate member feature'], ownerWork)).code).toBe(0)
+    expect((await runGit(['push', 'origin', 'main'], ownerWork, ownerAuthorization)).code).toBe(0)
+    const merged = await contentService.summary(owner, created.repository.id)
+    expect(merged.latestCommit?.subject).toBe('Integrate member feature')
+    const commit = await contentService.commit(instructor, created.repository.id, merged.latestCommit!.commitId)
+    expect(commit.parentCommitIds).toHaveLength(2)
+    expect((await contentService.file(instructor, created.repository.id, { branchName: 'main', path: 'Member.java' })).content).toContain('class Member')
+    expect((await contentService.diff(instructor, created.repository.id, { baseCommitId: commit.parentCommitIds[0]!, targetCommitId: commit.commitId })).patch).toContain('Member.java')
+    await expect(issue(instructor, created.repository.id, ['WRITE'])).rejects.toMatchObject({ code: 'GIT_OPERATION_NOT_AUTHORIZED' })
+    expect((await collaboration.listRecordedActivity(owner, created.repository.id, { page: 1, pageSize: 20 })).contributions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ userId: owner.id, acceptedPushes: 2 }), expect.objectContaining({ userId: member.id, acceptedPushes: 1 }),
+    ]))
+    const current = await collaboration.get(owner, created.repository.id)
+    await collaboration.readyForReview(owner, created.repository.id, { expectedUpdatedAt: current.updatedAt })
+    expect((await collaboration.groupContext(member, created.repository.id)).permissions).toMatchObject({ canRead: true, canWrite: false })
+    expect((await runGit(['push', 'origin', 'HEAD:feature/after-review'], memberWork, memberAuthorization)).code).not.toBe(0)
+    expect(await prisma.activitySubmission.count()).toBe(0)
 
     const repositoryMember = await prisma.repositoryMember.findUniqueOrThrow({
       where: { repositoryId_studentId: { repositoryId: created.repository.id, studentId: member.id } },

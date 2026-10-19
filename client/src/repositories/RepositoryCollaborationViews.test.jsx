@@ -249,6 +249,6 @@ describe('Phase 10C.2 repository collaboration', () => {
     const api = { archiveRepository: vi.fn().mockRejectedValue(new ApiError({ status: 409, code: 'REPOSITORY_ARCHIVE_BLOCKED', message: 'Resolve active review work before archiving.' })) }
     render(<RepositoryLifecyclePanel role="instructor" owner={false} repository={repository} api={api} onRepositoryChange={vi.fn()} onReloadRepository={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: 'Archive Repository' }))
-    expect(await screen.findByText('Resolve active review work before archiving.')).toBeInTheDocument()
+    expect(await screen.findByText('The repository cannot be archived until review and invitation blockers are resolved.')).toBeInTheDocument()
   })
 })

@@ -17,6 +17,7 @@ import type {
 } from '@prisma/client'
 
 export interface RepositoryRecord {
+  groupRelationship?: 'MY_GROUP' | 'CLASS_METADATA'
   id: string
   projectTaskId: string | null
   classId: string | null
@@ -66,6 +67,7 @@ export interface RepositoryAccessRecord {
 }
 
 export interface RepositoryProjection {
+  groupRelationship?: 'MY_GROUP' | 'CLASS_METADATA'
   id: string
   projectTaskId: string | null
   classId: string | null
@@ -144,6 +146,7 @@ export interface RepositoryFeedbackProjection {
 export function toRepositoryProjection(record: RepositoryRecord): RepositoryProjection {
   if (record.visibility === 'PUBLIC') throw new Error('PUBLIC repositories are unavailable.')
   return {
+    ...(record.groupRelationship ? { groupRelationship: record.groupRelationship } : {}),
     id: record.id,
     projectTaskId: record.projectTaskId,
     classId: record.classId,

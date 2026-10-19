@@ -4,8 +4,13 @@ import { ApiError, describeApiError } from '../api/api-client.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { ProjexIcon } from '../design/ProjexIcon.jsx'
+import { ProjexStatus } from '../design/ProjexStatus.jsx'
+import { useGroupFreshness } from '../repositories/use-group-freshness.js'
+import './group-project.css'
 import { useCapabilities } from '../capabilities/capability-context.js'
 import { repositoryApi } from '../repositories/repository-api.js'
+import { StudentInvitationInbox } from '../repositories/RepositoryCollaborationViews.jsx'
 import { repositoryCatalogProjection, repositoryMatchesProject } from '../repositories/repository-projections.js'
 import { projectApi } from './project-api.js'
 import {
@@ -21,7 +26,7 @@ import {
 } from './project-projections.js'
 
 const FIRST_PAGE = { page: 1, pageSize: 20 }
-const EMPTY_FORM = { title: '', instructions: '', dueDate: '', maxTeamSize: '4' }
+const EMPTY_FORM = { title: '', instructions: '', dueDate: '', maxTeamSize: '8' }
 
 function projectContextError() {
   return new ApiError({
@@ -88,7 +93,7 @@ export function StudentProjectList({ api = projectApi }) {
       </section>
       <section className="student-assignment-panel student-assignment-panel--board">
         <div className="student-assignment-toolbar student-assignment-toolbar--board">
-          <div><strong>Class Projects</strong><p>Published and closed project requirements for {selectedClass?.className}.</p></div>
+          <div><strong>My Projects</strong><p>Published and closed group project requirements for {selectedClass?.className}.</p></div>
           <label className="student-sort-control">Status<select value={query.status} onChange={(event) => setQuery({ ...FIRST_PAGE, status: event.target.value })}><option value="">Published and closed</option><option value="PUBLISHED">Published</option><option value="CLOSED">Closed</option></select></label>
         </div>
         {current.status === 'loading' && <RequestState kind="loading" compact message="Loading project requirements." />}
@@ -112,18 +117,18 @@ export function StudentProjectList({ api = projectApi }) {
   )
 }
 
-function ClassRepositoryForm({ busy, onSubmit }) {
+function ClassRepositoryForm({ busy, onSubmit, onDirtyChange }) {
   const [form, setForm] = useState({ teamName: '', repositoryName: '', description: '' })
-  const setField = (field, value) => setForm((current) => ({ ...current, [field]: value }))
+  const setField = (field, value) => { onDirtyChange?.(true); setForm((current) => ({ ...current, [field]: value })) }
   const valid = form.teamName.trim() && form.repositoryName.trim()
   return (
     <form className="project-repository-create" onSubmit={(event) => { event.preventDefault(); if (valid) onSubmit({ teamName: form.teamName.trim(), repositoryName: form.repositoryName.trim(), description: form.description.trim() || null }) }}>
-      <h3>Create your team repository</h3>
-      <p>Creation atomically establishes your team and owner membership. Joining another team requires accepting an authorized repository invitation.</p>
-      <label>Team name<input value={form.teamName} maxLength={120} onChange={(event) => setField('teamName', event.target.value)} disabled={busy} /></label>
-      <label>Repository name<input value={form.repositoryName} maxLength={120} onChange={(event) => setField('repositoryName', event.target.value)} disabled={busy} /></label>
-      <label>Description<textarea value={form.description} maxLength={5000} onChange={(event) => setField('description', event.target.value)} disabled={busy} /></label>
-      <button type="submit" className="student-primary-action" disabled={!valid || busy}>{busy ? 'Creating…' : 'Create Repository'}</button>
+      <h3>Create Group</h3>
+      <p className="group-help">Create a group or ask a Maintainer for an invitation.</p>
+      <label>Group name<input name="teamName" autoComplete="off" value={form.teamName} maxLength={120} onChange={(event) => setField('teamName', event.target.value)} disabled={busy} /></label>
+      <label>Repository name<input name="repositoryName" autoComplete="off" spellCheck={false} value={form.repositoryName} maxLength={120} onChange={(event) => setField('repositoryName', event.target.value)} disabled={busy} /></label>
+      <label>Description<textarea name="description" autoComplete="off" value={form.description} maxLength={5000} onChange={(event) => setField('description', event.target.value)} disabled={busy} /></label>
+      <button type="submit" className="student-primary-action" disabled={!valid || busy}>{busy ? 'Creating…' : 'Create Group'}</button>
     </form>
   )
 }
@@ -133,85 +138,99 @@ export function StudentProjectDetail({ api = projectApi, repositories = reposito
   const { projectTaskId } = useParams()
   const navigate = useNavigate()
   const { selectedClass, selectionStatus } = useClasses()
-  const [state, setState] = useState({ key: null, status: 'idle', project: null, repositoryItems: [], error: null })
+  const [state, setState] = useState({ key: null, status: 'idle', project: null, repositoryItems: [], myRepository: null, group: null, pagination: null, error: null })
   const [creating, setCreating] = useState(false)
+  const [formState, setFormState] = useState({ key: null, dirty: false })
+  const [invitationState, setInvitationState] = useState({ key: null, count: null })
+  const [freshnessVersion, setFreshnessVersion] = useState(0)
   const [actionError, setActionError] = useState(null)
-
+  const key = `${selectedClass?.id}:${projectTaskId}`
+  const formDirty = formState.key === key && formState.dirty
+  const pendingCount = invitationState.key === key ? invitationState.count : null
+  const setFormDirty = useCallback((dirty) => setFormState({ key, dirty }), [key])
+  const setPendingCount = useCallback((count) => setInvitationState({ key, count }), [key])
   const load = useCallback(async ({ signal } = {}) => {
     if (!selectedClass || !projectTaskId) return
     const key = `${selectedClass.id}:${projectTaskId}`
     try {
-      const [projectResponse, repositoryResponse] = await Promise.all([
+      const [projectResponse, repositoryResponse, mineResponse] = await Promise.all([
         api.getProjectTask(projectTaskId, { signal }),
-        repositories.listRepositories({ page: 1, pageSize: 100, projectTaskId }, { signal }),
+        repositories.listRepositories({ page: 1, pageSize: 20, projectTaskId, groupScope: 'CLASS_METADATA' }, { signal }),
+        repositories.listRepositories({ page: 1, pageSize: 20, projectTaskId, groupScope: 'MINE' }, { signal }),
       ])
       const project = projectTaskProjection(projectResponse.data)
       const repositoryItems = repositoryResponse.data.map(repositoryCatalogProjection)
+      const mine = mineResponse.data.map(repositoryCatalogProjection)
       if (!projectMatchesClass(project, selectedClass)) throw projectContextError()
-      if (repositoryItems.some((item) => !repositoryMatchesProject(item, projectTaskId))) throw repositoryContextError()
-      setState({ key, status: 'ready', project, repositoryItems, error: null })
+      if (repositoryItems.some((item) => !repositoryMatchesProject(item, projectTaskId) || item.groupRelationship !== 'CLASS_METADATA')) throw repositoryContextError()
+      if (mine.some((item) => !repositoryMatchesProject(item, projectTaskId) || item.groupRelationship !== 'MY_GROUP') || mine.length > 1) throw repositoryContextError()
+      let group = null
+      if (mine[0] && repositories.getGroupContext) {
+        const response = await repositories.getGroupContext(mine[0].id, { signal })
+        const data = response.data
+        if (data?.repositoryId !== mine[0].id || data.project?.id !== projectTaskId || data.class?.id !== selectedClass.id || !Number.isSafeInteger(data.team?.activeMemberCount) || data.team.activeMemberCount < 0) throw repositoryContextError()
+        group = { name: data.team.name, activeMemberCount: data.team.activeMemberCount }
+      }
+      if (signal?.aborted) return
+      setState({ key, status: 'ready', project, repositoryItems, myRepository: mine[0] || null, group, pagination: repositoryResponse.pagination, error: null })
     } catch (error) {
-      if (error?.name !== 'AbortError') setState({ key, status: 'error', project: null, repositoryItems: [], error })
+      if (!signal?.aborted && error?.name !== 'AbortError') setState({ key, status: 'error', project: null, repositoryItems: [], myRepository: null, group: null, error })
     }
   }, [api, projectTaskId, repositories, selectedClass])
-
   useEffect(() => {
     if (selectionStatus !== 'ready') return undefined
     const controller = new AbortController()
-    Promise.resolve().then(() => load({ signal: controller.signal }))
+    Promise.resolve().then(() => { if (!controller.signal.aborted) load({ signal: controller.signal }) })
     return () => controller.abort()
   }, [load, selectionStatus])
-
+  const refresh = useCallback(async (options) => { await load(options); if (!options?.signal?.aborted) setFreshnessVersion((value) => value + 1) }, [load])
+  useGroupFreshness({ identity: key, refresh, blocked: creating || formDirty, activeKey: selectionStatus })
   const createRepository = async (input) => {
-    setCreating(true)
-    setActionError(null)
+    setCreating(true); setActionError(null)
     try {
       const response = await repositories.createClassProject(projectTaskId, input)
       const repository = repositoryCatalogProjection(response.data)
       if (!repositoryMatchesProject(repository, projectTaskId)) throw repositoryContextError()
       navigate(classHref(`/student/projects/${projectTaskId}/repositories/${repository.id}`, selectedClass.id))
-    } catch (error) {
-      setActionError(error)
-    } finally {
-      setCreating(false)
-    }
+    } catch (error) { setActionError(error) }
+    finally { setCreating(false) }
   }
-
-  const key = `${selectedClass?.id}:${projectTaskId}`
-  const current = state.key === key ? state : { ...state, status: 'loading', project: null, repositoryItems: [] }
-  if (current.status === 'loading') return <RequestState kind="loading" message="Loading the selected project requirement." />
-  if (current.status === 'error') return <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />
-  if (!current.project) return null
+  const current = state.key === key ? state : { ...state, status: 'loading', project: null, repositoryItems: [], myRepository: null, group: null }
+  if (current.status === 'loading' || current.status === 'idle') return <RequestState kind="loading" message="Loading the selected project requirement." />
+  if (current.status === 'error') return <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Retry project</button>} />
   const project = current.project
-  const mayCreate = selectedClass.status === 'ACTIVE' && project.status === 'PUBLISHED' && project.dueState === 'OPEN'
-  return (
-    <div className="student-detail-layout student-project-detail-layout">
-      <main className="student-activity-detail-card">
-        <NavLink to={classHref('/student/projects', selectedClass.id)} className="student-back-link">Back to Group Projects</NavLink>
-        <article className="student-detail-card student-project-detail-card">
-          <div className="student-detail-heading"><span className="student-detail-icon student-project-detail-icon" aria-hidden="true" /><div><h2>{project.title}</h2><p><span>{project.createdBy.fullName}</span><span>{formatProjectStatus(project.status)}</span></p><p className="student-detail-due">Due {formatProjectDate(project.dueDate)}</p></div></div>
-          <div className="student-detail-divider" />
-          <section className="student-project-instructions"><h3>Project requirement</h3><p>{project.instructions}</p><ul><li>Maximum team size: {project.maxTeamSize}</li><li>Lifecycle: {formatProjectStatus(project.dueState)}</li></ul></section>
-        </article>
-        <section className="student-detail-card project-repository-list">
-          <div className="student-side-card-heading"><h2>Class repositories</h2><span>{current.repositoryItems.length} visible</span></div>
-          {current.repositoryItems.length === 0 && <RequestState kind="empty" compact message="No class repository is available for this project yet." />}
-          {current.repositoryItems.map((repository) => (
-            <NavLink to={classHref(`/student/projects/${project.id}/repositories/${repository.id}`, selectedClass.id)} className="student-repository-index-row" key={repository.id}>
-              <span className="student-repository-row-icon" aria-hidden="true" /><strong>{repository.repositoryName}</strong><span>{repository.owner.fullName}</span><small>{formatProjectStatus(repository.storageStatus)}</small><em>{formatProjectStatus(repository.status)}</em>
-            </NavLink>
-          ))}
-        </section>
-      </main>
-      <aside className="student-work-rail">
-        <section className="student-work-card">
-          {mayCreate && capabilities.git.provisioning ? <ClassRepositoryForm busy={creating} onSubmit={createRepository} /> : <RequestState kind="unavailable" compact title={mayCreate ? 'Repository provisioning unavailable' : 'Repository creation is closed'} message={mayCreate ? 'This environment preserves repository records but cannot provision new Git storage.' : 'A team repository can be created only while the project is published, before its deadline, in an active class.'} />}
-          {actionError && <p className="activity-action-error">{describeApiError(actionError)}</p>}
-        </section>
-        <section className="student-work-card student-private-card"><h2>Collaboration</h2><p>Repository invitations are available from My Repositories. Direct arbitrary repository joining is not supported.</p></section>
-      </aside>
-    </div>
-  )
+  const open = selectedClass.status === 'ACTIVE' && project.status === 'PUBLISHED' && project.dueState === 'OPEN'
+  const mayCreate = !current.myRepository && open && capabilities.git.provisioning
+  return <div className="student-detail-layout student-project-detail-layout group-project-detail">
+    <main className="student-activity-detail-card">
+      <NavLink to={classHref('/student/projects', selectedClass.id)} className="student-back-link">Back to Group Projects</NavLink>
+      <article className="student-detail-card student-project-detail-card">
+        <div className="student-detail-heading"><ProjexIcon name="group-project" size={32} /><div><h2>{project.title}</h2><p>{project.createdBy.fullName}{project.status !== 'PUBLISHED' ? ` · ${formatProjectStatus(project.status)}` : ''}</p><p className="group-project-due">Due {formatProjectDate(project.dueDate)}</p></div></div>
+        <div className="student-detail-divider" />
+        <section className="student-project-instructions"><h3>Project requirements</h3><p>{project.instructions}</p><p className="group-help">Up to {project.maxTeamSize} members, including the Maintainer{project.dueState !== 'OPEN' ? ` · ${formatProjectStatus(project.dueState)}` : ''}</p></section>
+      </article>
+      {(current.repositoryItems.length > 0 || current.pagination?.hasNextPage) && <details className="group-class-metadata"><summary>Other class repositories · {current.repositoryItems.length}</summary><p className="group-help">Class-visible summaries only. Source access still requires group membership.</p>{current.repositoryItems.map((repository) => <NavLink to={classHref(`/student/projects/${project.id}/repositories/${repository.id}`, selectedClass.id)} className="student-repository-index-row" key={repository.id}><ProjexIcon name="repository" /><strong>{repository.repositoryName}</strong><small>{formatProjectStatus(repository.storageStatus)}</small></NavLink>)}{current.pagination?.hasNextPage && <button type="button" className="student-outline-action" onClick={async () => {
+        try {
+          const response = await repositories.listRepositories({ page: current.pagination.page + 1, pageSize: 20, projectTaskId, groupScope: 'CLASS_METADATA' })
+          const items = response.data.map(repositoryCatalogProjection)
+          if (items.some((item) => !repositoryMatchesProject(item, projectTaskId) || item.groupRelationship !== 'CLASS_METADATA')) throw repositoryContextError()
+          setState((previous) => previous.key === key ? { ...previous, repositoryItems: [...new Map([...previous.repositoryItems, ...items].map((item) => [item.id, item])).values()], pagination: response.pagination } : previous)
+        } catch (error) { setActionError(error) }
+      }}>Load more class repositories</button>}</details>}
+    </main>
+    <aside className="student-work-rail" aria-label="Project collaboration">
+      <section className="student-work-card group-project-collaboration">
+        {current.myRepository ? <><ProjexIcon name="repository" size={28} /><h2>{current.myRepository.repositoryName}</h2><p className="group-help">{current.group?.name || 'Group repository'}{current.group ? ` · ${current.group.activeMemberCount}/${project.maxTeamSize} members` : ''}</p><div className="group-project-states"><ProjexStatus value={current.myRepository.storageStatus}>{formatProjectStatus(current.myRepository.storageStatus)}</ProjexStatus><ProjexStatus value={current.myRepository.reviewStatus}>{formatProjectStatus(current.myRepository.reviewStatus)}</ProjexStatus></div><NavLink className="student-primary-action" to={classHref(`/student/projects/${project.id}/repositories/${current.myRepository.id}`, selectedClass.id)}>Open Repository</NavLink></> : <>
+          <h2><ProjexIcon name="members" /> Collaboration</h2>
+          <StudentInvitationInbox key={key} compact allowActions={open} api={repositories} projectTaskId={project.id} onAccepted={refresh} onPendingChange={setPendingCount} refreshVersion={freshnessVersion} />
+          {pendingCount === 0 && (mayCreate ? <ClassRepositoryForm busy={creating} onSubmit={createRepository} onDirtyChange={setFormDirty} /> : <p>{!open ? 'Group creation is closed for this project.' : 'New Git repositories cannot be provisioned in this environment.'}</p>)}
+          {pendingCount === null && <p className="group-help">Checking group invitations…</p>}
+          {!open && pendingCount > 0 && <p className="group-help">Invitation actions are closed for this project.</p>}
+        </>}
+        {actionError && <p role="alert" className="activity-action-error">{describeApiError(actionError)}</p>}
+      </section>
+    </aside>
+  </div>
 }
 
 export function InstructorProjectList({ api = projectApi }) {
@@ -342,7 +361,7 @@ export function InstructorProjectEditor({ mode, api = projectApi }) {
         <div className="instructor-form-grid">
           <label>Project title<input value={form.title} maxLength={200} disabled={!editable || busy} onChange={(event) => setField('title', event.target.value)} />{fieldErrors.title && <small className="activity-field-error">{fieldErrors.title}</small>}</label>
           <label>Deadline<input type="datetime-local" value={form.dueDate} disabled={!editable || busy} onChange={(event) => setField('dueDate', event.target.value)} />{fieldErrors.dueDate && <small className="activity-field-error">{fieldErrors.dueDate}</small>}</label>
-          <label>Maximum team size<select value={form.maxTeamSize} disabled={!editable || busy} onChange={(event) => setField('maxTeamSize', event.target.value)}>{[2,3,4,5,6,7,8].map((size) => <option value={size} key={size}>{size} students</option>)}</select>{fieldErrors.maxTeamSize && <small className="activity-field-error">{fieldErrors.maxTeamSize}</small>}</label>
+          <label>Maximum members (including Maintainer)<select value={form.maxTeamSize} disabled={!editable || busy} onChange={(event) => setField('maxTeamSize', event.target.value)}>{[2,3,4,5,6,7,8].map((size) => <option value={size} key={size}>{size} members</option>)}</select>{fieldErrors.maxTeamSize && <small className="activity-field-error">{fieldErrors.maxTeamSize}</small>}</label>
           <label>Lifecycle<span className="instructor-fixed-value">{formatProjectStatus(status)}</span></label>
         </div>
         <label className="instructor-wide-field">Instructions<textarea value={form.instructions} maxLength={20000} disabled={!editable || busy} onChange={(event) => setField('instructions', event.target.value)} />{fieldErrors.instructions && <small className="activity-field-error">{fieldErrors.instructions}</small>}</label>
@@ -395,8 +414,8 @@ export function InstructorProjectDetail({ api = projectApi }) {
       <section className="instructor-page-heading"><p>Project Requirement Monitoring</p><h2>{current.project.title}</h2><span>Due {formatProjectDate(current.project.dueDate)} · {formatProjectStatus(current.project.status)}</span></section>
       <div className="instructor-stat-grid instructor-monitor-grid"><article className="instructor-stat-card"><span>Teams</span><strong>{current.monitoring.teamCount}</strong><p>authoritative records</p></article><article className="instructor-stat-card"><span>Repositories</span><strong>{current.monitoring.repositoryCount}</strong><p>created for this task</p></article><article className="instructor-stat-card"><span>Active members</span><strong>{current.monitoring.activeMemberCount}</strong><p>across project teams</p></article></div>
       {current.teams.length === 0 && <RequestState kind="empty" compact message="No teams or repositories have been created for this project task." />}
-      {current.teams.length > 0 && <div className="instructor-data-table" role="table" aria-label="Project teams"><div className="instructor-table-row instructor-table-row--head instructor-team-row project-team-foundation-row" role="row"><span>Team</span><span>Lead</span><span>Members</span><span>Repository</span><span>Status</span><span>Action</span></div>{current.teams.map((team) => <div className="instructor-table-row instructor-team-row project-team-foundation-row" role="row" key={team.teamId}><strong>{team.name}</strong><span>{team.lead.fullName}</span><span>{team.activeMemberCount}</span><span>{team.repository?.repositoryName ?? 'No repository'}</span><ProjectStatus value={team.repository?.reviewStatus ?? team.status} /><div>{team.repository ? <NavLink to={classHref(`/instructor/projects/${projectTaskId}/repositories/${team.repository.repositoryId}`, selectedClass.id)}>View metadata</NavLink> : <span>Unavailable</span>}</div></div>)}</div>}
-      <RequestState kind="unavailable" compact title="Git contribution evidence is not active yet" message="Open an authorized repository above for collaboration, feedback, and academic review. Git history, contribution analytics, and similarity remain later boundaries." />
+      {current.teams.length > 0 && <div className="instructor-data-table" role="table" aria-label="Project teams"><div className="instructor-table-row instructor-table-row--head instructor-team-row project-team-foundation-row" role="row"><span>Group</span><span>Maintainer</span><span>Members</span><span>Repository</span><span>Status</span><span>Action</span></div>{current.teams.map((team) => <div className="instructor-table-row instructor-team-row project-team-foundation-row" role="row" key={team.teamId}><strong>{team.name}</strong><span>{team.lead.fullName}</span><span>{team.activeMemberCount}</span><span>{team.repository?.repositoryName ?? 'No repository'}</span><ProjectStatus value={team.repository?.reviewStatus ?? team.status} /><div>{team.repository ? <NavLink to={classHref(`/instructor/projects/${projectTaskId}/repositories/${team.repository.repositoryId}`, selectedClass.id)}>Open Repository</NavLink> : <span>Unavailable</span>}</div></div>)}</div>}
+      <RequestState kind="unavailable" compact title="Repository evidence and academic review" message="Open an authorized repository above for Git history, source inspection, collaboration, feedback, and academic review. Contribution analytics and similarity are not available yet." />
     </div>
   )
 }

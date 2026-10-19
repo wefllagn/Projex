@@ -43,6 +43,9 @@ export function createRepositoryApi(client = apiClient) {
     getRepository(repositoryId, options) {
       return client.get(`/repositories/${repositoryId}`, options)
     },
+    getGroupContext(repositoryId, options) {
+      return client.get(`/repositories/${repositoryId}/group-context`, options)
+    },
     listRecordedActivity(repositoryId, query, options) {
       return client.get(`/repositories/${repositoryId}/activity${queryString(query)}`, options)
     },
