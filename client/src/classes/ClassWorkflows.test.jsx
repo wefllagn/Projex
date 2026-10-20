@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -60,13 +60,16 @@ describe('student class workflows', () => {
       patch: vi.fn(),
     }
     const user = userEvent.setup()
-    renderWorkflow({ client, entry: '/student/join-class', page: <StudentRoutePage pagePath="join-class" /> })
+    renderWorkflow({ client, entry: '/student', page: <StudentRoutePage pagePath="dashboard" /> })
 
-    await user.click(screen.getByRole('button', { name: 'Join Class by Code' }))
+    expect(screen.queryByRole('link', { name: 'To-do' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Class Invitations' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Join Class', exact: true }))
     await user.type(screen.getByLabelText('Class code'), secretInput)
-    await user.click(screen.getByRole('button', { name: 'Join Class' }))
+    await user.click(within(screen.getByRole('dialog', { name: 'Join Class' })).getByRole('button', { name: 'Join Class', exact: true }))
 
-    expect(await screen.findByText('Programming Fundamentals · BSIT 1A')).toBeInTheDocument()
+    expect(await screen.findByText('Joined Programming Fundamentals.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Programming Fundamentals/ })).toHaveAttribute('href', `/student/classes?classId=${classId}`)
     expect(client.post).toHaveBeenCalledWith('/classes/join', { classCode: secretInput }, undefined)
     expect(screen.queryByText(secretInput)).not.toBeInTheDocument()
   })

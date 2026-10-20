@@ -9,7 +9,7 @@ import DashboardLayout from './DashboardLayout.jsx'
 function renderRole(role, destination) {
   const base = `/${role.toLowerCase()}`
   const user = { id: `${role}-1`, fullName: `Synthetic ${role}`, email: `${role.toLowerCase()}@integration.test`, role, status: 'ACTIVE' }
-  const classContext = { classes: [], requestedClassId: null, status: 'ready', pagination: { hasNextPage: false } }
+  const classContext = { api: { listMyClassInvitations: vi.fn().mockResolvedValue({ data: [], pagination: { totalItems: 0 } }) }, classes: [], requestedClassId: null, status: 'ready', pagination: { hasNextPage: false } }
   const logout = vi.fn()
   render(
     <AuthContext.Provider value={{ user, logout }}>
@@ -43,6 +43,11 @@ describe('authenticated mobile navigation', () => {
     expect(menu).toHaveAttribute('aria-controls', navigation.closest('aside').id)
     expect(menu).toHaveAttribute('aria-expanded', 'false')
     expect(shell).not.toHaveClass('is-mobile-menu-open')
+    if (role === 'STUDENT') {
+      expect(screen.queryByRole('link', { name: 'My Submissions' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Join Class' })).not.toBeInTheDocument()
+      expect(navigation.closest('aside')).toContainElement(screen.getByRole('button', { name: 'Sign out' }))
+    }
 
     await user.click(menu)
     expect(screen.getByRole('button', { name: 'Close navigation', expanded: true })).toHaveAttribute('aria-expanded', 'true')

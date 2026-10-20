@@ -11,7 +11,7 @@ const common = {
   classId: z.uuid().optional(),
   search: z.string().trim().min(1).max(100).optional(),
 }
-const todoQuery = z.object({ ...common, due: z.enum(['all', 'upcoming', 'overdue']).default('all'), kind: z.enum(['all', 'activity', 'project']).default('all') }).strict()
+const todoQuery = z.object({ ...common, due: z.enum(['all', 'upcoming', 'overdue']).default('all'), kind: z.enum(['all', 'activity', 'project']).default('all'), state: z.enum(['all', 'assigned', 'missing', 'done']).default('all') }).strict()
 const submissionQuery = z.object({ ...common, status: z.enum(['QUEUED', 'ASSESSING', 'ASSESSED', 'ASSESSMENT_FAILED', 'REVIEWED', 'RELEASED', 'FAILED_RESOLVED']).optional() }).strict()
 const reviewQuery = z.object({ ...common, kind: z.enum(['all', 'submission', 'repository']).default('all') }).strict()
 
@@ -47,24 +47,38 @@ export function createWorkHubRouter({ prisma, requireAuthentication }: { prisma:
       const query = parseRequest(todoQuery, request.query)
       const studentId = request.auth!.user.id
       const now = new Date()
-      const dueDate = query.due === 'upcoming' ? { gte: now } : query.due === 'overdue' ? { lt: now } : undefined
+      const dueDate = query.state === 'assigned' ? { gte: now } : query.state === 'missing' ? { lt: now } : query.due === 'upcoming' ? { gte: now } : query.due === 'overdue' ? { lt: now } : undefined
       const classWhere = { status: 'ACTIVE' as const, members: { some: { studentId, status: 'ACTIVE' as const } } }
       const base = { class: classWhere, ...(query.classId ? { classId: query.classId } : {}), ...(query.search ? { title: { contains: query.search, mode: 'insensitive' as const } } : {}), ...(dueDate ? { dueDate } : {}) }
-      const activityWhere = { ...base, status: 'PUBLISHED' as const }
-      const taskWhere = { ...base, status: 'PUBLISHED' as const }
+      const completedTeam: Prisma.TeamWhereInput = {
+        members: { some: { studentId, status: 'ACTIVE' } },
+        repository: { is: { status: { in: ['ACTIVE', 'ARCHIVED'] }, reviewStatus: { in: ['READY_FOR_REVIEW', 'APPROVED'] } } },
+      }
+      const activityWhere: Prisma.ProgrammingActivityWhereInput = {
+        ...base,
+        status: query.state === 'missing' || query.state === 'done' ? { in: ['PUBLISHED', 'CLOSED'] } : 'PUBLISHED',
+        ...(query.state === 'done' ? { submissions: { some: { studentId } } }
+          : query.state === 'assigned' || query.state === 'missing' ? { submissions: { none: { studentId } } } : {}),
+      }
+      const taskWhere: Prisma.ProjectTaskWhereInput = {
+        ...base,
+        status: query.state === 'missing' || query.state === 'done' ? { in: ['PUBLISHED', 'CLOSED'] } : 'PUBLISHED',
+        ...(query.state === 'done' ? { teams: { some: completedTeam } }
+          : query.state === 'assigned' || query.state === 'missing' ? { NOT: { teams: { some: completedTeam } } } : {}),
+      }
       const take = query.page * query.pageSize
       const result = await prisma.$transaction(async (tx) => {
         const [activities, tasks, activityCount, taskCount] = await Promise.all([
           query.kind === 'project' ? [] : tx.programmingActivity.findMany({ where: activityWhere, select: { id: true, title: true, gradingMode: true, dueDate: true, class: { select: classSelect }, submissions: { where: { studentId }, select: { id: true }, take: 1 } }, orderBy: [{ dueDate: 'asc' }, { id: 'asc' }], take }),
-          query.kind === 'activity' ? [] : tx.projectTask.findMany({ where: taskWhere, select: { id: true, title: true, dueDate: true, class: { select: classSelect }, teams: { where: { members: { some: { studentId, status: 'ACTIVE' } } }, select: { id: true }, take: 1 } }, orderBy: [{ dueDate: 'asc' }, { id: 'asc' }], take }),
+          query.kind === 'activity' ? [] : tx.projectTask.findMany({ where: taskWhere, select: { id: true, title: true, dueDate: true, class: { select: classSelect }, teams: { where: { members: { some: { studentId, status: 'ACTIVE' } } }, select: { id: true, repository: { select: { reviewStatus: true, status: true } } }, take: 1 } }, orderBy: [{ dueDate: 'asc' }, { id: 'asc' }], take }),
           query.kind === 'project' ? 0 : tx.programmingActivity.count({ where: activityWhere }),
           query.kind === 'activity' ? 0 : tx.projectTask.count({ where: taskWhere }),
         ])
         return { activities, tasks, total: activityCount + taskCount }
       }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead })
       const rows = [
-        ...result.activities.map((row) => ({ id: row.id, kind: 'activity', title: row.title, gradingMode: row.gradingMode, ...(row.gradingMode === 'COMPLETION' ? { completionState: row.submissions.length > 0 ? 'COMPLETE' : 'NOT_SUBMITTED' } : {}), dueDate: row.dueDate, dueState: row.dueDate < now ? 'overdue' : 'upcoming', hasSubmission: row.submissions.length > 0, class: classProjection(row.class), sortAt: row.dueDate })),
-        ...result.tasks.map((row) => ({ id: row.id, kind: 'project', title: row.title, dueDate: row.dueDate, dueState: row.dueDate < now ? 'overdue' : 'upcoming', hasTeam: row.teams.length > 0, class: classProjection(row.class), sortAt: row.dueDate })),
+        ...result.activities.map((row) => ({ id: row.id, kind: 'activity', title: row.title, gradingMode: row.gradingMode, ...(row.gradingMode === 'COMPLETION' ? { completionState: row.submissions.length > 0 ? 'COMPLETE' : 'NOT_SUBMITTED' } : {}), dueDate: row.dueDate, dueState: row.dueDate < now ? 'overdue' : 'upcoming', hasSubmission: row.submissions.length > 0, workState: row.submissions.length > 0 ? 'done' : row.dueDate < now ? 'missing' : 'assigned', class: classProjection(row.class), sortAt: row.dueDate })),
+        ...result.tasks.map((row) => ({ id: row.id, kind: 'project', title: row.title, dueDate: row.dueDate, dueState: row.dueDate < now ? 'overdue' : 'upcoming', hasTeam: row.teams.length > 0, workState: row.teams.some(team => team.repository && ['ACTIVE', 'ARCHIVED'].includes(team.repository.status) && ['READY_FOR_REVIEW', 'APPROVED'].includes(team.repository.reviewStatus)) ? 'done' : row.dueDate < now ? 'missing' : 'assigned', class: classProjection(row.class), sortAt: row.dueDate })),
       ].sort((a, b) => compareDateAndIdentity(a, b))
       response.json(listResponse(pageOf(rows, query.page, query.pageSize).map(({ sortAt: _sortAt, ...row }) => row), pagination(query.page, query.pageSize, result.total), request.requestId))
     } catch (error) { next(error) }

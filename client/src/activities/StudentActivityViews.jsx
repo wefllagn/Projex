@@ -1,3 +1,4 @@
+import ProjexIcon from '../components/icons/ProjexIcon.jsx'
 import { GroupedClasswork } from './TopicViews.jsx'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
@@ -295,7 +296,7 @@ function ActivityCodeMenu({ activity, repository, api = repositoryContentApi }) 
   return (
     <div className="activity-code-menu" ref={menuRef}>
       <button type="button" className="activity-code-button" aria-haspopup="dialog" aria-expanded={open} disabled={!ready} onClick={() => open ? close() : openMenu()}>
-        Code <span aria-hidden="true">⌄</span>
+        Code <ProjexIcon name="expand" size={16} />
       </button>
       {open && (
         <section className="activity-code-popover" role="dialog" aria-label="Native Git access">
@@ -397,7 +398,7 @@ function StudentActivityReady({ activity, attemptState, testCases, classId, repo
         <NavLink to={classHref('/student/activity', classId)} className="student-back-link">Back to Activities</NavLink>
         <article className="student-detail-card">
           <div className="student-detail-heading activity-detail-heading">
-            <span className="student-detail-icon" aria-hidden="true" />
+            <span className="student-detail-icon" aria-hidden="true"><ProjexIcon name="activity" size={26} /></span>
             <div className="activity-detail-identity">
               <div className="activity-detail-title-row">
                 <h2>{activity.title}</h2>
@@ -405,7 +406,7 @@ function StudentActivityReady({ activity, attemptState, testCases, classId, repo
                 <ActivityCodeMenu activity={activity} repository={workspace.repository} api={repositoryContent} />
               </div>
               <p><span>{activity.createdBy.fullName}</span><span>{formatActivityStatus(activity.status)}</span></p>
-              <p className="student-detail-due">Due {formatActivityDate(activity.dueDate)}</p>
+              <p className="student-detail-due"><ProjexIcon name="calendar" size={18} />Due {formatActivityDate(activity.dueDate)}</p>
             </div>
           </div>
           <div className="student-detail-divider" />
@@ -416,7 +417,6 @@ function StudentActivityReady({ activity, attemptState, testCases, classId, repo
           <div className="student-detail-divider" />
           <section className="activity-visible-tests">
             <h3>Visible test cases</h3>
-            <p>Only instructor-approved visible examples are shown here. Hidden tests and their count remain private.</p>
             {testCases.length === 0 ? <p>No visible examples are available.</p> : testCases.map((testCase) => (
               <article key={testCase.id}>
                 <strong>{testCase.name}</strong>
@@ -447,14 +447,13 @@ function StudentActivityReady({ activity, attemptState, testCases, classId, repo
               : <p>No result has been released yet.</p>}
           </div>
           {attemptState.replacementAvailable && <p className="submission-notice">A replacement attempt is available until {formatActivityDate(attemptState.replacement?.expiresAt)}.</p>}
-          <small>{attemptState.nextAllowedSubmissionKind === 'REPLACEMENT' ? 'A replacement attempt is the next allowed submission.' : attemptState.nextAllowedSubmissionKind === 'ORDINARY' ? 'Another ordinary submission is currently allowed.' : 'Another submission is not currently available.'}</small>
+          {!['ORDINARY', 'REPLACEMENT'].includes(attemptState.nextAllowedSubmissionKind) && <small>Another submission is not currently available.</small>}
           <NavLink to={classHref(`/student/activity/${activity.id}/workspace`, classId)} className="student-primary-action">
             Open workspace
           </NavLink>
           <NavLink to={classHref(`/student/activity/${activity.id}/submissions`, classId)} className="student-outline-action">
             Attempt history
           </NavLink>
-          <small>Run visible tests before creating an immutable official submission.</small>
         </section>
       </aside>
     </div>

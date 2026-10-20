@@ -1,5 +1,8 @@
+import AppDialog from '../components/AppDialog.jsx'
+import ProjexIcon from '../components/icons/ProjexIcon.jsx'
+import AccountMenu from '../components/AccountMenu.jsx'
 import { useEffect, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { Navigate, NavLink, useSearchParams } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
@@ -7,6 +10,7 @@ import { classHref, classInitial, classOfferingLabel, firstName } from '../class
 import RequestState from '../components/RequestState.jsx'
 import { WorkHubList } from '../work-hub/WorkHubViews.jsx'
 import { StudentClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
+import { StudentNotificationMenu } from '../classes/StudentInvitationNotifications.jsx'
 import { StudentActivityDetail, StudentActivityList } from '../activities/StudentActivityViews.jsx'
 import {
   LegacySubmissionRoute,
@@ -21,74 +25,11 @@ import {
   StudentRepositoryCatalog,
 } from '../repositories/RepositoryFoundationViews.jsx'
 
-function StudentNotificationMenu() {
-  return (
-    <div className="student-notification-menu">
-      <button
-        type="button"
-        className="student-bell"
-        aria-label="Notifications are deferred"
-        title="Notifications are not available in this iteration."
-        disabled
-      >
-        <span className="student-bell__shape" aria-hidden="true" />
-      </button>
-    </div>
-  )
-}
-
-function StudentProfileMenu() {
-  const [open, setOpen] = useState(false)
-  const navigate = useNavigate()
-  const auth = useAuth()
-
-  return (
-    <div className="student-profile-menu">
-      <button type="button" className="student-profile-trigger" aria-label="Account menu" onClick={() => setOpen(!open)}>
-        <span className="student-user-avatar" aria-hidden="true" />
-        <span className="student-user-name">
-          <strong>{auth.user.fullName}</strong>
-          <span>Student</span>
-        </span>
-        <span className="student-dropdown" aria-hidden="true" />
-      </button>
-
-      {open && (
-        <section className="student-profile-dropdown">
-          <button type="button" className="student-profile-close" onClick={() => setOpen(false)} aria-label="Close profile menu" />
-          <strong>{auth.user.email}</strong>
-          <span>Managed by slu.edu.ph</span>
-          <div className="student-profile-photo">
-            <span className="student-user-avatar" aria-hidden="true" />
-          </div>
-          <h2>Hi, {auth.user.fullName.toUpperCase()}!</h2>
-          <button type="button" className="student-manage-account">Manage your projex account</button>
-          <div className="student-profile-menu-list">
-            <button type="button">Profile</button>
-            <button type="button">Settings</button>
-            <button
-              type="button"
-              onClick={async () => {
-                setOpen(false)
-                await auth.logout()
-                navigate('/', { replace: true })
-              }}
-            >
-              Sign out
-            </button>
-          </div>
-          <p>Privacy Policy · Terms of Service</p>
-        </section>
-      )}
-    </div>
-  )
-}
-
 function ClassHeader({ activeTab }) {
   const { selectedClass } = useClasses()
   const tabs = [
     { label: 'Overview', path: '/student/classes', key: 'stream' },
-    { label: 'Assignments', path: '/student/activity', key: 'assignments' },
+    { label: 'Activities', path: '/student/activity', key: 'assignments' },
     { label: 'People', path: '/student/people', key: 'people' },
   ]
   const initial = classInitial(selectedClass)
@@ -110,7 +51,7 @@ function ClassHeader({ activeTab }) {
 
         <div className="student-user-area">
           <StudentNotificationMenu />
-          <StudentProfileMenu />
+          <AccountMenu />
         </div>
       </div>
 
@@ -123,7 +64,7 @@ function ClassHeader({ activeTab }) {
               end={tab.key === 'stream'}
               className={activeTab === tab.key ? 'is-active' : undefined}
             >
-              <span className={`student-tab-icon student-tab-icon--${tab.key}`} aria-hidden="true" />
+              <ProjexIcon name={tab.key === 'assignments' ? 'activity' : tab.key === 'people' ? 'people' : 'preview'} />
               {tab.label}
             </NavLink>
           ))}
@@ -136,7 +77,7 @@ function ClassHeader({ activeTab }) {
 function StudentClassPage({ activeTab, children, wide = false, deferredLabel }) {
   const { requestedClassId, selectionError, selectionStatus } = useClasses()
   const previewLabel = deferredLabel === undefined
-    ? (activeTab === 'assignments' ? 'Activity and project integration' : '')
+    ? ''
     : deferredLabel
   let content = children
 
@@ -175,88 +116,62 @@ function StudentClassPage({ activeTab, children, wide = false, deferredLabel }) 
   )
 }
 
+function StudentClassCards({ classes }) {
+  return <div className="academic-class-grid">
+    {classes.map(item => <NavLink to={classHref('/student/classes', item.id)} className="academic-class-card" key={item.id}>
+      <span className={`student-class-dot student-class-dot--${classInitial(item).toLowerCase()}`}>{classInitial(item)}</span>
+      <span className="academic-class-identity"><strong>{item.className}</strong><span>{classOfferingLabel(item)}</span><small>{item.instructor.fullName}</small></span>
+      <span className="academic-class-state">{item.status === 'ARCHIVED' ? 'Archived · read-only' : 'Active'}</span>
+      <ProjexIcon name="chevronRight" size={18} />
+    </NavLink>)}
+  </div>
+}
+
 function HomeDashboardPage() {
   const auth = useAuth()
-  const { classes, error, pagination, status } = useClasses()
+  const { api, upsertClass, classes, error, pagination, status, loadMore } = useClasses()
+  const [params, setParams] = useSearchParams()
+  const [joinOpen, setJoinOpen] = useState(false)
+  const [joinNotice, setJoinNotice] = useState('')
+  const closeJoin = () => {
+    setJoinOpen(false)
+    if (params.has('join')) { const next = new URLSearchParams(params); next.delete('join'); setParams(next, { replace: true }) }
+  }
   const stats = [
-    { label: 'Joined Classes', value: pagination?.totalItems ?? classes.length, detail: 'authorized classes', tone: 'green' },
-    { label: 'Active Classes', value: classes.filter((item) => item.status === 'ACTIVE').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'classes', tone: 'blue' },
-    { label: 'Archived Classes', value: classes.filter((item) => item.status === 'ARCHIVED').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'read-only classes', tone: 'purple' },
+    { label: 'Joined Classes', value: pagination?.totalItems ?? classes.length, detail: '', tone: 'green' },
+    { label: 'Active Classes', value: classes.filter(item => item.status === 'ACTIVE').length, detail: pagination?.hasNextPage ? 'loaded classes' : '', tone: 'blue' },
+    { label: 'Archived Classes', value: classes.filter(item => item.status === 'ARCHIVED').length, detail: pagination?.hasNextPage ? 'loaded classes' : '', tone: 'purple' },
   ]
-
-  return (
-    <div className="student-home-page">
-      <header className="student-home-topbar">
-        <div />
-        <div className="student-user-area">
-          <StudentNotificationMenu />
-          <StudentProfileMenu />
-        </div>
-      </header>
-
-      <main className="student-home-content">
-        <section className="student-home-hero">
-          <div className="student-home-mascot" aria-hidden="true">
-            <img src="/assets/brand/projex-login-mascot.png" alt="" />
-          </div>
-          <div>
-            <h1>Welcome back, {firstName(auth.user.fullName)}</h1>
-            <p>Here are the classes currently available to your account.</p>
-          </div>
-        </section>
-
-        <section className="student-home-stats" aria-label="Student overview">
-          {stats.map((stat) => (
-            <article className="student-dashboard-stat" key={stat.label}>
-              <span className={`student-dashboard-stat-icon student-dashboard-stat-icon--${stat.tone}`} aria-hidden="true" />
-              <div>
-                <span>{stat.label}</span>
-                <strong>{stat.value}</strong>
-                <small>{stat.detail}</small>
-              </div>
-            </article>
-          ))}
-        </section>
-
-        <nav className="work-hub-dashboard-links" aria-label="Academic work">
-          <NavLink to="/student/todo">View cross-class To-do</NavLink>
-          <NavLink to="/student/submissions">View My Submissions</NavLink>
-        </nav>
-
-        <StudentClassInvitationPanel preview />
-
-        <section className="student-home-classes student-home-classes-panel">
-          <div className="student-home-section-heading">
-            <h2>My Classes</h2>
-            <NavLink to="/student/classes">View all classes</NavLink>
-          </div>
-
-          {status === 'loading' && <RequestState kind="loading" compact message="Loading your classes." />}
-          {status === 'error' && <RequestState kind="unavailable" compact error={error} />}
-          {status === 'ready' && classes.length === 0 && <RequestState kind="empty" compact message="Join a class to see it here." />}
-          <div className="student-home-class-grid">
-            {classes.map((item) => (
-              <NavLink to={classHref('/student/classes', item.id)} className="student-home-class-card" key={item.id}>
-                <span className={`student-class-dot student-class-dot--${classInitial(item).toLowerCase()}`}>
-                  {classInitial(item)}
-                </span>
-                <div>
-                  <strong>{item.className}</strong>
-                  <span>{classOfferingLabel(item)}</span>
-                  <span>{item.instructor.fullName}</span>
-                </div>
-                <div className="student-home-class-schedule">
-                  <span>{item.semester}</span>
-                  <span>{item.schoolYear} · {item.status === 'ARCHIVED' ? 'Archived' : 'Active'}</span>
-                </div>
-                <span className="student-home-card-action" aria-hidden="true" />
-              </NavLink>
-            ))}
-          </div>
-        </section>
-      </main>
-    </div>
-  )
+  return <div className="student-home-page">
+    <header className="student-home-topbar"><div /><div className="student-user-area"><StudentNotificationMenu /><AccountMenu /></div></header>
+    <main className="student-home-content">
+      <section className="student-home-hero">
+        <div className="student-home-mascot" aria-hidden="true"><img src="/assets/brand/projex-login-mascot.png" alt="" /></div>
+        <div><h1>Welcome back, {firstName(auth.user.fullName)}</h1></div>
+      </section>
+      <section className="student-home-stats" aria-label="Student overview">
+        {stats.map(stat => <article className="student-dashboard-stat" key={stat.label}>
+          <span className={`student-dashboard-stat-icon student-dashboard-stat-icon--${stat.tone}`} aria-hidden="true"><ProjexIcon name={stat.tone === 'green' ? 'classes' : stat.tone === 'blue' ? 'active' : 'archived'} size={28} /></span>
+          <div><span>{stat.label}</span><strong>{stat.value}</strong>{stat.detail && <small>{stat.detail}</small>}</div>
+        </article>)}
+      </section>
+      <section className="student-home-classes student-home-classes-panel academic-home-classes">
+        <div className="student-home-section-heading"><h2>My Classes</h2><button type="button" className="student-primary-action" onClick={() => setJoinOpen(true)}><ProjexIcon name="join" />Join Class</button></div>
+        {joinNotice && <p role="status" className="student-joined-state">{joinNotice}</p>}
+        {status === 'loading' && <RequestState kind="loading" compact message="Loading your classes." />}
+        {status === 'error' && <RequestState kind="unavailable" compact error={error} />}
+        {status === 'ready' && classes.length === 0 && <RequestState kind="empty" compact message="Join a class to see it here." />}
+        <StudentClassCards classes={classes} />
+        {pagination?.hasNextPage && <button type="button" className="student-outline-action class-load-more" onClick={loadMore}>Load more classes</button>}
+      </section>
+    </main>
+    {(joinOpen || params.get('join') === 'code') && <JoinClassModal onClose={closeJoin} onJoin={async code => {
+      const response = await api.joinClass(code)
+      upsertClass(response.data.class)
+      setJoinNotice(`Joined ${response.data.class.className}.`)
+      closeJoin()
+    }} />}
+  </div>
 }
 
 function StudentClassesPage() {
@@ -280,13 +195,13 @@ function StudentClassesPage() {
               <h2>{selectedClass.className}</h2>
               <p>{classOfferingLabel(selectedClass)}</p>
               <p>Instructor: {selectedClass.instructor.fullName}</p>
-              <small>{selectedClass.status === 'ARCHIVED' ? 'This class is read-only.' : 'Your membership grants access to this class.'}</small>
+              {selectedClass.status === 'ARCHIVED' && <small>This class is read-only.</small>}
             </section>
             <RequestState
               kind="unavailable"
               compact
-              title="Class stream deferred"
-              message="Announcements and comments are recognized Projex features, but no approved backend contract exists yet."
+              title="Class stream unavailable"
+              message="Announcements and comments are not available yet."
             />
           </div>
         )}
@@ -299,27 +214,7 @@ function StudentClassesPage() {
       {status === 'loading' && <RequestState kind="loading" message="Loading your authorized classes." />}
       {status === 'error' && <RequestState kind="unavailable" error={error} />}
       {status === 'ready' && classes.length === 0 && <RequestState kind="empty" message="Join a class using an instructor-provided code." />}
-      {status === 'ready' && classes.length > 0 && (
-        <section className="student-home-class-grid class-catalog-grid">
-          {classes.map((item) => {
-            const initial = classInitial(item)
-            return (
-              <NavLink to={classHref('/student/classes', item.id)} className="student-home-class-card" key={item.id}>
-                <span className={`student-class-dot student-class-dot--${initial.toLowerCase()}`}>{initial}</span>
-                <div>
-                  <strong>{item.className}</strong>
-                  <span>{classOfferingLabel(item)}</span>
-                  <span>{item.instructor.fullName}</span>
-                </div>
-                <div className="student-home-class-schedule">
-                  <span>{item.status === 'ARCHIVED' ? 'Archived · read-only' : 'Active'}</span>
-                </div>
-                <span className="student-home-card-action" aria-hidden="true" />
-              </NavLink>
-            )
-          })}
-        </section>
-      )}
+      {status === 'ready' && classes.length > 0 && <StudentClassCards classes={classes} />}
       {pagination?.hasNextPage && (
         <button type="button" className="student-outline-action class-load-more" onClick={loadMore}>Load more classes</button>
       )}
@@ -330,13 +225,13 @@ function StudentClassesPage() {
 function AssignmentSubTabs({ active }) {
   const { selectedClass } = useClasses()
   return (
-    <div className="student-segmented-tabs" aria-label="Assignment type">
+    <div className="student-segmented-tabs" aria-label="Activities and projects">
       <NavLink to={classHref('/student/activity', selectedClass?.id)} className={active === 'activities' ? 'is-active' : undefined}>
-        <span aria-hidden="true" />
+        <ProjexIcon name="activity" />
         Activities
       </NavLink>
       <NavLink to={classHref('/student/projects', selectedClass?.id)} className={active === 'projects' ? 'is-active' : undefined}>
-        <span aria-hidden="true" />
+        <ProjexIcon name="project" />
         My Projects
       </NavLink>
     </div>
@@ -383,15 +278,15 @@ function StudentGlobalPage({ title, eyebrow, action, children }) {
       <header className="student-home-topbar">
         <div />
         <div className="student-user-area">
-          <StudentNotificationMenu count={4} />
-          <StudentProfileMenu />
+          <StudentNotificationMenu />
+          <AccountMenu />
         </div>
       </header>
 
       <main className="student-global-content">
         <div className="student-global-heading">
           <div>
-            <p>{eyebrow}</p>
+            {eyebrow && <p>{eyebrow}</p>}
             <h1>{title}</h1>
           </div>
           {action}
@@ -403,16 +298,14 @@ function StudentGlobalPage({ title, eyebrow, action, children }) {
 }
 
 function StudentTodoPage() {
+  const { classes, pagination, loadMore } = useClasses()
   return (
-    <StudentGlobalPage eyebrow="Student To-do" title="To-do">
-      <WorkHubList view="todo" />
+    <StudentGlobalPage title="To-do">
+      <WorkHubList view="todo" classes={classes} moreClasses={pagination?.hasNextPage} onMoreClasses={loadMore} />
     </StudentGlobalPage>
   )
 }
 
-function StudentGlobalSubmissionsPage() {
-  return <StudentGlobalPage eyebrow="Academic Work" title="My Submissions"><WorkHubList view="submissions" /></StudentGlobalPage>
-}
 
 function JoinClassModal({ onClose, onJoin }) {
   const [classCode, setClassCode] = useState('')
@@ -432,11 +325,8 @@ function JoinClassModal({ onClose, onJoin }) {
   }
 
   return (
-    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="student-join-class-title">
-      <form className="student-action-modal" onSubmit={submit}>
-        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close join class" />
-        <p>Join Class</p>
-        <h2 id="student-join-class-title">Enter class code</h2>
+    <AppDialog title="Join Class" onClose={onClose} busy={joining}>
+      <form className="academic-join-form" onSubmit={submit}>
         <label className="student-single-field">
           Class code
           <input
@@ -449,7 +339,7 @@ function JoinClassModal({ onClose, onJoin }) {
         </label>
         {error && <p className="class-form-error" role="alert">{describeApiError(error)}</p>}
         <div className="student-submit-modal-actions">
-          <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
+          <button type="button" className="student-outline-action" disabled={joining} onClick={onClose}>Cancel</button>
           <button
             type="submit"
             className="student-primary-action"
@@ -459,53 +349,7 @@ function JoinClassModal({ onClose, onJoin }) {
           </button>
         </div>
       </form>
-    </div>
-  )
-}
-
-function StudentJoinClassPage() {
-  const [modalOpen, setModalOpen] = useState(false)
-  const [joinedClass, setJoinedClass] = useState(null)
-  const { api, upsertClass } = useClasses()
-
-  return (
-    <StudentGlobalPage
-      eyebrow="Class Membership"
-      title="Join Class"
-      action={(
-        <button type="button" className="student-global-action" onClick={() => setModalOpen(true)}>
-          <span aria-hidden="true">+</span>
-          Join Class by Code
-        </button>
-      )}
-    >
-      <section className="student-global-panel">
-        <div className="student-panel-heading">
-          <h2>Join with a class code</h2>
-          <span>Server verified</span>
-        </div>
-        <p>Enter the code supplied by your instructor. Projex does not save the code in this browser.</p>
-        {joinedClass && (
-          <div className="student-joined-state">
-            <strong>Joined class</strong>
-            <span>{joinedClass.className} · {joinedClass.section}</span>
-            <NavLink to={classHref('/student/classes', joinedClass.id)}>Open class</NavLink>
-          </div>
-        )}
-      </section>
-
-      {modalOpen && (
-        <JoinClassModal
-          onClose={() => setModalOpen(false)}
-          onJoin={async (code) => {
-            const response = await api.joinClass(code)
-            upsertClass(response.data.class)
-            setJoinedClass(response.data.class)
-            setModalOpen(false)
-          }}
-        />
-      )}
-    </StudentGlobalPage>
+    </AppDialog>
   )
 }
 
@@ -622,14 +466,14 @@ export function StudentRoutePage({ pagePath }) {
     dashboard: <HomeDashboardPage />,
     classes: <StudentClassesPage />,
     todo: <StudentTodoPage />,
-    'join-class': <StudentJoinClassPage />,
+    'join-class': <Navigate to="/student?join=code" replace />,
     invitations: (
       <StudentGlobalPage title="Class Invitations" eyebrow="Class Membership">
         <StudentClassInvitationPanel />
       </StudentGlobalPage>
     ),
     activity: <ActivitiesPage />,
-    submissions: <StudentGlobalSubmissionsPage />,
+    submissions: <Navigate to="/student/todo?tab=done" replace />,
     'activity/:activityId': <ActivityDetailPage />,
     'activity/:activityId/workspace': <StudentProgrammingWorkspace />,
     'activity/:activityId/submissions': <SubmissionHistoryPage />,

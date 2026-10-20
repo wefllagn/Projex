@@ -1,3 +1,5 @@
+import { ProjexIcon as KitIcon } from '../../design/ProjexIcon.jsx'
+
 const paths = {
   home: 'M3 10l9-7 9 7v10H3z M9 20v-7h6v7',
   createClass: 'M4 4h12v16H4z M8 8h4 M8 12h4 M20 4v8 M16 8h8',
@@ -20,7 +22,9 @@ const paths = {
   signout: 'M10 4H4v16h6 M9 12h12 M17 8l4 4-4 4',
   avatar: 'M16 7a4 4 0 11-8 0 4 4 0 018 0 M4 21v-3a8 8 0 0116 0v3',
 }
+const kit = { home: 'home', todo: 'todo', review: 'review', classes: 'class', folder: 'folder', repository: 'repository', activity: 'assignment', project: 'group-project', submission: 'submission', plus: 'join-class-add', join: 'join-class-add', bell: 'notifications', signout: 'signout', avatar: 'avatar', expand: 'chevron-down', file: 'file', run: 'run', tests: 'tests', save: 'save', branch: 'branch', people: 'members', calendar: 'calendar' }
 export default function ProjexIcon({ name, label, size = 20, className = '' }) {
+  if (kit[name]) return <KitIcon name={kit[name]} label={label} size={size} className={className} />
   return <svg className={`projex-icon ${className}`} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}><path d={paths[name] || paths.classes} /></svg>
 }
 // Use only with an actual authorized feed and an actual unread count.

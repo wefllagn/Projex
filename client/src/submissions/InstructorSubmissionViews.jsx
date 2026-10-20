@@ -1,3 +1,4 @@
+import useConfirmation from '../components/useConfirmation.jsx'
 import { submissionStatusLabel } from './submission-display.js'
 import AppDialog from '../components/AppDialog.jsx'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -175,6 +176,7 @@ function CorrectionHistory({ corrections }) {
 }
 
 export function InstructorSubmissionReview({ api = activityApi, submissions = submissionApi, pollingOptions }) {
+  const [confirm, confirmation] = useConfirmation()
   const capabilities = useCapabilities()
   const { activityId, submissionId } = useParams()
   const { selectedClass, selectionStatus } = useClasses()
@@ -343,7 +345,7 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
 
   const retry = async () => {
     if (!capabilities.java.execution) return
-    if (!window.confirm('Retry assessment for this same immutable submission?')) return
+    if (!await confirm('Retry assessment for this same immutable submission?', 'Retry assessment?')) return
     setBusy('retry')
     try {
       const response = await submissions.retryAssessment(submissionId, { expectedUpdatedAt: current.record.updatedAt })
@@ -352,7 +354,7 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
   }
 
   const startRerun = async () => {
-    if (!capabilities.java.execution || !window.confirm('Rerun this immutable submitted source against its saved test inputs? This will not change the score or consume an attempt.')) return
+    if (!capabilities.java.execution || !await confirm('Rerun this immutable submitted source against its saved test inputs? This will not change the score or consume an attempt.', 'Rerun submitted source?')) return
     setBusy('rerun')
     setRerunError(null)
     setRerunBounded(false)
@@ -435,6 +437,7 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
       {canResolveAssessmentFailure(record) && !archived && <section className="instructor-failure-panel"><div className="instructor-section-title"><h3>Infrastructure assessment failure</h3><span>The original submission remains immutable</span></div><p>Retry the same assessment first when appropriate, or explicitly resolve the infrastructure failure.</p><button type="button" className="student-outline-action" onClick={retry} disabled={Boolean(busy) || !capabilities.java.execution}>{busy === 'retry' ? 'Queueing retry…' : 'Retry same assessment'}</button>{!capabilities.java.execution && <p className="activity-lifecycle-note">Java assessment retry is unavailable in this environment.</p>}<form onSubmit={resolveFailure}><label>Resolution<select value={resolution.resolutionType} onChange={(event) => setResolution((value) => ({ ...value, resolutionType: event.target.value, replacementExpiresAt: '' }))}><option value="CLOSED_WITHOUT_REPLACEMENT">Close without replacement</option><option value="REPLACEMENT_GRANTED">Grant replacement attempt</option></select></label>{resolution.resolutionType === 'REPLACEMENT_GRANTED' && <label>Replacement expires (local time)<input type="datetime-local" value={resolution.replacementExpiresAt} onChange={(event) => setResolution((value) => ({ ...value, replacementExpiresAt: event.target.value }))} /><small>The browser converts this local time to an unambiguous ISO timestamp. The server decides whether the grant remains valid.</small></label>}<label>Mandatory reason<textarea value={resolution.reason} maxLength={2000} onChange={(event) => setResolution((value) => ({ ...value, reason: event.target.value }))} /></label><button type="submit" className="student-primary-action" disabled={!resolutionValid || Boolean(busy)}>{busy === 'resolution' ? 'Resolving…' : 'Resolve failure'}</button></form></section>}
 
       {record.failureResolution && <section className="submission-resolution instructor-resolution-record"><h2>Infrastructure resolution</h2><p>{formatStatus(record.failureResolution.resolutionType)}</p><p>{record.failureResolution.reason}</p><dl><div><dt>Resolved</dt><dd>{formatDate(record.failureResolution.resolvedAt)}</dd></div>{record.failureResolution.replacementExpiresAt && <div><dt>Replacement expiration</dt><dd>{formatDate(record.failureResolution.replacementExpiresAt)}</dd></div>}<div><dt>Replacement status</dt><dd>{record.failureResolution.replacementConsumedAt ? `Consumed ${formatDate(record.failureResolution.replacementConsumedAt)}` : record.failureResolution.replacementExpiresAt ? 'Unconsumed; the server enforces expiration when the student submits' : 'No replacement granted'}</dd></div></dl></section>}
+      {confirmation}
       {confirmAction === 'release' && <AppDialog title={completion ? 'Release feedback?' : 'Release final result?'} busy={Boolean(busy)} onClose={() => setConfirmAction('')}><p>Release this saved review to the Student? Released reviews cannot be edited.</p><footer><button type="button" className="student-outline-action" onClick={() => setConfirmAction('')} disabled={Boolean(busy)}>Cancel</button><button type="button" className="student-primary-action" onClick={release} disabled={Boolean(busy)}>Confirm release</button></footer></AppDialog>}
     </div>
   )

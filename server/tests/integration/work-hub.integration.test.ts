@@ -60,6 +60,60 @@ describe('cross-class academic work hub', () => {
     expect(removed.body.pagination.totalItems).toBe(1)
   })
 
+  it('partitions Assigned, Missing and Done before pagination using accepted submissions and repository review state', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const other = await createActiveUser(prisma, 'STUDENT')
+    const currentClass = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, currentClass.id, student.id)
+    await createActiveMembership(prisma, currentClass.id, other.id)
+    const past = new Date(Date.now() - 86_400_000)
+    const future = new Date(Date.now() + 86_400_000)
+    const activity = (title: string, dueDate: Date) => prisma.programmingActivity.create({ data: { classId: currentClass.id, createdById: instructor.id, title, instructions: 'Write Java', dueDate, starterCode: 'class Main {}', totalPoints: 100, status: 'PUBLISHED', publishedAt: new Date() } })
+    const doneActivity = await activity('Accepted Activity', past)
+    const missingActivity = await activity('Missing Activity', past)
+    const assignedActivity = await activity('Assigned Activity', future)
+    const submit = (activityId: string, studentId: string) => prisma.activitySubmission.create({ data: { activityId, studentId, attemptNumber: 1, sourceCode: 'private source', sourceHash: 'a'.repeat(64), activityTitleSnapshot: 'Activity', dueDateSnapshot: past, totalPointsSnapshot: 100, automatedMaximum: 50, instructorMaximum: 50, submissionStatus: 'QUEUED' } })
+    // Acceptance, rather than assessment success or a released score, moves work to Done.
+    await submit(doneActivity.id, student.id)
+    await submit(missingActivity.id, other.id)
+    const project = async (title: string, dueDate: Date, reviewStatus: 'WORKING' | 'READY_FOR_REVIEW' | 'APPROVED') => {
+      const task = await prisma.projectTask.create({ data: { classId: currentClass.id, createdById: instructor.id, title, instructions: 'Collaborate', dueDate, status: 'PUBLISHED', publishedAt: new Date() } })
+      await prisma.$transaction(async tx => {
+        const team = await tx.team.create({ data: { projectTaskId: task.id, leadStudentId: student.id, name: title, normalizedName: title.toLowerCase() } })
+        await tx.teamMember.create({ data: { teamId: team.id, projectTaskId: task.id, studentId: student.id, memberRole: 'LEAD', status: 'ACTIVE' } })
+        const repository = await tx.repository.create({ data: { projectTaskId: task.id, teamId: team.id, ownerId: student.id, repositoryType: 'CLASS_PROJECT', repositoryName: title, slug: task.id, visibility: 'CLASS_ONLY', status: 'ACTIVE', reviewStatus, ...(reviewStatus !== 'WORKING' ? { readyForReviewAt: new Date() } : {}), ...(reviewStatus === 'APPROVED' ? { approvedAt: new Date() } : {}) } })
+        await tx.repositoryMember.create({ data: { repositoryId: repository.id, studentId: student.id, memberRole: 'OWNER', status: 'ACTIVE' } })
+      })
+      return task
+    }
+    const working = await project('Working Project', future, 'WORKING')
+    const overdue = await project('Overdue Project', past, 'WORKING')
+    const ready = await project('Ready Project', past, 'READY_FOR_REVIEW')
+    const approved = await project('Approved Project', future, 'APPROVED')
+    const server = app()
+    const expected = { assigned: [assignedActivity.id, working.id], missing: [missingActivity.id, overdue.id], done: [doneActivity.id, ready.id, approved.id] }
+    for (const [state, identities] of Object.entries(expected)) {
+      const rows = []
+      for (let page = 1; page <= identities.length; page++) {
+        const result = await request(server).get(`/work-hub/student/todo?state=${state}&pageSize=1&page=${page}`).set('x-test-actor', student.id).expect(200)
+        expect(result.body.pagination).toMatchObject({ totalItems: identities.length, totalPages: identities.length })
+        expect(result.body.data).toHaveLength(1)
+        expect(result.body.data[0].workState).toBe(state)
+        expect(JSON.stringify(result.body)).not.toMatch(/private source|sourceCode|finalScore/)
+        rows.push(result.body.data[0].id)
+      }
+      expect(rows.sort()).toEqual(identities.sort())
+    }
+    // Changes Requested moves a previously ready repository back to unfinished work.
+    await prisma.repository.update({ where: { teamId: (await prisma.team.findFirstOrThrow({ where: { projectTaskId: ready.id } })).id }, data: { reviewStatus: 'CHANGES_REQUESTED' } })
+    const missing = await request(server).get('/work-hub/student/todo?state=missing').set('x-test-actor', student.id).expect(200)
+    expect(missing.body.data.map((row: { id: string }) => row.id)).toContain(ready.id)
+    await prisma.classMember.update({ where: { classId_studentId: { classId: currentClass.id, studentId: student.id } }, data: { status: 'REMOVED' } })
+    const removed = await request(server).get('/work-hub/student/todo?state=done').set('x-test-actor', student.id).expect(200)
+    expect(removed.body.data).toEqual([])
+  })
+
   it('keeps global attempt history student-isolated and score-gated, including archived classes', async () => {
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const student = await createActiveUser(prisma, 'STUDENT')

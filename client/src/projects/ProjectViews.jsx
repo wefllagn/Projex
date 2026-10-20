@@ -1,3 +1,4 @@
+import AcademicIcon from '../components/icons/ProjexIcon.jsx'
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import { ApiError, describeApiError } from '../api/api-client.js'
@@ -86,15 +87,10 @@ export function StudentProjectList({ api = projectApi }) {
   const current = state.classId === selectedClass?.id ? state : { ...state, status: 'loading', items: [] }
   return (
     <div className="student-assignment-board project-task-board">
-      <section className="student-assignment-stats" aria-label="Project requirement overview">
-        <article className="student-dashboard-stat student-assignment-stat"><div><span>Project Requirements</span><strong>{current.pagination?.totalItems ?? current.items.length}</strong><small>authorized records</small></div></article>
-        <article className="student-dashboard-stat student-assignment-stat"><div><span>Open</span><strong>{current.items.filter((item) => item.dueState === 'OPEN').length}</strong><small>on this page</small></div></article>
-        <article className="student-dashboard-stat student-assignment-stat"><div><span>Closed</span><strong>{current.items.filter((item) => item.status === 'CLOSED').length}</strong><small>on this page</small></div></article>
-      </section>
       <section className="student-assignment-panel student-assignment-panel--board">
         <div className="student-assignment-toolbar student-assignment-toolbar--board">
-          <div><strong>My Projects</strong><p>Published and closed group project requirements for {selectedClass?.className}.</p></div>
-          <label className="student-sort-control">Status<select value={query.status} onChange={(event) => setQuery({ ...FIRST_PAGE, status: event.target.value })}><option value="">Published and closed</option><option value="PUBLISHED">Published</option><option value="CLOSED">Closed</option></select></label>
+          <h2>My Projects</h2>
+          <label className="student-sort-control"><span className="academic-sr-only">Filter project status</span><select aria-label="Filter project status" value={query.status} onChange={(event) => setQuery({ ...FIRST_PAGE, status: event.target.value })}><option value="">Published and closed</option><option value="PUBLISHED">Published</option><option value="CLOSED">Closed</option></select></label>
         </div>
         {current.status === 'loading' && <RequestState kind="loading" compact message="Loading project requirements." />}
         {current.status === 'error' && <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} compact error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />}
@@ -102,12 +98,12 @@ export function StudentProjectList({ api = projectApi }) {
         {current.status === 'ready' && current.items.length > 0 && (
           <div className="student-assignment-list">
             {current.items.map((project) => (
-              <article className="student-assignment-row project-task-row" key={project.id}>
-                <div className="student-assignment-type"><span className="student-group-icon" aria-hidden="true" /><strong>Project</strong></div>
-                <div><h2>{project.title}</h2><p>{project.instructions}</p><small>Team size up to {project.maxTeamSize}</small></div>
-                <div className="student-assignment-due"><span>Due {formatProjectDate(project.dueDate)}</span><ProjectStatus value={project.dueState} /></div>
-                <NavLink to={classHref(`/student/projects/${project.id}`, selectedClass.id)} className="student-assignment-action">View details</NavLink>
-              </article>
+              <NavLink to={classHref(`/student/projects/${project.id}`, selectedClass.id)} className="academic-project-row" key={project.id}>
+                <span className="academic-row-icon"><AcademicIcon name="project" size={24} /></span>
+                <strong>{project.title}</strong>
+                <span className="academic-project-due"><time dateTime={project.dueDate}>{formatProjectDate(project.dueDate)}</time><ProjectStatus value={project.dueState} /></span>
+                <AcademicIcon name="chevronRight" size={18} />
+              </NavLink>
             ))}
           </div>
         )}

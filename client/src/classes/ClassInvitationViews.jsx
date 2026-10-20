@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import useAutomaticRefresh from '../components/useAutomaticRefresh.js'
+import useConfirmation from '../components/useConfirmation.jsx'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
 import RequestState from '../components/RequestState.jsx'
@@ -14,7 +16,8 @@ function InvitationIdentity({ invitation }) {
   )
 }
 
-export function StudentClassInvitationPanel({ preview = false }) {
+export function StudentClassInvitationPanel({ preview = false, autoRefresh = false, onPendingChange, onBusyChange, onActionSettled }) {
+  const [confirm, confirmation] = useConfirmation()
   const { api, upsertClass } = useClasses()
   const pageSize = preview ? 3 : 100
   const [state, setState] = useState({
@@ -25,43 +28,36 @@ export function StudentClassInvitationPanel({ preview = false }) {
   })
   const [busyId, setBusyId] = useState(null)
   const [notice, setNotice] = useState('')
+  const generation = useRef({ value: 0 })
+  const reading = useRef(false)
 
   const load = useCallback(async (page = 1, signal) => {
-    const response = await api.listMyClassInvitations(
-      { page, pageSize },
-      signal ? { signal } : undefined,
-    )
-    setState((current) => ({
-      status: 'ready',
-      invitations: page === 1
-        ? response.data
-        : [...current.invitations, ...response.data],
-      pagination: response.pagination,
-      error: null,
-    }))
+    const ticket = ++generation.current.value
+    reading.current = true
+    try {
+      const response = await api.listMyClassInvitations({ page, pageSize }, signal ? { signal } : undefined)
+      if (signal?.aborted || ticket !== generation.current.value) return
+      setState(current => ({ status: 'ready', invitations: page === 1 ? response.data : [...current.invitations, ...response.data], pagination: response.pagination, error: null }))
+    } finally { if (ticket === generation.current.value) reading.current = false }
   }, [api, pageSize])
 
   useEffect(() => {
     const controller = new AbortController()
-    api.listMyClassInvitations(
-      { page: 1, pageSize },
-      { signal: controller.signal },
-    )
-      .then((response) => setState({
-        status: 'ready',
-        invitations: response.data,
-        pagination: response.pagination,
-        error: null,
-      }))
-      .catch((error) => {
-        if (error?.name !== 'AbortError') {
-          setState({ status: 'error', invitations: [], pagination: null, error })
-        }
-      })
-    return () => controller.abort()
-  }, [api, pageSize])
+    const sequence = generation.current
+    load(1, controller.signal).catch(error => {
+      if (!controller.signal.aborted && error.name !== 'AbortError') setState({ status: 'error', invitations: [], pagination: null, error })
+    })
+    return () => { controller.abort(); sequence.value++; reading.current = false }
+  }, [load])
+  useEffect(() => { if (state.status === 'ready' && state.pagination) onPendingChange?.(state.pagination.totalItems) }, [state.status, state.pagination, onPendingChange])
+  useEffect(() => { onBusyChange?.(busyId !== null) }, [busyId, onBusyChange])
+  useAutomaticRefresh(() => {
+    if (reading.current) return
+    load(1).catch(error => setState(current => ({ ...current, status: 'error', error })))
+  }, { enabled: autoRefresh && busyId === null && state.status !== 'loading' && (state.pagination?.page ?? 1) === 1 })
 
   const removeInvitation = (invitationId) => {
+    generation.current.value++; reading.current = false
     setState((current) => ({
       ...current,
       invitations: current.invitations.filter(
@@ -77,6 +73,7 @@ export function StudentClassInvitationPanel({ preview = false }) {
   }
 
   const accept = async (invitation) => {
+    generation.current.value++; reading.current = false
     setBusyId(invitation.invitationId)
     setNotice('')
     try {
@@ -89,11 +86,13 @@ export function StudentClassInvitationPanel({ preview = false }) {
       setNotice(describeApiError(error))
     } finally {
       setBusyId(null)
+      onActionSettled?.()
     }
   }
 
   const decline = async (invitation) => {
-    if (!window.confirm(`Decline invitation to ${invitation.class.className}?`)) return
+    if (!await confirm(`Decline invitation to ${invitation.class.className}?`, 'Decline invitation')) return
+    generation.current.value++; reading.current = false
     setBusyId(invitation.invitationId)
     setNotice('')
     try {
@@ -105,6 +104,7 @@ export function StudentClassInvitationPanel({ preview = false }) {
       setNotice(describeApiError(error))
     } finally {
       setBusyId(null)
+      onActionSettled?.()
     }
   }
 
@@ -120,7 +120,7 @@ export function StudentClassInvitationPanel({ preview = false }) {
       </div>
       {notice && <p className="student-joined-state" role="status">{notice}</p>}
       {state.status === 'loading' && <RequestState kind="loading" compact message="Loading class invitations." />}
-      {state.status === 'error' && <RequestState kind="unavailable" compact error={state.error} />}
+      {state.status === 'error' && <RequestState kind="unavailable" compact error={state.error} action={<button type="button" className="student-outline-action" onClick={() => load(1).catch(error => setState(current => ({ ...current, status: 'error', error })))}>Try again</button>} />}
       {!preview && state.status === 'ready' && state.invitations.length === 0 && (
         <RequestState kind="empty" compact message="You have no pending class invitations." />
       )}
@@ -167,6 +167,7 @@ export function StudentClassInvitationPanel({ preview = false }) {
           Load more invitations
         </button>
       )}
+      {confirmation}
     </section>
   )
 }

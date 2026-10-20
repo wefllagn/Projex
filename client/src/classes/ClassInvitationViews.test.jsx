@@ -125,15 +125,18 @@ describe('student class invitations', () => {
       acceptClassInvitation: vi.fn(),
       declineClassInvitation: vi.fn().mockResolvedValue({ data: { status: 'DECLINED' } }),
     }
-    vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     const user = userEvent.setup()
     renderWithClasses(<StudentClassInvitationPanel />, { api, upsertClass: vi.fn() })
 
     const decline = await screen.findByRole('button', { name: 'Decline' })
     await user.click(decline)
+    expect(await screen.findByRole('dialog', { name: 'Decline invitation' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Cancel', exact: true }))
     expect(api.declineClassInvitation).not.toHaveBeenCalled()
+    expect(screen.getByText('Invited Class 1')).toBeInTheDocument()
     await user.click(decline)
-    expect(api.declineClassInvitation).toHaveBeenCalledTimes(1)
+    await user.click(screen.getByRole('button', { name: 'Confirm', exact: true }))
+    await waitFor(() => expect(api.declineClassInvitation).toHaveBeenCalledTimes(1))
     expect(await screen.findByText('Invitation to Invited Class 1 declined.')).toBeInTheDocument()
     expect(screen.queryByText('Invited Class 1')).not.toBeInTheDocument()
   })

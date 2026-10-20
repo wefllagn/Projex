@@ -174,7 +174,7 @@ describe('student activity integration', () => {
     expect(await screen.findByText('Visible sample')).toBeInTheDocument()
     expect(screen.queryByText('Private edge case')).not.toBeInTheDocument()
     expect(screen.queryByText(hiddenSecret)).not.toBeInTheDocument()
-    expect(screen.getByText(/Hidden tests and their count remain private/)).toBeInTheDocument()
+    expect(screen.queryByText(/Hidden tests and their count|\d+ hidden tests/i)).not.toBeInTheDocument()
     expect(screen.getByText('0 of 2 used')).toBeInTheDocument()
     expect(screen.getByText('Latest attempt')).toBeInTheDocument()
     expect(await screen.findByText('Not prepared')).toBeInTheDocument()

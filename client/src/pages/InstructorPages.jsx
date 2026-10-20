@@ -1,8 +1,9 @@
+import AccountMenu from '../components/AccountMenu.jsx'
 import useConfirmation from '../components/useConfirmation.jsx'
 import ProgramField from '../classes/ProgramField.jsx'
 import ProjexIcon from '../components/icons/ProjexIcon.jsx'
 import { useCallback, useEffect, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
@@ -29,55 +30,10 @@ import {
   RepositorySelectionRequired,
 } from '../repositories/RepositoryFoundationViews.jsx'
 
-function InstructorProfileMenu() {
-  const [open, setOpen] = useState(false)
-  const navigate = useNavigate()
-  const auth = useAuth()
-
-  return (
-    <div className="student-profile-menu">
-      <button type="button" className="student-profile-trigger" aria-label="Account menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <ProjexIcon name="avatar" className="account-avatar" />
-        <span className="student-user-name">
-          <strong>{auth.user.fullName}</strong>
-          <span>Instructor</span>
-        </span>
-        <ProjexIcon name="expand" size={16} />
-      </button>
-
-      {open && (
-        <section className="student-profile-dropdown">
-          <button type="button" className="student-profile-close" onClick={() => setOpen(false)} aria-label="Close profile menu" />
-          <strong>{auth.user.email}</strong>
-
-          <div className="student-profile-photo">
-            <ProjexIcon name="avatar" className="account-avatar" />
-          </div>
-          <h2>{auth.user.fullName}</h2>
-
-          <div className="student-profile-menu-list">
-            <button
-              type="button"
-              onClick={async () => {
-                setOpen(false)
-                await auth.logout()
-                navigate('/', { replace: true })
-              }}
-            >
-              Sign out
-            </button>
-          </div>
-
-        </section>
-      )}
-    </div>
-  )
-}
-
 function InstructorUserArea() {
   return (
     <div className="student-user-area instructor-user-area">
-      <InstructorProfileMenu />
+      <AccountMenu />
     </div>
   )
 }
@@ -86,7 +42,7 @@ function InstructorClassHeader({ activeTab }) {
   const { selectedClass } = useClasses()
   const tabs = [
     { label: 'Overview', path: '/instructor/classes', key: 'stream' },
-    { label: 'Assignments', path: '/instructor/activity', key: 'assignments' },
+    { label: 'Activities', path: '/instructor/activity', key: 'assignments' },
     { label: 'People', path: '/instructor/people', key: 'people' },
     { label: 'Class Info', path: '/instructor/class-info', key: 'info' },
   ]
@@ -116,7 +72,7 @@ function InstructorClassHeader({ activeTab }) {
               to={classHref(tab.path, selectedClass?.id)}
               className={activeTab === tab.key ? 'is-active' : undefined}
             >
-              <span className={`student-tab-icon student-tab-icon--${tab.key}`} aria-hidden="true" />
+              <ProjexIcon name={{ stream: 'preview', assignments: 'activity', people: 'people', info: 'classes' }[tab.key]} />
               {tab.label}
             </NavLink>
           ))}
@@ -129,7 +85,7 @@ function InstructorClassHeader({ activeTab }) {
 function InstructorClassPage({ activeTab, children, deferredLabel }) {
   const { requestedClassId, selectionError, selectionStatus } = useClasses()
   const previewLabel = deferredLabel === undefined
-    ? (activeTab === 'assignments' ? 'Activity and project integration' : '')
+    ? ''
     : deferredLabel
   let content = children
   if (!requestedClassId) {
@@ -255,7 +211,7 @@ function InstructorClassesPage() {
                 {selectedClass.instructor?.userId === user.id ? <NavLink className="student-outline-action" to={classHref('/instructor/class-code', selectedClass.id)}>Join code</NavLink> : null}
               </div>
             </section>
-            <RequestState kind="unavailable" compact title="Class stream deferred" message="Announcements and comments remain recognized, but no approved backend contract exists yet." />
+            <RequestState kind="unavailable" compact title="Class stream unavailable" message="Announcements and comments are not available yet." />
           </div>
         )}
       </InstructorClassPage>
@@ -289,13 +245,13 @@ function InstructorClassesPage() {
 function AssignmentSubTabs({ active }) {
   const { selectedClass } = useClasses()
   return (
-    <div className="student-segmented-tabs" aria-label="Instructor assignment type">
+    <div className="student-segmented-tabs" aria-label="Instructor activities and projects">
       <NavLink to={classHref('/instructor/activity', selectedClass?.id)} className={active === 'activities' ? 'is-active' : undefined}>
-        <span aria-hidden="true" />
+        <ProjexIcon name="activity" />
         Activities
       </NavLink>
       <NavLink to={classHref('/instructor/projects', selectedClass?.id)} className={active === 'projects' ? 'is-active' : undefined}>
-        <span aria-hidden="true" />
+        <ProjexIcon name="project" />
         Group Projects
       </NavLink>
     </div>

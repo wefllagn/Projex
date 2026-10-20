@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { AuthContext } from '../auth/auth-context.js'
 import ProtectedRoute from '../auth/ProtectedRoute.jsx'
 import ClassProvider from '../classes/ClassProvider.jsx'
+import { ClassContext } from '../classes/class-context.js'
 import { InstructorRoutePage } from './InstructorPages.jsx'
 import { StudentRoutePage } from './StudentPages.jsx'
 import { apiClient } from '../api/api-client.js'
@@ -38,21 +39,30 @@ describe('Phase 10 closeout routes', () => {
     const { container } = render(
       <AuthContext.Provider value={auth('STUDENT')}>
         <MemoryRouter initialEntries={['/student/todo']}>
-          <StudentRoutePage pagePath="todo" />
+          <ClassContext.Provider value={{ classes: [], pagination: { hasNextPage: false } }}><StudentRoutePage pagePath="todo" /></ClassContext.Provider>
         </MemoryRouter>
       </AuthContext.Provider>,
     )
 
     expect(screen.getByRole('heading', { name: 'To-do' })).toBeInTheDocument()
     expect(await screen.findByText('Actual programming work')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Open record' })).toHaveAttribute('href', '/student/activity/activity-1?classId=class-1')
-    expect(get).toHaveBeenCalledWith('/work-hub/student/todo?page=1&pageSize=20', expect.any(Object))
+    expect(screen.getByText('Actual programming work').closest('a')).toHaveAttribute('href', '/student/activity/activity-1?classId=class-1')
+    expect(get).toHaveBeenCalledWith('/work-hub/student/todo?page=1&pageSize=20&state=assigned', expect.any(Object))
     expect(screen.queryByText('Prelim Programming Exercise 1 LAB')).not.toBeInTheDocument()
     expect(screen.queryByText('Prelim Group Project 1 Specifications')).not.toBeInTheDocument()
     expect(screen.queryByText(/IT 112 - BSIT 2A/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Jul 3, 2026/i)).not.toBeInTheDocument()
     expect(container.querySelector('[href*="prelim-group-project-1"]')).not.toBeInTheDocument()
     get.mockRestore()
+  })
+
+  it('redirects the retired global submissions page to To-do Done', async () => {
+    render(<MemoryRouter initialEntries={['/student/submissions']}><Routes>
+      <Route path="/student/submissions" element={<StudentRoutePage pagePath="submissions" />} />
+      <Route path="/student/todo" element={<span>Completed work</span>} />
+    </Routes></MemoryRouter>)
+    expect(await screen.findByText('Completed work')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'My Submissions' })).not.toBeInTheDocument()
   })
 
   it('keeps the student to-do route protected from an instructor account', () => {

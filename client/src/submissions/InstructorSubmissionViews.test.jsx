@@ -161,6 +161,7 @@ describe('instructor submission review', () => {
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 10, maximumDurationMs: 500 }} />)
     await screen.findByText('Immutable submitted source')
     await userEvent.click(screen.getByRole('button', { name: 'Rerun submitted source' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm', exact: true }))
     expect(submissions.createReviewRun).toHaveBeenCalledWith(submissionId)
     expect(await screen.findByText('Hidden rerun')).toBeInTheDocument()
     expect(screen.getByText('Fresh actual output')).toBeInTheDocument()
@@ -182,6 +183,7 @@ describe('instructor submission review', () => {
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 10, maximumDelayMs: 10, maximumDurationMs: 30 }} />)
     await screen.findByText('Immutable submitted source')
     await userEvent.click(screen.getByRole('button', { name: 'Rerun submitted source' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm', exact: true }))
     await screen.findByRole('button', { name: 'Refresh rerun' })
 
     submissions.getReviewRun.mockClear()
@@ -207,6 +209,7 @@ describe('instructor submission review', () => {
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 10, maximumDelayMs: 10, maximumDurationMs: 30 }} />)
     await screen.findByText('Immutable submitted source')
     await userEvent.click(screen.getByRole('button', { name: 'Rerun submitted source' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm', exact: true }))
     await screen.findByRole('button', { name: 'Refresh rerun' })
 
     submissions.getReviewRun.mockResolvedValue({ data: { ...queued, status: 'succeeded', compileStatus: 'success', runtimeStatus: 'passed' } })
@@ -336,6 +339,7 @@ describe('instructor submission review', () => {
     })
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 1, maximumDelayMs: 1, maximumDurationMs: 100 }} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Retry same assessment' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm', exact: true }))
     expect(submissions.retryAssessment).toHaveBeenCalledWith(submissionId, { expectedUpdatedAt: failed.updatedAt })
     await waitFor(() => expect(submissions.getSubmission).toHaveBeenCalledTimes(2))
     expect(await screen.findByText('Assessed')).toBeInTheDocument()

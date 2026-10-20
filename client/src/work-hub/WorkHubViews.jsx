@@ -1,3 +1,4 @@
+import StudentTodoView from './StudentTodoView.jsx'
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { apiClient, describeApiError } from '../api/api-client.js'
@@ -27,7 +28,7 @@ function rowSummary(view, item) {
   return `${item.kind === 'submission' ? `Student: ${item.student.fullName}` : 'Project repository'} · ${item.action}`
 }
 
-export function WorkHubList({ view }) {
+function AcademicWorkList({ view }) {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [submittedSearch, setSubmittedSearch] = useState('')
@@ -93,4 +94,8 @@ export function ReviewPreview() {
   if (state.status === 'error') return <div role="alert"><p>{describeApiError(state.error)}</p><button type="button" onClick={() => setRevision(n => n + 1)}>Try again</button></div>
   if (!state.rows.length) return <p>You're all caught up.</p>
   return <ul className="review-preview-list">{state.rows.map(item => <li key={`${item.kind}-${item.id}`}><NavLink to={recordLink('review', item)}><strong>{item.title || item.activityTitle}</strong><span>{item.class.className}</span><small>{rowSummary('review', item)}</small></NavLink></li>)}</ul>
+}
+
+export function WorkHubList({ view, classes = [], moreClasses = false, onMoreClasses }) {
+  return view === 'todo' ? <StudentTodoView classes={classes} moreClasses={moreClasses} onMoreClasses={onMoreClasses} /> : <AcademicWorkList view={view} />
 }

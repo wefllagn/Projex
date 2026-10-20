@@ -1,3 +1,5 @@
+import useConfirmation from '../components/useConfirmation.jsx'
+import ProjexIcon from '../components/icons/ProjexIcon.jsx'
 import { submissionStatusLabel } from './submission-display.js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
@@ -316,7 +318,7 @@ function SubmitConfirmation({ mode, pending, onCancel, onConfirm }) {
         <div className="student-submit-modal-actions">
           <button type="button" className="student-outline-action" disabled={pending} onClick={onCancel}>Cancel</button>
           <button type="button" className="student-primary-action" disabled={pending} onClick={onConfirm}>
-            {pending ? 'Submitting...' : mode === 'retry' ? 'Retry same request' : 'Submit source'}
+            {pending ? 'Submitting…' : mode === 'retry' ? 'Retry same request' : 'Submit source'}
           </button>
         </div>
       </section>
@@ -394,6 +396,7 @@ export function StudentProgrammingWorkspace({
   repositoryContent = repositoryContentApi,
   pollingOptions,
 }) {
+  const [confirm, confirmation] = useConfirmation()
   const capabilities = useCapabilities()
   const { activityId } = useParams()
   const navigate = useNavigate()
@@ -627,7 +630,7 @@ export function StudentProgrammingWorkspace({
       if (fileResponse.data.commitId !== latestCommitHash || fileResponse.data.path !== filePath) {
         throw contextMismatchError('The loaded Git source does not match the requested file.')
       }
-      if (source.value !== source.initial && !window.confirm('Replace the unsaved browser source with the latest Git Workspace version?')) {
+      if (source.value !== source.initial && !await confirm('Replace the unsaved browser source with the latest Git Workspace version?', 'Load latest from Git?')) {
         setGitSource((current) => ({ ...current, loading: false }))
         return
       }
@@ -843,28 +846,27 @@ export function StudentProgrammingWorkspace({
     ? 'Requesting visible-test run...'
     : practice.record
       ? `Visible-test run: ${formatStatus(practice.record.status)}`
-      : 'Run visible tests to check the current source without using an attempt.'
+      : ''
 
   return (
     <div className="student-coding-page">
       <header className="student-coding-topbar">
         <div className="student-workspace-heading">
           <NavLink className="student-workspace-back" to={classHref(`/student/activity/${activity.id}`, selectedClass.id)}>Back to Activity</NavLink>
-          <div><h1>{activity.title}</h1><span className={sourceDirty ? 'is-unsaved' : 'is-saved'}>{sourceDirty ? 'Unsaved browser changes' : checkpoint.record?.status === 'SUCCEEDED' ? 'Saved to Git' : 'Browser source ready'}</span></div>
+          <div><h1>{activity.title}</h1>{(sourceDirty || checkpoint.record?.status === 'SUCCEEDED') && <span className={sourceDirty ? 'is-unsaved' : 'is-saved'} role="status">{sourceDirty ? 'Unsaved changes' : 'Saved to Git'}</span>}</div>
         </div>
         <div className="student-coding-toolbar" aria-label="Workspace actions">
-          <span className="student-workspace-branch" title="Current repository branch">⌘ {gitWorkspace.summary?.defaultBranch || gitWorkspace.repository?.defaultBranch || 'main'}</span>
           <button type="button" className="student-run-code" disabled={!capabilities.java.execution || !canRun || codeRun.requesting || isPracticePending(codeRun.record)} onClick={() => { setCodeInputOpen(true); setWorkspacePanel('output') }}>
-            {codeRun.requesting || isPracticePending(codeRun.record) ? 'Running code…' : 'Run Code'}
+            <ProjexIcon name="run" />{codeRun.requesting || isPracticePending(codeRun.record) ? 'Running code…' : 'Run Code'}
           </button>
           <button type="button" className="student-run-tests" disabled={!capabilities.java.execution || !canRun || practice.requesting || isPracticePending(practice.record)} onClick={runVisibleTests}>
-            {practice.requesting || isPracticePending(practice.record) ? 'Running tests…' : 'Run Visible Tests'}
+            <ProjexIcon name="tests" />{practice.requesting || isPracticePending(practice.record) ? 'Running tests…' : 'Run Visible Tests'}
           </button>
           <button type="button" className="student-save-git" disabled={gitWorkspace.status !== 'ready' || !ordinaryOpen || archived || !(checkpoint.intent?.sourceCode || source.value).trim() || checkpoint.requesting || isCheckpointPending(checkpoint.record)} onClick={saveGitCheckpoint}>
-            {checkpoint.requesting || isCheckpointPending(checkpoint.record) ? 'Saving…' : checkpoint.error?.code === 'NETWORK_ERROR' ? 'Retry Save to Git' : 'Save to Git'}
+            <ProjexIcon name="save" />{checkpoint.requesting || isCheckpointPending(checkpoint.record) ? 'Saving…' : checkpoint.error?.code === 'NETWORK_ERROR' ? 'Retry Save to Git' : 'Save to Git'}
           </button>
           <button type="button" className="student-submit-code" disabled={!capabilities.java.execution || !canSubmit || !source.value.trim() || submission.status === 'submitting' || submission.status === 'ambiguous'} onClick={() => setConfirmMode('new')}>
-            {submission.status === 'submitting' ? 'Submitting...' : attempt?.nextAllowedSubmissionKind === 'REPLACEMENT' ? 'Submit replacement' : 'Submit'}
+            <ProjexIcon name="submission" />{submission.status === 'submitting' ? 'Submitting…' : attempt?.nextAllowedSubmissionKind === 'REPLACEMENT' ? 'Submit replacement' : 'Submit'}
           </button>
         </div>
       </header>
@@ -877,7 +879,7 @@ export function StudentProgrammingWorkspace({
         <aside className="student-coding-instructions" id="student-workspace-instructions">
           <div className="student-coding-activity-title">
             <span>Programming activity</span>
-            <h1>{activity.title}</h1>
+            <h2>{activity.title}</h2>
             <p>{formatActivityStatus(activity.status)}</p>
             <small>Due {formatActivityDate(activity.dueDate)}</small>
             <strong>{activity.gradingMode === 'COMPLETION' ? 'Ungraded · completion' : `${activity.totalPoints} total points`}</strong>
@@ -895,15 +897,7 @@ export function StudentProgrammingWorkspace({
                 <span>Expected output</span><pre>{testCase.expectedOutput}</pre>
               </article>
             ))}
-            <div className="student-coding-tip">
-              <strong>Practice is not a submission</strong>
-              <p>Run Visible Tests never consumes an official attempt or creates a score.</p>
-            </div>
           </section>
-          <div className="student-source-memory-note">
-            <strong>{checkpoint.record?.status === 'SUCCEEDED' && !sourceDirty ? 'Saved to Git' : 'Browser draft'}</strong>
-            <span>{checkpoint.record?.status === 'SUCCEEDED' && !sourceDirty ? 'This save is available to clone or pull. It is not a submission.' : 'Use Save to Git before leaving this browser tab.'}</span>
-          </div>
         </aside>
 
         {paneSizing.isDesktop && (
@@ -914,7 +908,7 @@ export function StudentProgrammingWorkspace({
         )}
 
         <section className="student-editor-area" id="student-workspace-editor">
-          <div className="student-editor-tabs"><button type="button" className="is-active">{activity.entryClassName}.java</button></div>
+          <div className="student-editor-tabs"><span className="academic-file-tab"><ProjexIcon name="file" size={18} />{activity.entryClassName}.java</span><span className="student-workspace-branch" title="Current repository branch"><ProjexIcon name="branch" size={16} />{gitWorkspace.summary?.defaultBranch || gitWorkspace.repository?.defaultBranch || 'main'}</span></div>
           <div className="student-editor-workbench student-editor-workbench--single-file">
             <aside className="student-editor-explorer" aria-label="Repository explorer">
               <strong>EXPLORER</strong>
@@ -937,7 +931,7 @@ export function StudentProgrammingWorkspace({
               onChange={(value) => setSource((current) => ({ ...current, value }))}
             />
           </div>
-          <footer className="student-editor-status"><span>{sourceDirty ? 'Unsaved browser changes' : 'Browser source ready'}</span><span>Java · single editable file</span></footer>
+          <footer className="student-editor-status"><span>Java</span><span>UTF-8</span></footer>
         </section>
 
         {paneSizing.isDesktop && (
@@ -954,7 +948,7 @@ export function StudentProgrammingWorkspace({
           <div className={`student-output-panel student-output-panel--${workspacePanel}`} role="tabpanel">
             {workspacePanel === 'tests' && <>
               <div className="student-panel-status-row"><strong>Visible test outcomes</strong><span>{practice.record ? formatStatus(practice.record.status) : 'Not run'}</span></div>
-              <p>{practiceStatus}</p>
+              {practiceStatus && <p>{practiceStatus}</p>}
               <VisibleOutcomeList outcomes={practice.record?.visibleTestOutcomes ?? []} />
               {practice.error && <p className="student-coding-failure">{executionErrorMessage(practice.error)}</p>}
               {practice.bounded && <p>Automatic refresh stopped. The server-side run may still be processing.</p>}
@@ -967,7 +961,7 @@ export function StudentProgrammingWorkspace({
                 <textarea id="student-program-input" value={programInput} onChange={(event) => setProgramInput(event.target.value)} placeholder={'Enter input before running. Line boundaries are preserved.'} maxLength={20000} />
                 <div><button type="button" className="student-outline-action" disabled={codeRun.requesting} onClick={() => setCodeInputOpen(false)}>Cancel</button><button type="button" className="student-primary-action" disabled={codeRun.requesting || !source.value.trim()} onClick={runCode}>{codeRun.requesting ? 'Running…' : 'Run'}</button></div>
               </section>}
-              {!codeRun.record && !practice.record?.compilerOutput && !codeRun.error && <p>Run Code with your own input, or Run Visible Tests with instructor-defined input.</p>}
+              {!codeRun.record && !practice.record?.compilerOutput && !codeRun.error && <p>No output yet.</p>}
               {codeRun.requesting && <p>Queueing this bounded Java run…</p>}
               {codeRun.record && <div className="student-code-run-output" aria-live="polite">
                 <div className="student-panel-status-row"><strong>Run Code</strong><span>{isPracticePending(codeRun.record) ? formatStatus(codeRun.record.status) : codeRun.record.compileStatus === 'student_error' ? 'Compilation failed' : codeRun.record.runtimeStatus === 'passed' ? 'Completed' : formatStatus(codeRun.record.runtimeStatus)}</span></div>
@@ -1018,9 +1012,8 @@ export function StudentProgrammingWorkspace({
 
       <footer className="student-coding-actions">
         <div className="workspace-action-message">
-          <span>Save to Git preserves progress; Submit creates the official academic attempt.</span>
           {replacement && <strong>Replacement available until {formatDate(replacement.expiresAt)}.</strong>}
-          {currentAttemptState.status === 'loading' && <span>Checking attempt availability...</span>}
+          {currentAttemptState.status === 'loading' && <span>Checking attempt availability…</span>}
           {currentAttemptState.status === 'error' && <span className="student-coding-failure">Attempt availability could not be loaded. Submission remains disabled.</span>}
           {currentAttemptState.status === 'ready' && !canSubmit && <span>Another submission is not currently available.</span>}
           {submission.status === 'error' && <span className="student-coding-failure">{submissionErrorMessage(submission.error)}</span>}
@@ -1054,6 +1047,7 @@ export function StudentProgrammingWorkspace({
           onConfirm={confirmSubmission}
         />
       )}
+      {confirmation}
       {navigationBlocker.state === 'blocked' && <UnsavedSourceConfirmation blocker={navigationBlocker} />}
     </div>
   )

@@ -1,3 +1,6 @@
+import AccountMenu from '../components/AccountMenu.jsx'
+import { StudentInvitationProvider, StudentNotificationMenu } from '../classes/StudentInvitationNotifications.jsx'
+import '../design/academic-ui.css'
 import AppDialog from '../components/AppDialog.jsx'
 import ProjexIcon from '../components/icons/ProjexIcon.jsx'
 import ProgramField from '../classes/ProgramField.jsx'
@@ -14,8 +17,8 @@ import '../admin/admin-refinement.css'
 
 function StudentSidebarLink({ to, children, end = false, count, icon }) {
   return (
-    <NavLink to={to} end={end} className="student-sidebar__link">
-      <ProjexIcon name={icon === 'todo' ? 'review' : icon} className="sidebar-vector" />
+    <NavLink to={to} end={end} className="student-sidebar__link" aria-label={typeof children === 'string' ? children : undefined} title={typeof children === 'string' ? children : undefined}>
+      <ProjexIcon name={icon} className="sidebar-vector" />
       <span>{children}</span>
       {count && <span className="student-sidebar__count">{count}</span>}
     </NavLink>
@@ -69,11 +72,11 @@ function MobileShellNavigation({ role, open, setOpen, close, navigationId }) {
   const accountOpen = accountRoute === location.key
 
   useEffect(() => {
-    if (!accountOpen) return undefined
+    if (!accountOpen || role !== 'Administrator') return undefined
     const closeOnEscape = (event) => { if (event.key === 'Escape') setAccountRoute(null) }
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [accountOpen])
+  }, [accountOpen, role])
 
   return (
     <>
@@ -89,7 +92,10 @@ function MobileShellNavigation({ role, open, setOpen, close, navigationId }) {
           <span aria-hidden="true">☰</span>
         </button>
         <span className="student-mobile-header__brand">Projex</span>
-        <div className="student-mobile-account">
+        {role !== 'Administrator' ? <div className="academic-mobile-controls">
+          {role === 'Student' && <StudentNotificationMenu onOpen={() => { setAccountRoute(null); close() }} />}
+          <AccountMenu expanded={accountOpen} onExpandedChange={value => { if (value) close(); setAccountRoute(value ? location.key : null) }} />
+        </div> : <div className="student-mobile-account">
           <button
             type="button"
             className="student-mobile-header__identity"
@@ -114,7 +120,7 @@ function MobileShellNavigation({ role, open, setOpen, close, navigationId }) {
               }}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
             </div>
           )}
-        </div>
+        </div>}
       </header>
       {open && <button type="button" className="student-mobile-nav-backdrop" onClick={close} aria-label="Close navigation menu" />}
     </>
@@ -130,6 +136,7 @@ function SidebarClassLink({ item, to, active }) {
   return (
     <NavLink
       to={to}
+      aria-label={`${item.className} · ${classOfferingLabel(item)}${item.status === 'ARCHIVED' ? ' · Archived' : ''}`}
       className={active ? 'student-class-link is-active' : 'student-class-link'}
     >
       <span className={`student-class-dot student-class-dot--${initial.toLowerCase()}`}>
@@ -295,12 +302,12 @@ export function CreateClassModal({ onClose, onCreated }) {
   )
 }
 
-function InstructorSidebarSignout() {
+function AcademicSidebarSignout() {
   const auth = useAuth()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  return <div className="instructor-sidebar-signout"><button type="button" className="student-sidebar__link" title="Sign out" aria-label="Sign out" disabled={busy} onClick={async () => { setBusy(true); try { await auth.logout(); navigate('/', { replace: true }) } catch (cause) { setError(describeApiError(cause)) } finally { setBusy(false) } }}><ProjexIcon name="signout" /><span>{busy ? 'Signing out…' : 'Sign out'}</span></button>{error && <p role="alert">{error}</p>}</div>
+  return <div className="instructor-sidebar-signout academic-sidebar-signout"><button type="button" className="student-sidebar__link" title="Sign out" aria-label="Sign out" disabled={busy} onClick={async () => { setBusy(true); try { await auth.logout(); navigate('/', { replace: true }) } catch (cause) { setError(describeApiError(cause)) } finally { setBusy(false) } }}><ProjexIcon name="signout" /><span>{busy ? 'Signing out…' : 'Sign out'}</span></button>{error && <p role="alert">{error}</p>}</div>
 }
 
 function InstructorDashboardLayout() {
@@ -311,7 +318,7 @@ function InstructorDashboardLayout() {
   const { classes, requestedClassId, status, error, pagination, loadMore } = useClasses()
 
   return (
-    <div className={`${sidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'}${mobileNavigation.open ? ' is-mobile-menu-open' : ''}`}>
+    <div className={`${sidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'} projex-academic-shell${mobileNavigation.open ? ' is-mobile-menu-open' : ''}`}>
       <MobileShellNavigation role="Instructor" navigationId="instructor-navigation" {...mobileNavigation} />
       <aside id="instructor-navigation" className="student-sidebar">
         <SidebarBrand
@@ -326,7 +333,7 @@ function InstructorDashboardLayout() {
           <StudentSidebarLink to="/instructor" end icon="home">
             Home
           </StudentSidebarLink>
-          <StudentSidebarLink to="/instructor/review-queues" icon="todo">
+          <StudentSidebarLink to="/instructor/review-queues" icon="review">
             To Review
           </StudentSidebarLink>
 
@@ -356,7 +363,7 @@ function InstructorDashboardLayout() {
             </button>
           </div>
         </nav>
-        <InstructorSidebarSignout />
+        <AcademicSidebarSignout />
       </aside>
 
       <main className="student-main">
@@ -389,7 +396,7 @@ function StudentDashboardLayout() {
   const { classes, requestedClassId, status, error, pagination, loadMore } = useClasses()
 
   return (
-    <div className={`${effectiveSidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'}${isCodingWorkspace ? ' is-coding-workspace' : ''}${mobileNavigation.open ? ' is-mobile-menu-open' : ''}`}>
+    <StudentInvitationProvider><div className={`${effectiveSidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'} projex-academic-shell${isCodingWorkspace ? ' is-coding-workspace' : ''}${mobileNavigation.open ? ' is-mobile-menu-open' : ''}`}>
       <MobileShellNavigation role="Student" navigationId="student-navigation" {...mobileNavigation} />
       <aside id="student-navigation" className="student-sidebar">
         <SidebarBrand
@@ -406,9 +413,6 @@ function StudentDashboardLayout() {
           </StudentSidebarLink>
           <StudentSidebarLink to="/student/todo" icon="todo">
             To-do
-          </StudentSidebarLink>
-          <StudentSidebarLink to="/student/submissions" icon="activity">
-            My Submissions
           </StudentSidebarLink>
 
           <div className="student-sidebar__group">
@@ -431,16 +435,16 @@ function StudentDashboardLayout() {
           </div>
 
           <div className="student-sidebar__lower">
-            <StudentSidebarLink to="/student/repositories" icon="folder">My Repositories</StudentSidebarLink>
-            <StudentSidebarLink to="/student/join-class" icon="plus">Join Class</StudentSidebarLink>
+            <StudentSidebarLink to="/student/repositories" icon="repository">My Repositories</StudentSidebarLink>
           </div>
         </nav>
+        <AcademicSidebarSignout />
       </aside>
 
       <main className="student-main">
         <Outlet />
       </main>
-    </div>
+    </div></StudentInvitationProvider>
   )
 }
 
