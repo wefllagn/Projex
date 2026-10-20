@@ -166,10 +166,9 @@ describe('instructor class invitations', () => {
 
     const input = screen.getByLabelText('University email')
     await user.type(input, 'STUDENT@SLU.EDU.PH')
-    await user.click(screen.getByRole('button', { name: 'Check Student' }))
     expect(await screen.findByText('Eligible Student found.')).toBeInTheDocument()
-    expect(api.lookupInvitationStudent).toHaveBeenCalledWith('STUDENT@SLU.EDU.PH', classRecord.id)
-    await user.click(screen.getByRole('button', { name: 'Send Invitation' }))
+    expect(api.lookupInvitationStudent).toHaveBeenCalledWith('student@slu.edu.ph', classRecord.id, expect.objectContaining({ signal: expect.any(AbortSignal) }))
+    await user.click(screen.getByRole('button', { name: 'Invite' }))
     expect(await screen.findByText('Invitation created.')).toBeInTheDocument()
     expect(api.createClassInvitation).toHaveBeenCalledWith(classRecord.id, 'STUDENT@SLU.EDU.PH')
     expect(await screen.findByText('student@slu.edu.ph')).toBeInTheDocument()
@@ -186,9 +185,8 @@ describe('instructor class invitations', () => {
       { api, selectedClass: classRecord },
     )
     await user.type(screen.getByLabelText('University email'), 'student@slu.edu.ph')
-    await user.click(screen.getByRole('button', { name: 'Check Student' }))
     expect(await screen.findByText('An invitation is already pending.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Send Invitation' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Invite' })).toBeDisabled()
     rendered.unmount()
 
     renderWithClasses(

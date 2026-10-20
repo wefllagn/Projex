@@ -152,7 +152,7 @@ export function createPrismaAdminOversightRepository(prisma: PrismaClient) {
           where,
           select: {
             id: true, title: true, status: true, language: true, dueDate: true,
-            totalPoints: true, maxAttempts: true, createdAt: true, updatedAt: true,
+            gradingMode: true, topicId: true, totalPoints: true, maxAttempts: true, createdAt: true, updatedAt: true,
             publishedAt: true, closedAt: true, archivedAt: true,
             class: { select: safeClassSelect },
             createdBy: { select: safeUserSelect },
@@ -180,6 +180,7 @@ export function createPrismaAdminOversightRepository(prisma: PrismaClient) {
           select: {
             id: true, attemptNumber: true, submissionStatus: true, isLate: true,
             submittedAt: true, updatedAt: true, reviewedAt: true, releasedAt: true,
+            gradingModeSnapshot: true,
             releasedFinalScore: true,
             student: { select: safeUserSelect },
             activity: { select: { id: true, title: true, status: true, class: { select: safeClassSelect } } },

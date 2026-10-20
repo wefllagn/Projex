@@ -90,7 +90,7 @@ describe('Phase 10 closeout routes', () => {
       </AuthContext.Provider>,
     )
 
-    expect(await screen.findByRole('link', { name: 'Open review queue' })).toHaveAttribute('href', '/instructor/review-queues')
+    expect(await screen.findByRole('link', { name: 'View all' })).toHaveAttribute('href', '/instructor/review-queues')
     expect(screen.queryByText(/will be connected in Phase 10B and 10C/i)).not.toBeInTheDocument()
   })
 })

@@ -1,13 +1,14 @@
-# Gate B — exact isolated verification resources proposed for approval
+# Gate B — exact isolated verification resources
 
 ## macOS continuation proposal — October 20, 2026
 
-PROPOSAL ONLY. The compatibility slice permits no cluster, database, migration,
-fixture account or database-dependent test. The Windows inventory below is
-historical and is not a Mac resource approval. This section carries forward the
-Mac onboarding proposal into this existing source of truth. No resource below
-has been created. Recheck absence/ports/canonical paths immediately before any
-approved execution; observations are not reservations.
+APPROVED AND EXECUTED: the Product Owner's October 20 full Gate B work order
+supersedes the earlier compatibility-only boundary. The exact new resources
+below were created after absence/port/path/cleanup checks, and their identities
+were independently re-attested before each suite. Do not rerun initialization
+or treat their now-expected presence as a reusable empty target. The Windows
+inventory below remains historical. See `MVP_INTEGRATION_GATE_B_REPORT.md` for
+actual results, source changes and remaining review limitations.
 
 Root **R = `/private/tmp/projex-mvp-gate-b-macos-20261020-5da3ef7`**.
 
@@ -66,9 +67,11 @@ apply. Additional exact Mac preconditions:
 - Stop only recorded task-owned processes; preserve private review evidence.
   Whole-root/cluster deletion and all original storage cleanup remain separate.
 
-This inventory remains technically valid after the bounded compatibility fix;
-availability must be rechecked and resource execution still needs explicit
-Product Owner approval. No new approval is implied by passing unit checks.
+The approved new cluster system identifier is `7698462431321079325`; the original
+Mac cluster remains excluded. Test/review owners and roots are separate. Only
+the new test database may receive destructive suite cleanup. Preserve the
+review environment and private evidence; no stage/commit, push, merge, new
+migration or whole-root/cluster teardown is included in the execution approval.
 
 ## Historical Windows Gate A proposal — not Mac authority
 

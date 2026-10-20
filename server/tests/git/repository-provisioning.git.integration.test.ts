@@ -35,8 +35,14 @@ describe('real Git repository provisioning', () => {
   beforeAll(async () => {
     prisma = createIntegrationPrisma()
     const version = await git.detectVersion()
-    expect(version.raw).toMatch(/^\d+\.\d+\.\d+\.windows\.\d+$/)
-    expect(version.windowsBuild).not.toBeNull()
+    if (process.platform === 'win32') {
+      expect(version.raw).toMatch(/^\d+\.\d+\.\d+\.windows\.\d+$/)
+      expect(version.windowsBuild).not.toBeNull()
+    } else {
+      expect(process.platform).toBe('darwin')
+      expect(version.raw).toMatch(/^\d+\.\d+\.\d+$/)
+      expect(version.windowsBuild).toBeNull()
+    }
   })
 
   beforeEach(async () => {

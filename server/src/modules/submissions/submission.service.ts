@@ -164,6 +164,8 @@ function baseProjection(record: SubmissionRecord) {
     record.replacementResolutionUsed?.failedSubmission.attemptNumber ?? null
   return {
     id: record.id,
+    gradingMode: record.gradingModeSnapshot ?? 'GRADED',
+    ...(record.gradingModeSnapshot === 'COMPLETION' ? { completionState: 'COMPLETE' } : {}),
     activityId: record.activityId,
     activityTitle: record.activityTitleSnapshot,
     attemptLabel: submissionAttemptLabel({
@@ -197,12 +199,11 @@ function studentProjection(record: SubmissionRecord, isCreditedResult = false) {
     ...baseProjection(record),
     sourceCode: record.sourceCode,
     visibleTestOutcomes: visibleResults,
-    gradeStatus: released ? 'released' : 'pending',
+    gradeStatus: record.gradingModeSnapshot === 'COMPLETION' ? 'ungraded' : released ? 'released' : 'pending',
     isCreditedResult: released && isCreditedResult,
     ...(released
       ? {
-          finalScore: Number(record.releasedFinalScore),
-          totalPoints: Number(record.totalPointsSnapshot),
+          ...(record.gradingModeSnapshot === 'COMPLETION' ? {} : { finalScore: Number(record.releasedFinalScore), totalPoints: Number(record.totalPointsSnapshot) }),
           feedback: record.feedback?.feedbackText ?? null,
         }
       : {}),
@@ -251,13 +252,13 @@ function instructorProjection(record: SubmissionRecord, isCreditedResult = false
             outcome: result.passStatus.toLowerCase(),
             actualOutput: result.actualOutput,
             errorMessage: result.errorMessage,
-            automatedPoints: Number(result.automatedPoints),
-            maximumPoints: Number(result.maximumPoints),
+            automatedPoints: record.gradingModeSnapshot === 'COMPLETION' ? null : Number(result.automatedPoints),
+            maximumPoints: record.gradingModeSnapshot === 'COMPLETION' ? null : Number(result.maximumPoints),
             executionTimeMs: result.executionTimeMs,
           })),
         }
       : null,
-    scores: {
+    scores: record.gradingModeSnapshot === 'COMPLETION' ? null : {
       originalAutomatedScore:
         record.originalAutomatedScore === null
           ? null
@@ -303,10 +304,10 @@ function adminProjection(record: SubmissionRecord, isCreditedResult = false) {
     student: { id: record.student.id, fullName: record.student.fullName },
     assessmentStatus: record.submissionStatus.toLowerCase(),
     releasedFinalScore:
-      record.submissionStatus === 'RELEASED'
+      record.submissionStatus === 'RELEASED' && record.gradingModeSnapshot !== 'COMPLETION'
         ? Number(record.releasedFinalScore)
         : null,
-    totalPoints: Number(record.totalPointsSnapshot),
+    totalPoints: record.gradingModeSnapshot === 'COMPLETION' ? null : Number(record.totalPointsSnapshot),
   }
 }
 
@@ -413,6 +414,8 @@ function attemptStateProjection(
 
   return {
     activityId: record.activity.id,
+    gradingMode: record.activity.gradingMode ?? 'GRADED',
+    ...(record.activity.gradingMode === 'COMPLETION' ? { completionState: (record.acceptedAttempts ?? record.countingAttemptsUsed) > 0 ? 'COMPLETE' : 'NOT_SUBMITTED' } : {}),
     activityStatus: record.activity.status,
     dueState:
       record.activity.status === 'CLOSED'

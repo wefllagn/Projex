@@ -36,9 +36,12 @@ export const createActivitySchema = z
     starterCode: starterCodeSchema,
     maxAttempts: z.number().int().min(1).max(3),
     creditPolicy: creditPolicySchema.default('LATEST'),
-    totalPoints: pointsSchema,
+    gradingMode: z.enum(['GRADED', 'COMPLETION']).default('GRADED'),
+    topicId: z.uuid().nullable().optional(),
+    totalPoints: pointsSchema.nullable(),
   })
   .strict()
+  .refine(value => value.gradingMode === 'COMPLETION' ? value.totalPoints === null : value.totalPoints !== null, { path: ['totalPoints'], message: 'Choose points for Graded or no points for Ungraded.' })
 
 export const updateActivitySchema = z
   .object({
@@ -51,7 +54,9 @@ export const updateActivitySchema = z
     starterCode: starterCodeSchema.optional(),
     maxAttempts: z.number().int().min(1).max(3).optional(),
     creditPolicy: creditPolicySchema.optional(),
-    totalPoints: pointsSchema.optional(),
+    gradingMode: z.enum(['GRADED', 'COMPLETION']).optional(),
+    topicId: z.uuid().nullable().optional(),
+    totalPoints: pointsSchema.nullable().optional(),
   })
   .strict()
   .refine(
@@ -67,6 +72,7 @@ export const activityListQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
+    topicId: z.union([z.uuid(), z.literal('none')]).optional(),
     search: z.string().trim().min(1).max(200).optional(),
     status: z.enum(['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED']).optional(),
   })

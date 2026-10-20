@@ -456,7 +456,24 @@ model RefreshSession {
   @@map("refresh_sessions")
 }
 
+enum ClassProgram {
+  INFORMATION_TECHNOLOGY
+  COMPUTER_SCIENCE
+
+  @@map("class_program")
+}
+
+enum ActivityGradingMode {
+  GRADED
+  COMPLETION
+
+  @@map("activity_grading_mode")
+}
+
 model Class {
+  program ClassProgram?
+  topicVersion Int @default(0) @map("topic_version")
+  topics ClassTopic[]
   id                    String                @id @default(uuid()) @map("class_id") @db.Uuid
   instructorId          String?               @map("instructor_id") @db.Uuid
   className             String                @map("class_name")
@@ -565,7 +582,26 @@ model ClassInvitation {
   @@map("class_invitations")
 }
 
+model ClassTopic {
+  id String @id @default(uuid()) @map("topic_id") @db.Uuid
+  classId String @map("class_id") @db.Uuid
+  name String @db.VarChar(200)
+  position Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  class Class @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  activities ProgrammingActivity[]
+
+  @@unique([id, classId])
+  @@unique([classId, position], map: "class_topics_class_position_key")
+  @@index([classId, position, id])
+  @@map("class_topics")
+}
+
 model ProgrammingActivity {
+  gradingMode ActivityGradingMode @default(GRADED) @map("grading_mode")
+  topicId String? @map("topic_id") @db.Uuid
+  topic ClassTopic? @relation(fields: [topicId, classId], references: [id, classId], onDelete: Restrict, onUpdate: Cascade)
   id                      String                  @id @default(uuid()) @map("activity_id") @db.Uuid
   classId                 String                  @map("class_id") @db.Uuid
   createdById             String                  @map("created_by") @db.Uuid
@@ -577,7 +613,7 @@ model ProgrammingActivity {
   starterCode             String                  @map("starter_code") @db.Text
   maxAttempts             Int                     @default(3) @map("max_attempts")
   creditPolicy            AttemptCreditPolicy     @default(LATEST) @map("credit_policy")
-  totalPoints             Decimal                 @map("total_points") @db.Decimal(8, 2)
+  totalPoints             Decimal?                 @map("total_points") @db.Decimal(8, 2)
   status                  ActivityStatus          @default(DRAFT)
   createdAt               DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt               DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -594,6 +630,7 @@ model ProgrammingActivity {
   repositoryCheckpointJobs RepositoryCheckpointJob[]
 
   @@index([classId, status])
+  @@index([classId, topicId, createdAt, id])
   @@index([dueDate])
   @@map("programming_activities")
 }
@@ -606,7 +643,7 @@ model TestCase {
   inputData      String?                 @map("input_data") @db.Text
   expectedOutput String                  @map("expected_output") @db.Text
   isHidden       Boolean                 @default(true) @map("is_hidden")
-  points         Decimal                 @db.Decimal(8, 2)
+  points         Decimal?                 @db.Decimal(8, 2)
   createdAt      DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
   activity       ProgrammingActivity     @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -618,6 +655,7 @@ model TestCase {
 }
 
 model ActivitySubmission {
+  gradingModeSnapshot ActivityGradingMode @default(GRADED) @map("grading_mode_snapshot")
   id                          String                       @id @default(uuid()) @map("submission_id") @db.Uuid
   activityId                  String                       @map("activity_id") @db.Uuid
   studentId                   String                       @map("student_id") @db.Uuid
@@ -626,16 +664,16 @@ model ActivitySubmission {
   sourceHash                  String                       @map("source_hash")
   activityTitleSnapshot       String                       @map("activity_title_snapshot")
   dueDateSnapshot             DateTime                     @map("due_date_snapshot") @db.Timestamptz(3)
-  totalPointsSnapshot         Decimal                      @map("total_points_snapshot") @db.Decimal(8, 2)
-  automatedMaximum            Decimal                      @map("automated_maximum") @db.Decimal(8, 2)
-  instructorMaximum           Decimal                      @map("instructor_maximum") @db.Decimal(8, 2)
+  totalPointsSnapshot         Decimal?                      @map("total_points_snapshot") @db.Decimal(8, 2)
+  automatedMaximum            Decimal?                      @map("automated_maximum") @db.Decimal(8, 2)
+  instructorMaximum           Decimal?                      @map("instructor_maximum") @db.Decimal(8, 2)
   submittedAt                 DateTime                     @default(now()) @map("submitted_at") @db.Timestamptz(3)
   updatedAt                   DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
   submissionStatus            SubmissionStatus             @default(QUEUED) @map("submission_status")
   isLate                      Boolean                      @default(false) @map("is_late")
   countsTowardAttemptLimit    Boolean                      @default(true) @map("counts_toward_attempt_limit")
   originalAutomatedScore      Decimal?                     @map("original_automated_score") @db.Decimal(8, 2)
-  instructorPoints            Decimal                      @default(0) @map("instructor_points") @db.Decimal(8, 2)
+  instructorPoints            Decimal?                      @default(0) @map("instructor_points") @db.Decimal(8, 2)
   releasedFinalScore          Decimal?                     @map("released_final_score") @db.Decimal(8, 2)
   reviewedAt                  DateTime?                    @map("reviewed_at") @db.Timestamptz(3)
   releasedAt                  DateTime?                    @map("released_at") @db.Timestamptz(3)
@@ -683,11 +721,11 @@ model TestCaseResult {
   inputSnapshot          String?             @map("input_snapshot") @db.Text
   expectedOutputSnapshot String              @map("expected_output_snapshot") @db.Text
   isHiddenSnapshot       Boolean             @map("is_hidden_snapshot")
-  maximumPoints          Decimal             @map("maximum_points") @db.Decimal(8, 2)
+  maximumPoints          Decimal?             @map("maximum_points") @db.Decimal(8, 2)
   passStatus             TestCasePassStatus  @default(PENDING) @map("pass_status")
   actualOutput           String?             @map("actual_output") @db.Text
   errorMessage           String?             @map("error_message") @db.Text
-  automatedPoints        Decimal             @default(0) @map("automated_points") @db.Decimal(8, 2)
+  automatedPoints        Decimal?             @default(0) @map("automated_points") @db.Decimal(8, 2)
   executionTimeMs        Int?                @map("execution_time_ms")
   execution              SubmissionExecution @relation(fields: [executionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   testCase               TestCase            @relation(fields: [testCaseId], references: [id], onDelete: Restrict, onUpdate: Cascade)

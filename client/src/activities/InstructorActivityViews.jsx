@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import AppDialog from '../components/AppDialog.jsx'
+import UnsavedChangesGuard from '../components/UnsavedChangesGuard.jsx'
+import { TopicSelector, GroupedClasswork } from './TopicViews.jsx'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import { ApiError, describeApiError } from '../api/api-client.js'
 import { useClasses } from '../classes/class-context.js'
@@ -6,11 +9,9 @@ import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
 import { activityApi } from './activity-api.js'
 import {
-  ACTIVITY_STATUSES,
   activityClassMatches,
   activityPayload,
   activityUpdatePayload,
-  formatActivityDate,
   formatActivityStatus,
   publicationRequirements,
   testCasePayload,
@@ -20,8 +21,9 @@ import {
 } from './activity-utils.js'
 import { createTemporaryTestCaseId } from './temporary-test-case-id.js'
 
-const FIRST_PAGE = { page: 1, pageSize: 20 }
 const EMPTY_FORM = {
+  gradingMode: 'GRADED',
+  topicId: '',
   title: '',
   instructions: '',
   dueDate: '',
@@ -38,6 +40,8 @@ function contextMismatchError() {
 
 function formFromActivity(activity) {
   return {
+    gradingMode: activity.gradingMode ?? 'GRADED',
+    topicId: activity.topicId ?? '',
     title: activity.title,
     instructions: activity.instructions,
     dueDate: toDateTimeLocal(activity.dueDate),
@@ -45,7 +49,7 @@ function formFromActivity(activity) {
     starterCode: activity.starterCode,
     maxAttempts: String(activity.maxAttempts),
     creditPolicy: activity.creditPolicy ?? 'LATEST',
-    totalPoints: String(activity.totalPoints),
+    totalPoints: activity.totalPoints === null ? '' : String(activity.totalPoints),
   }
 }
 
@@ -65,170 +69,46 @@ function emptyTestCase() {
 }
 
 function ActivityFormFields({ form, errors, onChange, readOnly, status }) {
-  const published = status === 'PUBLISHED'
-  return (
-    <>
-      <div className="instructor-form-grid">
-        <label>
-          Activity title
-          <input aria-invalid={Boolean(errors.title)} value={form.title} onChange={(event) => onChange('title', event.target.value)} disabled={readOnly} />
-          {errors.title && <small className="activity-field-error">{errors.title}</small>}
-        </label>
-        <label>
-          Programming language
-          <span className="instructor-fixed-value">Java</span>
-        </label>
-        <label>
-          Deadline
-          <input type="datetime-local" aria-invalid={Boolean(errors.dueDate)} value={form.dueDate} onChange={(event) => onChange('dueDate', event.target.value)} disabled={readOnly} />
-          {errors.dueDate && <small className="activity-field-error">{errors.dueDate}</small>}
-        </label>
-        <label>
-          Maximum attempts
-          <select aria-invalid={Boolean(errors.maxAttempts)} value={form.maxAttempts} onChange={(event) => onChange('maxAttempts', event.target.value)} disabled={readOnly}>
-            <option value="1">1 attempt</option><option value="2">2 attempts</option><option value="3">3 attempts</option>
-          </select>
-          {errors.maxAttempts && <small className="activity-field-error">{errors.maxAttempts}</small>}
-        </label>
-        <label>
-          Credited result
-          <select aria-invalid={Boolean(errors.creditPolicy)} value={form.creditPolicy} onChange={(event) => onChange('creditPolicy', event.target.value)} disabled={readOnly || published}>
-            <option value="LATEST">Latest attempt</option>
-            <option value="HIGHEST">Highest attempt</option>
-          </select>
-          {errors.creditPolicy && <small className="activity-field-error">{errors.creditPolicy}</small>}
-          {form.maxAttempts === '1' && <small>Both policies produce the same result when only one attempt is allowed.</small>}
-        </label>
-        <label>
-          Java entry class
-          <input aria-invalid={Boolean(errors.entryClassName)} value={form.entryClassName} onChange={(event) => onChange('entryClassName', event.target.value)} disabled={readOnly || published} />
-          {errors.entryClassName && <small className="activity-field-error">{errors.entryClassName}</small>}
-        </label>
-        <label>
-          Total points
-          <input type="number" min="0.01" max="1000" step="0.01" aria-invalid={Boolean(errors.totalPoints)} value={form.totalPoints} onChange={(event) => onChange('totalPoints', event.target.value)} disabled={readOnly || published} />
-          {errors.totalPoints && <small className="activity-field-error">{errors.totalPoints}</small>}
-        </label>
-      </div>
-      <label className="instructor-wide-field">
-        Instructions
-        <textarea aria-invalid={Boolean(errors.instructions)} value={form.instructions} onChange={(event) => onChange('instructions', event.target.value)} disabled={readOnly} />
-        {errors.instructions && <small className="activity-field-error">{errors.instructions}</small>}
-      </label>
-      <label className="instructor-wide-field">
-        Starter source
-        <textarea className="activity-source-input" aria-invalid={Boolean(errors.starterCode)} value={form.starterCode} onChange={(event) => onChange('starterCode', event.target.value)} disabled={readOnly || published} />
-        {errors.starterCode && <small className="activity-field-error">{errors.starterCode}</small>}
-      </label>
-      {published && <p className="activity-lifecycle-note">Published scoring, credited-result policy, starter source, language, entry class, and test cases are immutable. The deadline may only be extended and the attempt limit may only increase.</p>}
-    </>
-  )
+  const frozen = readOnly || status === 'PUBLISHED'
+  const field = key => ({ 'aria-invalid': Boolean(errors[key]), 'aria-describedby': errors[key] ? `activity-${key}-error` : undefined })
+  const error = key => errors[key] && <small id={`activity-${key}-error`} className="activity-field-error">{errors[key]}</small>
+  return <>
+    <section className="activity-authoring-section"><h3>Activity details</h3><label>Activity title<input {...field('title')} value={form.title} onChange={event => onChange('title', event.target.value)} disabled={readOnly} />{error('title')}</label><label>Instructions<GrowingTextarea {...field('instructions')} value={form.instructions} onChange={event => onChange('instructions', event.target.value)} disabled={readOnly} />{error('instructions')}</label></section>
+    <section className="activity-authoring-section"><h3>Grading</h3><div className="instructor-form-grid"><label>Grading mode<select value={form.gradingMode} onChange={event => onChange('gradingMode', event.target.value)} disabled={frozen}><option value="GRADED">Graded</option><option value="COMPLETION">Ungraded · completion</option></select></label>{form.gradingMode !== 'COMPLETION' && <><label>Total points<input type="number" min="0.01" max="1000" step="0.01" {...field('totalPoints')} value={form.totalPoints} onChange={event => onChange('totalPoints', event.target.value)} disabled={frozen} />{error('totalPoints')}</label><label>Credited result<select {...field('creditPolicy')} value={form.creditPolicy} onChange={event => onChange('creditPolicy', event.target.value)} disabled={frozen}><option value="LATEST">Latest attempt</option><option value="HIGHEST">Highest attempt</option></select>{error('creditPolicy')}</label></>}</div></section>
+    <section className="activity-authoring-section"><h3>Deadline &amp; attempts</h3><div className="instructor-form-grid"><label>Deadline<input type="datetime-local" {...field('dueDate')} value={form.dueDate} onChange={event => onChange('dueDate', event.target.value)} disabled={readOnly} />{error('dueDate')}</label><label>Maximum attempts<select {...field('maxAttempts')} value={form.maxAttempts} onChange={event => onChange('maxAttempts', event.target.value)} disabled={readOnly}><option value="1">1 attempt</option><option value="2">2 attempts</option><option value="3">3 attempts</option></select>{error('maxAttempts')}</label></div></section>
+    <section className="activity-authoring-section"><h3>Java starter</h3><div className="instructor-form-grid"><label>Programming language<span className="instructor-fixed-value">Java</span></label><label>Java entry class<input {...field('entryClassName')} value={form.entryClassName} onChange={event => onChange('entryClassName', event.target.value)} disabled={frozen} />{error('entryClassName')}</label></div><label>Starter source<GrowingTextarea className="activity-source-input" {...field('starterCode')} value={form.starterCode} onChange={event => onChange('starterCode', event.target.value)} disabled={frozen} />{error('starterCode')}</label></section>
+    {status === 'PUBLISHED' && <p className="activity-lifecycle-note">Published grading and test cases are locked. You can extend the deadline or increase attempts.</p>}
+  </>
 }
 
+function GrowingTextarea(props) {
+  const ref = useRef(null)
+  useEffect(() => { if (ref.current) { ref.current.style.height = 'auto'; ref.current.style.height = `${Math.min(260, Math.max(72, ref.current.scrollHeight))}px` } }, [props.value])
+  return <textarea {...props} ref={ref} rows={3} />
+}
 function TestCaseEditor({ activity, testCases, setTestCases, dirty, setDirty, busy, onSave }) {
+  const [selected, setSelected] = useState(null)
+  const [removing, setRemoving] = useState(false)
+  const nameInput = useRef(null)
   const editable = activity.status === 'DRAFT'
-  const errors = validateTestCases(testCases, activity.totalPoints)
-  const points = testCases.reduce((sum, testCase) => sum + (Number(testCase.points) || 0), 0)
-  const update = (index, field, value) => {
-    setDirty(true)
-    setTestCases((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row))
-  }
-  const move = (index, offset) => {
+  const completion = activity.gradingMode === 'COMPLETION'
+  const index = Math.max(0, testCases.findIndex(row => row.id === selected))
+  const row = testCases[index]
+  const errors = validateTestCases(testCases, activity.totalPoints, activity.gradingMode)
+  const update = (field, value) => { setDirty(true); setTestCases(rows => rows.map(item => item.id === row.id ? { ...item, [field]: value } : item)) }
+  const move = offset => {
     const target = index + offset
     if (target < 0 || target >= testCases.length) return
-    setDirty(true)
-    setTestCases((rows) => {
-      const next = [...rows]
-      ;[next[index], next[target]] = [next[target], next[index]]
-      return next
-    })
+    setSelected(row.id); setDirty(true)
+    setTestCases(rows => { const next = [...rows]; [next[index], next[target]] = [next[target], next[index]]; return next })
   }
-
-  return (
-    <section className="instructor-testcase-panel activity-testcase-editor">
-      <div className="instructor-section-title">
-        <div><h3>Test cases</h3><p>{testCases.length} of 50 · {points} of {activity.totalPoints} activity points</p></div>
-        {editable && <button type="button" onClick={() => { setDirty(true); setTestCases((rows) => [...rows, emptyTestCase()]) }} disabled={testCases.length >= 50 || busy}>Add test case</button>}
-      </div>
-      {!editable && <p className="activity-lifecycle-note">Test cases are read-only after publication.</p>}
-      {testCases.length === 0 && <RequestState kind="empty" compact message="Add at least one test case and keep at least one visible before publishing." />}
-      <div className="activity-testcase-list">
-        {testCases.map((testCase, index) => (
-          <fieldset key={testCase.id} disabled={!editable || busy}>
-            <legend>Test case {index + 1}</legend>
-            <div className="instructor-form-grid">
-              <label>Name<input value={testCase.name} onChange={(event) => update(index, 'name', event.target.value)} /></label>
-              <label>Points<input type="number" min="0" max="1000" step="0.01" value={testCase.points} onChange={(event) => update(index, 'points', event.target.value)} /></label>
-              <label className="activity-testcase-wide">Input<textarea value={testCase.inputData} onChange={(event) => update(index, 'inputData', event.target.value)} /></label>
-              <label className="activity-testcase-wide">Expected output<textarea value={testCase.expectedOutput} onChange={(event) => update(index, 'expectedOutput', event.target.value)} /></label>
-            </div>
-            <div className="activity-testcase-actions">
-              <label><input type="checkbox" checked={testCase.isHidden} onChange={(event) => update(index, 'isHidden', event.target.checked)} /> Hidden from students</label>
-              {editable && <div><button type="button" onClick={() => move(index, -1)} disabled={index === 0}>Move up</button><button type="button" onClick={() => move(index, 1)} disabled={index === testCases.length - 1}>Move down</button><button type="button" onClick={() => { setDirty(true); setTestCases((rows) => rows.filter((_, rowIndex) => rowIndex !== index)) }}>Remove</button></div>}
-            </div>
-          </fieldset>
-        ))}
-      </div>
-      {errors.length > 0 && <ul className="activity-validation-summary">{errors.map((error) => <li key={error}>{error}</li>)}</ul>}
-      {editable && <div className="instructor-form-actions"><button type="button" className="student-primary-action" onClick={onSave} disabled={!dirty || busy || errors.length > 0}>{busy ? 'Saving…' : 'Save test cases'}</button><p>{dirty ? 'Unsaved test-case changes.' : 'Test cases match the server.'}</p></div>}
-    </section>
-  )
+  const add = () => { const item = emptyTestCase(); setDirty(true); setTestCases(rows => [...rows, item]); setSelected(item.id); requestAnimationFrame(() => nameInput.current?.focus()) }
+  return <section className="instructor-testcase-panel activity-testcase-editor"><div className="instructor-section-title"><div><h3>Test cases</h3><p>{testCases.length} of 50{!completion && ` · ${testCases.reduce((sum, testCase) => sum + (Number(testCase.points) || 0), 0)} of ${activity.totalPoints} points`}</p></div>{editable && <button type="button" className="student-outline-action" onClick={add} disabled={testCases.length >= 50 || busy}>Add test case</button>}</div>{!editable && <p>Test cases are read-only after publication.</p>}{testCases.length === 0 && <p>Add a visible test case to provide feedback.</p>}<div className="case-workbench"><nav className="case-navigator" aria-label="Test cases">{testCases.map((item, number) => <button type="button" key={item.id} aria-current={row?.id === item.id ? 'true' : undefined} onClick={() => setSelected(item.id)}><strong>{number + 1}. {item.name || 'Untitled case'}</strong><small>{item.isHidden ? 'Hidden' : 'Visible'}</small></button>)}</nav>{row && <fieldset className="case-selected" disabled={!editable || busy}><legend>Test case {index + 1}</legend><div className="instructor-form-grid"><label>Name<input ref={nameInput} value={row.name} onChange={event => update('name', event.target.value)} /></label>{!completion && <label>Points<input type="number" min="0" max="1000" step="0.01" value={row.points} onChange={event => update('points', event.target.value)} /></label>}<label className="activity-testcase-wide">Input<GrowingTextarea value={row.inputData} onChange={event => update('inputData', event.target.value)} /></label><label className="activity-testcase-wide">Expected output<GrowingTextarea value={row.expectedOutput} onChange={event => update('expectedOutput', event.target.value)} /></label></div><label><input type="checkbox" checked={row.isHidden} onChange={event => update('isHidden', event.target.checked)} /> Hidden from students</label>{editable && <div className="activity-testcase-actions"><button type="button" onClick={() => move(-1)} disabled={index === 0}>Move up</button><button type="button" onClick={() => move(1)} disabled={index === testCases.length - 1}>Move down</button><button type="button" onClick={() => setRemoving(true)}>Remove</button></div>}</fieldset>}</div>{errors.length > 0 && <div className="activity-validation-summary" role="alert"><strong>Check your test cases</strong><ul>{errors.map(error => <li key={error}>{error}</li>)}</ul></div>}{editable && <div className="instructor-form-actions"><button type="button" className="student-primary-action" onClick={onSave} disabled={!dirty || busy || errors.length > 0}>{busy ? 'Saving…' : 'Save test cases'}</button>{dirty && <p>Unsaved test-case changes.</p>}</div>}{removing && <AppDialog title="Remove test case?" onClose={() => setRemoving(false)}><p>Remove “{row?.name || `Test case ${index + 1}`}” from this draft?</p><footer><button type="button" className="student-primary-action" onClick={() => setRemoving(false)}>Keep case</button><button type="button" className="student-outline-action" onClick={() => { setDirty(true); setTestCases(rows => rows.filter(item => item.id !== row.id)); setRemoving(false) }}>Remove case</button></footer></AppDialog>}</section>
 }
 
 export function InstructorActivityList({ api = activityApi }) {
-  const { selectedClass, selectionStatus } = useClasses()
-  const [query, setQuery] = useState({ ...FIRST_PAGE, status: '' })
-  const [state, setState] = useState({ classId: null, status: 'idle', items: [], pagination: null, error: null })
-
-  const load = useCallback(async ({ signal } = {}) => {
-    if (!selectedClass) return
-    try {
-      const response = await api.listActivities(selectedClass.id, query, { signal })
-      if (response.data.some((activity) => !activityClassMatches(activity, selectedClass))) throw contextMismatchError()
-      setState({ classId: selectedClass.id, status: 'ready', items: response.data, pagination: response.pagination, error: null })
-    } catch (error) {
-      if (error?.name !== 'AbortError') setState({ classId: selectedClass.id, status: 'error', items: [], pagination: null, error })
-    }
-  }, [api, query, selectedClass])
-
-  useEffect(() => {
-    if (selectionStatus !== 'ready') return undefined
-    const controller = new AbortController()
-    Promise.resolve().then(() => load({ signal: controller.signal }))
-    return () => controller.abort()
-  }, [load, selectionStatus])
-
-  const current = state.classId === selectedClass?.id ? state : { ...state, status: 'loading', items: [] }
-  return (
-    <div className="student-assignment-panel instructor-assignment-panel">
-      <div className="instructor-assignment-toolbar instructor-assignment-toolbar--board">
-        <div><strong>Programming Activities</strong><p>Repository-backed authoring for {selectedClass?.className}.</p></div>
-        <div className="instructor-assignment-toolbar-actions">
-          <label className="instructor-status-filter"><span>Status</span><select value={query.status} onChange={(event) => setQuery({ ...FIRST_PAGE, status: event.target.value })}><option value="">All statuses</option>{ACTIVITY_STATUSES.map((status) => <option value={status} key={status}>{formatActivityStatus(status)}</option>)}</select></label>
-          {selectedClass?.status === 'ARCHIVED'
-            ? <button type="button" className="student-primary-action instructor-create-action" disabled title="Archived classes are read-only.">Create Activity</button>
-            : <NavLink to={classHref('/instructor/activity/new', selectedClass?.id)} className="student-primary-action instructor-create-action">Create Activity</NavLink>}
-        </div>
-      </div>
-      {current.status === 'loading' && <RequestState kind="loading" compact message="Loading programming activities." />}
-      {current.status === 'error' && <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} compact error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />}
-      {current.status === 'ready' && current.items.length === 0 && <RequestState kind="empty" compact message="Create a draft activity for this class to begin." />}
-      {current.status === 'ready' && current.items.length > 0 && (
-        <div className="instructor-data-table instructor-assignment-board-table" role="table" aria-label="Programming activities">
-          <div className="instructor-table-row instructor-table-row--head instructor-activity-row" role="row"><span>Activity</span><span>Language</span><span>Due date</span><span>Attempts</span><span>Status</span><span>Actions</span></div>
-          {current.items.map((activity) => (
-            <div className="instructor-table-row instructor-activity-row" role="row" key={activity.id}>
-              <div className="instructor-assignment-name"><span className="instructor-assignment-file instructor-assignment-file--blue" aria-hidden="true" /><div><strong>{activity.title}</strong><span>{activity.instructions}</span><em>{activity.totalPoints} points</em></div></div>
-              <span>Java</span><span>{formatActivityDate(activity.dueDate)}</span><span>{activity.maxAttempts}</span>
-              <em className={`instructor-assignment-status instructor-assignment-status--${activity.status.toLowerCase()}`}>{formatActivityStatus(activity.status)}</em>
-              <div className="instructor-activity-actions"><NavLink to={classHref(`/instructor/activity/${activity.id}/submissions`, selectedClass.id)}>Submissions</NavLink><NavLink to={classHref(`/instructor/activity/${activity.id}/settings`, selectedClass.id)}>Configure</NavLink></div>
-            </div>
-          ))}
-        </div>
-      )}
-      {current.pagination && current.pagination.totalPages > 1 && <nav className="activity-pagination" aria-label="Activity pages"><button type="button" className="student-outline-action" disabled={!current.pagination.hasPreviousPage} onClick={() => setQuery((value) => ({ ...value, page: current.pagination.page - 1 }))}>Previous</button><span>Page {current.pagination.page} of {current.pagination.totalPages}</span><button type="button" className="student-outline-action" disabled={!current.pagination.hasNextPage} onClick={() => setQuery((value) => ({ ...value, page: current.pagination.page + 1 }))}>Next</button></nav>}
-    </div>
-  )
+  const { selectedClass } = useClasses()
+  return selectedClass ? <GroupedClasswork key={selectedClass.id} classId={selectedClass.id} instructor editable={selectedClass.status !== 'ARCHIVED'} api={api} /> : null
 }
 
 export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
@@ -244,6 +124,9 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
   const [errors, setErrors] = useState({})
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const mutationLock = useRef(false)
+  const acceptedNavigation = useRef(false)
 
   const load = useCallback(async ({ signal, preserveEdits = false } = {}) => {
     if (creating || !selectedClass || !activityId) return
@@ -261,7 +144,7 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
         setForm(formFromActivity(activity)); setFormDirty(false); setTestCases(rows); setTestsDirty(false); setErrors({}); setNotice('')
       }
     } catch (error) {
-      if (error?.name !== 'AbortError') setState({ key, status: 'error', activity: null, testCases: [], error })
+      if (error?.name !== 'AbortError') setState(previous => preserveEdits && previous.activity ? { ...previous, error } : { key, status: 'error', activity: null, testCases: [], error })
     }
   }, [activityId, api, creating, selectedClass])
 
@@ -290,6 +173,7 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
     setBusy('create'); setNotice('')
     try {
       const response = await api.createActivity(selectedClass.id, activityPayload(form, 'DRAFT'))
+      acceptedNavigation.current = true
       navigate(classHref(`/instructor/activity/${response.data.id}/settings`, selectedClass.id), { replace: true })
     } catch (error) { await handleError(error) } finally { setBusy('') }
   }
@@ -302,33 +186,32 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
     try {
       const changes = activityUpdatePayload(form, state.activity)
       if (Object.keys(changes).length === 0) {
-        setFormDirty(false); setNotice('Activity fields already match the server.'); return
+        setFormDirty(false); setNotice('No changes to save.'); return
       }
       const response = await api.updateActivity(state.activity.id, { expectedUpdatedAt: state.activity.updatedAt, ...changes })
       setState((current) => ({ ...current, activity: response.data }))
+      if ((response.data.gradingMode ?? 'GRADED') !== (state.activity.gradingMode ?? 'GRADED')) { setTestCases(rows => rows.map(row => ({ ...row, points: response.data.gradingMode === 'COMPLETION' ? '' : '0' }))); setTestsDirty(true) }
       setForm(formFromActivity(response.data)); setFormDirty(false); setNotice('Activity saved.')
     } catch (error) { await handleError(error) } finally { setBusy('') }
   }
 
   const saveTestCases = async () => {
-    const testErrors = validateTestCases(testCases, state.activity.totalPoints)
+    const testErrors = validateTestCases(testCases, state.activity.totalPoints, state.activity.gradingMode)
     if (testErrors.length > 0) { setNotice(testErrors[0]); return }
     setBusy('tests'); setNotice('')
     try {
-      const response = await api.replaceTestCases(state.activity.id, { expectedUpdatedAt: state.activity.updatedAt, testCases: testCasePayload(testCases) })
+      const response = await api.replaceTestCases(state.activity.id, { expectedUpdatedAt: state.activity.updatedAt, testCases: testCasePayload(testCases, state.activity.gradingMode) })
       const activity = { ...state.activity, updatedAt: response.data.activityUpdatedAt }
       const rows = rowsFromResponse(response.data.testCases)
       setState((current) => ({ ...current, activity, testCases: rows }))
-      setTestCases(rows); setTestsDirty(false); setNotice('Test cases saved. The latest activity version is now active.')
+      setTestCases(rows); setTestsDirty(false); setNotice('Test cases saved.')
     } catch (error) { await handleError(error) } finally { setBusy('') }
   }
 
   const transition = async (action) => {
     if (!state.activity || formDirty || testsDirty) return
-    const confirmation = action === 'reopen'
-      ? 'Reopen this activity? Student attempts will not reset, and the deadline will not be extended automatically.'
-      : `Confirm ${action} for this activity?`
-    if (!window.confirm(confirmation)) return
+    if (mutationLock.current) return
+    mutationLock.current = true
     setBusy(action); setNotice('')
     try {
       const response = await api.transition(state.activity.id, action, { expectedUpdatedAt: state.activity.updatedAt })
@@ -339,7 +222,7 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
           ? 'Activity reopen succeeded. The deadline has already passed; extend it separately before ordinary submissions can resume.'
           : `Activity ${action} succeeded.`,
       )
-    } catch (error) { await handleError(error) } finally { setBusy('') }
+    } catch (error) { await handleError(error) } finally { setBusy(''); setConfirmation(''); mutationLock.current = false }
   }
 
   const currentKey = `${selectedClass?.id}:${activityId}`
@@ -354,30 +237,39 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
 
   return (
     <div className="student-assignment-panel instructor-assignment-panel instructor-form-panel">
-      <div className="instructor-assignment-toolbar"><NavLink to={classHref('/instructor/activity', selectedClass?.id)} className="student-outline-action">Back to activities</NavLink>{current.activity && <span className="class-status-chip">{formatActivityStatus(current.activity.status)}</span>}</div>
-      <section className="instructor-page-heading"><p>{creating ? 'Create Activity' : 'Activity Settings'}</p><h2>{creating ? 'Programming activity setup' : current.activity?.title}</h2><span>{creating ? 'Create a server-backed draft before configuring its test cases.' : 'Manage only the fields and lifecycle transitions supported by Projex.'}</span></section>
-      {notice && <RequestState kind={noticeIsConflict ? 'conflict' : noticeIsSuccess ? 'empty' : 'unavailable'} compact title={noticeIsConflict ? 'Latest server version loaded' : noticeIsSuccess ? 'Changes saved' : 'Action not completed'} message={notice} />}
-      <form onSubmit={create}>
+      <UnsavedChangesGuard dirty={formDirty || testsDirty} bypass={acceptedNavigation} />
+      <div className="instructor-assignment-toolbar">
+        <NavLink to={classHref('/instructor/activity', selectedClass?.id)} className="student-outline-action">Back to activities</NavLink>
+        {current.activity && <div className="activity-editor-actions">
+          <span className="class-status-chip">{formatActivityStatus(current.activity.status)}</span>
+          <NavLink to={classHref(`/instructor/activity/${current.activity.id}/submissions`, selectedClass?.id)} className="student-outline-action">View submissions</NavLink>
+        </div>}
+      </div>
+      <section className="instructor-page-heading"><p>{creating ? 'Create Activity' : 'Activity Settings'}</p><h2>{creating ? 'Programming activity setup' : current.activity?.title}</h2></section>
+      {notice && (noticeIsSuccess ? <div className="activity-save-notice" role="status"><strong>Changes saved</strong><p>{notice}</p></div> : <RequestState kind={noticeIsConflict ? 'conflict' : 'unavailable'} compact title={noticeIsConflict ? 'Review the latest changes' : 'Action not completed'} message={notice} />)}
+      <form onSubmit={creating ? create : event => event.preventDefault()}>
+        <TopicSelector classId={selectedClass?.id} value={form.topicId} onChange={value => changeForm('topicId', value)} disabled={Boolean(busy) || selectedClass?.status === 'ARCHIVED' || current.activity?.status === 'ARCHIVED'} api={api} />
         <ActivityFormFields form={form} errors={errors} onChange={changeForm} readOnly={readOnly || Boolean(busy)} status={current.activity?.status || 'DRAFT'} />
         <div className="instructor-form-actions">
-          {creating ? <button type="submit" className="student-primary-action" disabled={busy === 'create' || selectedClass?.status === 'ARCHIVED'}>{busy === 'create' ? 'Creating…' : 'Create draft'}</button> : <button type="button" className="student-primary-action" onClick={saveActivity} disabled={!formDirty || readOnly || Boolean(busy)}>{busy === 'activity' ? 'Saving…' : 'Save activity'}</button>}
-          <p>{creating ? 'Test cases become available after the draft is created.' : formDirty ? 'Unsaved activity changes.' : 'Activity fields match the server.'}</p>
+          {creating ? <button type="submit" className="student-primary-action" disabled={busy === 'create' || selectedClass?.status === 'ARCHIVED'}>{busy === 'create' ? 'Creating…' : 'Create draft'}</button> : <button type="button" className="student-primary-action" onClick={saveActivity} disabled={!formDirty || current.activity?.status === 'ARCHIVED' || selectedClass?.status === 'ARCHIVED' || Boolean(busy)}>{busy === 'activity' ? 'Saving…' : 'Save activity'}</button>}
+          <p>{creating ? 'Add test cases after saving the draft.' : formDirty ? 'Unsaved activity changes.' : ''}</p>
         </div>
       </form>
       {current.activity && <TestCaseEditor activity={current.activity} testCases={testCases} setTestCases={setTestCases} dirty={testsDirty} setDirty={setTestsDirty} busy={Boolean(busy)} onSave={saveTestCases} />}
       {current.activity && (
         <section className="activity-lifecycle-panel">
-          <div><h3>Lifecycle</h3><p>Lifecycle actions use the latest server version. Save all edits first.</p></div>
-          {current.activity.status === 'DRAFT' && publishReasons.length > 0 && <ul>{publishReasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>}
+          <div><h3>Publishing &amp; availability</h3><p>Save changes before changing availability.</p></div>
+          {current.activity.status === 'DRAFT' && publishReasons.length > 0 && <div className="activity-validation-summary"><strong>Before publishing</strong><ul>{publishReasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></div>}
           <div className="instructor-form-actions">
-            {current.activity.status === 'DRAFT' && <button type="button" className="student-primary-action" disabled={Boolean(busy) || formDirty || testsDirty || publishReasons.length > 0 || selectedClass?.status === 'ARCHIVED'} onClick={() => transition('publish')}>Publish</button>}
-            {current.activity.status === 'PUBLISHED' && <button type="button" className="student-primary-action" disabled={Boolean(busy) || formDirty || selectedClass?.status === 'ARCHIVED'} onClick={() => transition('close')}>Close</button>}
-            {current.activity.status === 'CLOSED' && <button type="button" className="student-primary-action" disabled={Boolean(busy) || formDirty || testsDirty || selectedClass?.status === 'ARCHIVED'} onClick={() => transition('reopen')}>Reopen Activity</button>}
-            {current.activity.status !== 'ARCHIVED' && <button type="button" className="student-outline-action" disabled={Boolean(busy) || formDirty || testsDirty || selectedClass?.status === 'ARCHIVED'} onClick={() => transition('archive')}>Archive</button>}
-            {current.activity.status === 'ARCHIVED' && <button type="button" className="student-primary-action" disabled={Boolean(busy) || selectedClass?.status === 'ARCHIVED'} onClick={() => transition('restore')}>Restore</button>}
+            {current.activity.status === 'DRAFT' && <button type="button" className="student-primary-action" disabled={Boolean(busy) || formDirty || testsDirty || publishReasons.length > 0 || selectedClass?.status === 'ARCHIVED'} onClick={() => setConfirmation('publish')}>Publish</button>}
+            {current.activity.status === 'PUBLISHED' && <button type="button" className="student-primary-action" disabled={Boolean(busy) || formDirty || selectedClass?.status === 'ARCHIVED'} onClick={() => setConfirmation('close')}>Close</button>}
+            {current.activity.status === 'CLOSED' && <button type="button" className="student-primary-action" disabled={Boolean(busy) || formDirty || testsDirty || selectedClass?.status === 'ARCHIVED'} onClick={() => setConfirmation('reopen')}>Reopen Activity</button>}
+            {current.activity.status !== 'ARCHIVED' && <button type="button" className="student-outline-action" disabled={Boolean(busy) || formDirty || testsDirty || selectedClass?.status === 'ARCHIVED'} onClick={() => setConfirmation('archive')}>Archive</button>}
+            {current.activity.status === 'ARCHIVED' && <button type="button" className="student-primary-action" disabled={Boolean(busy) || selectedClass?.status === 'ARCHIVED'} onClick={() => setConfirmation('restore')}>Restore</button>}
           </div>
         </section>
       )}
+      {confirmation && <AppDialog title={`Confirm ${confirmation}`} busy={Boolean(busy)} onClose={() => setConfirmation('')}><p>{confirmation === 'reopen' ? 'Attempts and deadline stay the same. Reopen this activity?' : `Continue and ${confirmation} this activity?`}</p><footer><button type="button" className="student-outline-action" onClick={() => setConfirmation('')} disabled={Boolean(busy)}>Cancel</button><button type="button" className="student-primary-action" onClick={() => transition(confirmation)} disabled={Boolean(busy)}>Confirm {confirmation}</button></footer></AppDialog>}
     </div>
   )
 }

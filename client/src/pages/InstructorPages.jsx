@@ -1,3 +1,6 @@
+import useConfirmation from '../components/useConfirmation.jsx'
+import ProgramField from '../classes/ProgramField.jsx'
+import ProjexIcon from '../components/icons/ProjexIcon.jsx'
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
@@ -5,7 +8,7 @@ import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref, classInitial, classOfferingLabel, firstName } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
-import { WorkHubList } from '../work-hub/WorkHubViews.jsx'
+import { WorkHubList, ReviewPreview } from '../work-hub/WorkHubViews.jsx'
 import { InstructorClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
 import CsvInvitationPanel from '../classes/CsvInvitationPanel.jsx'
 import AcademicFields from '../classes/AcademicFields.jsx'
@@ -33,28 +36,26 @@ function InstructorProfileMenu() {
 
   return (
     <div className="student-profile-menu">
-      <button type="button" className="student-profile-trigger" aria-label="Account menu" onClick={() => setOpen(!open)}>
-        <span className="student-user-avatar" aria-hidden="true" />
+      <button type="button" className="student-profile-trigger" aria-label="Account menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <ProjexIcon name="avatar" className="account-avatar" />
         <span className="student-user-name">
           <strong>{auth.user.fullName}</strong>
           <span>Instructor</span>
         </span>
-        <span className="student-dropdown" aria-hidden="true" />
+        <ProjexIcon name="expand" size={16} />
       </button>
 
       {open && (
         <section className="student-profile-dropdown">
           <button type="button" className="student-profile-close" onClick={() => setOpen(false)} aria-label="Close profile menu" />
           <strong>{auth.user.email}</strong>
-          <span>Managed by slu.edu.ph</span>
+
           <div className="student-profile-photo">
-            <span className="student-user-avatar" aria-hidden="true" />
+            <ProjexIcon name="avatar" className="account-avatar" />
           </div>
-          <h2>Hi, {auth.user.fullName.toUpperCase()}!</h2>
-          <button type="button" className="student-manage-account">Manage your projex account</button>
+          <h2>{auth.user.fullName}</h2>
+
           <div className="student-profile-menu-list">
-            <button type="button">Profile</button>
-            <button type="button">Settings</button>
             <button
               type="button"
               onClick={async () => {
@@ -66,7 +67,7 @@ function InstructorProfileMenu() {
               Sign out
             </button>
           </div>
-          <p>Privacy Policy - Terms of Service</p>
+
         </section>
       )}
     </div>
@@ -76,15 +77,6 @@ function InstructorProfileMenu() {
 function InstructorUserArea() {
   return (
     <div className="student-user-area instructor-user-area">
-      <button
-        type="button"
-        className="student-bell"
-        aria-label="Notifications are deferred"
-        title="Notifications are not available in this iteration."
-        disabled
-      >
-        <span className="student-bell__shape" aria-hidden="true" />
-      </button>
       <InstructorProfileMenu />
     </div>
   )
@@ -167,9 +159,9 @@ function InstructorDashboard() {
   const auth = useAuth()
   const { classes, error, pagination, status } = useClasses()
   const stats = [
-    { label: 'Teaching Classes', value: pagination?.totalItems ?? classes.length, detail: 'authorized classes', tone: 'blue', icon: 'book' },
-    { label: 'Active Classes', value: classes.filter((item) => item.status === 'ACTIVE').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'classes', tone: 'green', icon: 'book' },
-    { label: 'Archived Classes', value: classes.filter((item) => item.status === 'ARCHIVED').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'read-only classes', tone: 'purple', icon: 'students' },
+    { label: 'Teaching Classes', value: pagination?.totalItems ?? classes.length, detail: 'classes', tone: 'blue', icon: 'teaching' },
+    { label: 'Active Classes', value: classes.filter((item) => item.status === 'ACTIVE').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'classes', tone: 'green', icon: 'active' },
+    { label: 'Archived Classes', value: classes.filter((item) => item.status === 'ARCHIVED').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'read-only classes', tone: 'purple', icon: 'archived' },
   ]
   return (
     <div className="instructor-home-page">
@@ -180,13 +172,13 @@ function InstructorDashboard() {
       <main className="student-home-content instructor-home-content">
         <section className="instructor-dashboard-hero">
           <h1>Welcome back, {firstName(auth.user.fullName)}!</h1>
-          <p>Here's an overview of the classes currently owned by your account.</p>
+
         </section>
 
         <section className="instructor-home-stat-grid" aria-label="Instructor dashboard summary">
           {stats.map((stat) => (
             <article className={`instructor-home-stat-card instructor-home-stat-card--${stat.tone}`} key={stat.label}>
-              <span className={`instructor-home-stat-icon instructor-home-stat-icon--${stat.icon}`} aria-hidden="true" />
+              <ProjexIcon name={stat.icon} size={28} />
               <div>
                 <span>{stat.label}</span>
                 <strong>{stat.value}</strong>
@@ -200,7 +192,7 @@ function InstructorDashboard() {
           <section className="instructor-home-panel instructor-home-classes-panel">
             <div className="instructor-home-panel-heading">
               <div>
-                <span className="instructor-panel-icon instructor-panel-icon--classes" aria-hidden="true" />
+                <ProjexIcon name="classes" />
                 <h2>Your Classes</h2>
               </div>
               <NavLink to="/instructor/classes">View all classes</NavLink>
@@ -229,14 +221,13 @@ function InstructorDashboard() {
           <section className="instructor-home-panel instructor-home-review-panel">
             <div className="instructor-home-panel-heading">
               <div>
-                <span className="instructor-panel-icon instructor-panel-icon--reviews" aria-hidden="true" />
-                <h2>Review Queue Preview</h2>
+                <ProjexIcon name="preview" />
+                <h2>To Review</h2>
               </div>
               <NavLink to="/instructor/review-queues">View all</NavLink>
             </div>
 
-            <p>Open the current cross-class queue for submissions needing assessment follow-up or release and repositories ready for review.</p>
-            <NavLink to="/instructor/review-queues">Open review queue</NavLink>
+            <ReviewPreview />
           </section>
         </section>
       </main>
@@ -329,6 +320,7 @@ function CreateActivityPage({ mode = 'create' }) {
 }
 
 function InstructorPeoplePage() {
+  const [confirm, confirmation] = useConfirmation()
   const { api, selectedClass, selectionStatus } = useClasses()
   const { user } = useAuth()
   const [rosterState, setRosterState] = useState({ classId: null, status: 'loading', members: [], pagination: null, error: null })
@@ -373,7 +365,7 @@ function InstructorPeoplePage() {
     if (!selectedClass || selectedClass.status === 'ARCHIVED') return
     const nextStatus = member.membershipStatus === 'ACTIVE' ? 'REMOVED' : 'ACTIVE'
     const verb = nextStatus === 'REMOVED' ? 'remove' : 'reactivate'
-    if (!window.confirm(`Are you sure you want to ${verb} ${member.fullName}?`)) return
+    if (!await confirm(`Are you sure you want to ${verb} ${member.fullName}?`, 'Change enrollment')) return
     setMutatingMemberId(member.memberId)
     setActionError(null)
     try {
@@ -401,6 +393,7 @@ function InstructorPeoplePage() {
 
   return (
     <InstructorClassPage activeTab="people">
+      {confirmation}
       <div className="student-people-panel instructor-people-panel">
         <section className="instructor-people-hero">
           <div className="instructor-people-hero-copy">
@@ -430,7 +423,7 @@ function InstructorPeoplePage() {
 
         {selectedClass?.status === 'ARCHIVED' && <p className="instructor-people-action-status">Archived classes are read-only.</p>}
         <InstructorClassInvitationPanel />
-        {selectedClass?.status === 'ACTIVE' ? <CsvInvitationPanel api={api} classId={selectedClass.id} /> : null}
+        {selectedClass?.status === 'ACTIVE' ? <CsvInvitationPanel key={selectedClass.id} api={api} classId={selectedClass.id} /> : null}
         {actionError && <p className="class-form-error" role="alert">{describeApiError(actionError)}</p>}
         {selectionStatus === 'ready' && roster.status === 'loading' && <RequestState kind="loading" compact message="Loading the detailed roster." />}
         {roster.status === 'error' && <RequestState kind="unavailable" compact error={roster.error} />}
@@ -476,17 +469,18 @@ function InstructorPeoplePage() {
 }
 
 function ClassInfoForm({ classRecord }) {
+  const [confirm, confirmation] = useConfirmation()
   const { api, upsertClass } = useClasses()
   const { user } = useAuth()
   const isPrimary = classRecord.instructor?.userId === user.id
   const official = Boolean(classRecord.officialClassCode)
   const [form, setForm] = useState({
     className: classRecord.className,
+    program: classRecord.program ?? '',
     section: classRecord.section ?? '',
     semester: classRecord.semester ?? '',
     schoolYear: classRecord.schoolYear ?? '',
     schedule: classRecord.schedule ?? '',
-    days: classRecord.days ?? '',
     room: classRecord.room ?? '',
   })
   const [saving, setSaving] = useState(false)
@@ -501,8 +495,8 @@ function ClassInfoForm({ classRecord }) {
     setMessage('')
     try {
       const response = await api.updateClass(classRecord.id, official
-        ? { schedule: form.schedule || null, days: form.days || null, room: form.room || null }
-        : { className: form.className, section: form.section || null, ...(form.semester !== (classRecord.semester ?? '') ? { semester: form.semester } : {}), ...(form.schoolYear !== (classRecord.schoolYear ?? '') ? { schoolYear: form.schoolYear } : {}), schedule: form.schedule || null, days: form.days || null, room: form.room || null })
+        ? { ...(form.program ? { program: form.program } : {}), schedule: form.schedule || null, room: form.room || null }
+        : { ...(form.program ? { program: form.program } : {}), className: form.className, section: form.section || null, ...(form.semester !== (classRecord.semester ?? '') ? { semester: form.semester } : {}), ...(form.schoolYear !== (classRecord.schoolYear ?? '') ? { schoolYear: form.schoolYear } : {}), schedule: form.schedule || null, room: form.room || null })
       upsertClass(response.data)
       setMessage('Class information updated.')
     } catch (requestError) {
@@ -514,7 +508,7 @@ function ClassInfoForm({ classRecord }) {
 
   const changeLifecycle = async () => {
     const archive = classRecord.status === 'ACTIVE'
-    if (!window.confirm(`${archive ? 'Archive' : 'Restore'} ${classRecord.className}?`)) return
+    if (!await confirm(`${archive ? 'Archive' : 'Restore'} ${classRecord.className}?`, 'Class availability')) return
     setSaving(true)
     setError(null)
     setMessage('')
@@ -535,6 +529,7 @@ function ClassInfoForm({ classRecord }) {
 
   return (
     <div className="student-people-panel instructor-info-panel">
+      {confirmation}
       <section>
         <h2>Class Info</h2>
         {official ? <p>Contact Admin to correct catalog details.</p> : null}
@@ -542,11 +537,11 @@ function ClassInfoForm({ classRecord }) {
       <form className="instructor-form-grid class-info-form" onSubmit={save}>
         <label>Class Name<input value={form.className} onChange={updateField('className')} maxLength={200} required disabled={official || !isPrimary || classRecord.status !== 'ACTIVE'} /></label>
         {official ? <p>Official: {classRecord.courseName} · {classOfferingLabel(classRecord)}</p> : <>
-          <label>Section<input value={form.section} onChange={updateField('section')} maxLength={100} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
+          <label>Class Code<input value={form.section} onChange={updateField('section')} maxLength={100} required disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
           <AcademicFields semester={form.semester} schoolYear={form.schoolYear} onChange={(field, value) => setForm((current) => ({ ...current, [field]: value }))} legacy disabled={!isPrimary || classRecord.status !== 'ACTIVE'} />
         </>}
-        <label>Schedule<input value={form.schedule} onChange={updateField('schedule')} maxLength={200} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
-        <label>Days<input value={form.days} onChange={updateField('days')} maxLength={100} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
+        <ProgramField value={form.program} onChange={value => setForm(old => ({ ...old, program: value }))} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} />
+        <label>Schedule Type<input value={form.schedule} onChange={updateField('schedule')} maxLength={200} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
         <label>Room<input value={form.room} onChange={updateField('room')} maxLength={100} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
         <div className="class-info-actions">
           {isPrimary ? <button type="submit" className="student-primary-action" disabled={saving || classRecord.status !== 'ACTIVE'}>{saving ? 'Saving…' : 'Save changes'}</button> : null}
@@ -575,6 +570,7 @@ function InstructorClassInfoPage() {
 }
 
 function InstructorClassCodePage() {
+  const [confirm, confirmation] = useConfirmation()
   const { api, selectedClass, selectionStatus } = useClasses()
   const [codeState, setCodeState] = useState({ classId: null, status: 'loading', data: null, error: null })
   const [action, setAction] = useState('')
@@ -594,7 +590,7 @@ function InstructorClassCodePage() {
   const mutate = async (operation) => {
     if (!selectedClass || selectedClass.status === 'ARCHIVED') return
     const verb = operation === 'rotate' ? 'rotate' : 'revoke'
-    if (!window.confirm(`Are you sure you want to ${verb} this join code?`)) return
+    if (!await confirm(`Are you sure you want to ${verb} this join code?`, 'Change join code')) return
     setAction(operation)
     try {
       const response = operation === 'rotate'
@@ -620,6 +616,7 @@ function InstructorClassCodePage() {
 
   return (
     <InstructorClassPage activeTab="info">
+      {confirmation}
       <div className="student-people-panel instructor-info-panel">
         <section><h2>Class Join Code</h2><p>Join codes are generated and validated only by the Projex server.</p></section>
         {selectionStatus === 'ready' && current.status === 'loading' && <RequestState kind="loading" compact message="Loading the join-code status." />}
@@ -662,7 +659,7 @@ function DeferredInstructorPage({ title, message }) {
 }
 
 function InstructorReviewQueuePage() {
-  return <div className="student-global-page"><header className="student-home-topbar"><InstructorUserArea /></header><main className="student-global-content"><div className="student-global-heading"><div><p>Academic Work</p><h1>Review Queues</h1></div></div><WorkHubList view="review" /></main></div>
+  return <div className="student-global-page"><header className="student-home-topbar"><InstructorUserArea /></header><main className="student-global-content"><div className="student-global-heading"><div><p>Academic Work</p><h1>To Review</h1></div></div><WorkHubList view="review" /></main></div>
 }
 
 function InstructorProjectListPage() {

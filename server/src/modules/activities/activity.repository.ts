@@ -1,8 +1,9 @@
-import type {
+import { AppError } from '../../shared/errors/app-error.js'
+import {
   Prisma,
-  ActivityStatus,
-  PrismaClient,
-  UserRole,
+  type ActivityStatus,
+  type PrismaClient,
+  type UserRole,
 } from '@prisma/client'
 import type {
   ActivityListQuery,
@@ -22,6 +23,8 @@ export const activityRecordSelect = {
   starterCode: true,
   maxAttempts: true,
   creditPolicy: true,
+  gradingMode: true,
+  topicId: true,
   totalPoints: true,
   status: true,
   createdAt: true,
@@ -84,7 +87,9 @@ export interface ActivityMutableFields {
   starterCode?: string
   maxAttempts?: number
   creditPolicy?: 'LATEST' | 'HIGHEST'
-  totalPoints?: number
+  gradingMode?: 'GRADED' | 'COMPLETION'
+  topicId?: string | null
+  totalPoints?: number | null
 }
 
 export interface ActivityRepository {
@@ -210,6 +215,7 @@ export function createPrismaActivityRepository(
         if (classRecord.status === 'ARCHIVED') {
           return { kind: 'class_archived' } as const
         }
+        if (input.activity.topicId && !await transaction.classTopic.findFirst({ where: { id: input.activity.topicId, classId: input.classId } })) throw new AppError({ statusCode: 404, code: 'TOPIC_NOT_FOUND', message: 'Topic not found.' })
         const activity = await transaction.programmingActivity.create({
           data: {
             classId: input.classId,
@@ -222,6 +228,8 @@ export function createPrismaActivityRepository(
             starterCode: input.activity.starterCode,
             maxAttempts: input.activity.maxAttempts,
             creditPolicy: input.activity.creditPolicy,
+            gradingMode: input.activity.gradingMode,
+            topicId: input.activity.topicId,
             totalPoints: input.activity.totalPoints,
             status: 'DRAFT',
             createdAt: input.now,
@@ -249,6 +257,7 @@ export function createPrismaActivityRepository(
       const where: Prisma.ProgrammingActivityWhereInput = {
         classId: input.classId,
         ...statusScope,
+        ...(input.query.topicId ? { topicId: input.query.topicId === 'none' ? null : input.query.topicId } : {}),
         ...(input.studentView
           ? {
               class: {
@@ -280,7 +289,7 @@ export function createPrismaActivityRepository(
       const [activities, totalItems] = await prisma.$transaction([
         prisma.programmingActivity.findMany({
           where,
-          select: activityRecordSelect,
+          select: { ...activityRecordSelect, ...(input.studentView ? { submissions: { where: { studentId: input.callerId }, select: { id: true }, take: 1 } } : input.callerRole === 'INSTRUCTOR' ? { _count: { select: { submissions: true } } } : {}) },
           orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
           skip: (input.query.page - 1) * input.query.pageSize,
           take: input.query.pageSize,
@@ -319,7 +328,13 @@ export function createPrismaActivityRepository(
     update(input) {
       return prisma.$transaction(async (transaction) => {
         const versionTimestamp = nextUpdatedAt(input.expectedUpdatedAt, input.now)
-        if (input.fields.totalPoints !== undefined) {
+        const definition = await transaction.programmingActivity.findUnique({ where: { id: input.activityId }, select: { gradingMode: true } })
+        const changingMode = input.fields.gradingMode !== undefined && input.fields.gradingMode !== definition?.gradingMode
+        if (input.fields.topicId) {
+          const activity = await transaction.programmingActivity.findUnique({ where: { id: input.activityId }, select: { classId: true } })
+          if (!activity || !await transaction.classTopic.findFirst({ where: { id: input.fields.topicId, classId: activity.classId } })) throw new AppError({ statusCode: 404, code: 'TOPIC_NOT_FOUND', message: 'Topic not found.' })
+        }
+        if (input.fields.totalPoints !== undefined && input.fields.totalPoints !== null) {
           const aggregate = await transaction.testCase.aggregate({
             where: { activityId: input.activityId },
             _sum: { points: true },
@@ -345,6 +360,7 @@ export function createPrismaActivityRepository(
             [input.currentStatus],
           )
         }
+        if (changingMode) await transaction.testCase.updateMany({ where: { activityId: input.activityId }, data: { points: input.fields.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(0) } })
         return {
           kind: 'updated',
           activity: await loadActivity(transaction, input.activityId),
@@ -396,13 +412,13 @@ export function createPrismaActivityRepository(
           (total, testCase) => total + Number(testCase.points),
           0,
         )
-        if (testCasePoints <= 0) {
+        if (current.gradingMode !== 'COMPLETION' && testCasePoints <= 0) {
           return {
             kind: 'not_publishable',
             reason: 'TEST_CASE_POINTS_REQUIRED',
           } as const
         }
-        if (testCasePoints > Number(current.totalPoints)) {
+        if (current.gradingMode !== 'COMPLETION' && testCasePoints > Number(current.totalPoints)) {
           return {
             kind: 'not_publishable',
             reason: 'TEST_CASE_POINTS_EXCEED_TOTAL',

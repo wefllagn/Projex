@@ -24,6 +24,7 @@ export const submissionInclude = {
       title: true,
       entryClassName: true,
       status: true,
+      gradingMode: true,
       totalPoints: true,
       creditPolicy: true,
       class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
@@ -107,9 +108,11 @@ export interface StudentAttemptStateRecord {
     status: 'PUBLISHED' | 'CLOSED'
     dueDate: Date
     maxAttempts: number
+    gradingMode?: 'GRADED' | 'COMPLETION'
     creditPolicy: AttemptCreditPolicyValue
     classStatus: 'PREPARED' | 'ACTIVE' | 'ARCHIVED'
   }
+  acceptedAttempts?: number
   countingAttemptsUsed: number
   availableReplacement: {
     replacementExpiresAt: Date
@@ -456,9 +459,11 @@ export function createPrismaSubmissionRepository(
               sourceHash: input.sourceHash,
               activityTitleSnapshot: activity.title,
               dueDateSnapshot: activity.dueDate,
+              gradingModeSnapshot: activity.gradingMode,
               totalPointsSnapshot: activity.totalPoints,
-              automatedMaximum: new Prisma.Decimal(automatedMaximum),
-              instructorMaximum: new Prisma.Decimal(
+              instructorPoints: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(0),
+              automatedMaximum: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(automatedMaximum),
+              instructorMaximum: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(
                 totalPoints - automatedMaximum,
               ),
               submittedAt: input.now,
@@ -476,7 +481,8 @@ export function createPrismaSubmissionRepository(
                       inputSnapshot: testCase.inputData,
                       expectedOutputSnapshot: testCase.expectedOutput,
                       isHiddenSnapshot: testCase.isHidden,
-                      maximumPoints: testCase.points,
+                      maximumPoints: activity.gradingMode === 'COMPLETION' ? null : testCase.points,
+                      automatedPoints: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(0),
                     })),
                   },
                 },
@@ -637,6 +643,7 @@ export function createPrismaSubmissionRepository(
                 status: true,
                 dueDate: true,
                 maxAttempts: true,
+                gradingMode: true,
                 creditPolicy: true,
                 class: {
                   select: {
@@ -662,7 +669,7 @@ export function createPrismaSubmissionRepository(
             return null
           }
 
-          const [countingAttemptsUsed, replacement, releasedAttempts] =
+          const [countingAttemptsUsed, replacement, releasedAttempts, acceptedAttempts] =
             await Promise.all([
               transaction.activitySubmission.count({
                 where: {
@@ -697,6 +704,7 @@ export function createPrismaSubmissionRepository(
                 select: releasedAttemptSelect,
                 orderBy: [{ attemptNumber: 'asc' }],
               }),
+              transaction.activitySubmission.count({ where: { activityId: input.activityId, studentId: input.studentId } }),
             ])
 
           return {
@@ -705,9 +713,11 @@ export function createPrismaSubmissionRepository(
               status: activity.status,
               dueDate: activity.dueDate,
               maxAttempts: activity.maxAttempts,
+              gradingMode: activity.gradingMode,
               creditPolicy: activity.creditPolicy,
               classStatus: activity.class.status,
             },
+            acceptedAttempts,
             countingAttemptsUsed,
             availableReplacement:
               replacement?.replacementExpiresAt
@@ -741,6 +751,7 @@ export function createPrismaSubmissionRepository(
         ) {
           return { kind: 'invalid_state' } as const
         }
+        if (record.gradingModeSnapshot === 'COMPLETION') return { kind: 'score_out_of_bounds' } as const
         const original = record.originalAutomatedScore
         const previous = effectiveScore(record)
         if (original === null || previous === null) {
@@ -792,11 +803,12 @@ export function createPrismaSubmissionRepository(
         }
         if (
           record.submissionStatus !== 'ASSESSED' &&
-          record.submissionStatus !== 'REVIEWED'
+          record.submissionStatus !== 'REVIEWED' &&
+          !(record.gradingModeSnapshot === 'COMPLETION' && ['FAILED_RESOLVED'].includes(record.submissionStatus))
         ) {
           return { kind: 'invalid_state' } as const
         }
-        if (input.review.instructorPoints > Number(record.instructorMaximum)) {
+        if (record.gradingModeSnapshot === 'COMPLETION' ? input.review.instructorPoints !== undefined : input.review.instructorPoints === undefined || input.review.instructorPoints > Number(record.instructorMaximum)) {
           return { kind: 'score_out_of_bounds' } as const
         }
         if (input.review.feedbackText !== undefined) {
@@ -825,7 +837,7 @@ export function createPrismaSubmissionRepository(
         await transaction.activitySubmission.update({
           where: { id: record.id },
           data: {
-            instructorPoints: new Prisma.Decimal(input.review.instructorPoints),
+            instructorPoints: record.gradingModeSnapshot === 'COMPLETION' ? null : new Prisma.Decimal(input.review.instructorPoints!),
             submissionStatus: 'REVIEWED',
             reviewedAt: input.now,
             updatedAt: nextUpdatedAt(input.review.expectedUpdatedAt, input.now),
@@ -853,16 +865,17 @@ export function createPrismaSubmissionRepository(
           return { kind: 'invalid_state' } as const
         }
         const automated = effectiveScore(record)
-        if (automated === null) return { kind: 'invalid_state' } as const
-        const finalScore = automated + Number(record.instructorPoints)
-        if (finalScore > Number(record.totalPointsSnapshot)) {
+        const completion = record.gradingModeSnapshot === 'COMPLETION'
+        if (!completion && automated === null) return { kind: 'invalid_state' } as const
+        const finalScore = (automated ?? 0) + Number(record.instructorPoints)
+        if (!completion && finalScore > Number(record.totalPointsSnapshot)) {
           return { kind: 'score_out_of_bounds' } as const
         }
         await transaction.activitySubmission.update({
           where: { id: record.id },
           data: {
             submissionStatus: 'RELEASED',
-            releasedFinalScore: new Prisma.Decimal(finalScore),
+            releasedFinalScore: completion ? null : new Prisma.Decimal(finalScore),
             releasedAt: input.now,
             updatedAt: nextUpdatedAt(input.expectedUpdatedAt, input.now),
           },

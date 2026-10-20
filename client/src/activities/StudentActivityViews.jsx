@@ -1,3 +1,4 @@
+import { GroupedClasswork } from './TopicViews.jsx'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 import { ApiError, describeApiError } from '../api/api-client.js'
@@ -19,7 +20,6 @@ import {
   formatActivityStatus,
 } from './activity-utils.js'
 
-const FIRST_PAGE = { page: 1, pageSize: 20 }
 
 function contextMismatchError() {
   return new ApiError({
@@ -384,111 +384,9 @@ function ActivityGitWorkspaceCard({ activity, workspace }) {
   )
 }
 
-function StudentActivityRow({ activity, classId }) {
-  const dueTone = activity.dueState === 'OPEN' ? 'not-submitted' : 'submitted'
-  return (
-    <article className="student-assignment-row student-assignment-row--activity">
-      <div className="student-assignment-type">
-        <span className="student-todo-icon student-todo-icon--activity" aria-hidden="true" />
-        <strong>Activity</strong>
-      </div>
-      <div>
-        <h2>{activity.title}</h2>
-        <p>{activity.instructions}</p>
-        <small>Posted {formatActivityDate(activity.publishedAt || activity.createdAt)}</small>
-      </div>
-      <div className="student-assignment-due">
-        <span>Due {formatActivityDate(activity.dueDate)}</span>
-        <em className={`student-assignment-status student-assignment-status--${dueTone}`}>
-          {formatActivityStatus(activity.dueState)}
-        </em>
-      </div>
-      <NavLink to={classHref(`/student/activity/${activity.id}`, classId)} className="student-assignment-action">
-        View details
-      </NavLink>
-    </article>
-  )
-}
-
 export function StudentActivityList({ api = activityApi }) {
-  const { selectedClass, selectionStatus } = useClasses()
-  const [query, setQuery] = useState({ ...FIRST_PAGE, status: '' })
-  const [state, setState] = useState({ classId: null, status: 'idle', items: [], pagination: null, error: null })
-
-  const load = useCallback(async ({ signal } = {}) => {
-    if (!selectedClass) return
-    try {
-      const response = await api.listActivities(selectedClass.id, query, { signal })
-      if (response.data.some((activity) => !activityClassMatches(activity, selectedClass))) throw contextMismatchError()
-      setState({ classId: selectedClass.id, status: 'ready', items: response.data, pagination: response.pagination, error: null })
-    } catch (error) {
-      if (error?.name !== 'AbortError') {
-        setState({ classId: selectedClass.id, status: 'error', items: [], pagination: null, error })
-      }
-    }
-  }, [api, query, selectedClass])
-
-  useEffect(() => {
-    if (selectionStatus !== 'ready') return undefined
-    const controller = new AbortController()
-    Promise.resolve().then(() => load({ signal: controller.signal }))
-    return () => controller.abort()
-  }, [load, selectionStatus])
-
-  const current = state.classId === selectedClass?.id ? state : { ...state, status: 'loading', items: [] }
-  const setPage = (page) => setQuery((value) => ({ ...value, page }))
-
-  return (
-    <div className="student-assignment-board">
-      <section className="student-assignment-stats" aria-label="Activity overview">
-        <article className="student-dashboard-stat student-assignment-stat">
-          <span className="student-dashboard-stat-icon student-dashboard-stat-icon--blue" aria-hidden="true" />
-          <div><span>Activities</span><strong>{current.pagination?.totalItems ?? current.items.length}</strong><small>authorized records</small></div>
-        </article>
-        <article className="student-dashboard-stat student-assignment-stat">
-          <span className="student-dashboard-stat-icon student-dashboard-stat-icon--orange" aria-hidden="true" />
-          <div><span>Open</span><strong>{current.items.filter((item) => item.dueState === 'OPEN').length}</strong><small>on this page</small></div>
-        </article>
-        <article className="student-dashboard-stat student-assignment-stat">
-          <span className="student-dashboard-stat-icon student-dashboard-stat-icon--purple" aria-hidden="true" />
-          <div><span>Closed</span><strong>{current.items.filter((item) => item.status === 'CLOSED').length}</strong><small>on this page</small></div>
-        </article>
-      </section>
-
-      <section className="student-assignment-panel student-assignment-panel--board">
-        <div className="student-assignment-toolbar student-assignment-toolbar--board">
-          <div>
-            <strong>Programming Activities</strong>
-            <p>Repository-backed activities for {selectedClass?.className}.</p>
-          </div>
-          <label className="student-sort-control">
-            Status
-            <select value={query.status} onChange={(event) => setQuery({ ...FIRST_PAGE, status: event.target.value })}>
-              <option value="">Published and closed</option>
-              <option value="PUBLISHED">Published</option>
-              <option value="CLOSED">Closed</option>
-            </select>
-          </label>
-        </div>
-
-        {current.status === 'loading' && <RequestState kind="loading" compact message="Loading programming activities." />}
-        {current.status === 'error' && <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} compact error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />}
-        {current.status === 'ready' && current.items.length === 0 && <RequestState kind="empty" compact message="No programming activities match this view." />}
-        {current.status === 'ready' && current.items.length > 0 && (
-          <div className="student-assignment-list">
-            {current.items.map((activity) => <StudentActivityRow activity={activity} classId={selectedClass.id} key={activity.id} />)}
-          </div>
-        )}
-        {current.pagination && current.pagination.totalPages > 1 && (
-          <nav className="activity-pagination" aria-label="Activity pages">
-            <button type="button" className="student-outline-action" disabled={!current.pagination.hasPreviousPage} onClick={() => setPage(current.pagination.page - 1)}>Previous</button>
-            <span>Page {current.pagination.page} of {current.pagination.totalPages}</span>
-            <button type="button" className="student-outline-action" disabled={!current.pagination.hasNextPage} onClick={() => setPage(current.pagination.page + 1)}>Next</button>
-          </nav>
-        )}
-      </section>
-    </div>
-  )
+  const { selectedClass } = useClasses()
+  return selectedClass ? <GroupedClasswork key={selectedClass.id} classId={selectedClass.id} api={api} /> : null
 }
 
 function StudentActivityReady({ activity, attemptState, testCases, classId, repositories, repositoryContent }) {
@@ -524,7 +422,7 @@ function StudentActivityReady({ activity, attemptState, testCases, classId, repo
                 <strong>{testCase.name}</strong>
                 <span>Input</span><pre>{testCase.inputData ?? '(no input)'}</pre>
                 <span>Expected output</span><pre>{testCase.expectedOutput}</pre>
-                <small>{testCase.points} points</small>
+                {activity.gradingMode !== 'COMPLETION' && <small>{testCase.points} points</small>}
               </article>
             ))}
           </section>
@@ -540,12 +438,11 @@ function StudentActivityReady({ activity, attemptState, testCases, classId, repo
             <div><dt>Maximum attempts</dt><dd>{activity.maxAttempts}</dd></div>
             <div><dt>Attempts</dt><dd>{attemptState.countingAttemptsUsed} of {attemptState.maxAttempts} used</dd></div>
             <div><dt>Ordinary attempts remaining</dt><dd>{attemptState.remainingOrdinaryAttempts}</dd></div>
-            <div><dt>Credited result policy</dt><dd>{attemptState.creditPolicy === 'HIGHEST' ? 'Highest attempt' : 'Latest attempt'}</dd></div>
-            <div><dt>Total points</dt><dd>{activity.totalPoints}</dd></div>
+            {activity.gradingMode !== 'COMPLETION' && <><div><dt>Credited result policy</dt><dd>{attemptState.creditPolicy === 'HIGHEST' ? 'Highest attempt' : 'Latest attempt'}</dd></div><div><dt>Total points</dt><dd>{activity.totalPoints}</dd></div></>}
           </dl>
           <div className="submission-released-result">
-            <strong>Credited result</strong>
-            {attemptState.creditedResult
+            <strong>{activity.gradingMode === 'COMPLETION' ? 'Ungraded · completion' : 'Credited result'}</strong>
+            {activity.gradingMode === 'COMPLETION' ? <p>{attemptState.completionState === 'COMPLETE' ? 'Complete · official submission accepted' : 'Not submitted'}</p> : attemptState.creditedResult
               ? <><p>{attemptState.creditedResult.attemptLabel}</p><h3>{attemptState.creditedResult.score} / {attemptState.creditedResult.totalPoints}</h3></>
               : <p>No result has been released yet.</p>}
           </div>

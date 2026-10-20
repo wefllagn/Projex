@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { submissionStatusLabel } from './submission-display.js'
+import AppDialog from '../components/AppDialog.jsx'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, NavLink, useParams } from 'react-router-dom'
 import { activityApi } from '../activities/activity-api.js'
 import { activityClassMatches, formatActivityDate } from '../activities/activity-utils.js'
@@ -50,7 +52,7 @@ function score(value) {
 
 function reviewForm(record) {
   return {
-    instructorPoints: String(record?.scores.instructorPoints ?? 0),
+    instructorPoints: String(record?.scores?.instructorPoints ?? 0),
     feedbackText: record?.feedback?.text ?? '',
   }
 }
@@ -66,7 +68,7 @@ function SubmissionQueueRow({ record, classId }) {
     <div className="instructor-table-row instructor-queue-row instructor-submission-queue-row" role="row">
       <div><strong>{record.student.fullName}</strong>{record.student.email && <small>{record.student.email}</small>}</div>
       <span>{record.attemptLabel}{record.isCreditedResult && <small>Credited result</small>}</span>
-      <em className={`submission-status submission-status--${record.status}`}>{formatStatus(record.status)}</em>
+      <em className={`submission-status submission-status--${record.gradingMode === 'COMPLETION' ? 'complete' : record.status}`}>{submissionStatusLabel(record, formatStatus)}</em>
       <span>{formatDate(record.submittedAt)}{record.isLate && <small>Accepted late</small>}</span>
       <NavLink to={classHref(`/instructor/activity/${record.activityId}/submissions/${record.id}`, classId)}>Review</NavLink>
     </div>
@@ -152,7 +154,7 @@ function AssessmentEvidence({ record }) {
           ? <RequestState kind="empty" compact message="No test-case results were recorded." />
           : record.assessment.testResults.map((result) => (
             <details className="instructor-assessment-case" key={result.testCaseId || `${result.order}:${result.name}`}>
-              <summary><strong>{result.name}</strong><span>{result.isHidden ? 'Hidden' : 'Visible'}</span><em className={result.outcome === 'passed' ? 'is-passed' : 'is-failed'}>{formatStatus(result.outcome)}</em><span>{score(result.automatedPoints)} / {score(result.maximumPoints)} points</span></summary>
+              <summary><strong>{result.name}</strong><span>{result.isHidden ? 'Hidden' : 'Visible'}</span><em className={result.outcome === 'passed' ? 'is-passed' : 'is-failed'}>{formatStatus(result.outcome)}</em>{record.gradingMode !== 'COMPLETION' && <span>{score(result.automatedPoints)} / {score(result.maximumPoints)} points</span>}</summary>
               <dl><div><dt>Input</dt><dd><pre>{result.input ?? 'No input'}</pre></dd></div><div><dt>Expected output</dt><dd><pre>{result.expectedOutput}</pre></dd></div><div><dt>Actual output</dt><dd><pre>{result.actualOutput ?? 'No output'}</pre></dd></div>{result.errorMessage && <div><dt>Error</dt><dd><pre>{result.errorMessage}</pre></dd></div>}</dl>
             </details>
           ))}
@@ -178,6 +180,8 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
   const { selectedClass, selectionStatus } = useClasses()
   const [state, setState] = useState({ key: null, status: 'idle', activity: null, record: null, error: null, notice: '', bounded: false })
   const [correction, setCorrection] = useState({ newEffectiveScore: '', reason: '' })
+  const [confirmAction, setConfirmAction] = useState('')
+  const actionLock = useRef(false)
   const [review, setReview] = useState({ instructorPoints: '0', feedbackText: '' })
   const [rerun, setRerun] = useState(null)
   const [rerunError, setRerunError] = useState(null)
@@ -319,21 +323,22 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
   const saveReview = async (event) => {
     event.preventDefault()
     const points = Number(review.instructorPoints)
-    if (!Number.isFinite(points) || points < 0 || points > current.record.scores.instructorMaximum || review.feedbackText.trim().length > 20_000) return
+    if ((current.record.gradingMode !== 'COMPLETION' && (!Number.isFinite(points) || points < 0 || points > current.record.scores.instructorMaximum)) || review.feedbackText.trim().length > 20_000) return
     setBusy('review')
     try {
-      const response = await submissions.saveReview(submissionId, { instructorPoints: points, feedbackText: review.feedbackText.trim(), expectedUpdatedAt: current.record.updatedAt })
+      const response = await submissions.saveReview(submissionId, { ...(current.record.gradingMode === 'COMPLETION' ? {} : { instructorPoints: points }), feedbackText: review.feedbackText.trim(), expectedUpdatedAt: current.record.updatedAt })
       adopt(response, review.feedbackText.trim() ? 'Review and private feedback draft saved.' : 'Review saved and the unreleased feedback draft was cleared.', true)
     } catch (error) { await handleMutationError(error) } finally { setBusy('') }
   }
 
   const release = async () => {
-    if (!window.confirm('Release the authoritative final score and feedback to this student? This submission cannot be reopened in the current workflow.')) return
+    if (actionLock.current) return
+    actionLock.current = true
     setBusy('release')
     try {
       const response = await submissions.releaseSubmission(submissionId, { expectedUpdatedAt: current.record.updatedAt })
-      adopt(response, 'Final score and feedback released.', true)
-    } catch (error) { await handleMutationError(error) } finally { setBusy('') }
+      adopt(response, current.record.gradingMode === 'COMPLETION' ? 'Feedback released.' : 'Final score and feedback released.', true)
+    } catch (error) { await handleMutationError(error) } finally { setBusy(''); setConfirmAction(''); actionLock.current = false }
   }
 
   const retry = async () => {
@@ -380,14 +385,15 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
   const record = current.record
   const archived = current.activity.status === 'ARCHIVED' || selectedClass.status === 'ARCHIVED'
   const editable = !archived && canCorrectOrReview(record)
-  const projectedFinalScore = record.scores.effectiveAutomatedScore === null ? null : record.scores.effectiveAutomatedScore + Number(review.instructorPoints || 0)
-  const correctionValid = Number.isFinite(Number(correction.newEffectiveScore)) && correction.newEffectiveScore !== '' && Number(correction.newEffectiveScore) >= 0 && Number(correction.newEffectiveScore) <= record.scores.automatedMaximum && correction.reason.trim().length >= 10 && correction.reason.trim().length <= 2000
-  const reviewValid = Number.isFinite(Number(review.instructorPoints)) && review.instructorPoints !== '' && Number(review.instructorPoints) >= 0 && Number(review.instructorPoints) <= record.scores.instructorMaximum && review.feedbackText.trim().length <= 20_000
+  const completion = record.gradingMode === 'COMPLETION'
+  const projectedFinalScore = completion ? null : record.scores.effectiveAutomatedScore === null ? null : record.scores.effectiveAutomatedScore + Number(review.instructorPoints || 0)
+  const correctionValid = !completion && Number.isFinite(Number(correction.newEffectiveScore)) && correction.newEffectiveScore !== '' && Number(correction.newEffectiveScore) >= 0 && Number(correction.newEffectiveScore) <= record.scores.automatedMaximum && correction.reason.trim().length >= 10 && correction.reason.trim().length <= 2000
+  const reviewValid = completion ? review.feedbackText.trim().length <= 20_000 : Number.isFinite(Number(review.instructorPoints)) && review.instructorPoints !== '' && Number(review.instructorPoints) >= 0 && Number(review.instructorPoints) <= record.scores.instructorMaximum && review.feedbackText.trim().length <= 20_000
   const resolutionValid = resolution.reason.trim().length >= 10 && resolution.reason.trim().length <= 2000 && (resolution.resolutionType !== 'REPLACEMENT_GRANTED' || (resolution.replacementExpiresAt && new Date(resolution.replacementExpiresAt).getTime() > Date.now()))
 
   return (
     <div className="instructor-review-page instructor-live-review">
-      <div className="instructor-assignment-toolbar"><NavLink to={classHref(`/instructor/activity/${activityId}/submissions`, selectedClass.id)} className="student-outline-action">Back to queue</NavLink><em className={`submission-status submission-status--${record.status}`}>{formatStatus(record.status)}</em></div>
+      <div className="instructor-assignment-toolbar"><NavLink to={classHref(`/instructor/activity/${activityId}/submissions`, selectedClass.id)} className="student-outline-action">Back to queue</NavLink><em className={`submission-status submission-status--${record.gradingMode === 'COMPLETION' ? 'complete' : record.status}`}>{submissionStatusLabel(record, formatStatus)}</em></div>
       <section className="instructor-page-heading"><p>Selected submission review</p><h2>{record.student.fullName} · {record.activityTitle}</h2><span>{record.attemptLabel} · Submitted {formatDate(record.submittedAt)}{record.isLate ? ' · Accepted late' : ''}</span></section>
       {state.notice && <RequestState kind={state.notice.startsWith('Another') ? 'conflict' : 'empty'} compact title={state.notice.startsWith('Another') ? 'Latest version loaded' : 'Submission updated'} message={state.notice} />}
       {current.error && <RequestState kind="unavailable" compact error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load({ preserveDraft: true })}>Refresh record</button>} />}
@@ -396,7 +402,7 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
       {current.bounded && <p className="submission-notice">Automatic refresh stopped after the bounded polling window. Assessment may still be processing.</p>}
       {(current.bounded || current.error) && isInstructorSubmissionPending(record) && <button type="button" className="student-outline-action" onClick={() => load({ preserveDraft: true })}>Refresh assessment status</button>}
 
-      <dl className="activity-facts instructor-submission-facts"><div><dt>Student</dt><dd>{record.student.fullName}{record.student.email && <small>{record.student.email}</small>}</dd></div><div><dt>Attempt record</dt><dd>{record.attemptLabel}<small>{record.countsTowardAttemptLimit ? 'Counts toward normal allowance' : 'Does not count toward normal allowance'}</small></dd></div><div><dt>Credited-result policy</dt><dd>{current.activity.creditPolicy === 'HIGHEST' ? 'Highest released attempt' : 'Latest released attempt'}{record.isCreditedResult && <small>Current credited result</small>}</dd></div><div><dt>Activity state</dt><dd>{formatStatus(current.activity.status)}</dd></div></dl>
+      <dl className="activity-facts instructor-submission-facts"><div><dt>Student</dt><dd>{record.student.fullName}{record.student.email && <small>{record.student.email}</small>}</dd></div><div><dt>Attempt record</dt><dd>{record.attemptLabel}<small>{record.countsTowardAttemptLimit ? 'Counts toward normal allowance' : 'Does not count toward normal allowance'}</small></dd></div><div><dt>{completion ? 'Completion' : 'Credited-result policy'}</dt><dd>{completion ? 'Complete · official submission accepted' : current.activity.creditPolicy === 'HIGHEST' ? 'Highest released attempt' : 'Latest released attempt'}{record.isCreditedResult && <small>Current credited result</small>}</dd></div><div><dt>Activity state</dt><dd>{formatStatus(current.activity.status)}</dd></div></dl>
       <div className="instructor-review-grid">
         <section className="instructor-code-card"><div className="instructor-section-title"><h3>Immutable submitted source</h3><span>Read-only</span></div><pre>{record.sourceCode || 'No source snapshot was returned.'}</pre></section>
         <aside className="instructor-review-side"><AssessmentEvidence record={record} /></aside>
@@ -413,21 +419,23 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
         {(rerunBounded || rerunError) && currentRerun && <><p>Automatic refresh stopped. The server-side job may still be processing.</p><button type="button" className="student-outline-action" disabled={rerunRefreshing} onClick={() => { void refreshRerunManually() }}>{rerunRefreshing ? 'Refreshing rerun…' : 'Refresh rerun'}</button></>}
       </section>
 
-      <section className="instructor-score-panel">
+      {!completion && <section className="instructor-score-panel">
         <div className="instructor-section-title"><h3>Score components</h3><span>Server-authorized values</span></div>
         <dl className="activity-facts"><div><dt>Original automated</dt><dd>{score(record.scores.originalAutomatedScore)} / {score(record.scores.automatedMaximum)}</dd></div><div><dt>Effective automated</dt><dd>{score(record.scores.effectiveAutomatedScore)} / {score(record.scores.automatedMaximum)}</dd></div><div><dt>Instructor points</dt><dd>{score(record.scores.instructorPoints)} / {score(record.scores.instructorMaximum)}</dd></div><div><dt>{record.status === 'released' ? 'Released final score' : 'Projected final score'}</dt><dd>{record.status === 'released' ? score(record.scores.finalScore) : score(projectedFinalScore)} / {score(record.scores.totalPoints)}</dd></div></dl>
         <CorrectionHistory corrections={record.corrections} />
         {editable && <form className="instructor-correction-form" onSubmit={correctScore}><h3>Edit Automated Score</h3><p>This appends a correction; it never rewrites the original evidence.</p><label>New effective automated score<input type="number" min="0" max={record.scores.automatedMaximum} step="0.01" value={correction.newEffectiveScore} onChange={(event) => setCorrection((value) => ({ ...value, newEffectiveScore: event.target.value }))} /></label><label>Correction reason<textarea value={correction.reason} maxLength={2000} onChange={(event) => setCorrection((value) => ({ ...value, reason: event.target.value }))} /></label><button type="submit" className="student-outline-action" disabled={!correctionValid || Boolean(busy)}>{busy === 'correction' ? 'Recording…' : 'Record correction'}</button></form>}
-      </section>
+      </section>}
+      {completion && <section className="instructor-score-panel"><h3>Complete · Ungraded</h3><p>Official submission accepted. Java results are technical feedback. Review and feedback release are separate from completion.</p></section>}
 
-      {editable && <form className="instructor-feedback-panel instructor-live-feedback" onSubmit={saveReview}><label>Private feedback draft<textarea value={review.feedbackText} maxLength={20000} onChange={(event) => setReview((value) => ({ ...value, feedbackText: event.target.value }))} /><small>Saving an empty field clears the unreleased draft.</small></label><label>Instructor points<input type="number" min="0" max={record.scores.instructorMaximum} step="0.01" value={review.instructorPoints} onChange={(event) => setReview((value) => ({ ...value, instructorPoints: event.target.value }))} /></label><div className="instructor-form-actions"><button type="submit" className="student-primary-action" disabled={!reviewValid || Boolean(busy)}>{busy === 'review' ? 'Saving…' : 'Save review draft'}</button></div></form>}
+      {editable && <form className="instructor-feedback-panel instructor-live-feedback" onSubmit={saveReview}><label>Private feedback draft<textarea aria-label="Private feedback draft" aria-describedby="feedback-draft-help" value={review.feedbackText} maxLength={20000} onChange={(event) => setReview((value) => ({ ...value, feedbackText: event.target.value }))} /><small id="feedback-draft-help">Saving an empty field clears the unreleased draft.</small></label>{!completion && <label>Instructor points<input type="number" min="0" max={record.scores.instructorMaximum} step="0.01" value={review.instructorPoints} onChange={(event) => setReview((value) => ({ ...value, instructorPoints: event.target.value }))} /></label>}<div className="instructor-form-actions"><button type="submit" className="student-primary-action" disabled={!reviewValid || Boolean(busy)}>{busy === 'review' ? 'Saving…' : 'Save review draft'}</button></div></form>}
 
-      {canRelease(record) && !archived && <section className="instructor-release-panel"><div><h3>Release result</h3><p>Release snapshots the server-calculated final score and makes this submission immutable.</p></div><button type="button" className="student-primary-action" disabled={Boolean(busy)} onClick={release}>{busy === 'release' ? 'Releasing…' : 'Release final result'}</button></section>}
-      {record.status === 'released' && <section className="submission-released-result"><p className="student-feedback-eyebrow">{record.isCreditedResult ? 'Credited result' : 'Released result'}</p><h2>{score(record.scores.finalScore)} / {score(record.scores.totalPoints)} points</h2><p>{record.feedback?.text || 'No textual feedback was released.'}</p>{record.feedback?.releasedAt && <small>Feedback released {formatDate(record.feedback.releasedAt)}</small>}</section>}
+      {canRelease(record) && !archived && <section className="instructor-release-panel"><div><h3>{completion ? 'Release feedback' : 'Release result'}</h3><p>{completion ? 'Share your saved comments with the Student.' : 'Share the final score and feedback with the Student.'} This cannot be undone.</p></div><button type="button" className="student-primary-action" disabled={Boolean(busy)} onClick={() => setConfirmAction('release')}>{busy === 'release' ? 'Releasing…' : completion ? 'Release feedback' : 'Release final result'}</button></section>}
+      {record.status === 'released' && <section className="submission-released-result"><p className="student-feedback-eyebrow">{record.isCreditedResult ? 'Credited result' : 'Released result'}</p><h2>{completion ? 'Feedback released · Complete' : `${score(record.scores.finalScore)} / ${score(record.scores.totalPoints)} points`}</h2><p>{record.feedback?.text || 'No textual feedback was released.'}</p>{record.feedback?.releasedAt && <small>Feedback released {formatDate(record.feedback.releasedAt)}</small>}</section>}
 
       {canResolveAssessmentFailure(record) && !archived && <section className="instructor-failure-panel"><div className="instructor-section-title"><h3>Infrastructure assessment failure</h3><span>The original submission remains immutable</span></div><p>Retry the same assessment first when appropriate, or explicitly resolve the infrastructure failure.</p><button type="button" className="student-outline-action" onClick={retry} disabled={Boolean(busy) || !capabilities.java.execution}>{busy === 'retry' ? 'Queueing retry…' : 'Retry same assessment'}</button>{!capabilities.java.execution && <p className="activity-lifecycle-note">Java assessment retry is unavailable in this environment.</p>}<form onSubmit={resolveFailure}><label>Resolution<select value={resolution.resolutionType} onChange={(event) => setResolution((value) => ({ ...value, resolutionType: event.target.value, replacementExpiresAt: '' }))}><option value="CLOSED_WITHOUT_REPLACEMENT">Close without replacement</option><option value="REPLACEMENT_GRANTED">Grant replacement attempt</option></select></label>{resolution.resolutionType === 'REPLACEMENT_GRANTED' && <label>Replacement expires (local time)<input type="datetime-local" value={resolution.replacementExpiresAt} onChange={(event) => setResolution((value) => ({ ...value, replacementExpiresAt: event.target.value }))} /><small>The browser converts this local time to an unambiguous ISO timestamp. The server decides whether the grant remains valid.</small></label>}<label>Mandatory reason<textarea value={resolution.reason} maxLength={2000} onChange={(event) => setResolution((value) => ({ ...value, reason: event.target.value }))} /></label><button type="submit" className="student-primary-action" disabled={!resolutionValid || Boolean(busy)}>{busy === 'resolution' ? 'Resolving…' : 'Resolve failure'}</button></form></section>}
 
       {record.failureResolution && <section className="submission-resolution instructor-resolution-record"><h2>Infrastructure resolution</h2><p>{formatStatus(record.failureResolution.resolutionType)}</p><p>{record.failureResolution.reason}</p><dl><div><dt>Resolved</dt><dd>{formatDate(record.failureResolution.resolvedAt)}</dd></div>{record.failureResolution.replacementExpiresAt && <div><dt>Replacement expiration</dt><dd>{formatDate(record.failureResolution.replacementExpiresAt)}</dd></div>}<div><dt>Replacement status</dt><dd>{record.failureResolution.replacementConsumedAt ? `Consumed ${formatDate(record.failureResolution.replacementConsumedAt)}` : record.failureResolution.replacementExpiresAt ? 'Unconsumed; the server enforces expiration when the student submits' : 'No replacement granted'}</dd></div></dl></section>}
+      {confirmAction === 'release' && <AppDialog title={completion ? 'Release feedback?' : 'Release final result?'} busy={Boolean(busy)} onClose={() => setConfirmAction('')}><p>Release this saved review to the Student? Released reviews cannot be edited.</p><footer><button type="button" className="student-outline-action" onClick={() => setConfirmAction('')} disabled={Boolean(busy)}>Cancel</button><button type="button" className="student-primary-action" onClick={release} disabled={Boolean(busy)}>Confirm release</button></footer></AppDialog>}
     </div>
   )
 }

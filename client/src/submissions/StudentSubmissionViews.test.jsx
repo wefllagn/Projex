@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { RouterProvider, createMemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
 import { ClassContext } from '../classes/class-context.js'
@@ -169,9 +169,9 @@ function renderWithClass(element, {
   path = '/student/activity/:activityId/workspace',
   destination = false,
   legacyDestination = false,
+  initialEntries = [entry],
 } = {}) {
-  return render(
-    <MemoryRouter initialEntries={[entry]}>
+  const router = createMemoryRouter([{ path: '*', element:
       <ClassContext.Provider value={{
         selectedClass,
         requestedClassId: classId,
@@ -180,12 +180,13 @@ function renderWithClass(element, {
       }}>
         <Routes>
           <Route path={path} element={element} />
+          <Route path="/student/activity/:activityId" element={<p>Activity detail destination</p>} />
           {destination && <Route path="/student/activity/:activityId/submissions/:submissionId" element={<p>Canonical submission destination</p>} />}
           {legacyDestination && <Route path="/student/activity/:activityId/submissions" element={<LocationProbe />} />}
         </Routes>
       </ClassContext.Provider>
-    </MemoryRouter>,
-  )
+  }], { initialEntries })
+  return { ...render(<RouterProvider router={router} />), router }
 }
 
 function LocationProbe() {
@@ -194,6 +195,27 @@ function LocationProbe() {
 }
 
 describe('student programming workspace', () => {
+  it('preserves unsaved source when cancelling link and history navigation, including Escape and focus', async () => {
+    const user = userEvent.setup()
+    const { router } = renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissionTransport()} {...gitDependencies()} />, {
+      initialEntries: [`/student/activity/${activityId}?classId=${classId}`, `/student/activity/${activityId}/workspace?classId=${classId}`],
+    })
+    const editor = await screen.findByRole('textbox', { name: 'Java source code' })
+    fireEvent.change(editor, { target: { value: changedCode } })
+    await user.click(screen.getByRole('link', { name: 'Back to Activity' }))
+    expect(await screen.findByRole('dialog', { name: 'Leave unsaved code?' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Keep editing' })).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(editor).toHaveValue(changedCode)
+    expect(screen.getByRole('link', { name: 'Back to Activity' })).toHaveFocus()
+    await act(async () => { await router.navigate(-1) })
+    await user.click(await screen.findByRole('button', { name: 'Keep editing' }))
+    expect(editor).toHaveValue(changedCode)
+    await user.click(screen.getByRole('link', { name: 'Back to Activity' }))
+    await user.click(await screen.findByRole('button', { name: 'Leave without saving' }))
+    expect(await screen.findByText('Activity detail destination')).toBeInTheDocument()
+  })
+
   it('saves the current browser source as a Git checkpoint without creating a submission', async () => {
     const repositories = gitDependencies({
       repositoryOverrides: {
@@ -885,5 +907,17 @@ describe('student submission records', () => {
 
     expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
     expect(screen.queryByText('CROSS-CLASS-SOURCE')).not.toBeInTheDocument()
+  })
+})
+
+describe('Ungraded Student submission records', () => {
+  it.each(['assessed', 'released'])('shows completion for %s without any academic score and gates comments by deliberate release', async status => {
+    const secret = 'Unreleased instructor comment'
+    const submissions = submissionTransport({ getSubmission: vi.fn().mockResolvedValue({ data: submissionRecord({ gradingMode: 'COMPLETION', completionState: 'COMPLETE', status, gradeStatus: 'ungraded', feedback: secret, finalScore: 0, totalPoints: 0 }) }) })
+    renderWithClass(<StudentSubmissionDetail api={activityTransport()} submissions={submissions} />, { entry: `/student/activity/${activityId}/submissions/${submissionId}?classId=${classId}`, path: '/student/activity/:activityId/submissions/:submissionId' })
+    expect(await screen.findByRole('heading', { name: 'Complete · Ungraded' })).toBeInTheDocument()
+    expect(screen.queryByText(/0 \/ 0|0%|Numeric scores/)).not.toBeInTheDocument()
+    if (status === 'released') expect(screen.getByText(secret)).toBeInTheDocument()
+    else { expect(screen.queryByText(secret)).not.toBeInTheDocument(); expect(screen.getByText('Feedback not released')).toBeInTheDocument() }
   })
 })

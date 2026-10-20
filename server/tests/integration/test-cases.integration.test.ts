@@ -46,7 +46,7 @@ function activityInput(totalPoints = 100) {
     entryClassName: 'Main',
     starterCode: 'public class Main { public static void main(String[] args) {} }',
     maxAttempts: 1,
-    creditPolicy: 'LATEST' as const,
+    gradingMode: 'GRADED' as const, creditPolicy: 'LATEST' as const,
     totalPoints,
   }
 }

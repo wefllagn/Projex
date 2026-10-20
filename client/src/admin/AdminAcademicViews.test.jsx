@@ -35,6 +35,15 @@ function renderAt(element, path, route = '*') {
 }
 
 describe('Phase 10D.2 admin academic views', () => {
+  it('identifies an Activity workspace accurately without implying a Group project or exposing source actions', async () => {
+    const record = { id: 'activity-repo', repositoryType: 'ACTIVITY_WORKSPACE', repositoryName: 'Student Activity Workspace', status: 'ACTIVE', reviewStatus: 'WORKING', storageStatus: 'READY', storageSizeBytes: null, owner: { id: 'student-1', fullName: 'Synthetic Student', email: 'student@example.test' }, projectTask: null, team: null, counts: {} }
+    const api = { listAcademicRepositories: vi.fn().mockResolvedValue({ data: [record], pagination }) }
+    renderAt(<AdminAcademicListPage kind="repositories" api={api} />, '/admin/academic/repositories')
+    expect(await screen.findByText('Activity workspace')).toBeInTheDocument()
+    expect(within(screen.getByText('Student Activity Workspace').closest('tr')).queryByText('Class project')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /source|credential|clone/i })).not.toBeInTheDocument()
+  })
+
   it('filters existing Activity repository metadata without offering source or credential controls', async () => {
     const api = { listAcademicRepositories: vi.fn().mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } }) }
     const user = userEvent.setup()
@@ -71,11 +80,12 @@ describe('Phase 10D.2 admin academic views', () => {
     await user.click(await screen.findByRole('radio'))
     expect(screen.queryByLabelText('Course')).not.toBeInTheDocument()
     await user.type(screen.getByLabelText(/Class name/), 'Java Programming')
-    await user.type(screen.getByLabelText(/Section/), 'BSIT 2A')
+    await user.type(screen.getByLabelText('Class Code'), 'BSIT 2A')
+    await user.selectOptions(screen.getByLabelText('Program'), 'COMPUTER_SCIENCE')
     await user.selectOptions(screen.getByLabelText('Semester / Term'), 'Short Term')
     await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
     await user.click(screen.getByRole('button', { name: 'Create Class' }))
-    expect(api.createClass).toHaveBeenCalledWith({ instructorId: 'instructor-1', className: 'Java Programming', semester: 'Short Term', schoolYear: '2026-2027', section: 'BSIT 2A' })
+    expect(api.createClass).toHaveBeenCalledWith({ instructorId: 'instructor-1', program: 'COMPUTER_SCIENCE', className: 'Java Programming', semester: 'Short Term', schoolYear: '2026-2027', section: 'BSIT 2A' })
     expect(api.listCourses).not.toHaveBeenCalled()
   })
 
@@ -88,6 +98,8 @@ describe('Phase 10D.2 admin academic views', () => {
     renderAt(<AdminClassCreatePage api={api} />, '/admin/academic/classes/new')
     expect(screen.getByRole('button', { name: 'Create Class' })).toBeDisabled()
     await user.type(screen.getByLabelText('Class name'), 'Retained Class')
+    await user.type(screen.getByLabelText('Class Code'), '9123A')
+    await user.selectOptions(screen.getByLabelText('Program'), 'COMPUTER_SCIENCE')
     await user.selectOptions(screen.getByLabelText('Semester / Term'), 'Short Term')
     await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
     await user.click(screen.getByRole('button', { name: 'Search instructors' }))

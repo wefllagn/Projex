@@ -182,6 +182,7 @@ function publishedFieldViolation(input: UpdateActivityInput): string | null {
     'starterCode',
     'totalPoints',
     'creditPolicy',
+    'gradingMode',
   ]
   return frozenFields.find((field) => input[field] !== undefined) ?? null
 }
@@ -270,7 +271,7 @@ export function createActivityService(dependencies: {
         activities: result.activities.map((activity) =>
           caller.role === 'ADMIN'
             ? toAdminActivityProjection(activity, currentTime)
-            : toActivityProjection(activity, currentTime),
+            : { ...toActivityProjection(activity, currentTime), ...(caller.role === 'INSTRUCTOR' ? { submissionCount: activity._count?.submissions ?? 0 } : activity.gradingMode === 'COMPLETION' ? { completionState: activity.submissions?.length ? 'COMPLETE' as const : 'NOT_SUBMITTED' as const } : {}) },
         ),
         pagination: {
           page: query.page,
@@ -291,7 +292,7 @@ export function createActivityService(dependencies: {
     },
     async update(caller, activityId, input) {
       const access = await loadManagerAccess(caller, activityId)
-      if (access.activity.status === 'CLOSED' || access.activity.status === 'ARCHIVED') {
+      if (access.activity.status === 'ARCHIVED' || (access.activity.status === 'CLOSED' && Object.keys(input).some(key => key !== 'expectedUpdatedAt' && key !== 'topicId'))) {
         throw new AppError({
           statusCode: 409,
           code: 'ACTIVITY_NOT_EDITABLE',
@@ -329,6 +330,9 @@ export function createActivityService(dependencies: {
           })
         }
       }
+      const mode = input.gradingMode ?? access.activity.gradingMode ?? 'GRADED'
+      const points = input.totalPoints === undefined ? access.activity.totalPoints : input.totalPoints
+      if ((mode === 'COMPLETION') !== (points === null)) throw new AppError({ statusCode: 400, code: 'INVALID_GRADING_CONFIGURATION', message: 'Choose points for Graded or no points for Ungraded.' })
       const { expectedUpdatedAt, ...fields } = input
       const changedAt = now()
       const result = await repository.update({

@@ -124,6 +124,7 @@ function customTransport(overrides: Partial<Parameters<typeof createGitSmartHttp
 }
 
 function closeServer(): Promise<void> {
+  if (!server) return Promise.resolve()
   return new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
 }
 

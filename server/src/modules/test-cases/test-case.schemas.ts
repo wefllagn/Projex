@@ -30,7 +30,7 @@ export const replaceTestCasesSchema = z
             inputData: z.string().max(32_000).nullable().optional().default(null),
             expectedOutput: z.string().max(32_000),
             isHidden: z.boolean(),
-            points: testCasePointsSchema,
+            points: testCasePointsSchema.nullable(),
           })
           .strict(),
       )

@@ -72,10 +72,10 @@ describe('Admin and Instructor Class provisioning MVP', () => {
     const setupToken = new URLSearchParams(new URL(setupLink).hash.slice(1)).get('token')
     await teacher.post('/api/v1/account-setup/complete').send({ setupToken, password, confirmPassword: password }).expect(200)
     const teacherToken = csrf(await teacher.post('/api/v1/auth/login').send({ email: 'provision.primary@slu.edu.ph', password }).expect(200))
-    const classInput = { className: 'Self-service Programming', semester: 'Short Term', schoolYear: '2026-2027', section: 'A', room: 'Lab 1' }
+    const classInput = { program: 'INFORMATION_TECHNOLOGY', className: 'Self-service Programming', semester: 'Short Term', schoolYear: '2026-2027', section: 'A', room: 'Lab 1' }
     await teacher.post('/api/v1/classes').send(classInput).expect(403)
     await mutate(learner.post('/api/v1/classes'), studentToken).send(classInput).expect(403)
-    for (const invalid of [{ semester: 'summer-ish' }, { schoolYear: '2026-2028' }, { semester: undefined }, { schoolYear: undefined }]) {
+    for (const invalid of [{ section: undefined }, { section: '' }, { section: '   ' }, { semester: 'summer-ish' }, { schoolYear: '2026-2028' }, { semester: undefined }, { schoolYear: undefined }]) {
       await mutate(teacher.post('/api/v1/classes'), teacherToken).send({ ...classInput, ...invalid }).expect(400)
     }
     await mutate(teacher.post('/api/v1/classes'), teacherToken).send({ ...classInput, instructorId: co.id }).expect(400)

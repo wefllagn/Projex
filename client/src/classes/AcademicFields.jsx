@@ -10,7 +10,7 @@ function academicYears(currentValue = '', year = new Date().getFullYear()) {
 export default function AcademicFields({ semester = '', schoolYear = '', onChange, legacy = false, disabled = false }) {
   return <>
     <label>Semester / Term<select name="semester" required disabled={disabled} {...(onChange ? { value: semester, onChange: (event) => onChange('semester', event.target.value) } : { defaultValue: semester })}>
-      <option value="">Select semester / term</option>
+      <option value="" disabled hidden>{legacy ? 'Not set' : 'Choose term'}</option>
       {legacy && semester && !classTerms.includes(semester) ? <option value={semester}>{semester} (current)</option> : null}
       {classTerms.map((term) => <option key={term} value={term}>{term}</option>)}
     </select></label>

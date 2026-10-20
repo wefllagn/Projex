@@ -12,6 +12,7 @@ export const classIdParamsSchema = z.object({ classId: z.uuid() }).strict()
 
 export const createClassSchema = z
   .object({
+    program: z.enum(['INFORMATION_TECHNOLOGY', 'COMPUTER_SCIENCE']),
     className: classNameSchema,
     section: sectionSchema.optional(),
     semester: semesterSchema.optional(),
@@ -27,6 +28,7 @@ export const createClassSchema = z
   })
   .strict()
   .superRefine((value, context) => {
+    if (!value.officialClassCode && !value.section) context.addIssue({ code: 'custom', path: ['section'], message: 'Enter a Class Code.' })
     if (!value.semester && !value.academicPeriod) context.addIssue({ code: 'custom', path: ['semester'], message: 'Select a semester or term.' })
     if (!value.schoolYear) context.addIssue({ code: 'custom', path: ['schoolYear'], message: 'Select an academic year.' })
   })
@@ -42,6 +44,7 @@ export const createClassSchema = z
 
 export const updateClassSchema = z
   .object({
+    program: z.enum(['INFORMATION_TECHNOLOGY', 'COMPUTER_SCIENCE']).optional(),
     className: classNameSchema.optional(),
     section: sectionSchema.nullable().optional(),
     semester: semesterSchema.nullable().optional(),
@@ -54,6 +57,7 @@ export const updateClassSchema = z
   .strict()
   .refine(
     (value) =>
+      value.program !== undefined ||
       value.className !== undefined ||
       value.section !== undefined ||
       value.semester !== undefined ||

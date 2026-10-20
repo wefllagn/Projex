@@ -37,9 +37,11 @@ describe('teaching staff access changes', () => {
       <Route path="/instructor/classes" element={<p>Class list</p>} />
     </Routes></MemoryRouter>)
 
-    await user.selectOptions(await screen.findByLabelText('New Primary'), 'co-1')
-    await user.selectOptions(screen.getByLabelText('Former Primary access'), 'LEAVE')
+    await user.selectOptions(await screen.findByLabelText('New Primary Instructor'), 'co-1')
+    await user.selectOptions(screen.getByLabelText('Your role after transfer'), 'LEAVE')
     await user.click(screen.getByRole('button', { name: 'Transfer Primary' }))
+    expect(mocks.api.transferPrimary).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
 
     expect(await screen.findByText('Class list')).toBeInTheDocument()
     expect(mocks.api.transferPrimary).toHaveBeenCalledWith('class-1', 'co-1', 'LEAVE')

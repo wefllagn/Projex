@@ -1,3 +1,7 @@
+import AppDialog from '../components/AppDialog.jsx'
+import ProjexIcon from '../components/icons/ProjexIcon.jsx'
+import ProgramField from '../classes/ProgramField.jsx'
+import '../instructor-overhaul.css'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
@@ -11,7 +15,7 @@ import '../admin/admin-refinement.css'
 function StudentSidebarLink({ to, children, end = false, count, icon }) {
   return (
     <NavLink to={to} end={end} className="student-sidebar__link">
-      <span className={`student-sidebar__icon student-sidebar__icon--${icon}`} aria-hidden="true" />
+      <ProjexIcon name={icon === 'todo' ? 'review' : icon} className="sidebar-vector" />
       <span>{children}</span>
       {count && <span className="student-sidebar__count">{count}</span>}
     </NavLink>
@@ -143,25 +147,28 @@ export function CreateClassModal({ onClose, onCreated }) {
   const { api, upsertClass } = useClasses()
   const [form, setForm] = useState({
     className: '',
+    program: '',
     section: '',
     semester: '',
     schoolYear: '',
     schedule: '',
-    days: '',
     room: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [classCodeError, setClassCodeError] = useState('')
   const [invitationEmail, setInvitationEmail] = useState('')
   const [invitationTargets, setInvitationTargets] = useState([])
   const [invitationLookup, setInvitationLookup] = useState({ status: 'idle', message: '' })
 
   const updateField = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }))
+    if (field === 'section') setClassCodeError('')
   }
 
   const submit = async (event) => {
     event.preventDefault()
+    if (!form.section.trim()) { setClassCodeError('Enter a Class Code.'); return }
     setSaving(true)
     setError(null)
     try {
@@ -205,23 +212,22 @@ export function CreateClassModal({ onClose, onCreated }) {
   }
 
   return (
-    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="create-class-title">
-      <form className="instructor-action-modal" onSubmit={submit} aria-busy={saving}>
-        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close create class" disabled={saving} />
-        <p>Create Class</p>
-        <h2 id="create-class-title">New Class</h2>
-        <div className="instructor-form-grid">
-          <label>
+    <AppDialog title="New Class" className="projex-dialog--class" onClose={onClose} busy={saving}>
+      <form className="class-create-form" onSubmit={submit} aria-busy={saving}>
+        <div className="class-create-body">
+        <div className="instructor-form-grid class-create-grid">
+          <label className="class-create-wide">
             Class Name
             <input value={form.className} onChange={updateField('className')} maxLength={200} required disabled={saving} />
           </label>
           <label>
-            Section (optional)
-            <input value={form.section} onChange={updateField('section')} maxLength={100} disabled={saving} />
+            Class Code
+            <input value={form.section} onChange={updateField('section')} maxLength={100} required disabled={saving} aria-invalid={Boolean(classCodeError)} aria-describedby={classCodeError ? 'new-class-code-error' : undefined} />
+            {classCodeError && <small id="new-class-code-error" className="class-form-error" role="alert">{classCodeError}</small>}
           </label>
+          <ProgramField value={form.program} onChange={value => setForm(old => ({ ...old, program: value }))} required disabled={saving} />
           <AcademicFields semester={form.semester} schoolYear={form.schoolYear} onChange={(field, value) => setForm((current) => ({ ...current, [field]: value }))} disabled={saving} />
-          <label>Schedule (optional)<input value={form.schedule} onChange={updateField('schedule')} maxLength={200} disabled={saving} /></label>
-          <label>Days (optional)<input value={form.days} onChange={updateField('days')} maxLength={100} disabled={saving} /></label>
+          <label>Schedule Type (optional)<input value={form.schedule} onChange={updateField('schedule')} maxLength={200} disabled={saving} /></label>
           <label>Room (optional)<input value={form.room} onChange={updateField('room')} maxLength={100} disabled={saving} /></label>
         </div>
         <details className="class-create-invitations"><summary>Invite Students (optional)</summary>
@@ -275,17 +281,26 @@ export function CreateClassModal({ onClose, onCreated }) {
             </ul>
           )}
         </details>
-        <p className="class-form-note">Projex creates the join code securely on the server. Manage it after the class is created.</p>
+
         {error && <p className="class-form-error" role="alert">{describeApiError(error)}</p>}
-        <div className="student-submit-modal-actions">
+        </div>
+        <footer className="class-create-footer">
           <button type="button" className="student-outline-action" onClick={onClose} disabled={saving}>Cancel</button>
           <button type="submit" className="student-primary-action" disabled={saving}>
             {saving ? 'Creating…' : 'Create Class'}
           </button>
-        </div>
+        </footer>
       </form>
-    </div>
+    </AppDialog>
   )
+}
+
+function InstructorSidebarSignout() {
+  const auth = useAuth()
+  const navigate = useNavigate()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  return <div className="instructor-sidebar-signout"><button type="button" className="student-sidebar__link" title="Sign out" aria-label="Sign out" disabled={busy} onClick={async () => { setBusy(true); try { await auth.logout(); navigate('/', { replace: true }) } catch (cause) { setError(describeApiError(cause)) } finally { setBusy(false) } }}><ProjexIcon name="signout" /><span>{busy ? 'Signing out…' : 'Sign out'}</span></button>{error && <p role="alert">{error}</p>}</div>
 }
 
 function InstructorDashboardLayout() {
@@ -312,7 +327,7 @@ function InstructorDashboardLayout() {
             Home
           </StudentSidebarLink>
           <StudentSidebarLink to="/instructor/review-queues" icon="todo">
-            Review Queues
+            To Review
           </StudentSidebarLink>
 
           <div className="student-sidebar__group">
@@ -336,11 +351,12 @@ function InstructorDashboardLayout() {
 
           <div className="student-sidebar__lower">
             <button type="button" className="student-sidebar__link instructor-sidebar-button" onClick={() => { mobileNavigation.close(); setCreateClassOpen(true) }}>
-              <span className="student-sidebar__icon student-sidebar__icon--plus" aria-hidden="true" />
+              <ProjexIcon name="createClass" />
               <span>Create Class</span>
             </button>
           </div>
         </nav>
+        <InstructorSidebarSignout />
       </aside>
 
       <main className="student-main">

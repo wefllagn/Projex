@@ -220,6 +220,14 @@ Statuses below describe the baseline found at Phase 10 start plus the Phase 10A.
 | `/student/archive` | `RepositoryCatalogPage` | Connected in 10C.1 | Authorized archived repository catalog with no active-record fallback | Role-scoped repository list filtered to archived records | 10C.1 complete | Real read-only archived repository records | Incorrect active-project fallback retired |
 | `/student/settings` | `DeferredStudentPage` | Deferred | Explicit unavailable state | User profile/settings update absent | Deferred/new scope | Honest unavailable state | Incorrect stream fallback retired |
 
+The Activity editor keeps source in memory only. Unsaved source blocks internal
+route and browser-history navigation with an explicit stay/discard dialog;
+Escape keeps editing and restores focus, and Tab stays inside the dialog.
+Browser refresh/close retains the existing `beforeunload` warning. A successful
+official submission may navigate to its accepted immutable record without
+discard confirmation. No draft is stored in browser storage or submitted by
+navigation, cancellation or Git checkpointing.
+
 ### Instructor routes
 
 | Route | Current component | Status | Hardcoded/local behavior | Backend contract or gap | Milestone | Disposition | Mock source |

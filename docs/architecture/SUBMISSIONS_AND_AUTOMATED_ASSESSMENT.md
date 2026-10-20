@@ -197,3 +197,31 @@ All mutation endpoints require JSON, cookie authentication, CSRF validation, Zod
 - `npm run test:java` invokes the locally installed `javac`/`java` and verifies Java 17 target compilation, deterministic stdin/stdout, student compiler errors, timeouts, output overflow, process termination, and temporary cleanup.
 - `npm run test:integration` accepts only private `TEST_DATABASE_URL` naming exactly `projex_test`, runs `prisma migrate deploy`, executes serial PostgreSQL tests, and removes fixture application rows while preserving migration history.
 - The integration runner never falls back to `DATABASE_URL` and never runs `prisma db push` or `prisma migrate reset`.
+
+
+## Completion-based Ungraded Activities (October 20)
+
+Official attempts snapshot `gradingModeSnapshot`, defaulting historical records
+to `GRADED`. For `COMPLETION`, server acceptance of an official submission
+establishes Complete immediately, independent of compilation, correctness,
+worker status, Instructor review or release. Not submitted means no accepted
+record exists. Completion derives from all accepted records, including a record
+later marked non-counting by an approved replacement resolution. A subsequent
+permitted attempt remains a separate immutable record. Saving/editing source,
+Git pushes/checkpoints and practice runs cannot establish completion.
+
+Ungraded total/automated/instructor maxima, per-test academic weights, original
+score, Instructor points and released score are null. The worker still saves
+compile/output/test diagnostics, but saves no numeric academic result. Score
+correction and numeric review input are rejected. Students receive no numeric
+score/percentage or academic pass/fail. Their visible tests remain technical
+feedback. Admin and Work Hub projections distinguish completion from scores.
+
+Feedback drafts stay private. Once assessment is reviewable (or an infrastructure
+failure has been explicitly resolved), Instructors may save comments and
+separately release them with an application-owned confirmation and version
+check. Ungraded release preserves a null final score. Unresolved infrastructure
+failure still requires the existing retry/resolution workflow; commenting does
+not bypass its audit/replacement controls. Release never creates completion.
+Existing attempt limits, deadlines, authorization, source/test snapshots,
+replacement grants and submission idempotency remain authoritative.

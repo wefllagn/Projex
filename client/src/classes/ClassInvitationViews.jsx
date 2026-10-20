@@ -218,19 +218,22 @@ export function InstructorClassInvitationPanel() {
     return () => controller.abort()
   }, [api, classId, selectedClass?.status])
 
-  const checkStudent = async (event) => {
-    event.preventDefault()
-    setBusy(true)
-    setLookup({ status: 'loading', data: null, error: null })
-    try {
-      const response = await api.lookupInvitationStudent(email, classId)
-      setLookup({ status: 'ready', data: response.data, error: null })
-    } catch (error) {
-      setLookup({ status: 'error', data: null, error })
-    } finally {
-      setBusy(false)
-    }
-  }
+  useEffect(() => {
+    const normalized = email.trim().toLowerCase()
+    if (!classId || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) return undefined
+    const controller = new AbortController()
+    let active = true
+    const timer = setTimeout(async () => {
+      setLookup({ status: 'loading', data: null, error: null })
+      try {
+        const response = await api.lookupInvitationStudent(normalized, classId, { signal: controller.signal })
+        if (active) setLookup({ status: 'ready', data: response.data, error: null })
+      } catch (error) {
+        if (active && error.name !== 'AbortError') setLookup({ status: 'error', data: null, error })
+      }
+    }, 450)
+    return () => { active = false; clearTimeout(timer); controller.abort() }
+  }, [api, classId, email])
 
   const sendInvitation = async () => {
     if (!classId || lookup.data?.eligibility !== 'ELIGIBLE') return
@@ -271,12 +274,13 @@ export function InstructorClassInvitationPanel() {
         </div>
         {list.pagination && <span>{list.pagination.totalItems} pending</span>}
       </div>
-      <form className="class-invitation-lookup" onSubmit={checkStudent}>
+      <form className="class-invitation-lookup" onSubmit={event => { event.preventDefault(); if (!busy) sendInvitation() }}>
         <label>
           University email
           <input
             type="email"
             value={email}
+            disabled={busy}
             onChange={(event) => {
               setEmail(event.target.value)
               setLookup({ status: 'idle', data: null, error: null })
@@ -286,18 +290,16 @@ export function InstructorClassInvitationPanel() {
             required
           />
         </label>
-        <button type="submit" className="student-outline-action" disabled={busy || !email.trim()}>
-          {lookup.status === 'loading' ? 'Checking…' : 'Check Student'}
-        </button>
         <button
           type="button"
           className="student-primary-action"
           disabled={busy || lookup.data?.eligibility !== 'ELIGIBLE'}
           onClick={sendInvitation}
         >
-          Send Invitation
+          Invite
         </button>
       </form>
+      {lookup.status === 'loading' && <p role="status">Checking Student…</p>}
       {eligibilityMessage && <p className="instructor-people-action-status" role="status">{eligibilityMessage}</p>}
       {lookup.status === 'sent' && <p className="instructor-people-action-status" role="status">Invitation created.</p>}
       {lookup.status === 'error' && <p className="class-form-error" role="alert">{describeApiError(lookup.error)}</p>}

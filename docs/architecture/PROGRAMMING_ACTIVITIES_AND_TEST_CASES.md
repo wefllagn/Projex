@@ -180,3 +180,37 @@ Phase 5 implemented none of those behaviors; Phase 6 implements them while leavi
 The isolated suite covers activity authorization, projection, lifecycle policy, publication failures, immutable published fields, monotonic versions, and hidden-test-safe logging. The guarded serial PostgreSQL suite covers persistence, filtering, ownership/membership boundaries, publication validation, role-specific test projections, concurrent stale-write rejection, transactional replacement rollback, lifecycle restoration, and SQL constraints.
 
 `npm run test:integration` accepts only exactly `projex_test`, applies committed migrations with `prisma migrate deploy`, runs serially, and removes fixture application rows while preserving migration history. It covers the persisted policy default/selection, draft mutability, publication immutability, exact-deadline boundary, and credited-attempt selection. It never falls back to the normal development database and never uses `prisma db push` or `prisma migrate reset`.
+
+
+## October 20 Instructor Classwork extension
+
+The approved Instructor overhaul adds `gradingMode` (`GRADED` by default,
+`COMPLETION` for Ungraded) and nullable `topicId`. Historical Activities stay
+Graded and unassigned. Graded totals and case weights retain their previous
+bounds. Completion Activities have null total points and null case weights;
+Java/test outcomes are technical feedback. Publication still requires a future
+deadline, starter source and at least one visible case. Positive case points
+apply only to Graded work. Grading mode is immutable after publication.
+Changing a draft mode clears/resets draft case weights atomically; instructors
+must save/review their case configuration before publishing.
+
+Class Topics are organizational metadata, independent of semester, deadlines,
+grading and Git. `GET /classes/:classId/topics?page=N` is bounded at 100 Topics.
+`POST /classes/:classId/topics` accepts `action` create/rename/up/down/remove,
+`expectedVersion`, and the applicable name/topic identity. Primary and active
+Co-Instructors may manage Topics in active Classes. Class-row locks and an
+optimistic organization version serialize changes. The same-Class composite
+foreign key rejects cross-Class assignments. Removal confirms in the UI,
+reassigns Activities to No topic with a monotonic Activity version, then removes
+only the organizational Topic. Academic/test/submission/Git records survive.
+
+New Topics append in creation order. Adjacent moves persist position for both
+roles and have keyboard-operable buttons. Creating/publishing work does not
+move its Topic. Activities remain ordered by `createdAt DESC, id ASC`.
+`topicId=<uuid>` or `topicId=none` filters the existing bounded Activity endpoint.
+The UI pages Activities inside each Topic and pages Topic sections separately;
+No topic is shown on the final Topic page. Filtering resets the section pages.
+Instructors see empty Topics and authorized submission counts. Student Topic
+queries filter for published/closed work before counting/pagination; Activity
+queries still enforce membership/status before returning rows. Draft titles,
+hidden definitions and hidden counts do not enter Student navigation.

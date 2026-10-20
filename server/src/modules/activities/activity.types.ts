@@ -8,6 +8,8 @@ import type {
 } from '@prisma/client'
 
 export interface ActivityRecord {
+  _count?: { submissions: number }
+  submissions?: { id: string }[]
   id: string
   classId: string
   createdById: string
@@ -19,7 +21,9 @@ export interface ActivityRecord {
   starterCode: string
   maxAttempts: number
   creditPolicy: AttemptCreditPolicy
-  totalPoints: Prisma.Decimal
+  gradingMode?: 'GRADED' | 'COMPLETION'
+  topicId?: string | null
+  totalPoints: Prisma.Decimal | null
   status: ActivityStatus
   createdAt: Date
   updatedAt: Date
@@ -54,6 +58,8 @@ export type ActivityDueState =
   | 'ARCHIVED'
 
 export interface ActivityProjection {
+  submissionCount?: number
+  completionState?: 'COMPLETE' | 'NOT_SUBMITTED'
   id: string
   classId: string
   title: string
@@ -65,7 +71,9 @@ export interface ActivityProjection {
   starterCode: string
   maxAttempts: number
   creditPolicy: AttemptCreditPolicy
-  totalPoints: number
+  gradingMode: 'GRADED' | 'COMPLETION'
+  topicId: string | null
+  totalPoints: number | null
   status: ActivityStatus
   createdAt: Date
   updatedAt: Date
@@ -88,7 +96,9 @@ export interface AdminActivityProjection {
   entryClassName: string
   maxAttempts: number
   creditPolicy: AttemptCreditPolicy
-  totalPoints: number
+  gradingMode: 'GRADED' | 'COMPLETION'
+  topicId: string | null
+  totalPoints: number | null
   status: ActivityStatus
   createdAt: Date
   updatedAt: Date
@@ -131,7 +141,9 @@ export function toActivityProjection(
     starterCode: record.starterCode,
     maxAttempts: record.maxAttempts,
     creditPolicy: record.creditPolicy,
-    totalPoints: Number(record.totalPoints),
+    gradingMode: record.gradingMode ?? 'GRADED',
+    topicId: record.topicId ?? null,
+    totalPoints: record.gradingMode === 'COMPLETION' ? null : Number(record.totalPoints),
     status: record.status,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
@@ -159,7 +171,9 @@ export function toAdminActivityProjection(
     entryClassName: record.entryClassName,
     maxAttempts: record.maxAttempts,
     creditPolicy: record.creditPolicy,
-    totalPoints: Number(record.totalPoints),
+    gradingMode: record.gradingMode ?? 'GRADED',
+    topicId: record.topicId ?? null,
+    totalPoints: record.gradingMode === 'COMPLETION' ? null : Number(record.totalPoints),
     status: record.status,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,

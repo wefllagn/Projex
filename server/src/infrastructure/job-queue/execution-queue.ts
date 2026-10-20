@@ -231,8 +231,9 @@ export function createPostgresExecutionQueue(prisma: PrismaClient): ExecutionQue
         if (job.submissionId) {
           const execution = await transaction.submissionExecution.findUniqueOrThrow({
             where: { submissionId: job.submissionId },
-            select: { id: true },
+            select: { id: true, submission: { select: { gradingModeSnapshot: true } } },
           })
+          const completion = execution.submission.gradingModeSnapshot === 'COMPLETION'
           for (const testCase of result.cases) {
             await transaction.testCaseResult.update({
               where: { id: testCase.id },
@@ -240,7 +241,7 @@ export function createPostgresExecutionQueue(prisma: PrismaClient): ExecutionQue
                 passStatus: testCase.status,
                 actualOutput: testCase.actualOutput,
                 errorMessage: testCase.errorMessage,
-                automatedPoints: new Prisma.Decimal(testCase.automatedPoints),
+                automatedPoints: completion ? null : new Prisma.Decimal(testCase.automatedPoints),
                 executionTimeMs: testCase.executionTimeMs,
               },
             })
@@ -264,7 +265,7 @@ export function createPostgresExecutionQueue(prisma: PrismaClient): ExecutionQue
             data: {
               submissionStatus: 'ASSESSED',
               originalAutomatedScore:
-                aggregate._sum.automatedPoints ?? new Prisma.Decimal(0),
+                completion ? null : aggregate._sum.automatedPoints ?? new Prisma.Decimal(0),
               updatedAt: now,
             },
           })

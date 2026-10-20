@@ -29,13 +29,13 @@ describe('PostgreSQL class lifecycle', () => {
       generateCode: () => generatedCodes[codeIndex++]!,
     })
 
-    await service.create(instructor, {
+    await service.create(instructor, { program: 'INFORMATION_TECHNOLOGY',
       className: 'IT 111',
       section: 'BSIT 2A',
       semester: 'First Semester',
       schoolYear: '2026-2027',
     })
-    await service.create(instructor, {
+    await service.create(instructor, { program: 'INFORMATION_TECHNOLOGY',
       className: 'IT 112',
       section: 'BSIT 2B',
       semester: 'First Semester',
@@ -75,13 +75,13 @@ describe('PostgreSQL class lifecycle', () => {
       classRepository: repository,
       logger,
     })
-    const firstClass = await firstService.create(firstInstructor, {
+    const firstClass = await firstService.create(firstInstructor, { program: 'INFORMATION_TECHNOLOGY',
       className: 'IT 113',
       section: 'BSIT 2C',
       semester: 'First Semester',
       schoolYear: '2026-2027',
     })
-    const secondClass = await secondService.create(secondInstructor, {
+    const secondClass = await secondService.create(secondInstructor, { program: 'INFORMATION_TECHNOLOGY',
       className: 'IT 114',
       section: 'BSIT 2D',
       semester: 'First Semester',
@@ -119,7 +119,7 @@ describe('PostgreSQL class lifecycle', () => {
       logger,
       generateCode: () => 'WXYZA23456',
     })
-    const created = await service.create(admin, {
+    const created = await service.create(admin, { program: 'INFORMATION_TECHNOLOGY',
       instructorId: instructor.id,
       className: 'IT 115',
       section: 'BSIT 2E',
@@ -168,7 +168,7 @@ describe('PostgreSQL class lifecycle', () => {
       classRepository: repository,
       logger,
     })
-    const created = await service.create(owner, {
+    const created = await service.create(owner, { program: 'INFORMATION_TECHNOLOGY',
       className: 'IT 116',
       section: 'BSIT 2F',
       semester: 'First Semester',
@@ -218,7 +218,7 @@ describe('PostgreSQL class lifecycle', () => {
       classRepository,
       logger,
     })
-    const classRecord = await classService.create(instructor, {
+    const classRecord = await classService.create(instructor, { program: 'INFORMATION_TECHNOLOGY',
       className: 'IT 116A',
       section: 'BSIT 2F',
       semester: 'First Semester',
@@ -267,7 +267,7 @@ describe('PostgreSQL class lifecycle', () => {
       logger,
       generateCode: () => 'CDEFG23456',
     })
-    const created = await baseService.create(instructor, {
+    const created = await baseService.create(instructor, { program: 'INFORMATION_TECHNOLOGY',
       className: 'IT 117',
       section: 'BSIT 2G',
       semester: 'First Semester',

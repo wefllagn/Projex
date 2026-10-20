@@ -1,3 +1,4 @@
+import { createTopicService } from './modules/activities/topic.service.js'
 import 'dotenv/config'
 import { createServer, type Server } from 'node:http'
 import { fileURLToPath } from 'node:url'
@@ -297,6 +298,7 @@ async function bootstrap(): Promise<void> {
         requireCsrf,
       }),
       classes: createClassesRouter({
+        topicService: createTopicService(prisma),
         classService,
         classMemberService,
         activityService,

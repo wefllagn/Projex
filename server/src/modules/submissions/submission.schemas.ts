@@ -56,7 +56,7 @@ export const scoreCorrectionSchema = z
 
 export const reviewSubmissionSchema = z
   .object({
-    instructorPoints: z.number().finite().min(0).max(1000),
+    instructorPoints: z.number().finite().min(0).max(1000).optional(),
     feedbackText: z.string().trim().max(20_000).optional(),
     expectedUpdatedAt,
   })

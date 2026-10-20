@@ -1,3 +1,4 @@
+import { submissionStatusLabel } from './submission-display.js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   NavLink,
@@ -5,6 +6,7 @@ import {
   useLocation,
   useNavigate,
   useParams,
+  useBlocker,
 } from 'react-router-dom'
 import { activityApi } from '../activities/activity-api.js'
 import {
@@ -322,6 +324,35 @@ function SubmitConfirmation({ mode, pending, onCancel, onConfirm }) {
   )
 }
 
+function UnsavedSourceConfirmation({ blocker }) {
+  const cancelRef = useRef(null)
+  useEffect(() => {
+    const previous = document.activeElement
+    cancelRef.current?.focus()
+    return () => previous?.focus()
+  }, [])
+  return (
+    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="unsaved-source-title" onKeyDown={(event) => {
+      if (event.key === 'Escape') { event.preventDefault(); blocker.reset() }
+      if (event.key === 'Tab') {
+        event.preventDefault()
+        const buttons = event.currentTarget.querySelectorAll('button')
+        const current = Array.from(buttons).indexOf(document.activeElement)
+        buttons[(current + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length]?.focus()
+      }
+    }}>
+      <section className="student-submit-modal">
+        <h2 id="unsaved-source-title">Leave unsaved code?</h2>
+        <p>Your browser changes have not been saved to Git. Stay here to save them before leaving.</p>
+        <div className="student-submit-modal-actions">
+          <button ref={cancelRef} type="button" className="student-outline-action" onClick={() => blocker.reset()}>Keep editing</button>
+          <button type="button" className="student-primary-action" onClick={() => blocker.proceed()}>Leave without saving</button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function useWorkspaceActivity(api, activityId, selectedClass, selectionStatus) {
   const [state, setState] = useState({ key: null, status: 'idle', activity: null, testCases: [], error: null })
   const key = `${selectedClass?.id}:${activityId}`
@@ -389,6 +420,11 @@ export function StudentProgrammingWorkspace({
   const codeRunSource = useRef(null)
   const checkpointIntent = useRef(null)
   const observedGitHead = useRef(null)
+  const acceptedNavigation = useRef(false)
+  const navigationBlocker = useBlocker(({ currentLocation, nextLocation }) => Boolean(
+    source.key && source.value !== source.initial && !acceptedNavigation.current
+      && (currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search),
+  ))
   const paneSizing = useWorkspacePaneSizing()
 
   useEffect(() => {
@@ -417,6 +453,7 @@ export function StudentProgrammingWorkspace({
     setNewerGitAvailable(false)
     checkpointIntent.current = null
     observedGitHead.current = null
+    acceptedNavigation.current = false
   }, [selectedClass?.id, workspace.activity])
 
   const loadGitWorkspace = useCallback(async ({ signal, announceChange = false } = {}) => {
@@ -744,6 +781,7 @@ export function StudentProgrammingWorkspace({
       setConfirmMode(null)
       setSubmission({ status: 'accepted', intent: null, error: null })
       await refreshAttemptState()
+      acceptedNavigation.current = true
       navigate(
         classHref(`/student/activity/${activityId}/submissions/${record.id}`, selectedClass.id),
         { state: { idempotentReplay: response.meta?.idempotentReplay === true } },
@@ -842,7 +880,7 @@ export function StudentProgrammingWorkspace({
             <h1>{activity.title}</h1>
             <p>{formatActivityStatus(activity.status)}</p>
             <small>Due {formatActivityDate(activity.dueDate)}</small>
-            <strong>{activity.totalPoints} total points</strong>
+            <strong>{activity.gradingMode === 'COMPLETION' ? 'Ungraded · completion' : `${activity.totalPoints} total points`}</strong>
           </div>
           <div className="student-coding-tabs"><button type="button" className="is-active">Instructions</button></div>
           <section className="student-coding-scroll">
@@ -1016,6 +1054,7 @@ export function StudentProgrammingWorkspace({
           onConfirm={confirmSubmission}
         />
       )}
+      {navigationBlocker.state === 'blocked' && <UnsavedSourceConfirmation blocker={navigationBlocker} />}
     </div>
   )
 }
@@ -1024,13 +1063,13 @@ function SubmissionCard({ record, classId }) {
   return (
     <article className="student-assignment-row submission-history-card">
       <div>
-        <span className={`submission-status submission-status--${record.status}`}>{formatStatus(record.status)}</span>
+        <span className={`submission-status submission-status--${record.gradingMode === 'COMPLETION' ? 'complete' : record.status}`}>{submissionStatusLabel(record, formatStatus)}</span>
         <h2>{record.attemptLabel}</h2>
         <p>Submitted {formatDate(record.submittedAt)}</p>
         {record.isLate && <small>Accepted after the ordinary deadline</small>}
       </div>
       <div>
-        <strong>{record.gradeStatus === 'released' ? 'Result released' : 'Result not released'}</strong>
+        <strong>{record.gradingMode === 'COMPLETION' ? `Complete · Feedback ${record.feedbackReleased ? 'released' : 'not released'}` : record.gradeStatus === 'released' ? 'Result released' : 'Result not released'}</strong>
         {record.gradeStatus === 'released' && <small>{record.finalScore ?? 'Not available'} / {record.totalPoints ?? 'Not available'} points</small>}
         {record.isCreditedResult && <span className="submission-status submission-status--released">Credited result</span>}
         {record.failureResolution?.replacementGranted && (
@@ -1087,13 +1126,13 @@ export function StudentSubmissionHistory({ api = activityApi, submissions = subm
           <p className="student-feedback-eyebrow">Official submissions</p>
           <h1>{current.activity.title}</h1>
           <p>Attempts are immutable records. Practice runs do not appear here.</p>
-          <small>Credited result policy: {current.activity.creditPolicy === 'HIGHEST' ? 'Highest released attempt' : 'Latest released attempt'}.</small>
+          <small>{current.activity.gradingMode === 'COMPLETION' ? 'Ungraded · completion is independent of feedback release.' : `Credited result policy: ${current.activity.creditPolicy === 'HIGHEST' ? 'Highest released attempt' : 'Latest released attempt'}.`}</small>
         </div>
         <NavLink className="student-primary-action" to={classHref(`/student/activity/${activityId}/workspace`, selectedClass.id)}>Open workspace</NavLink>
       </header>
       <section className="student-assignment-panel student-assignment-panel--board">
         <div className="student-assignment-toolbar student-assignment-toolbar--board">
-          <div><strong>Attempt history</strong><p>Backend-provided attempt and replacement labels.</p></div>
+          <div><strong>Attempt history</strong></div>
           <label className="student-sort-control">Status
             <select value={query.status} onChange={(event) => setQuery({ ...FIRST_PAGE, status: event.target.value })}>
               <option value="">All statuses</option>
@@ -1189,11 +1228,11 @@ export function StudentSubmissionDetail({ api = activityApi, submissions = submi
         <article className="student-detail-card">
           <div className="submission-record-heading">
             <div><p className="student-feedback-eyebrow">Submission record</p><h1>{record.attemptLabel}</h1><p>{record.activityTitle}</p></div>
-            <span className={`submission-status submission-status--${record.status}`}>{formatStatus(record.status)}</span>
+            <span className={`submission-status submission-status--${record.gradingMode === 'COMPLETION' ? 'complete' : record.status}`}>{submissionStatusLabel(record, formatStatus)}</span>
           </div>
           <dl className="activity-facts submission-facts">
             <div><dt>Submitted</dt><dd>{formatDate(record.submittedAt)}</dd></div>
-            <div><dt>Grade</dt><dd>{record.gradeStatus === 'released' ? 'Released' : 'Not released'}</dd></div>
+            <div><dt>{record.gradingMode === 'COMPLETION' ? 'Completion' : 'Grade'}</dt><dd>{record.gradingMode === 'COMPLETION' ? 'Complete · Ungraded' : record.gradeStatus === 'released' ? 'Released' : 'Not released'}</dd></div>
             <div><dt>Deadline</dt><dd>{record.isLate ? 'Accepted late' : 'On time'}</dd></div>
           </dl>
           {isSubmissionPending(record) && <p className="submission-notice">Assessment is processing. This page refreshes status without changing the accepted submission.</p>}
@@ -1221,7 +1260,7 @@ export function StudentSubmissionDetail({ api = activityApi, submissions = submi
             <p>Hidden-test definitions, count, and breakdown remain private.</p>
             <VisibleOutcomeList outcomes={record.visibleTestOutcomes} />
           </section>
-          {record.gradeStatus === 'released' ? (
+          {record.gradingMode === 'COMPLETION' ? <section className="submission-released-result"><h2>Complete · Ungraded</h2><p>Official submission accepted. Code and test outcomes provide technical feedback.</p><h3>{record.feedbackReleased ? 'Feedback released' : 'Feedback not released'}</h3>{record.feedbackReleased && <p>{record.feedback || 'No comments were released.'}</p>}</section> : record.gradeStatus === 'released' ? (
             <section className="submission-released-result">
               <p className="student-feedback-eyebrow">{record.isCreditedResult ? 'Credited result' : 'Released result'}</p>
               <h2>{record.finalScore ?? 'Not available'} / {record.totalPoints ?? 'Not available'} points</h2>

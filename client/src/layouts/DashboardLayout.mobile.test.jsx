@@ -31,7 +31,7 @@ function renderRole(role, destination) {
 describe('authenticated mobile navigation', () => {
   it.each([
     ['STUDENT', '/student/todo', 'To-do', 'Student navigation'],
-    ['INSTRUCTOR', '/instructor/review-queues', 'Review Queues', 'Instructor navigation'],
+    ['INSTRUCTOR', '/instructor/review-queues', 'To Review', 'Instructor navigation'],
     ['ADMIN', '/admin/users', 'Users', 'Administrator navigation'],
   ])('opens and closes the %s drawer while preserving its authorized route', async (role, destination, linkName, navigationName) => {
     const user = userEvent.setup()

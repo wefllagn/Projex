@@ -96,17 +96,36 @@ describe('student class workflows', () => {
 })
 
 describe('instructor class workflows', () => {
+  it('requires a nonblank Class Code before creating a Class', async () => {
+    const client = { get: vi.fn().mockResolvedValue({ data: [], pagination }), post: vi.fn(), patch: vi.fn() }
+    const user = userEvent.setup()
+    renderWorkflow({ client, entry: '/instructor', page: <CreateClassModal onClose={vi.fn()} onCreated={vi.fn()} />, role: 'INSTRUCTOR' })
+    await user.type(screen.getByLabelText('Class Name'), 'Programming')
+    await user.selectOptions(screen.getByLabelText('Program'), 'COMPUTER_SCIENCE')
+    await user.selectOptions(screen.getByLabelText('Semester / Term'), 'First Semester')
+    await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
+    await user.click(screen.getByRole('button', { name: 'Create Class' }))
+    expect(screen.getByLabelText('Class Code')).toBeInvalid()
+    expect(client.post).not.toHaveBeenCalled()
+    await user.type(screen.getByLabelText('Class Code'), '   ')
+    await user.click(screen.getByRole('button', { name: 'Create Class' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Enter a Class Code.')
+    expect(client.post).not.toHaveBeenCalled()
+  })
   it('keeps self-service Class inputs after a failed save without a Course or approval requirement', async () => {
     const client = { get: vi.fn().mockResolvedValue({ data: [], pagination }), post: vi.fn().mockRejectedValue(new Error('private failure')), patch: vi.fn() }
     const onCreated = vi.fn()
     const user = userEvent.setup()
     renderWorkflow({ client, entry: '/instructor', page: <CreateClassModal onClose={vi.fn()} onCreated={onCreated} />, role: 'INSTRUCTOR' })
     await user.type(screen.getByLabelText('Class Name'), 'Retained Class')
+    await user.type(screen.getByLabelText('Class Code'), '9123A')
+    await user.selectOptions(screen.getByLabelText('Program'), 'INFORMATION_TECHNOLOGY')
     await user.selectOptions(screen.getByLabelText('Semester / Term'), 'Short Term')
     await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
     await user.click(screen.getByRole('button', { name: 'Create Class' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Please try again')
     expect(screen.getByLabelText('Class Name')).toHaveValue('Retained Class')
+    expect(screen.getByLabelText('Class Code')).toHaveValue('9123A')
     expect(screen.getByLabelText('Semester / Term')).toHaveValue('Short Term')
     expect(screen.getByLabelText('Academic year')).toHaveValue('2026-2027')
     expect(screen.queryByLabelText(/Course/)).not.toBeInTheDocument()
@@ -129,7 +148,8 @@ describe('instructor class workflows', () => {
     })
 
     await user.type(screen.getByLabelText('Class Name'), 'Programming Fundamentals')
-    await user.type(screen.getByLabelText('Section (optional)'), 'BSIT 1A')
+    await user.type(screen.getByLabelText('Class Code'), 'BSIT 1A')
+    await user.selectOptions(screen.getByLabelText('Program'), 'INFORMATION_TECHNOLOGY')
     await user.selectOptions(screen.getByLabelText('Semester / Term'), 'First Semester')
     await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
     expect(screen.queryByRole('button', { name: /generate/i })).not.toBeInTheDocument()
@@ -137,6 +157,7 @@ describe('instructor class workflows', () => {
 
     await waitFor(() => expect(client.post).toHaveBeenCalledWith('/classes', {
       className: 'Programming Fundamentals',
+      program: 'INFORMATION_TECHNOLOGY',
       section: 'BSIT 1A',
       semester: 'First Semester',
       schoolYear: '2026-2027',
@@ -171,7 +192,8 @@ describe('instructor class workflows', () => {
     await user.click(screen.getByText('Invite Students (optional)'))
     expect(screen.getByText(/the class and all invitations will not be created/i)).toBeInTheDocument()
     await user.type(screen.getByLabelText('Class Name'), 'Programming Fundamentals')
-    await user.type(screen.getByLabelText('Section (optional)'), 'BSIT 1A')
+    await user.type(screen.getByLabelText('Class Code'), 'BSIT 1A')
+    await user.selectOptions(screen.getByLabelText('Program'), 'INFORMATION_TECHNOLOGY')
     await user.selectOptions(screen.getByLabelText('Semester / Term'), 'First Semester')
     await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
     await user.type(screen.getByLabelText('University email'), 'INVITEE@SLU.EDU.PH')
@@ -184,6 +206,7 @@ describe('instructor class workflows', () => {
     }, undefined)
     expect(client.post).toHaveBeenCalledWith('/classes', {
       className: 'Programming Fundamentals',
+      program: 'INFORMATION_TECHNOLOGY',
       section: 'BSIT 1A',
       semester: 'First Semester',
       schoolYear: '2026-2027',
@@ -209,6 +232,7 @@ describe('instructor class workflows', () => {
 
     expect(await screen.findByText('ABCD-EFGH-JK')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Rotate code' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
     expect(await screen.findByText('MNPQ-RSTU-VW')).toBeInTheDocument()
     expect(client.post).toHaveBeenCalledWith(`/classes/${classId}/join-code/rotate`, {}, undefined)
   })
@@ -262,6 +286,7 @@ describe('instructor class workflows', () => {
 
     expect(await screen.findByText('Roster Student')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Remove' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm' }))
     await waitFor(() => expect(client.patch).toHaveBeenCalledWith(
       `/classes/${classId}/members/member-1`,
       { status: 'REMOVED' },

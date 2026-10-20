@@ -1,48 +1,47 @@
 # Projex Codex Handoff
 
-## Current milestone — macOS compatibility slice for Gate B
+## Current milestone — macOS Gate B execution
 
-Product Owner authorization: 2026-10-20, bounded compatibility fixes only, on
-`codex/mvp-gate-b-macos`. Starting transferred handoff:
-`5da3ef767fa29a0c01294788ee941dc885bc0fbc`, whose parent is Gate A integration
-`870e6b93d7b18606a93ff4006653aaab49b5a798`. Git owns current HEAD/status; compatibility
-changes remain unstaged and uncommitted pending separate authorization.
+The Product Owner approved full integrated verification on October 20, 2026,
+using the exact isolated macOS resource plan. The approved compatibility
+checkpoint is `a6ef2427a7e27183977c9b66ff6ce14b988bf6f7` on
+`codex/mvp-gate-b-macos`, parent `5da3ef767fa29a0c01294788ee941dc885bc0fbc`.
+No further staging/commit/push/merge is authorized. Git owns live status.
 
-The original Mac checkout and its PostgreSQL/storage remain preserved. The
-continuation worktree is `projex-gate-b-macos` under the chat workspace, separate
-from the original checkout. Reuse the existing local dependencies; no package
-installation/upgrade or private environment copy was required.
+The [self-contained Gate B report](MVP_INTEGRATION_GATE_B_REPORT.md) owns current
+A–Q evidence, exact resources, remaining browser limitations and next boundaries.
+New private root `/private/tmp/projex-mvp-gate-b-macos-20261020-5da3ef7` exists;
+do not initialize it again. Its PostgreSQL system ID is `7698462431321079325`,
+loopback port 55483. The separate test/review owners cannot connect to one
+another's DBs. Both new databases have the 24 committed migrations with matching
+checksums. The original checkout/database/storage remains preserved and port
+5432 was never connected to or targeted.
 
-Implemented in the compatibility slice:
+Fresh real Mac serial suites passed: PostgreSQL 114, Java 26, native Git 11,
+Smart HTTP 12. Fresh server unit 333 and client unit 488 passed, with lint/type
+checks/build as detailed in the report. Windows numbers remain historical;
+Windows execution was not repeated. Bounded unstaged defects cover raw-query
+serialization retries, platform-aware native Git fixtures, POSIX hook file
+permissions, multi-row Audit mapping and unsaved workspace route/history loss.
+Security, academic submission and Group rules remain unchanged.
 
-- Platform-aware Git detection retains Windows `.windows.N` validation and the
-  `2.55.0` minimum; macOS accepts verified upstream/Homebrew release output at the
-  same minimum. Unknown vendor formats/host platforms remain unsupported.
-- Successful environment fixtures use native absolute paths; negative cases keep
-  production validation strict. Production `env.ts` is unchanged.
-- Unit-test workers receive a canonical existing temporary root; filesystem link
-  rejection, ownership and containment guards remain unchanged.
-- Windows long paths and the Git environment allowlist are retained. No academic
-  assessment, transport authorization, schema, dependency or frontend change.
+Actual browser Admin provisioned the Instructor; Instructor created a Class,
+invited staff and created an Activity; Student joined by code, ran real Java/stdin
+and visible tests, saved a Git checkpoint and made one assessed submission.
+Instructor saved feedback. Native Git on the browser repository preserved the
+single immutable academic attempt despite different Git HEAD. Separate API/native
+Group capacity/roles/protected-main/freeze/fetch and Activity review/release proof
+passed, but is not a substitute for remaining browser observations.
 
-Actual October 20 macOS evidence: targeted Git/config/path/operations 50 tests;
-full server unit suite 43 files / 326 tests passed; backend lint, both type checks
-and build passed. The full unit run used the disclosed review-only loopback
-preload and approved socket access, with canonical temp supplied by Vitest itself.
-Actual canonical Homebrew Git 2.55.0 detection and a temporary empty-bare smoke
-check passed without a database; the owned fixture was removed. Targeted client
-Admin/API regression: 2 files / 61 tests passed, including duplicate-email
-recovery. Frontend source is unchanged; the earlier October 20 Mac 67-file /
-486-test full run and client lint/build remain prior evidence, not new runs.
-
-Windows PostgreSQL 114 / Java 26 / native Git 11 / Smart HTTP 12 and the reported
-browser flows are historical user-supplied handoff results, not Mac runs. No Mac
-database-dependent suite or browser walkthrough has run. Real Windows execution
-was not repeated; platform-policy Windows cases are tested on this Mac.
-
-The Product Owner transfers this report to the separate Development Reviewer;
-preserve the Developer/checker arrangement in the existing team workflow. This
-technical status update changes no governance or approval policy.
+A native result-release confirmation currently blocks the in-app browser;
+the dialog API cannot reach it and human OK was requested. Do not replay the
+release or earlier consequential actions blindly. Publishing showed a real
+prompt and one browser-origin success, but the user's cancellation report and
+observed Published state conflict; cancellation remains unverified. Continue
+from actual UI after the prompt closes. Full Group UI, released Student feedback,
+unsaved-code browser retest, populated Admin follow-ups and wide/mobile remain
+pending. No final MVP acceptance is claimed. Keep the loopback review services
+and private evidence for inspection; the report gives safe credential access.
 
 ## Historical Gate A integration
 
@@ -64,19 +63,18 @@ parents, actual conflicts, resolution details and executed verification.
 
 ## Current authority and next gate
 
-Current authorization permits only the described compatibility changes, related
-safe checks and technical documentation. It does NOT permit staging, committing,
-push, any merge, original worktree changes, database resources/records, destructive
-suites, migrations, recovery, deployment or new features.
+The current full Gate B work order authorizes only the exact new resources,
+24 existing migrations, serial suites, fictional fixtures, browser verification
+and bounded integration fixes in [the resource plan](MVP_INTEGRATION_GATE_B_PLAN.md).
+Existing resources now belong to this task; reattest them rather than assuming
+an absent root. Review data must never be a destructive-suite target.
 
-Gate B is separate. [The exact resource and safety proposal](MVP_INTEGRATION_GATE_B_PLAN.md)
-requires approval before any cluster/database/fixture creation, migration or
-database-dependent suite. No such operation occurred in Gate A. New disposable
-test resources must be exclusive and separate from review fixtures and all
-original databases/Git storage. A test database name alone is not isolation.
-
-The older report instructions to stop demo APIs, reuse projex_test or recreate
-fixtures are HISTORICAL, not current authority. Do not act on those instructions.
+Continuation of pending browser verification needs no renewed scope approval.
+Native prompts may require human UI assistance. Local staging/commit of the
+resulting fixes requires separate repository-policy approval after review.
+No push, merge, original database/storage change, recovery/reseed, new feature/
+schema, deployment/public exposure or whole-root/cluster teardown is authorized.
+The older Windows instructions are historical and grant no additional authority.
 
 ## Preserved product contracts
 
@@ -111,12 +109,9 @@ Git in place. [The recovery issue](DEMO_DATABASE_RECOVERY_ISSUE.md) records the
 destructive shared-test-data incident; native Git alone cannot recover DB history.
 Do not restore, reconstruct, reseed or overwrite original storage.
 
-Combined Mac PostgreSQL/cookie/CSRF, Java, Git/Smart HTTP and role/viewport proof
-remain Gate B work under a separately approved resource plan. Explicitly verify
-the Activity publishing confirmation dialog (the historical API workaround is
-not dialog proof), all seven Admin screens, duplicate-email recovery against the
-review API, and Group search/recovery at 1366/wide/390px. Independent Windows
-matrices and older screenshots are not Mac proof or final acceptance.
+Mac PostgreSQL/cookie/CSRF, Java, native Git and Smart HTTP suites now pass.
+The remaining actual-browser requirements and limitations are itemized in the
+Gate B report; API/native checks and historical screenshots cannot satisfy them.
 Existing frontend bundle-size warnings remain outside this integration's scope.
 
 ## Historical milestone evidence — not live worktree status

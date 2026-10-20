@@ -258,9 +258,9 @@ export function createAdminOversightService(dependencies: {
       return {
         items: result.items.map(({ testCases, _count, totalPoints, ...item }) => ({
           ...item,
-          totalPoints: Number(totalPoints),
+          totalPoints: item.gradingMode === 'COMPLETION' ? null : Number(totalPoints),
           testCaseCount: testCases.length,
-          testCasePointTotal: testCases.reduce((sum, testCase) => sum + Number(testCase.points), 0),
+          testCasePointTotal: item.gradingMode === 'COMPLETION' ? null : testCases.reduce((sum, testCase) => sum + Number(testCase.points), 0),
           submissionCount: _count.submissions,
         })),
         pagination: pagination(query, result.totalItems),
@@ -273,7 +273,9 @@ export function createAdminOversightService(dependencies: {
       return {
         items: result.items.map(({ releasedFinalScore, ...item }) => ({
           ...item,
-          releasedScore: item.submissionStatus === 'RELEASED' && releasedFinalScore !== null
+          gradingMode: item.gradingModeSnapshot,
+          ...(item.gradingModeSnapshot === 'COMPLETION' ? { completionState: 'COMPLETE' } : {}),
+          releasedScore: item.gradingModeSnapshot !== 'COMPLETION' && item.submissionStatus === 'RELEASED' && releasedFinalScore !== null
             ? Number(releasedFinalScore)
             : null,
         })),

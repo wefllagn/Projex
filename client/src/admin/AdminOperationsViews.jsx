@@ -219,7 +219,7 @@ export function AdminOperationalListPage({ kind, api = adminApi }) {
 
   const load = useCallback(({ signal } = {}) => api[config.list](query, { signal }).then((response) => {
     if (signal?.aborted) return []
-    const items = response.data.map(config.project)
+    const items = response.data.map((item) => config.project(item))
     setState({ status: 'ready', items, pagination: response.pagination, error: null })
     return items
   }).catch((error) => {
@@ -280,7 +280,7 @@ export function AdminAuditEventsPage({ api = adminApi }) {
   const [state, setState] = useState({ status: 'loading', items: [], pagination: null, error: null })
   const [selected, setSelected] = useState(null)
   const query = useMemo(() => ({ page, pageSize: PAGE_SIZE, action, targetType, sortOrder }), [action, page, sortOrder, targetType])
-  const load = useCallback(({ signal } = {}) => api.listAuditEvents(query, { signal }).then((response) => { if (!signal?.aborted) setState({ status: 'ready', items: response.data.map(projectAuditEvent), pagination: response.pagination, error: null }) }).catch((error) => { if (!signal?.aborted && error?.name !== 'AbortError') setState({ status: 'error', items: [], pagination: null, error }) }), [api, query])
+  const load = useCallback(({ signal } = {}) => api.listAuditEvents(query, { signal }).then((response) => { if (!signal?.aborted) setState({ status: 'ready', items: response.data.map((item) => projectAuditEvent(item)), pagination: response.pagination, error: null }) }).catch((error) => { if (!signal?.aborted && error?.name !== 'AbortError') setState({ status: 'error', items: [], pagination: null, error }) }), [api, query])
   const refresh = useAdminFreshness(load, !!selected)
   const filter = (event) => updateQuery(setSearchParams, searchParams, { page: 1, [event.target.name]: event.target.value })
   return <div className="admin-page-stack">

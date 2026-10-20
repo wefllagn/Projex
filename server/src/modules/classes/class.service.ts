@@ -221,6 +221,7 @@ export function createClassService(dependencies: {
         const result = await repository.create({
           instructorId,
           className: input.className,
+          program: input.program,
           section: input.section,
           semester: input.semester,
           schoolYear: input.schoolYear,

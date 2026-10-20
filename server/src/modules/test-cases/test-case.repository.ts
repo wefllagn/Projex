@@ -78,6 +78,7 @@ export function createPrismaTestCaseRepository(
             status: true,
             updatedAt: true,
             totalPoints: true,
+            gradingMode: true,
             class: { select: { status: true } },
           },
         })
@@ -92,10 +93,10 @@ export function createPrismaTestCaseRepository(
           return { kind: 'stale' } as const
         }
         const totalTestPoints = input.testCases.reduce(
-          (total, testCase) => total + testCase.points,
+          (total, testCase) => total + (testCase.points ?? 0),
           0,
         )
-        if (totalTestPoints > Number(activity.totalPoints)) {
+        if (activity.gradingMode !== 'COMPLETION' && (input.testCases.some(testCase => testCase.points === null) || totalTestPoints > Number(activity.totalPoints))) {
           return { kind: 'points_exceed_total' } as const
         }
         const touched = await transaction.programmingActivity.updateMany({
@@ -121,7 +122,7 @@ export function createPrismaTestCaseRepository(
               inputData: testCase.inputData,
               expectedOutput: testCase.expectedOutput,
               isHidden: testCase.isHidden,
-              points: new Prisma.Decimal(testCase.points),
+              points: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(testCase.points!),
               createdAt: input.now,
               updatedAt: input.now,
             })),

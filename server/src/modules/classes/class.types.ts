@@ -7,6 +7,7 @@ export interface ClassRecord {
   classCode: string
   classCodeActive: boolean
   classCodeChangedAt: Date
+  program?: 'INFORMATION_TECHNOLOGY' | 'COMPUTER_SCIENCE' | null
   section: string | null
   semester: string | null
   schoolYear: string | null
@@ -40,6 +41,7 @@ export interface ClassAccessRecord {
 export interface ClassProjection {
   id: string
   className: string
+  program?: 'INFORMATION_TECHNOLOGY' | 'COMPUTER_SCIENCE' | null
   section: string | null
   semester: string | null
   schoolYear: string | null
@@ -69,6 +71,7 @@ export function toClassProjection(record: ClassRecord): ClassProjection {
   return {
     id: record.id,
     className: record.className,
+    program: record.program ?? null,
     section: record.section,
     semester: record.semester,
     schoolYear: record.schoolYear,

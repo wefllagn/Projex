@@ -1,3 +1,4 @@
+import ProgramField from '../classes/ProgramField.jsx'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ApiError, describeApiError } from '../api/api-client.js'
@@ -122,6 +123,7 @@ export function AdminClassCreatePage({ api = adminApi }) {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [instructors, setInstructors] = useState([])
+  const [program, setProgram] = useState('')
   const [selectedInstructorId, setSelectedInstructorId] = useState('')
   const [searching, setSearching] = useState(false)
   const [searched, setSearched] = useState(false)
@@ -155,6 +157,7 @@ export function AdminClassCreatePage({ api = adminApi }) {
     setError(null)
     try {
       const response = await api.createClass({
+        program: form.get('program'),
         className: form.get('className'),
         semester: form.get('semester'), schoolYear: form.get('schoolYear'),
         ...(form.get('section') ? { section: form.get('section') } : {}),
@@ -177,8 +180,9 @@ export function AdminClassCreatePage({ api = adminApi }) {
       <AdminPanel title="Class details">
         <form className="admin-form-grid" onSubmit={submit} aria-busy={busy}>
           <label>Class name<input name="className" required maxLength="200" autoComplete="off" disabled={busy} /></label>
+          <ProgramField value={program} onChange={setProgram} disabled={busy} required />
           <AcademicFields disabled={busy} />
-          <label>Section (optional)<input name="section" maxLength="100" disabled={busy} /></label>
+          <label>Class Code<input name="section" maxLength="100" required disabled={busy} /></label>
           <label>Schedule (optional)<input name="schedule" maxLength="200" disabled={busy} /></label>
           <label>Days (optional)<input name="days" maxLength="100" disabled={busy} /></label>
           <label>Room (optional)<input name="room" maxLength="100" disabled={busy} /></label>
@@ -354,10 +358,10 @@ const ACADEMIC_CONFIG = {
 }
 
 function AcademicRow({ kind, item }) {
-  if (kind === 'activities') return <><td><strong>{item.title}</strong><span>{item.class.className} · {item.class.section}</span></td><td><StatusBadge label={humanize(item.status)} /></td><td>{humanize(item.language)}<span>{item.testCaseCount} tests · {item.testCasePointTotal} points</span></td><td>{item.submissionCount} submissions<span>Due {formatDate(item.dueDate)}</span></td></>
-  if (kind === 'submissions') return <><td><strong>{item.student.fullName}</strong><span>{item.student.universityEmail}</span></td><td>{item.activity.title}<span>{item.activity.class.className}</span></td><td><StatusBadge label={humanize(item.submissionStatus)} /><span>Attempt {item.attemptNumber}{item.isLate ? ' · Late' : ''}</span></td><td>{item.releasedScore === null ? 'Not released' : `${item.releasedScore} points`}<span>{formatDate(item.submittedAt)}</span></td></>
+  if (kind === 'activities') return <><td><strong>{item.title}</strong><span>{item.class.className} · {item.class.section}</span></td><td><StatusBadge label={humanize(item.status)} /></td><td>{humanize(item.language)}<span>{item.testCaseCount} tests · {item.gradingMode === 'COMPLETION' ? 'Ungraded' : `${item.testCasePointTotal} points`}</span></td><td>{item.submissionCount} submissions<span>Due {formatDate(item.dueDate)}</span></td></>
+  if (kind === 'submissions') return <><td><strong>{item.student.fullName}</strong><span>{item.student.universityEmail}</span></td><td>{item.activity.title}<span>{item.activity.class.className}</span></td><td><StatusBadge label={item.gradingMode === 'COMPLETION' ? 'Complete' : humanize(item.submissionStatus)} /><span>Attempt {item.attemptNumber}{item.isLate ? ' · Late' : ''}</span></td><td>{item.gradingMode === 'COMPLETION' ? 'Complete · Ungraded' : item.releasedScore === null ? 'Not released' : `${item.releasedScore} points`}<span>{formatDate(item.submittedAt)}</span></td></>
   if (kind === 'project-tasks') return <><td><strong>{item.title}</strong><span>{item.class.className} · {item.class.section}</span></td><td><StatusBadge label={humanize(item.status)} /></td><td>Max team {item.maxTeamSize}<span>Due {formatDate(item.dueDate)}</span></td><td>{item.counts.repositories ?? 0} repositories<span>{item.counts.teams ?? 0} teams · {item.counts.invitations ?? 0} invitations</span></td></>
-  return <><td><strong>{item.repositoryName}</strong><span>{item.repositoryType === 'PERSONAL' ? 'Personal' : item.repositoryType === 'CLASS_WORKSPACE' ? 'Student class workspace' : item.projectTask?.class.className || 'Class project'}</span></td><td>{item.owner.fullName}<span>{item.owner.universityEmail}</span></td><td><StatusBadge label={humanize(item.status)} /><span>{humanize(item.reviewStatus)}</span></td><td>{humanize(item.storageStatus)}<span>{item.storageSizeBytes === null ? 'Unmeasured' : `${item.storageSizeBytes} bytes measured`}</span></td></>
+  return <><td><strong>{item.repositoryName}</strong><span>{item.repositoryType === 'PERSONAL' ? 'Personal' : item.repositoryType === 'CLASS_WORKSPACE' ? 'Student class workspace' : item.repositoryType === 'ACTIVITY_WORKSPACE' ? 'Activity workspace' : item.projectTask?.class.className || 'Class project'}</span></td><td>{item.owner.fullName}<span>{item.owner.universityEmail}</span></td><td><StatusBadge label={humanize(item.status)} /><span>{humanize(item.reviewStatus)}</span></td><td>{humanize(item.storageStatus)}<span>{item.storageSizeBytes === null ? 'Unmeasured' : `${item.storageSizeBytes} bytes measured`}</span></td></>
 }
 
 export function AdminAcademicListPage({ kind, api = adminApi }) {

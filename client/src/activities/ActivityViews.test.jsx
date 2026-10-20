@@ -131,6 +131,7 @@ function classValue(overrides = {}) {
 }
 
 function renderView(element, { entry = '/', path = '*' } = {}) {
+  if (element.props.api && !element.props.api.listTopics) element.props.api.listTopics = vi.fn().mockResolvedValue({ data: { version: 0, topics: [], page: 1, hasNextPage: false } })
   return render(
     <MemoryRouter initialEntries={[entry]}>
       <ClassContext.Provider value={classValue()}>
@@ -146,8 +147,8 @@ describe('student activity integration', () => {
     renderView(<StudentActivityList api={api} />)
 
     expect(await screen.findByText('Repository-backed Loops')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'View details' })).toHaveAttribute('href', `/student/activity/${activityId}?classId=${classId}`)
-    expect(api.listActivities).toHaveBeenCalledWith(classId, { page: 1, pageSize: 20, status: '' }, expect.objectContaining({ signal: expect.any(AbortSignal) }))
+    expect(screen.getByRole('link', { name: activity.title })).toHaveAttribute('href', `/student/activity/${activityId}?classId=${classId}`)
+    expect(api.listActivities).toHaveBeenCalledWith(classId, { page: 1, pageSize: 20, topicId: 'none' }, expect.objectContaining({ signal: expect.any(AbortSignal) }))
     expect(screen.queryByText(/Prelim Programming Exercise/)).not.toBeInTheDocument()
   })
 
@@ -388,10 +389,11 @@ describe('student activity integration', () => {
     let resolve
     const api = { listActivities: vi.fn(() => new Promise((done) => { resolve = done })) }
     renderView(<StudentActivityList api={api} />)
-    expect(screen.getByText('Loading programming activities.')).toBeInTheDocument()
+    expect(await screen.findByText('Loading activities…')).toBeInTheDocument()
     await waitFor(() => expect(resolve).toBeTypeOf('function'))
     resolve({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } })
-    expect(await screen.findByText('No programming activities match this view.')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Loading activities…')).not.toBeInTheDocument())
+    expect(screen.queryByRole('heading', { name: 'No topic' })).not.toBeInTheDocument()
   })
 
   it('loads the next bounded activity page without mixing class context', async () => {
@@ -405,7 +407,7 @@ describe('student activity integration', () => {
     expect(await screen.findByText('Repository-backed Loops')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next' }))
     expect(await screen.findByText('Second page activity')).toBeInTheDocument()
-    expect(api.listActivities).toHaveBeenLastCalledWith(classId, { page: 2, pageSize: 20, status: '' }, expect.any(Object))
+    expect(api.listActivities).toHaveBeenLastCalledWith(classId, { page: 2, pageSize: 20, topicId: 'none' }, expect.any(Object))
   })
 })
 
@@ -415,8 +417,8 @@ describe('instructor activity integration', () => {
     renderView(<InstructorActivityList api={api} />)
 
     expect(await screen.findByText('Repository-backed Loops')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Configure' })).toHaveAttribute('href', `/instructor/activity/${activityId}/settings?classId=${classId}`)
-    expect(screen.getAllByText('Draft')).toHaveLength(2)
+    expect(screen.getByRole('link', { name: activity.title })).toHaveAttribute('href', `/instructor/activity/${activityId}/settings?classId=${classId}`)
+    expect(screen.getByText(/Draft · Due/)).toBeInTheDocument()
   })
 
   it('creates a draft using only the supported backend fields', async () => {
@@ -459,9 +461,10 @@ describe('instructor activity integration', () => {
       await user.click(await screen.findByRole('button', { name: 'Add test case' }))
       await user.click(screen.getByRole('button', { name: 'Add test case' }))
 
-      expect(screen.getByRole('group', { name: 'Test case 1' })).toBeInTheDocument()
+      expect(screen.queryByRole('group', { name: 'Test case 1' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /1\. Untitled case.*Visible/ })).toBeInTheDocument()
       expect(screen.getByRole('group', { name: 'Test case 2' })).toBeInTheDocument()
-      expect(screen.getByText('2 of 50 · 0 of 100 activity points')).toBeInTheDocument()
+      expect(screen.getByText('2 of 50 · 0 of 100 points')).toBeInTheDocument()
     } finally {
       vi.unstubAllGlobals()
     }
@@ -483,8 +486,9 @@ describe('instructor activity integration', () => {
     await user.clear(name)
     await user.type(name, 'Updated visible sample')
     await user.click(screen.getByRole('button', { name: 'Save test cases' }))
-    expect(await screen.findByText('Test cases saved. The latest activity version is now active.')).toBeInTheDocument()
+    expect(await screen.findByText('Test cases saved.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Publish' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm publish' }))
 
     expect(api.replaceTestCases).toHaveBeenCalledWith(activityId, expect.objectContaining({ expectedUpdatedAt: activity.updatedAt }))
     expect(api.transition).toHaveBeenCalledWith(activityId, 'publish', { expectedUpdatedAt: updatedVersion })
@@ -514,6 +518,7 @@ describe('instructor activity integration', () => {
     expect(screen.getByText('Changes saved')).toBeInTheDocument()
     expect(screen.queryByText('Action not completed')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Close' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm close' }))
 
     const updateBody = api.updateActivity.mock.calls[0][1]
     expect(updateBody).toEqual(expect.objectContaining({ title: 'Updated published title', expectedUpdatedAt: published.updatedAt }))
@@ -549,6 +554,7 @@ describe('instructor activity integration', () => {
 
     expect(await screen.findByLabelText('Activity title')).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'Restore' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm restore' }))
     expect(api.transition).toHaveBeenCalledWith(activityId, 'restore', { expectedUpdatedAt: archived.updatedAt })
   })
 
@@ -576,18 +582,19 @@ describe('instructor activity integration', () => {
         .mockResolvedValueOnce({ data: { ...reopened, status: 'CLOSED', updatedAt: '2026-08-10T03:00:00.000Z' } }),
     }
     const confirm = vi.spyOn(window, 'confirm')
-      .mockReturnValueOnce(false)
-      .mockReturnValue(true)
     const user = userEvent.setup()
     renderView(<InstructorActivityEditor api={api} mode="edit" />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
 
     const reopen = await screen.findByRole('button', { name: 'Reopen Activity' })
     expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
     await user.click(reopen)
-    expect(confirm).toHaveBeenLastCalledWith('Reopen this activity? Student attempts will not reset, and the deadline will not be extended automatically.')
+    expect(confirm).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog', { name: 'Confirm reopen' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(api.transition).not.toHaveBeenCalled()
 
     await user.click(reopen)
+    await user.click(screen.getByRole('button', { name: 'Confirm reopen' }))
     expect(api.transition).toHaveBeenCalledWith(activityId, 'reopen', { expectedUpdatedAt: closed.updatedAt })
     expect(await screen.findByText(/deadline has already passed; extend it separately/i)).toBeInTheDocument()
     expect(screen.getByText('Published')).toBeInTheDocument()
@@ -596,6 +603,7 @@ describe('instructor activity integration', () => {
     expect(screen.getByLabelText('Starter source')).toBeDisabled()
 
     await user.click(screen.getByRole('button', { name: 'Close' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm close' }))
     expect(api.transition).toHaveBeenLastCalledWith(activityId, 'close', { expectedUpdatedAt: reopened.updatedAt })
   })
 
@@ -634,6 +642,7 @@ describe('instructor activity integration', () => {
     renderView(<InstructorActivityEditor api={api} mode="edit" />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
 
     await user.click(await screen.findByRole('button', { name: 'Reopen Activity' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm reopen' }))
     expect(await screen.findByText('This record changed while you were working. Refresh it before trying again.')).toBeInTheDocument()
     expect(api.getActivity).toHaveBeenCalledTimes(2)
     expect(screen.getByRole('button', { name: 'Reopen Activity' })).toBeInTheDocument()
@@ -657,5 +666,42 @@ describe('instructor activity integration', () => {
     expect(await screen.findByText('This record changed while you were working. Refresh it before trying again.')).toBeInTheDocument()
     expect(screen.getByLabelText('Activity title')).toHaveValue('My unsaved title')
     expect(api.getActivity).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('Instructor authoring overhaul', () => {
+  it('creates an Ungraded draft with no numeric points while retaining deadline, source and attempts', async () => {
+    const api = { createActivity: vi.fn().mockResolvedValue({ data: { ...activity, gradingMode: 'COMPLETION', totalPoints: null } }) }
+    const user = userEvent.setup()
+    renderView(<InstructorActivityEditor api={api} mode="create" />, { entry: `/instructor/activity/new?classId=${classId}`, path: '/instructor/activity/new' })
+    await user.type(screen.getByLabelText('Activity title'), 'Completion practice')
+    await user.type(screen.getByLabelText('Instructions'), 'Practice until ready, then submit.')
+    await user.type(screen.getByLabelText('Deadline'), '2099-09-03T17:00')
+    await user.selectOptions(screen.getByLabelText('Grading mode'), 'COMPLETION')
+    expect(screen.queryByLabelText('Total points')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Credited result')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Create draft' }))
+    await waitFor(() => expect(api.createActivity).toHaveBeenCalled())
+    expect(api.createActivity.mock.calls[0][1]).toMatchObject({ gradingMode: 'COMPLETION', totalPoints: null, maxAttempts: 1, language: 'JAVA' })
+    expect(api.createActivity.mock.calls[0][1].starterCode).toContain('public class Main')
+  })
+  it('keeps edits while switching selected cases, focuses a new case and confirms removal', async () => {
+    const api = { getActivity: vi.fn().mockResolvedValue({ data: activity }), listTestCases: vi.fn().mockResolvedValue({ data: [testCase, { ...testCase, id: 'second', name: 'Boundary' }], pagination }) }
+    const user = userEvent.setup()
+    renderView(<InstructorActivityEditor api={api} />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
+    await screen.findByDisplayValue('Visible sample')
+    await user.clear(screen.getByLabelText('Input')); await user.type(screen.getByLabelText('Input'), 'Unsaved case input')
+    await user.click(screen.getByRole('button', { name: /2\. Boundary/ }))
+    expect(screen.getByLabelText('Name')).toHaveValue('Boundary')
+    await user.click(screen.getByRole('button', { name: /1\. Visible sample/ }))
+    expect(screen.getByLabelText('Input')).toHaveValue('Unsaved case input')
+    await user.click(screen.getByRole('button', { name: 'Add test case' }))
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveFocus())
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+    await user.click(screen.getByRole('button', { name: 'Keep case' }))
+    expect(screen.getByRole('group', { name: 'Test case 3' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+    await user.click(screen.getByRole('button', { name: 'Remove case' }))
+    expect(screen.queryByRole('button', { name: /3\. Untitled/ })).not.toBeInTheDocument()
   })
 })

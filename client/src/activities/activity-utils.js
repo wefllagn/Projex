@@ -38,7 +38,7 @@ export function validateActivityForm(form) {
   if (!starterCode.trim() || starterCode.length > 100_000) errors.starterCode = 'Enter starter source of no more than 100,000 characters.'
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 3) errors.maxAttempts = 'Choose between one and three attempts.'
   if (!['LATEST', 'HIGHEST'].includes(form.creditPolicy)) errors.creditPolicy = 'Choose how the credited result is selected.'
-  if (!Number.isFinite(totalPoints) || totalPoints <= 0 || totalPoints > 1_000 || Math.round(totalPoints * 100) !== totalPoints * 100) errors.totalPoints = 'Enter 0.01 to 1,000 points with at most two decimals.'
+  if (form.gradingMode !== 'COMPLETION' && (!Number.isFinite(totalPoints) || totalPoints <= 0 || totalPoints > 1_000 || Math.round(totalPoints * 100) !== totalPoints * 100)) errors.totalPoints = 'Enter 0.01 to 1,000 points with at most two decimals.'
   if (!form.dueDate || Number.isNaN(dueDate.getTime())) errors.dueDate = 'Choose a valid deadline.'
 
   return errors
@@ -46,6 +46,7 @@ export function validateActivityForm(form) {
 
 export function activityPayload(form, status = 'DRAFT') {
   const common = {
+    topicId: form.topicId || null,
     title: form.title.trim(),
     instructions: form.instructions.trim(),
     dueDate: new Date(form.dueDate).toISOString(),
@@ -58,14 +59,17 @@ export function activityPayload(form, status = 'DRAFT') {
     language: 'JAVA',
     entryClassName: form.entryClassName.trim(),
     starterCode: form.starterCode,
-    totalPoints: Number(form.totalPoints),
+    ...(form.gradingMode ? { gradingMode: form.gradingMode } : {}),
+    totalPoints: form.gradingMode === 'COMPLETION' ? null : Number(form.totalPoints),
   }
 }
 
 export function activityUpdatePayload(form, activity) {
+  if (activity.status === 'CLOSED') return { topicId: form.topicId || null }
   if (activity.status !== 'PUBLISHED') return activityPayload(form, activity.status)
   const candidate = activityPayload(form, 'PUBLISHED')
   const changed = {}
+  if ((candidate.topicId ?? null) !== (activity.topicId ?? null)) changed.topicId = candidate.topicId
   if (candidate.title !== activity.title) changed.title = candidate.title
   if (candidate.instructions !== activity.instructions) changed.instructions = candidate.instructions
   if (new Date(candidate.dueDate).getTime() !== new Date(activity.dueDate).getTime()) changed.dueDate = candidate.dueDate
@@ -73,7 +77,7 @@ export function activityUpdatePayload(form, activity) {
   return changed
 }
 
-export function validateTestCases(testCases, activityTotalPoints) {
+export function validateTestCases(testCases, activityTotalPoints, gradingMode = 'GRADED') {
   const errors = []
   if (testCases.length > 50) errors.push('An activity can contain at most 50 test cases.')
   testCases.forEach((testCase, index) => {
@@ -82,20 +86,20 @@ export function validateTestCases(testCases, activityTotalPoints) {
     if (!testCase.name.trim() || testCase.name.trim().length > 200) errors.push(`${label} needs a name of no more than 200 characters.`)
     if (testCase.inputData.length > 32_000) errors.push(`${label} input exceeds 32,000 characters.`)
     if (testCase.expectedOutput.length > 32_000) errors.push(`${label} expected output exceeds 32,000 characters.`)
-    if (!Number.isFinite(points) || points < 0 || points > 1_000 || Math.round(points * 100) !== points * 100) errors.push(`${label} points must be 0 to 1,000 with at most two decimals.`)
+    if (gradingMode !== 'COMPLETION' && (!Number.isFinite(points) || points < 0 || points > 1_000 || Math.round(points * 100) !== points * 100)) errors.push(`${label} points must be 0 to 1,000 with at most two decimals.`)
   })
   const points = testCases.reduce((sum, testCase) => sum + (Number(testCase.points) || 0), 0)
-  if (points > Number(activityTotalPoints)) errors.push('Test-case points cannot exceed the activity total.')
+  if (gradingMode !== 'COMPLETION' && points > Number(activityTotalPoints)) errors.push('Test-case points cannot exceed the activity total.')
   return errors
 }
 
-export function testCasePayload(testCases) {
+export function testCasePayload(testCases, gradingMode = 'GRADED') {
   return testCases.map((testCase) => ({
     name: testCase.name.trim(),
     inputData: testCase.inputData === '' ? null : testCase.inputData,
     expectedOutput: testCase.expectedOutput,
     isHidden: Boolean(testCase.isHidden),
-    points: Number(testCase.points),
+    points: gradingMode === 'COMPLETION' ? null : Number(testCase.points),
   }))
 }
 
@@ -106,7 +110,7 @@ export function publicationRequirements(activity, testCases) {
   if (activity && new Date(activity.dueDate).getTime() <= Date.now()) reasons.push('The deadline must be in the future.')
   if (testCases.length === 0) reasons.push('Add at least one test case.')
   if (!testCases.some((testCase) => !testCase.isHidden)) reasons.push('Add at least one visible test case.')
-  if (totalTestPoints <= 0) reasons.push('Test cases must award a positive total number of points.')
-  if (activity && totalTestPoints > Number(activity.totalPoints)) reasons.push('Test-case points cannot exceed the activity total.')
+  if (activity?.gradingMode !== 'COMPLETION' && totalTestPoints <= 0) reasons.push('Test cases must award a positive total number of points.')
+  if (activity && activity.gradingMode !== 'COMPLETION' && totalTestPoints > Number(activity.totalPoints)) reasons.push('Test-case points cannot exceed the activity total.')
   return reasons
 }
