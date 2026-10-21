@@ -1,10 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
 import { AuthContext } from '../auth/auth-context.js'
 import LoginPage, { InstructorLoginPage } from './LoginPage.jsx'
+
+afterEach(() => localStorage.removeItem('origin-public-theme'))
 
 function renderLogin({ component = <LoginPage />, login = vi.fn(), initialEntry = '/student-login' } = {}) {
   const auth = {
@@ -55,11 +57,30 @@ describe('real login forms', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is invalid.')
     expect(screen.getByLabelText('Password')).toHaveValue('')
+    expect(screen.getByLabelText('Email')).toHaveValue('synthetic@example.edu')
+    expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password')
   })
 
   it('contains no hardcoded email or password defaults', () => {
     renderLogin()
     expect(screen.getByLabelText('Email')).toHaveValue('')
     expect(screen.getByLabelText('Password')).toHaveValue('')
+  })
+
+  it('keeps typed credentials while changing public appearance and toggling visibility', async () => {
+    const login = vi.fn()
+    const { container } = renderLogin({ login })
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText('Email'), 'synthetic@example.edu')
+    await user.type(screen.getByLabelText('Password'), 'Synthetic1!')
+    await user.click(screen.getByRole('button', { name: 'Light appearance' }))
+    expect(container.querySelector('.origin-auth')).toHaveAttribute('data-theme', 'light')
+    expect(screen.getByLabelText('Email')).toHaveValue('synthetic@example.edu')
+    expect(screen.getByLabelText('Password')).toHaveValue('Synthetic1!')
+    await user.click(screen.getByRole('button', { name: 'Show password' }))
+    expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'text')
+    await user.click(screen.getByRole('button', { name: 'Hide password' }))
+    expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password')
+    expect(login).not.toHaveBeenCalled()
   })
 })

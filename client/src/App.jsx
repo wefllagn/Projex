@@ -11,7 +11,8 @@ import DashboardLayout from './layouts/DashboardLayout.jsx'
 import AdminRoutePage from './admin/AdminViews.jsx'
 import { adminChildren } from './admin/admin-routes.jsx'
 import AccountSetupPage from './pages/AccountSetupPage.jsx'
-import LoginPage, { InstructorLoginPage, RoleLandingPage } from './pages/LoginPage.jsx'
+import LoginPage, { InstructorLoginPage } from './pages/LoginPage.jsx'
+import OriginLandingPage from './landing/OriginLandingPage.jsx'
 import PlaceholderPage from './pages/PlaceholderPage.jsx'
 import InstructorRoutePage from './pages/InstructorPages.jsx'
 import RoleDashboard from './pages/RoleDashboard.jsx'
@@ -75,7 +76,7 @@ const roleRoutes = routeCatalog.flatMap((role) => [
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <RoleLandingPage />,
+    element: <OriginLandingPage />,
   },
   {
     path: '/student-login',
