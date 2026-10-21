@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { RouterProvider, createMemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
+import { AuthContext } from '../auth/auth-context.js'
 import { ClassContext } from '../classes/class-context.js'
 import {
   LegacySubmissionRoute,
@@ -172,7 +173,7 @@ function renderWithClass(element, {
   initialEntries = [entry],
 } = {}) {
   const router = createMemoryRouter([{ path: '*', element:
-      <ClassContext.Provider value={{
+      <AuthContext.Provider value={{ user: { id: 'student-1', role: 'STUDENT', status: 'ACTIVE' } }}><ClassContext.Provider value={{
         selectedClass,
         requestedClassId: classId,
         selectionStatus: 'ready',
@@ -184,7 +185,7 @@ function renderWithClass(element, {
           {destination && <Route path="/student/activity/:activityId/submissions/:submissionId" element={<p>Canonical submission destination</p>} />}
           {legacyDestination && <Route path="/student/activity/:activityId/submissions" element={<LocationProbe />} />}
         </Routes>
-      </ClassContext.Provider>
+      </ClassContext.Provider></AuthContext.Provider>
   }], { initialEntries })
   return { ...render(<RouterProvider router={router} />), router }
 }
@@ -581,6 +582,7 @@ describe('student programming workspace', () => {
   })
 
   it('runs unsaved Scanner code with multiline stdin without submission or Git side effects', async () => {
+    mockWorkspaceViewport(false)
     const scannerSource = 'import java.util.Scanner; public class Main { public static void main(String[] args) { Scanner scanner = new Scanner(System.in); System.out.println("Hello " + scanner.nextLine()); } }'
     const submissions = submissionTransport({
       createCodeRun: vi.fn().mockResolvedValue({ data: {
@@ -596,7 +598,11 @@ describe('student programming workspace', () => {
     renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 1, maximumDelayMs: 1, maximumDurationMs: 1000 }} />)
 
     fireEvent.change(await screen.findByLabelText('Java source code'), { target: { value: scannerSource } })
+    const revealOutput = vi.fn()
+    screen.getByRole('tablist', { name: 'Workspace results' }).parentElement.scrollIntoView = revealOutput
     await userEvent.click(screen.getByRole('button', { name: 'Run Code' }))
+    expect(screen.getByRole('tab', { name: 'Output' })).toHaveAttribute('aria-selected', 'true')
+    expect(revealOutput).toHaveBeenCalledWith({ block: 'start' })
     fireEvent.change(screen.getByLabelText('Program input (stdin)'), { target: { value: 'Julius\n23' } })
     await userEvent.click(screen.getByRole('button', { name: 'Run' }))
 
@@ -922,4 +928,15 @@ describe('Ungraded Student submission records', () => {
     if (status === 'released') expect(screen.getByText(secret)).toBeInTheDocument()
     else { expect(screen.queryByText(secret)).not.toBeInTheDocument(); expect(screen.getByText('Feedback not released')).toBeInTheDocument() }
   })
+})
+
+
+it('keeps embedded attempt history concise and hides unreleased results', async () => {
+  const record = submissionRecord({ status: 'assessed', gradeStatus: 'pending', finalScore: 91, feedback: 'UNRELEASED-HISTORY-FEEDBACK' })
+  const submissions = submissionTransport({ listSubmissions: vi.fn().mockResolvedValue({ data: [record], pagination }) })
+  renderWithClass(<StudentSubmissionHistory compact api={activityTransport()} submissions={submissions} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
+  expect(await screen.findByText('Attempt 1')).toBeInTheDocument()
+  expect(screen.queryByText(/UNRELEASED-HISTORY-FEEDBACK|91/)).not.toBeInTheDocument()
+  expect(screen.queryByText('Attempts are immutable records. Practice runs do not appear here.')).not.toBeInTheDocument()
+  expect(screen.getByRole('link', { name: /Attempt 1/ })).toHaveAttribute('href', `/student/activity/${activityId}/submissions/${record.id}?classId=${classId}`)
 })

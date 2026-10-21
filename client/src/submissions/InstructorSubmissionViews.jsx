@@ -114,14 +114,13 @@ export function InstructorSubmissionQueue({ api = activityApi, submissions = sub
   return (
     <div className="student-assignment-panel instructor-assignment-panel instructor-submission-queue">
       <div className="instructor-assignment-toolbar instructor-assignment-toolbar--board">
-        <div><strong>Submission Queue</strong><p>Accepted submissions for this activity only. Missing-student and cross-class monitoring are not inferred.</p></div>
+        <div><strong>Submission queue</strong></div>
         <div className="instructor-assignment-toolbar-actions">
           <label className="instructor-status-filter"><span>Status</span><select value={query.status} onChange={(event) => setQuery({ ...FIRST_PAGE, status: event.target.value })}><option value="">All statuses</option>{SUBMISSION_STATUSES.map((status) => <option key={status} value={status}>{formatStatus(status)}</option>)}</select></label>
           <button type="button" className="student-outline-action" onClick={() => load()}>Refresh</button>
         </div>
       </div>
       <section className="instructor-page-heading">
-        <p>Activity assessment</p>
         <h2>{current.activity.title}</h2>
         <span>Due {formatActivityDate(current.activity.dueDate)} · {formatStatus(current.activity.status)} · {current.activity.creditPolicy === 'HIGHEST' ? 'Highest released attempt credited' : 'Latest released attempt credited'}</span>
       </section>

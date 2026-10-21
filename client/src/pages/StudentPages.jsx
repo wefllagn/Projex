@@ -1,12 +1,14 @@
+import ClassCardGrid from '../classes/ClassCardGrid.jsx'
+import ClassOverviewCard from '../classes/ClassOverviewCard.jsx'
+import StudentWorkOverview from '../activities/StudentWorkOverview.jsx'
 import AppDialog from '../components/AppDialog.jsx'
 import ProjexIcon from '../components/icons/ProjexIcon.jsx'
 import AccountMenu from '../components/AccountMenu.jsx'
 import { useEffect, useState } from 'react'
 import { Navigate, NavLink, useSearchParams } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
-import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
-import { classHref, classInitial, classOfferingLabel, firstName } from '../classes/class-links.js'
+import { classHref, classInitial, classOfferingLabel } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
 import { WorkHubList } from '../work-hub/WorkHubViews.jsx'
 import { StudentClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
@@ -117,18 +119,10 @@ function StudentClassPage({ activeTab, children, wide = false, deferredLabel }) 
 }
 
 function StudentClassCards({ classes }) {
-  return <div className="academic-class-grid">
-    {classes.map(item => <NavLink to={classHref('/student/classes', item.id)} className="academic-class-card" key={item.id}>
-      <span className={`student-class-dot student-class-dot--${classInitial(item).toLowerCase()}`}>{classInitial(item)}</span>
-      <span className="academic-class-identity"><strong>{item.className}</strong><span>{classOfferingLabel(item)}</span><small>{item.instructor.fullName}</small></span>
-      <span className="academic-class-state">{item.status === 'ARCHIVED' ? 'Archived · read-only' : 'Active'}</span>
-      <ProjexIcon name="chevronRight" size={18} />
-    </NavLink>)}
-  </div>
+  return <ClassCardGrid classes={classes} role="student" />
 }
 
 function HomeDashboardPage() {
-  const auth = useAuth()
   const { api, upsertClass, classes, error, pagination, status, loadMore } = useClasses()
   const [params, setParams] = useSearchParams()
   const [joinOpen, setJoinOpen] = useState(false)
@@ -137,26 +131,11 @@ function HomeDashboardPage() {
     setJoinOpen(false)
     if (params.has('join')) { const next = new URLSearchParams(params); next.delete('join'); setParams(next, { replace: true }) }
   }
-  const stats = [
-    { label: 'Joined Classes', value: pagination?.totalItems ?? classes.length, detail: '', tone: 'green' },
-    { label: 'Active Classes', value: classes.filter(item => item.status === 'ACTIVE').length, detail: pagination?.hasNextPage ? 'loaded classes' : '', tone: 'blue' },
-    { label: 'Archived Classes', value: classes.filter(item => item.status === 'ARCHIVED').length, detail: pagination?.hasNextPage ? 'loaded classes' : '', tone: 'purple' },
-  ]
   return <div className="student-home-page">
     <header className="student-home-topbar"><div /><div className="student-user-area"><StudentNotificationMenu /><AccountMenu /></div></header>
     <main className="student-home-content">
-      <section className="student-home-hero">
-        <div className="student-home-mascot" aria-hidden="true"><img src="/assets/brand/projex-login-mascot.png" alt="" /></div>
-        <div><h1>Welcome back, {firstName(auth.user.fullName)}</h1></div>
-      </section>
-      <section className="student-home-stats" aria-label="Student overview">
-        {stats.map(stat => <article className="student-dashboard-stat" key={stat.label}>
-          <span className={`student-dashboard-stat-icon student-dashboard-stat-icon--${stat.tone}`} aria-hidden="true"><ProjexIcon name={stat.tone === 'green' ? 'classes' : stat.tone === 'blue' ? 'active' : 'archived'} size={28} /></span>
-          <div><span>{stat.label}</span><strong>{stat.value}</strong>{stat.detail && <small>{stat.detail}</small>}</div>
-        </article>)}
-      </section>
       <section className="student-home-classes student-home-classes-panel academic-home-classes">
-        <div className="student-home-section-heading"><h2>My Classes</h2><button type="button" className="student-primary-action" onClick={() => setJoinOpen(true)}><ProjexIcon name="join" />Join Class</button></div>
+        <div className="student-home-section-heading"><h1>Classes</h1><button type="button" className="student-primary-action" onClick={() => setJoinOpen(true)}><ProjexIcon name="join" />Join Class</button></div>
         {joinNotice && <p role="status" className="student-joined-state">{joinNotice}</p>}
         {status === 'loading' && <RequestState kind="loading" compact message="Loading your classes." />}
         {status === 'error' && <RequestState kind="unavailable" compact error={error} />}
@@ -189,21 +168,7 @@ function StudentClassesPage() {
     return (
       <StudentClassPage activeTab="stream">
         {selectedClass && (
-          <div className="class-overview-grid">
-            <section className="student-global-panel class-overview-card">
-              <span className="class-status-chip">{selectedClass.status}</span>
-              <h2>{selectedClass.className}</h2>
-              <p>{classOfferingLabel(selectedClass)}</p>
-              <p>Instructor: {selectedClass.instructor.fullName}</p>
-              {selectedClass.status === 'ARCHIVED' && <small>This class is read-only.</small>}
-            </section>
-            <RequestState
-              kind="unavailable"
-              compact
-              title="Class stream unavailable"
-              message="Announcements and comments are not available yet."
-            />
-          </div>
+          <ClassOverviewCard classRecord={selectedClass} />
         )}
       </StudentClassPage>
     )
@@ -232,17 +197,18 @@ function AssignmentSubTabs({ active }) {
       </NavLink>
       <NavLink to={classHref('/student/projects', selectedClass?.id)} className={active === 'projects' ? 'is-active' : undefined}>
         <ProjexIcon name="project" />
-        My Projects
+        Group Projects
       </NavLink>
     </div>
   )
 }
 
 function ActivitiesPage() {
+  const [params] = useSearchParams()
   return (
     <StudentClassPage activeTab="assignments" deferredLabel="">
-      <div className="student-assignment-toolbar"><AssignmentSubTabs active="activities" /></div>
-      <StudentActivityList />
+      <AssignmentSubTabs active="activities" />
+      {params.get('view') === 'work' ? <StudentWorkOverview /> : <StudentActivityList />}
     </StudentClassPage>
   )
 }
@@ -357,7 +323,7 @@ function PersonRow({ person }) {
   const initials = person.fullName.split(/\s+/).map((part) => part.charAt(0)).join('').slice(0, 2).toUpperCase()
   return (
     <li className="student-person-row">
-      <span className="student-person-avatar">{initials}</span>
+      <span className="student-person-avatar" aria-hidden="true">{initials}</span>
       <div>
         <strong>{person.fullName}</strong>
       </div>
@@ -408,17 +374,18 @@ function PeoplePage() {
 
   return (
     <StudentClassPage activeTab="people">
-      <div className="student-people-panel">
+      <div className="student-people-panel academic-people-panel academic-classwork-panel">
+        <header className="academic-people-toolbar"><h2><ProjexIcon name="people" />People</h2></header>
         <section>
-          <h2>Instructor</h2>
+          <h3 className="academic-people-section-title">Instructor</h3>
           <ul className="student-people-list">
             {selectedClass && <PersonRow person={{ fullName: selectedClass.instructor.fullName }} />}
           </ul>
         </section>
         <section>
           <div className="student-people-heading">
-            <h2>Classmates</h2>
-            {currentRoster.pagination && <span>{currentRoster.pagination.totalItems} students</span>}
+            <h3 className="academic-people-section-title">Classmates</h3>
+            {currentRoster.pagination && <span>{currentRoster.pagination.totalItems} {currentRoster.pagination.totalItems === 1 ? 'student' : 'students'}</span>}
           </div>
           {selectionStatus === 'ready' && currentRoster.status === 'loading' && <RequestState kind="loading" compact message="Loading the class roster." />}
           {currentRoster.status === 'error' && <RequestState kind="unavailable" compact error={currentRoster.error} />}
@@ -455,7 +422,7 @@ function ProjectDetailPage() {
 
 function RepositoryCatalogPage({ archived = false }) {
   return (
-    <StudentGlobalPage title={archived ? 'Archived Repositories' : 'My Repositories'} eyebrow="Project Collaboration Mode">
+    <StudentGlobalPage title={archived ? 'Archived Repositories' : 'My Repositories'}>
       <StudentRepositoryCatalog archived={archived} />
     </StudentGlobalPage>
   )

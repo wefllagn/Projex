@@ -2,10 +2,11 @@ import useAutomaticRefresh from '../components/useAutomaticRefresh.js'
 import { deadlineGroup } from './todo-grouping.js'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useSearchParams } from 'react-router-dom'
-import { apiClient, describeApiError } from '../api/api-client.js'
+import { apiClient } from '../api/api-client.js'
 import { classHref } from '../classes/class-links.js'
 import ProjexIcon from '../components/icons/ProjexIcon.jsx'
-import RequestState from '../components/RequestState.jsx'
+import WorkHubState from './WorkHubState.jsx'
+import OutlinedSelect from '../components/OutlinedSelect.jsx'
 
 const views = [['assigned', 'Assigned'], ['missing', 'Missing'], ['done', 'Done']]
 const emptyCopy = { assigned: 'No assigned work.', missing: 'No missing work.', done: 'No completed work yet.' }
@@ -55,30 +56,30 @@ export default function StudentTodoView({ classes = [], moreClasses = false, onM
     if (!grouped.has(group)) grouped.set(group, [])
     grouped.get(group).push(item)
   }
-  return <section className="academic-todo" aria-busy={state.key !== key}>
+  return <section className="academic-todo academic-work-panel" aria-busy={state.key !== key}>
     <nav className="academic-todo-tabs" aria-label="To-do views">
       {views.map(([value, label]) => {
         const target = new URLSearchParams(params); target.set('tab', value); target.delete('page')
-        return <Link key={value} to={`?${target}`} aria-current={selected === value ? 'page' : undefined} className={selected === value ? 'is-active' : ''}>{label}</Link>
+        return <Link key={value} to={`?${target}`} aria-current={selected === value ? 'page' : undefined} className={selected === value ? 'is-active' : ''}><ProjexIcon name={value === 'assigned' ? 'activity' : value === 'missing' ? 'calendar' : 'published'} size={18} />{label}</Link>
       })}
     </nav>
     <div className="academic-todo-content">
       <div className="academic-todo-toolbar">
-        <select aria-label="Filter by class" value={classId} onChange={event => update({ classId: event.target.value, page: null })}>
-          <option value="">All classes</option>
-          {classId && !classes.some(item => item.id === classId && item.status === 'ACTIVE') && <option value={classId}>Selected class</option>}
-          {classes.filter(item => item.status === 'ACTIVE').map(item => <option key={item.id} value={item.id}>{item.className}{item.section ? ` · ${item.section}` : ''}</option>)}
-        </select>
+        <OutlinedSelect label="Filter by class" value={classId} onChange={value => update({ classId: value, page: null })} options={[
+          { value: '', label: 'All classes' },
+          ...(classId && !classes.some(item => item.id === classId && item.status === 'ACTIVE') ? [{ value: classId, label: 'Selected class' }] : []),
+          ...classes.filter(item => item.status === 'ACTIVE').map(item => ({ value: item.id, label: `${item.className}${item.section ? ` · ${item.section}` : ''}` })),
+        ]} />
         {moreClasses && <button type="button" className="student-outline-action" onClick={onMoreClasses}>More classes</button>}
         <form className="academic-todo-search" onSubmit={event => { event.preventDefault(); update({ search: draftSearch.trim(), page: null }) }}>
-          <input type="search" aria-label="Search work" value={draftSearch} onChange={event => setDraft({ key: search, value: event.target.value })} placeholder="Search work…" maxLength={100} />
+          <label className="academic-hub-search"><span>Search work</span><input type="search" aria-label="Search work" value={draftSearch} onChange={event => setDraft({ key: search, value: event.target.value })} placeholder="Search by title…" maxLength={100} /></label>
         </form>
       </div>
-      {current.status === 'loading' && <RequestState kind="loading" compact message="Loading work…" />}
-      {current.status === 'error' && <div role="alert"><p>{describeApiError(current.error)}</p><button type="button" className="student-outline-action" onClick={() => setRevision(value => value + 1)}>Try again</button></div>}
-      {current.status === 'ready' && !current.rows.length && <RequestState kind="empty" compact message={emptyCopy[selected]} />}
+      {current.status === 'loading' && <WorkHubState kind="loading" message="Loading work…" />}
+      {current.status === 'error' && <WorkHubState kind="error" error={current.error} onRetry={() => setRevision(value => value + 1)} />}
+      {current.status === 'ready' && !current.rows.length && <WorkHubState kind="empty" message={emptyCopy[selected]} />}
       {current.status === 'ready' && [...grouped].map(([heading, rows]) => <section className="academic-todo-group" key={heading}>
-        <h2>{heading}</h2>
+        <h2><ProjexIcon name="calendar" size={18} />{heading}</h2>
         <ul>{rows.map(item => <li key={`${item.kind}-${item.id}`}>
           <NavLink className="academic-todo-row" to={classHref(item.kind === 'project' ? `/student/projects/${item.id}` : `/student/activity/${item.id}`, item.class.id)}>
             <span className="academic-row-icon"><ProjexIcon name={item.kind === 'project' ? 'project' : 'activity'} size={24} /></span>

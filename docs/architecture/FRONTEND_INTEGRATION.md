@@ -380,7 +380,7 @@ Each milestone may use multiple reviewable commits on `phase/10-frontend-integra
 The Product Owner authorized the shared academic UI changes in the isolated Student continuation worktree on 21 October 2026. This authorizes the scoped visual changes below as an exception to the historical visual-preservation baseline; visual acceptance and branch integration remain separate decisions.
 
 - Use the existing Instructor palette and local `--sans` font stack, consistent heading levels and button spacing, and the established Projex icon kit. New icons retain SVG geometry with transparent PNG exports at 24, 48 and 96 px. Student and Instructor class tabs share Activity and Project icons.
-- Use the Product Owner's attachment 1 account layout in both Student and Instructor panes, including mobile: email and SLU organization label, filled placeholder avatar, greeting, account-management pill and a Sign out row. Profile, Settings, Privacy Policy and Terms links are omitted. The account-management pill remains explicitly disabled until implemented. Student Sign out also appears at the bottom of the navigation. The Student bell opens existing pending Class invitations in an application overlay, with a red exclamation when the authoritative pending count is positive; opening it does not mark anything read or resolve an invitation. No general notification feed, unread-history storage, SMTP or new backend permission is introduced.
+- Use the Product Owner's attachment 1 account layout in both Student and Instructor panes, including mobile: email and SLU organization label, filled placeholder avatar, natural-case account name and a Sign out row. Profile, Settings, Privacy Policy and Terms links are omitted. The fake account-management button is removed, along with the greeting prefix. Student Sign out also appears at the bottom of the navigation. The Student bell opens existing pending Class invitations in an application overlay, with a red exclamation when the authoritative pending count is positive; opening it does not mark anything read or resolve an invitation. No general notification feed, unread-history storage, SMTP or new backend permission is introduced.
 - Remove redundant introductory and implementation sentences. Preserve instructions on detail pages, useful empty/error states, deadline and attempt restrictions, required confirmations, uncertain-operation recovery and credential/source-loss guidance. Project catalogs show title, deadline and state; instructions stay on Project Detail. Loaded-page qualifiers remain where counts are partial.
 - Use application dialogs for confirmations. Cancel preserves draft/source and performs no write. Browser unload protection remains browser-owned because a page cannot replace the browser's unload dialog.
 - Label classwork Activities. Retire the global My Submissions page and entry points in favor of To-do; per-Activity Attempt history and Submission Record retain source, times, assessment state and released results.
@@ -389,3 +389,77 @@ The Product Owner authorized the shared academic UI changes in the isolated Stud
 - Keep workspace actions explicit: Run Code, Run Visible Tests and Save to Git are secondary; Submit is primary and retains its confirmation. Branch identity belongs with the file header. Single-file editing remains unchanged, and full repository inspection remains in the repository view.
 
 The external loopback component preview supplies clearly labeled, fictional responses and never verifies backend persistence, authorization, Java execution or native Git behavior. It must not be imported into production. Real database/Git/Java testing still requires separately approved isolated resources.
+
+
+### Unified refinement candidate (continuation worktree)
+
+The subsequent Product Owner work order authorizes a compact, shared Student/Instructor refinement. Implementation remains an uncommitted review candidate; branch integration is separate.
+
+- The academic shell uses the existing local sans and Projex assets on a neutral navigation frame and white working sheet. Home consolidates Class statistics into inline figures. To-do keeps its approved tabs, server semantics, filters, automatic refresh and due groups.
+- My Repositories leads with a single type/action toolbar and grouped Personal, Activity and Project rows. Authorized catalog projections add Class/Activity/Project names plus `contextClassId` for academic navigation; the direct nullable `classId` foreign-key projection retains its original meaning. No grading information or source is added to the catalog.
+- Standalone individual Class Workspace creation is retired from the normal Student UI. Existing Class Workspace filters, direct routes, reads, storage and backend APIs remain for historical compatibility. No data migration or backend removal is implied.
+- Personal creation uses the existing API and a New repository dialog with name, optional description and private-account scope. Errors retain the draft; cancellation makes no write.
+- Activity Detail exposes View Git in Your work. Its contextual dialog reuses the existing workspace/provisioning/history/Code behavior and links to the full repository browser. Files/Git lead that browser, with metadata secondary. Activity files reuse GroupFileBrowser and GroupLatestCommit with commit-pinned reads; history/diffs and branches reuse their existing Group presentation. No Group membership context or permissions are fabricated for an individual Activity. Git saves remain separate from explicit official Submit.
+- Java workspace retains instructions/editor/diagnostics, keyboard/pointer sizing and four separate actions. Narrow-screen Run Code and visible-test actions reveal diagnostics; no execution request or evidence contract changes.
+- Instructor To Review uses `GET /work-hub/instructor/review-activities`, an active-account/Instructor-only, bounded, active-primary-or-co-teaching read. Class/state filters apply before pagination and count. Published/closed Activities with zero attempts or any pending attempt appear in To review. Reviewed requires at least one reviewed attempt and no pending attempt. Review means REVIEWED/RELEASED or reviewed FAILED_RESOLVED; automated assessment alone is not review. Submitted/reviewed/released counts measure attempts, while Assigned students counts current active Student memberships. A reviewed Activity may still have students who have not submitted. No graded-student counter or grade/release equivalence is invented. Due group counts describe the current returned page; the toolbar count and pagination describe the complete authorized query.
+- Existing Project review links stay available in To review through the original independently paginated queue, with the same Class filter. Activity links reach the existing per-Activity submission queue.
+
+Post-deadline practice remains a documented dependency, not an implemented permission change. The accepted assessment contract currently closes practice as well as ordinary submission; Git writes/checkpoints also check the open lifecycle. Supporting learning after that cutoff needs coordinated authorization and evidence regression review. Existing accepted source/test snapshots, ownership, attempts and released-only visibility are preserved. See `docs/STUDENT_INSTRUCTOR_REFINEMENT_PROGRESS.md` for candidate verification and unresolved scope.
+
+
+### Product Owner Classroom-layout follow-up
+
+Student and Instructor homes lead with Classes using a shared cover/body/action card grid; the welcome/mascot block and class-stat cards are removed at the Product Owner's request. Sidebar blue/icon emphasis remains. Covers use stable class colors and CSS artwork; no fictional instructor photos or fabricated deadline summaries are introduced. Classwork/own-work/People links use existing class-scoped routes.
+
+Instructor Activities and Group Projects keep the same sub-navigation. Class Info starts with read-only details; a primary-only active-class Edit details dialog retains existing update fields/official-catalog restrictions. Teaching staff has an Invite Co-Instructor dialog; transfer and class lifecycle controls are progressively disclosed with existing confirmations and authorization unchanged.
+
+Student Classwork includes a topic filter over the current authorized topic page (topic paging remains explicit), View your work, and a visible No topic empty state when the class has no Topics. View your work uses the existing class-filtered, server-paginated Student work-hub endpoint with Activity kind and All/Assigned/Missing/Submitted filters. Status labels reflect its authoritative workState; Submitted means an accepted official attempt, not an Instructor grade. Existing work-hub availability rules still apply: All covers published work in active classes; Submitted includes eligible closed Activities. Archived-class historical records remain accessible through existing Activity/submission routes. No backend permission, schema, migration, submission, or released-result contract changes are implied.
+
+Review tab frames keep their width and viewport-based height between states; long lists scroll within the panel. Student project rows emphasize title, team capacity, due date and due state, with no instruction paragraphs in lists. Shared contextual project empty states use the existing icon kit.
+
+
+### Outlined controls and concise Activity presentation
+
+The Product Owner's follow-up aligns Student Classwork, Topic filter and View your work in one responsive toolbar. OutlinedSelect uses a floating border label and an in-app listbox with arrow/Home/End/type selection, pointer interaction, outside close and Escape. Inside a dialog, the first Escape closes the dropdown and a subsequent Escape closes the dialog.
+
+Student My Projects is renamed Group Projects. Project items share the Classwork row hierarchy with concise topic/status/due/team metadata. ProjectTask has no topic relation in the accepted schema/API, so the label is honestly No topic; assigning project topics remains a separately approved backend/schema decision. No migration or synthetic topic association was added.
+
+Activity Your work facts show due date and counting attempts used/max only. The duplicate deadline beside the instructions, language/entry-class/configuration facts and redundant remaining-attempt facts are removed from that presentation. Submission eligibility, replacements and released results retain their existing authority. Attempt history buttons in Activity Detail and the coding workspace open the same compact dialog using existing bounded history reads, class/activity checks and safe submission projections. Compact history shows attempt, timestamp, status and released-only result/credit; full historical routes remain compatible. No Java execution, Git writes or submission action is triggered by opening history.
+
+
+### Stable class panels and simplified class identity follow-up
+
+Instructor Home contains the class catalog only; its To Review shortcut and preview panel are removed, while sidebar review navigation remains. Both class overviews use a shared identity card with a compact lifecycle badge and Primary Instructor identity; redundant Instructor overview action buttons are removed. Canonical People, Class Info and join-code routes remain available.
+
+Activities and Group Projects share a full-width, viewport-based-height frame with internal scrolling. The scoped frame rule explicitly outranks legacy three-class width selectors, including the Student 1460px and Instructor 1360px limits at wide viewports. Instructor status controls reuse OutlinedSelect. Student Group Projects uses that same floating-label control with All projects, Active projects and Closed projects; values still map to the existing empty/PUBLISHED/CLOSED server lifecycle query, and deadlines retain their separate due-state authority.
+
+Class Info uses a primary details column beside a compact Teaching staff card, stacking on narrow screens. Date Created is a date-only fact, and primary-only Archive/Restore sits in the details footer. Archive opens the existing custom confirmation dialog with read-only-until-restored and preservation wording. Existing update, archival, ownership and staff authorization contracts remain unchanged.
+
+
+### People-tab presentation follow-up
+
+Student and Instructor People use the same full-width, viewport-height panel frame as Classwork. Student teaching/classmate sections use blue initial avatars and separated rows. Instructor People leads with a compact toolbar and roster; the former Class Roster hero, mascot, explanatory paragraph and three summary counters are removed. Invitation email entry and pending invitations use the existing flow inside a busy-guarded dialog; CSV invitations and the primary-only join-code route remain accessible from the toolbar. Roster lifecycle actions, pagination, archived-class restrictions and API authorization are unchanged. Narrow Instructor roster rows stack with field labels.
+
+
+People’s primary-only Manage join code button opens a themed dialog in place. The existing server-owned code read, copy, rotate/revoke confirmations, inactive-code hiding and archived guards are reused. Code is fetched only when the dialog opens; closing restores focus. The existing class-code route remains compatible.
+
+
+### To-do and To Review working sheets
+
+Both work hubs use a shared full-width, viewport-based-height panel with internal scrolling, matching outlined class filters, blue active tabs and consistent control sizing. Student search retains its existing debounce and URL state. Row identity, due groups and Instructor attempt/student count units retain their authority. Shared loading/empty/error cards preserve safe API error text and explicit retries; Project repository reviews remain independently paginated and class-filtered. Tab, query, automatic-refresh, permission and released-result semantics are unchanged.
+
+
+## Activity repository navigation and shared Git presentation (2026-10-22)
+
+The Student Activity Detail now uses intentional Open workspace / View repository actions instead of the former Activity Repository overlay. Both actions reuse the existing authenticated Activity association and provisioning endpoint; a unique-creation conflict is recovered by reading the existing association. Page/list reads remain observational, preparation polling is bounded, and Git creation never becomes an academic submission or attempt. Submission-page workspace actions use the same helper. Authorized deep links and Class context remain supported.
+
+Activity repositories share the Group Git tabs, branch selector, immutable snapshot file browser, file search, commit history/diff, branch list and README reader. Activity navigation remains Code / Commits / Branches, with contextual Open IDE and secondary repository metadata/activity. Group membership/review controls remain Group-only. Temporary refresh failures retain the current browser context; confirmed denial or invalid context clears it.
+
+The shared Code menu presents only the clone URL/Copy, Get Git access, and How to use Git. Get Git access opens one focused AppDialog; neither opening Code nor opening the modal issues a credential. Read/write generation, the one-time result, access management and revocation confirmation are internal modal views. Group authority is reread before offering write access and again at explicit issuance. Active records appear first; revoked/expired History is collapsed, with six rows per client page and identifiers/metadata behind Details. The existing API returns the caller’s full history without server pagination; that contract is unchanged. Beginner help and command examples sit outside the dropdown. Secrets clear on modal close, expiry, confirmed denial, permission/session change or unmount, and are never persisted or inserted into clone URLs. Compatible Personal and legacy Class Workspace Local Git views reuse these components without changing existing eligibility rules.
+
+Group browser editing is not implemented by reusing Activity Java checkpoints: its schema and worker are Activity-specific, and general source routes are read-only. The bounded audit and smallest secure expansion requiring Product Owner approval are documented in `docs/design/ACTIVITY_REPOSITORY_WORKFLOW_AND_GROUP_EDITOR_PROPOSAL.md`.
+
+
+### Final Git access capability selection (2026-10-22)
+
+The shared Git access modal has one deliberate Generate credentials action. Activity, Personal and legacy repositories read `gitPermissions` from the existing repository detail response; this projection reuses the exact Git transport access lookup and `evaluateGitPermission`. Group repositories retain their authoritative Group-context check. Opening surfaces only reads authority. Generation revalidates and requests the existing combined READ/WRITE scope when permitted, otherwise READ; malformed/missing/denied authority fails closed. The credential service and every Git operation independently enforce current permissions and protected branches. No new credential endpoint, policy or schema is introduced. See `docs/design/FINAL_GIT_ACCESS_FUNCTIONAL_BASELINE.md` for the current verification and local-demo handoff.

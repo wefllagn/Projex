@@ -1,3 +1,7 @@
+import './group-repository.css'
+import { RepositoryCodeMenu } from './RepositoryCodeMenu.jsx'
+import { GroupFileBrowser } from './GroupFileBrowser.jsx'
+import { GroupLatestCommit } from './GroupLatestCommit.jsx'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, describeApiError } from '../api/api-client.js'
 import RequestState from '../components/RequestState.jsx'
@@ -12,10 +16,8 @@ import {
   branchProjection,
   commitDetailProjection,
   commitSummaryProjection,
-  credentialProjection,
   diffProjection,
   fileProjection,
-  issuedCredentialProjection,
   repositoryGitSummaryProjection,
   treeProjection,
 } from './repository-content-projections.js'
@@ -87,6 +89,11 @@ function EmptyRepositoryGuidance({ repository, role, owner, writeLikely, smartHt
   } else if (!writeLikely) {
     title = 'Repository authoring is currently unavailable'
     message = 'This empty repository is read-only in its current lifecycle state. Projex does not edit or commit files in the browser.'
+  } else if (owner && repository.repositoryType === 'ACTIVITY_WORKSPACE') {
+    title = 'No commits yet'
+    message = smartHttpAvailable
+      ? 'Save your first commit from the coding workspace with Save to Git, or push main using Local Git.'
+      : 'Open the coding workspace and use Save to Git to save your first commit.'
   } else if (owner) {
     title = classProject ? 'Initialize main as the team lead' : 'Initialize your repository'
     message = smartHttpAvailable
@@ -118,6 +125,20 @@ function BranchSelector({ branches, value, onChange, group = false }) {
       </select>
     </label>
   )
+}
+
+const keepRootState = () => {}
+
+function ActivityRepositoryFiles({ api, repositoryId, branches, selectedBranch, onSelectBranch, onOpenCommit, onOpenHistory, refreshVersion }) {
+  const branch = branches.data?.find(item => item.branchName === selectedBranch)
+  if (branches.status === 'error') return <RequestState kind="unavailable" compact title="Branches unavailable" message={gitErrorMessage(branches.error)} />
+  if (!branch) return branches.status === 'ready'
+    ? <RequestState kind="unavailable" compact title="Selected branch unavailable" message="Refresh Git status to load the current branches." />
+    : <RequestState kind="loading" compact message="Loading repository branch." />
+  return <GroupFileBrowser key={`${repositoryId}:${branch.commitId}`} api={api} repositoryId={repositoryId} commitId={branch.commitId} onRootChange={keepRootState}
+    renderToolbar={finder => <div className="group-code-toolbar"><BranchSelector group branches={branches.data} value={selectedBranch} onChange={onSelectBranch} />{finder}</div>}
+    latestCommit={<GroupLatestCommit {...{ api, repositoryId, branch, refreshVersion, onOpenCommit, onOpenHistory }} />}
+  />
 }
 
 export function FilesView({ api, repositoryId, summary, branches, selectedBranch, onSelectBranch }) {
@@ -287,92 +308,18 @@ export function BranchesView({ summary, branches, loading, error, group = false 
   return <div className="repository-git-branch-list">{branches.map((branch) => <article key={branch.branchName}><div><strong>{branch.branchName}</strong>{branch.isDefault && <span>Default</span>}{group && branch.branchName === 'main' && <span>Protected</span>}</div><code>{shortCommit(branch.commitId)}</code><p>{branch.subject || 'Untitled commit'}</p><small>{branch.authorName} · self-asserted Git author · {formatProjectDate(branch.authoredAt)}</small></article>)}</div>
 }
 
-function credentialLifecycle(credential) {
-  if (credential.revokedAt) return 'Revoked'
-  if (!credential.expiresAt || Date.parse(credential.expiresAt) <= Date.now()) return 'Expired'
-  return 'Active'
-}
-
 function LocalGitView({ api, repository, role, project, activity, owner, empty }) {
-  const [credentials, setCredentials] = useState(state('loading', []))
-  const [issued, setIssued] = useState(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState(null)
-  const [copied, setCopied] = useState('')
-  const active = useRef(true)
-  let transportUrl = null
-  let transportError = null
-  try { transportUrl = api.getTransportUrl(repository.id) } catch (urlError) { transportError = urlError }
-
-  const load = useCallback(async ({ signal } = {}) => {
-    try {
-      const response = await api.listCredentials(repository.id, { signal })
-      if (signal?.aborted || !active.current) return
-      const projected = Array.isArray(response.data) ? response.data.map(credentialProjection) : []
-      if (projected.some((credential) => credential.repositoryId !== repository.id)) throw gitContextError()
-      setCredentials(state('ready', projected))
-    } catch (loadError) { if (loadError?.name !== 'AbortError' && active.current) setCredentials(state('error', [], loadError)) }
-  }, [api, repository.id])
-
-  useEffect(() => {
-    active.current = true
-    const controller = new AbortController()
-    Promise.resolve().then(() => load({ signal: controller.signal }))
-    return () => { controller.abort(); active.current = false }
-  }, [load])
-
-  useEffect(() => {
-    if (!issued?.expiresAt) return undefined
-    const remaining = Math.max(0, Date.parse(issued.expiresAt) - Date.now())
-    const timer = setTimeout(() => setIssued(null), Math.min(remaining, 2_147_000_000))
-    return () => clearTimeout(timer)
-  }, [issued])
-
-  const issue = async (operations) => {
-    setBusy(true); setError(null); setIssued(null); setCopied('')
-    try {
-      const response = await api.issueCredential(repository.id, operations)
-      const projection = issuedCredentialProjection(response.data, repository.id)
-      if (!active.current) return
-      setIssued(projection)
-      setCredentials((current) => state('ready', [credentialProjection(projection), ...(current.data ?? []).filter((item) => item.credentialId !== projection.credentialId)]))
-    } catch (issueError) { if (active.current) setError(issueError) } finally { if (active.current) setBusy(false) }
-  }
-
-  const revoke = async (credentialId) => {
-    setBusy(true); setError(null)
-    try {
-      const response = await api.revokeCredential(credentialId)
-      const projection = credentialProjection(response.data)
-      if (!active.current) return
-      if (projection.repositoryId !== repository.id) throw gitContextError()
-      setCredentials((current) => state('ready', current.data.map((item) => item.credentialId === projection.credentialId ? projection : item)))
-      if (issued?.credentialId === credentialId) setIssued(null)
-    } catch (revokeError) { if (active.current) setError(revokeError) } finally { if (active.current) setBusy(false) }
-  }
-
-  const copy = async (value, label) => {
-    if (!navigator.clipboard?.writeText) { setCopied('Clipboard access is unavailable; select and copy the value manually.'); return }
-    try { await navigator.clipboard.writeText(value); setCopied(`${label} copied.`) } catch { setCopied('Clipboard access was denied; select and copy the value manually.') }
-  }
-
+  const capabilities = useCapabilities()
   const writeLikely = studentWriteLikely(repository, role, project, activity)
   const waitingForOwner = empty && role === 'student' && !owner
-  const initializerLabel = repository.repositoryType === 'CLASS_PROJECT' ? 'team lead' : 'repository owner'
   const canOfferWrite = !waitingForOwner && writeLikely
-  return (
-    <div className="repository-local-git">
-      {repository.repositoryType === 'ACTIVITY_WORKSPACE' && <p className="activity-git-submission-warning">Git push saves your work. It does not submit the Activity.</p>}
-      {repository.repositoryType === 'ACTIVITY_WORKSPACE' && !writeLikely && <p className="activity-git-read-only">Activity closed — repository is read-only.</p>}
-      <section className="repository-git-clone"><h3>Local Git address</h3><p>Use a local Git client. Projex never runs these commands in the browser.</p>{transportUrl && <div className="repository-copy-row"><code>{transportUrl}</code><button type="button" className="student-outline-action" onClick={() => copy(transportUrl, 'Clone URL')}>Copy URL</button></div>}<pre>git clone &quot;{transportUrl || '<configured Projex Git URL>'}&quot;</pre><p>When Git prompts, enter the separately issued username and one-time secret. Never place credentials in the URL or command.</p></section>
-      <section className="repository-git-issue"><h3>Issue a short-lived credential</h3><p>Authorization is checked now and again for every Git operation. A credential never guarantees future push access.</p><div className="repository-git-actions"><button type="button" className="student-outline-action" disabled={busy} onClick={() => issue(['READ'])}>Issue Read Credential</button>{canOfferWrite && <button type="button" className="student-primary-action" disabled={busy} onClick={() => issue(['READ', 'WRITE'])}>Issue Read + Write Credential</button>}</div>{role === 'instructor' && <p className="activity-lifecycle-note">Instructors receive read-only repository access. Write credentials are not available.</p>}{waitingForOwner && writeLikely && <p className="activity-lifecycle-note">The {initializerLabel} must establish main first. After that push appears, refresh the Git status before creating a feature branch.</p>}{empty && owner && !writeLikely && <p className="activity-lifecycle-note">Current repository or project lifecycle rules do not allow the initial push.</p>}{(error || transportError) && <p className="activity-action-error">{gitErrorMessage(error || transportError)}</p>}</section>
-      {issued && <section className="repository-issued-credential" role="dialog" aria-modal="true" aria-labelledby="issued-credential-title"><div><h3 id="issued-credential-title">Copy this credential now</h3><button type="button" className="student-modal-close" aria-label="Close credential result" onClick={() => setIssued(null)} /></div><p>The secret is shown once and remains only in this page’s memory until this panel closes or expires.</p><label>Username<div className="repository-copy-row"><code>{issued.username}</code><button type="button" className="student-outline-action" onClick={() => copy(issued.username, 'Username')}>Copy Username</button></div></label><label>One-time secret<div className="repository-copy-row"><code>{issued.secret}</code><button type="button" className="student-outline-action" onClick={() => copy(issued.secret, 'Secret')}>Copy Secret</button></div></label><small>Expires {formatProjectDate(issued.expiresAt)}. Clipboard contents are controlled by your operating system and other local applications after copying.</small></section>}
-      {copied && <p className="activity-action-success" aria-live="polite">{copied}</p>}
-      <section className="repository-git-credentials"><h3>My credential metadata</h3>{credentials.status === 'loading' && <RequestState kind="loading" compact message="Loading credential metadata." />}{credentials.status === 'error' && <RequestState kind="unavailable" compact message={gitErrorMessage(credentials.error)} />}{credentials.status === 'ready' && credentials.data.length === 0 && <RequestState kind="empty" compact message="No credentials have been issued for this repository." />}{credentials.status === 'ready' && credentials.data.map((credential) => { const lifecycle = credentialLifecycle(credential); return <article key={credential.credentialId}><div><strong>{credential.operations.join(' + ')}</strong><span>{lifecycle}</span></div><code>{credential.credentialId}</code><small>Created {formatProjectDate(credential.createdAt)} · Expires {formatProjectDate(credential.expiresAt)}{credential.lastUsedAt ? ` · Last used ${formatProjectDate(credential.lastUsedAt)}` : ''}</small>{lifecycle === 'Active' && <button type="button" className="student-outline-action" disabled={busy} onClick={() => revoke(credential.credentialId)}>Revoke</button>}</article> })}</section>
-      {issued?.operations.includes('WRITE') && empty && owner && writeLikely && <section className="repository-git-guidance"><h3>Initialize main from your computer</h3><p>After cloning the empty repository, create the first project files locally and run:</p><pre>{'git checkout -b main\n# create your project files locally\ngit add .\ngit commit -m "Initial commit"\ngit push -u origin main'}</pre><p>Return to this page and select Refresh Git status. Projex never creates this commit for you.</p></section>}
-      {issued?.operations.includes('WRITE') && !empty && <section className="repository-git-guidance"><h3>Local write workflow</h3><pre>{'git fetch origin\ngit checkout -b <branch-name>\ngit add .\ngit commit -m "Describe your change"\ngit push -u origin <branch-name>'}</pre><p>Projex may reject a later push if membership or academic lifecycle authorization changes.</p></section>}
-    </div>
-  )
+  return <section className="repository-local-git">
+    <RepositoryCodeMenu repository={repository} gitApi={api} available={repository.storageStatus === 'READY' && capabilities.git.smartHttp} canWrite={canOfferWrite} />
+    {repository.repositoryType === 'ACTIVITY_WORKSPACE' && <p className="activity-git-submission-warning">Git push saves your work. It does not submit the Activity.</p>}
+    {repository.repositoryType === 'ACTIVITY_WORKSPACE' && !writeLikely && <p className="activity-git-read-only">Activity closed — repository is read-only.</p>}
+    {waitingForOwner && writeLikely && <p className="activity-lifecycle-note">The team lead must establish main first. After that push appears, refresh the Git status before creating a feature branch.</p>}
+    {empty && owner && !writeLikely && <p className="activity-lifecycle-note">Current repository or project lifecycle rules do not allow the initial push.</p>}
+  </section>
 }
 
 export function RepositoryGitPanel({ repository, role = 'student', project = null, activity = null, owner = false, initialTab = 'files', api = repositoryContentApi }) {
@@ -383,6 +330,10 @@ export function RepositoryGitPanel({ repository, role = 'student', project = nul
   const [branches, setBranches] = useState(state())
   const [selectedBranch, setSelectedBranch] = useState(repository.defaultBranch)
   const [inspectionVersion, setInspectionVersion] = useState(0)
+  const [selectedCommitId, setSelectedCommitId] = useState(null)
+  const activityRepository = repository.repositoryType === 'ACTIVITY_WORKSPACE'
+  const openActivityCommit = id => { setSelectedCommitId(id); setActiveTab('history') }
+  const changeBranch = name => { setSelectedCommitId(null); setSelectedBranch(name) }
 
   const displayedTab = activeTab === 'local' && !capabilities.git.smartHttp ? 'files' : activeTab
 
@@ -417,6 +368,7 @@ export function RepositoryGitPanel({ repository, role = 'student', project = nul
   }, [api, repository.id, summary])
 
   const refreshInspection = () => {
+    setSelectedCommitId(null)
     setSummary((current) => state('loading', current.data))
     setBranches(state())
     setSelectedBranch(repository.defaultBranch)
@@ -428,14 +380,15 @@ export function RepositoryGitPanel({ repository, role = 'student', project = nul
   if (!capabilities.git.inspection) return <RequestState kind="unavailable" compact title="Git inspection unavailable" message="Repository metadata is preserved, but this environment cannot inspect Git source or history." />
   return (
     <section className="student-repo-card repository-git-panel">
-      <div className="repository-git-heading"><div><h2>Repository Git</h2><p>Backend-authorized source inspection and short-lived local Git access.</p></div><div className="repository-git-heading-actions">{summary.data && <dl><div><dt>Branches</dt><dd>{summary.data.branchCount}</dd></div><div><dt>Commits</dt><dd>{summary.data.commitCount}</dd></div></dl>}<button type="button" className="student-outline-action" disabled={summary.status === 'loading'} onClick={refreshInspection}>{summary.status === 'loading' ? 'Refreshing…' : 'Refresh Git status'}</button></div></div>
+      <div className="repository-git-heading"><div><h2>Repository Git</h2></div><div className="repository-git-heading-actions">{summary.data && <dl><div><dt>Branches</dt><dd>{summary.data.branchCount}</dd></div><div><dt>Commits</dt><dd>{summary.data.commitCount}</dd></div></dl>}<button type="button" className="student-outline-action" disabled={summary.status === 'loading'} onClick={refreshInspection}>{summary.status === 'loading' ? 'Refreshing…' : 'Refresh Git status'}</button></div></div>
       <div className="repository-git-tabs" role="tablist" aria-label="Repository Git views">{TABS.filter(([id]) => id !== 'local' || capabilities.git.smartHttp).map(([id, label]) => <button type="button" role="tab" aria-selected={displayedTab === id} key={id} onClick={() => setActiveTab(id)}>{label}</button>)}</div>
       {displayedTab !== 'local' && summary.status === 'loading' && <RequestState kind="loading" compact message="Loading repository Git summary." />}
       {displayedTab !== 'local' && summary.status === 'error' && <RequestState kind="unavailable" compact title="Git inspection unavailable" message={gitErrorMessage(summary.error)} />}
       {summary.status === 'ready' && summary.data.empty && displayedTab !== 'local' && <EmptyRepositoryGuidance repository={repository} role={role} owner={owner} writeLikely={writeLikely} smartHttpAvailable={capabilities.git.smartHttp} onOpenLocalGit={() => setActiveTab('local')} />}
-      {summary.status === 'ready' && !summary.data.empty && displayedTab === 'files' && <FilesView key={`${repository.id}:${selectedBranch}:${inspectionVersion}`} api={api} repositoryId={repository.id} summary={summary.data} branches={branches.data ?? []} selectedBranch={selectedBranch} onSelectBranch={setSelectedBranch} />}
-      {summary.status === 'ready' && !summary.data.empty && displayedTab === 'history' && <HistoryView key={`${repository.id}:${selectedBranch}:${inspectionVersion}`} api={api} repositoryId={repository.id} summary={summary.data} branches={branches.data ?? []} selectedBranch={selectedBranch} onSelectBranch={setSelectedBranch} />}
-      {summary.status === 'ready' && !summary.data.empty && displayedTab === 'branches' && <BranchesView summary={summary.data} branches={branches.data ?? []} loading={branches.status === 'loading'} error={branches.error} />}
+      {summary.status === 'ready' && !summary.data.empty && displayedTab === 'files' && activityRepository && <ActivityRepositoryFiles key={`${repository.id}:${selectedBranch}:${inspectionVersion}`} api={api} repositoryId={repository.id} branches={branches} selectedBranch={selectedBranch} onSelectBranch={changeBranch} onOpenCommit={openActivityCommit} onOpenHistory={() => { setSelectedCommitId(null); setActiveTab('history') }} refreshVersion={inspectionVersion} />}
+      {summary.status === 'ready' && !summary.data.empty && displayedTab === 'files' && !activityRepository && <FilesView key={`${repository.id}:${selectedBranch}:${inspectionVersion}`} api={api} repositoryId={repository.id} summary={summary.data} branches={branches.data ?? []} selectedBranch={selectedBranch} onSelectBranch={changeBranch} />}
+      {summary.status === 'ready' && !summary.data.empty && displayedTab === 'history' && <HistoryView group={activityRepository} selectedCommitId={selectedCommitId} onSelectCommit={activityRepository ? setSelectedCommitId : undefined} key={`${repository.id}:${selectedBranch}:${inspectionVersion}`} api={api} repositoryId={repository.id} summary={summary.data} branches={branches.data ?? []} selectedBranch={selectedBranch} onSelectBranch={changeBranch} />}
+      {summary.status === 'ready' && !summary.data.empty && displayedTab === 'branches' && <BranchesView group={activityRepository} summary={summary.data} branches={branches.data ?? []} loading={branches.status === 'loading'} error={branches.error} />}
       {displayedTab === 'local' && <LocalGitView api={api} repository={repository} role={role} project={project} activity={activity} owner={owner} empty={summary.data?.empty === true} />}
     </section>
   )

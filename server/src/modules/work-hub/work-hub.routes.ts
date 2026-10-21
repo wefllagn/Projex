@@ -1,3 +1,4 @@
+import { listInstructorReviewActivities } from './instructor-review-activities.js'
 import { Prisma, type PrismaClient } from '@prisma/client'
 import { Router, type RequestHandler } from 'express'
 import { z } from 'zod'
@@ -102,6 +103,14 @@ export function createWorkHubRouter({ prisma, requireAuthentication }: { prisma:
       }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead })
       const rows = result.rows.map((row) => ({ id: row.id, activityId: row.activityId, activityTitle: row.activityTitleSnapshot, attemptNumber: row.attemptNumber, submittedAt: row.submittedAt, status: row.submissionStatus.toLowerCase(), isLate: row.isLate, class: classProjection(row.activity.class), gradingMode: row.gradingModeSnapshot, ...(row.gradingModeSnapshot === 'COMPLETION' ? { completionState: 'COMPLETE' } : {}), ...(row.submissionStatus === 'RELEASED' && row.gradingModeSnapshot !== 'COMPLETION' ? { finalScore: Number(row.releasedFinalScore), totalPoints: Number(row.totalPointsSnapshot) } : {}) }))
       response.json(listResponse(rows, pagination(query.page, query.pageSize, result.total), request.requestId))
+    } catch (error) { next(error) }
+  })
+
+  router.get('/instructor/review-activities', requireRole('INSTRUCTOR'), async (request, response, next) => {
+    try {
+      const query = parseRequest(z.object({ ...common, state: z.enum(['to-review', 'reviewed']).default('to-review') }).strict(), request.query)
+      const result = await listInstructorReviewActivities(prisma, request.auth!.user.id, query)
+      response.json(listResponse(result.rows, result.pagination, request.requestId))
     } catch (error) { next(error) }
   })
 

@@ -14,13 +14,18 @@ const branch = { branchName: 'main', isDefault: true, commitId: 'a'.repeat(40), 
 function dependencies(value = context()) {
   return {
     api: { getGroupContext: vi.fn().mockResolvedValue({ data: value }), listMembers: vi.fn().mockResolvedValue({ data: [{ memberId: 'm', userId: 'a', fullName: 'Student A', teamRole: 'LEAD', memberRole: 'OWNER' }] }), listFeedback: vi.fn().mockResolvedValue({ data: [] }), listRecordedActivity: vi.fn().mockResolvedValue({ data: { repositoryId: repository.id, events: [], contributions: [], pagination: { page: 1, totalPages: 0 } } }) },
-    gitApi: { getTransportUrl: vi.fn().mockReturnValue('http://localhost:3300/api/v1/git/repositories/group-repo'), getSummary: vi.fn().mockResolvedValue({ data: { repositoryId: repository.id, repositoryStatus: 'ACTIVE', storageStatus: 'READY', empty: false, defaultBranch: 'main', branchCount: 1, commitCount: 1, latestCommit: branch } }), listBranches: vi.fn().mockResolvedValue({ data: [branch] }), getTree: vi.fn().mockResolvedValue({ data: { commitId: branch.commitId, path: '', entries: [{ name: 'README.md', path: 'README.md', entryType: 'blob', objectId: 'b'.repeat(40), sizeBytes: 40 }] } }), getFile: vi.fn().mockResolvedValue({ data: { commitId: branch.commitId, path: 'README.md', encoding: 'utf-8', content: '<img src=x onerror="alert(1)">', sizeBytes: 40 } }), issueCredential: vi.fn().mockResolvedValue({ data: { credentialId: 'credential', repositoryId: repository.id, username: 'synthetic-user', secret: 'synthetic-test-secret', operations: ['READ', 'WRITE'], createdAt: '2026-10-18T00:00:00Z', expiresAt: '2099-10-18T00:00:00Z' } }) },
+    gitApi: { getTransportUrl: vi.fn().mockReturnValue('http://localhost:3300/api/v1/git/repositories/group-repo'), getSummary: vi.fn().mockResolvedValue({ data: { repositoryId: repository.id, repositoryStatus: 'ACTIVE', storageStatus: 'READY', empty: false, defaultBranch: 'main', branchCount: 1, commitCount: 1, latestCommit: branch } }), listBranches: vi.fn().mockResolvedValue({ data: [branch] }), getTree: vi.fn().mockResolvedValue({ data: { commitId: branch.commitId, path: '', entries: [{ name: 'README.md', path: 'README.md', entryType: 'blob', objectId: 'b'.repeat(40), sizeBytes: 40 }] } }), getFile: vi.fn().mockResolvedValue({ data: { commitId: branch.commitId, path: 'README.md', encoding: 'utf-8', content: '<img src=x onerror="alert(1)">', sizeBytes: 40 } }), issueCredential: vi.fn((_id, operations) => Promise.resolve({ data: { credentialId: 'credential', repositoryId: repository.id, username: 'synthetic-user', secret: 'synthetic-test-secret', operations, createdAt: '2026-10-18T00:00:00Z', expiresAt: '2099-10-18T00:00:00Z' } })) },
   }
 }
 afterEach(() => vi.useRealTimers())
 function NavigationProbe() {
   const location = useLocation(), navigate = useNavigate()
   return <><output aria-label="Current URL">{location.search}</output><button onClick={() => navigate(-1)}>Browser back</button></>
+}
+async function openAccess() {
+  fireEvent.click(screen.getByRole('button', { name: 'Code' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Get Git access' }))
+  await act(async () => {})
 }
 describe('Group Repository MVP', () => {
   it('preserves search text if an already-started background source refresh fails and retries after clearing', async () => {
@@ -81,6 +86,10 @@ describe('Group Repository MVP', () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: copy } })
     render(<GroupCodeMenu repository={repository} context={context()} {...deps} available />)
     fireEvent.click(screen.getByRole('button', { name: 'Code' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy URL' }))
+    await waitFor(() => expect(copy).toHaveBeenLastCalledWith(deps.gitApi.getTransportUrl.mock.results[0].value))
+    fireEvent.click(screen.getByRole('button', { name: 'Get Git access' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate credentials' }))
     await screen.findByText('synthetic-test-secret')
     fireEvent.click(screen.getByRole('button', { name: 'Copy token' }))
     expect(await screen.findByText('Copied!')).toBeInTheDocument()
@@ -88,11 +97,9 @@ describe('Group Repository MVP', () => {
     expect(document.querySelector('.group-copy-feedback')).not.toHaveTextContent('synthetic-test-secret')
     fireEvent.click(screen.getByRole('button', { name: 'Copy username' }))
     await waitFor(() => expect(copy).toHaveBeenLastCalledWith('synthetic-user'))
-    fireEvent.click(screen.getByRole('button', { name: 'Copy URL' }))
-    await waitFor(() => expect(copy).toHaveBeenLastCalledWith(deps.gitApi.getTransportUrl.mock.results[0].value))
     fireEvent(window, new Event('resize'))
     expect(deps.gitApi.issueCredential).toHaveBeenCalledTimes(1)
-    fireEvent.click(screen.getByRole('button', { name: 'Close Code menu' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close Git access' }))
     expect(screen.queryByText('synthetic-test-secret')).not.toBeInTheDocument()
     expect(document.querySelector('.group-copy-feedback')).toBeNull()
   })
@@ -280,19 +287,21 @@ describe('Group Repository MVP', () => {
     expect(deps.api.listRecordedActivity).not.toHaveBeenCalled()
   })
 
-  it('retains an open token during unchanged authority refresh, but clears it when authority changes', async () => {
+  it('preserves an open token and pauses passive refresh until Code closes', async () => {
     const deps = dependencies()
     render(<MemoryRouter><GroupRepositoryView repository={repository} role="student" {...deps} onReload={vi.fn()} /></MemoryRouter>)
     await screen.findByText('Add enrollment form')
-    fireEvent.click(screen.getByRole('button', { name: 'Code' }))
+    await openAccess()
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate credentials' }))
     expect(await screen.findByText('synthetic-test-secret')).toBeInTheDocument()
     const calls = deps.api.getGroupContext.mock.calls.length
     const now = Date.now()
     const clock = vi.spyOn(Date, 'now').mockReturnValue(now + 16_000)
     fireEvent.focus(window)
-    await waitFor(() => expect(deps.api.getGroupContext.mock.calls.length).toBeGreaterThan(calls))
+    expect(deps.api.getGroupContext).toHaveBeenCalledTimes(calls)
     expect(screen.getByText('synthetic-test-secret')).toBeInTheDocument()
     deps.api.getGroupContext.mockResolvedValue({ data: context({ permissions: { ...context().permissions, canWrite: false } }) })
+    fireEvent.click(screen.getByRole('button', { name: 'Close Git access' }))
     clock.mockReturnValue(now + 32_000)
     fireEvent.focus(window)
     await waitFor(() => expect(screen.queryByText('synthetic-test-secret')).not.toBeInTheDocument())
@@ -302,13 +311,15 @@ describe('Group Repository MVP', () => {
   it.each([['DEVELOPER', true, ['READ', 'WRITE']], ['MAINTAINER', true, ['READ', 'WRITE']], ['INSTRUCTOR', false, ['READ']], ['DEVELOPER', false, ['READ']]])('derives scope from fresh server authority for %s writable=%s', async (currentRole, canWrite, operations) => {
     const live = context({ currentRole, permissions: { ...context().permissions, canWrite } })
     const deps = dependencies(live)
-    render(<GroupCodeMenu repository={repository} context={context()} {...deps} available />)
-    fireEvent.click(screen.getByRole('button', { name: 'Code' }))
+    render(<GroupCodeMenu repository={repository} context={live} {...deps} available />)
+    await openAccess()
+    expect(deps.gitApi.issueCredential).not.toHaveBeenCalled()
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate credentials' }))
     expect(await screen.findByText('synthetic-test-secret')).toBeInTheDocument()
     expect(deps.gitApi.issueCredential).toHaveBeenCalledWith(repository.id, operations)
     const cloneUrl = deps.gitApi.getTransportUrl.mock.results[0].value
     expect(cloneUrl).not.toContain('synthetic-test-secret')
-    fireEvent.keyDown(document, { key: 'Escape' })
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Git access', exact: true }), { key: 'Escape' })
     expect(screen.queryByText('synthetic-test-secret')).not.toBeInTheDocument()
     expect(localStorage.length).toBe(0)
     expect(sessionStorage.length).toBe(0)
@@ -319,9 +330,10 @@ describe('Group Repository MVP', () => {
     let finish
     deps.gitApi.issueCredential.mockImplementation(() => new Promise((resolve) => { finish = resolve }))
     const view = render(<GroupCodeMenu repository={repository} context={context()} {...deps} available />)
-    fireEvent.click(screen.getByRole('button', { name: 'Code' }))
+    await openAccess()
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate credentials' }))
     await waitFor(() => expect(deps.gitApi.issueCredential).toHaveBeenCalledTimes(1))
-    fireEvent.click(screen.getByRole('button', { name: 'Close Code menu' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close Git access' }))
     await act(async () => finish({ data: { credentialId: 'late', repositoryId: repository.id, username: 'late', secret: 'late-test-secret', operations: ['READ'], expiresAt: '2099-10-18T00:00:00Z' } }))
     expect(screen.queryByText('late-test-secret')).not.toBeInTheDocument()
     view.unmount()
@@ -330,9 +342,10 @@ describe('Group Repository MVP', () => {
   it('clears an expired token and never issues when fresh authority denies read', async () => {
     vi.useFakeTimers()
     const deps = dependencies()
-    deps.gitApi.issueCredential.mockResolvedValue({ data: { credentialId: 'short', repositoryId: repository.id, username: 'short', secret: 'short-test-secret', operations: ['READ'], expiresAt: new Date(Date.now() + 1000).toISOString() } })
+    deps.gitApi.issueCredential.mockResolvedValue({ data: { credentialId: 'short', repositoryId: repository.id, username: 'short', secret: 'short-test-secret', operations: ['READ', 'WRITE'], expiresAt: new Date(Date.now() + 1000).toISOString() } })
     const view = render(<GroupCodeMenu repository={repository} context={context()} {...deps} available />)
-    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Code' })))
+    await openAccess()
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Generate credentials' })))
     expect(screen.getByText('short-test-secret')).toBeInTheDocument()
     await act(async () => vi.advanceTimersByTime(1001))
     expect(screen.queryByText('short-test-secret')).not.toBeInTheDocument()
@@ -340,8 +353,20 @@ describe('Group Repository MVP', () => {
     vi.useRealTimers()
     const denied = dependencies(context({ permissions: { ...context().permissions, canRead: false, canWrite: false } }))
     render(<GroupCodeMenu repository={repository} context={context()} {...denied} available />)
-    fireEvent.click(screen.getByRole('button', { name: 'Code' }))
+    await openAccess()
+    expect(screen.queryByRole('button', { name: 'Generate read access' })).not.toBeInTheDocument()
     await waitFor(() => expect(denied.api.getGroupContext).toHaveBeenCalled())
     expect(denied.gitApi.issueCredential).not.toHaveBeenCalled()
   })
+  it('selects read access when fresh Group authority becomes read-only', async () => {
+    const deps = dependencies()
+    render(<GroupCodeMenu repository={repository} context={context()} {...deps} available />)
+    await openAccess()
+    const write = await screen.findByRole('button', { name: 'Generate credentials' })
+    deps.api.getGroupContext.mockResolvedValue({ data: context({ permissions: { ...context().permissions, canWrite: false } }) })
+    fireEvent.click(write)
+    await screen.findByText('synthetic-test-secret')
+    expect(deps.gitApi.issueCredential).toHaveBeenCalledExactlyOnceWith(repository.id, ['READ'])
+  })
+
 })

@@ -338,7 +338,7 @@ function InstructorDashboardLayout() {
           </StudentSidebarLink>
 
           <div className="student-sidebar__group">
-            <p>MY CLASSES</p>
+            <p>My classes</p>
             <div className="student-class-list">
               {classes.map((item) => (
                 <SidebarClassLink
@@ -416,7 +416,7 @@ function StudentDashboardLayout() {
           </StudentSidebarLink>
 
           <div className="student-sidebar__group">
-            <p>MY CLASSES</p>
+            <p>My classes</p>
             <div className="student-class-list">
               {classes.map((item) => (
                 <SidebarClassLink

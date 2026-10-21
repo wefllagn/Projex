@@ -18,6 +18,7 @@ import RoleDashboard from './pages/RoleDashboard.jsx'
 import StudentRoutePage from './pages/StudentPages.jsx'
 import { routeCatalog } from './data/projexData.js'
 import { CapabilityProvider } from './capabilities/CapabilityProvider.jsx'
+import './design/academic-refinement.css'
 
 function getRouteElement(role, route) {
   if (role.id === 'student') {

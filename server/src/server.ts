@@ -191,14 +191,15 @@ async function bootstrap(): Promise<void> {
     classRepository,
     logger,
   })
+  const gitTransportRepository = createPrismaGitTransportRepository(prisma)
   const repositoryService = createRepositoryService({
+    accessRepository: gitTransportRepository,
     repository: createPrismaRepositoryRepository(prisma, {
       provisioningMaxAttempts: env.gitProvisioningMaxAttempts,
     }),
     logger,
     provisioningEnabled: env.gitExecutionMode === 'local_process',
   })
-  const gitTransportRepository = createPrismaGitTransportRepository(prisma)
   const gitCredentialService = createGitCredentialService({
     issuanceEnabled: env.gitSmartHttpEnabled,
     repository: gitTransportRepository,

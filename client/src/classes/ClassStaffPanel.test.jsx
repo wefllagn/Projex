@@ -37,7 +37,8 @@ describe('teaching staff access changes', () => {
       <Route path="/instructor/classes" element={<p>Class list</p>} />
     </Routes></MemoryRouter>)
 
-    await user.selectOptions(await screen.findByLabelText('New Primary Instructor'), 'co-1')
+    await user.click(await screen.findByText('Change teaching ownership'))
+    await user.selectOptions(screen.getByLabelText('New Primary Instructor'), 'co-1')
     await user.selectOptions(screen.getByLabelText('Your role after transfer'), 'LEAVE')
     await user.click(screen.getByRole('button', { name: 'Transfer Primary' }))
     expect(mocks.api.transferPrimary).not.toHaveBeenCalled()
@@ -48,4 +49,17 @@ describe('teaching staff access changes', () => {
     await waitFor(() => expect(mocks.refreshClasses).toHaveBeenCalledOnce())
     expect(mocks.api.listClassStaff).toHaveBeenCalledOnce()
   })
+})
+
+
+it('reveals the invite form on demand and validates inside the dialog without sending', async () => {
+  mocks.api.listClassStaff.mockResolvedValue({ data: { primary: { fullName: 'Primary' }, coInstructors: [] } })
+  const user = userEvent.setup()
+  render(<MemoryRouter><ClassStaffPanel classRecord={classRecord} /></MemoryRouter>)
+  expect(screen.queryByLabelText('Co-Instructor email')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Invite Co-Instructor' }))
+  await user.click(screen.getByRole('button', { name: 'Send invitation' }))
+  expect(screen.getByRole('dialog')).toHaveTextContent('Enter a valid university email.')
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })

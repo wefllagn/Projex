@@ -14,6 +14,8 @@ const BUSINESS_MESSAGES = {
   CLASS_HAS_UNFINISHED_SUBMISSION_WORK: 'The class cannot be archived while submission work remains unfinished.',
   CLASS_MEMBERSHIP_PENDING: 'Your class membership is awaiting approval.',
   CLASS_MEMBERSHIP_REMOVED: 'Your class membership has been removed.',
+  REPOSITORY_CREATION_UNAVAILABLE: 'A repository can be prepared only while this Activity is open and Git provisioning is available.',
+  REPOSITORY_UNAVAILABLE: 'Repository storage is unavailable. Try again later.',
   REPOSITORY_ARCHIVE_BLOCKED: 'The repository cannot be archived until review and invitation blockers are resolved.',
 }
 

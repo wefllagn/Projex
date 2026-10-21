@@ -1,3 +1,4 @@
+import InstructorReviewView from './InstructorReviewView.jsx'
 import StudentTodoView from './StudentTodoView.jsx'
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
@@ -97,5 +98,5 @@ export function ReviewPreview() {
 }
 
 export function WorkHubList({ view, classes = [], moreClasses = false, onMoreClasses }) {
-  return view === 'todo' ? <StudentTodoView classes={classes} moreClasses={moreClasses} onMoreClasses={onMoreClasses} /> : <AcademicWorkList view={view} />
+  return view === 'todo' ? <StudentTodoView classes={classes} moreClasses={moreClasses} onMoreClasses={onMoreClasses} /> : view === 'review' ? <InstructorReviewView classes={classes} moreClasses={moreClasses} onMoreClasses={onMoreClasses} /> : <AcademicWorkList view={view} />
 }

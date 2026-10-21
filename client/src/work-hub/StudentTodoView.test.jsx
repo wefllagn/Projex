@@ -23,7 +23,7 @@ describe('Student To-do', () => {
     await waitFor(() => expect(get).toHaveBeenLastCalledWith(`/work-hub/student/todo?page=1&pageSize=20&state=missing&classId=${classId}`, expect.any(Object)))
     fireEvent.click(screen.getByRole('link', { name: 'Done', exact: true }))
     await waitFor(() => expect(get).toHaveBeenLastCalledWith(`/work-hub/student/todo?page=1&pageSize=20&state=done&classId=${classId}`, expect.any(Object)))
-    expect(screen.getByLabelText('Filter by class')).toHaveValue(classId)
+    expect(screen.getByRole('combobox', { name: 'Filter by class' })).toHaveTextContent('Programming · IT 1A')
   })
   it('uses full row navigation, class labels and concise Ungraded completion', async () => {
     vi.spyOn(apiClient, 'get').mockResolvedValue(result([{ ...row, gradingMode: 'COMPLETION', completionState: 'COMPLETE' }]))
@@ -56,8 +56,9 @@ describe('Student To-do', () => {
     const get = vi.spyOn(apiClient, 'get').mockResolvedValue(result([]))
     render(<MemoryRouter initialEntries={[`/student/todo?classId=${classId}`]}><StudentTodoView classes={[]} moreClasses onMoreClasses={vi.fn()} /></MemoryRouter>)
     await screen.findByText('No assigned work.')
-    expect(screen.getByLabelText('Filter by class')).toHaveValue(classId)
-    expect(screen.getByRole('option', { name: 'Selected class' }).selected).toBe(true)
+    expect(screen.getByRole('combobox', { name: 'Filter by class' })).toHaveTextContent('Selected class')
+    fireEvent.click(screen.getByRole('combobox', { name: 'Filter by class' }))
+    expect(screen.getByRole('option', { name: 'Selected class' })).toHaveAttribute('aria-selected', 'true')
     expect(get).toHaveBeenCalledWith(`/work-hub/student/todo?page=1&pageSize=20&state=assigned&classId=${classId}`, expect.any(Object))
   })
   it('ignores an obsolete failure after a newer tab has loaded', async () => {

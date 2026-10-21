@@ -1,3 +1,7 @@
+import { ActivityWorkspaceAction } from '../repositories/ActivityWorkspaceAction.jsx'
+import AppDialog from '../components/AppDialog.jsx'
+import AcademicEmptyState from '../components/AcademicEmptyState.jsx'
+import OutlinedSelect from '../components/OutlinedSelect.jsx'
 import useConfirmation from '../components/useConfirmation.jsx'
 import ProjexIcon from '../components/icons/ProjexIcon.jsx'
 import { submissionStatusLabel } from './submission-display.js'
@@ -408,6 +412,7 @@ export function StudentProgrammingWorkspace({
   const [programInput, setProgramInput] = useState('')
   const [codeInputOpen, setCodeInputOpen] = useState(false)
   const [attemptState, setAttemptState] = useState({ key: null, status: 'idle', record: null, error: null })
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
   const [history, setHistory] = useState({ key: null, status: 'idle', items: [], error: null, reviewedAfterAmbiguity: false })
   const [submission, setSubmission] = useState({ status: 'idle', intent: null, error: null })
   const [confirmMode, setConfirmMode] = useState(null)
@@ -415,6 +420,7 @@ export function StudentProgrammingWorkspace({
   const [checkpoint, setCheckpoint] = useState({ record: null, requesting: false, bounded: false, error: null, intent: null })
   const [gitSource, setGitSource] = useState({ loading: false, loadedCommitHash: null, error: null })
   const [workspacePanel, setWorkspacePanel] = useState('tests')
+  const diagnosticsRef = useRef(null)
   const [repositoryTree, setRepositoryTree] = useState({ status: 'idle', path: '', entries: [], error: null })
   const [newerGitAvailable, setNewerGitAvailable] = useState(false)
   const mounted = useRef(true)
@@ -719,8 +725,13 @@ export function StudentProgrammingWorkspace({
     return () => window.removeEventListener('beforeunload', warn)
   }, [source])
 
+  const revealDiagnostics = panel => {
+    setWorkspacePanel(panel)
+    if (!paneSizing.isDesktop) diagnosticsRef.current?.scrollIntoView?.({ block: 'start' })
+  }
+
   const runVisibleTests = async () => {
-    setWorkspacePanel('tests')
+    revealDiagnostics('tests')
     practicedSource.current = source.value
     setPractice({ record: null, error: null, requesting: true, bounded: false })
     try {
@@ -737,7 +748,7 @@ export function StudentProgrammingWorkspace({
   const runCode = async () => {
     codeRunSource.current = source.value
     setCodeRun({ record: null, error: null, requesting: true, bounded: false })
-    setWorkspacePanel('output')
+    revealDiagnostics('output')
     try {
       const response = await submissions.createCodeRun(activityId, source.value, programInput)
       if (!mounted.current) return
@@ -856,7 +867,7 @@ export function StudentProgrammingWorkspace({
           <div><h1>{activity.title}</h1>{(sourceDirty || checkpoint.record?.status === 'SUCCEEDED') && <span className={sourceDirty ? 'is-unsaved' : 'is-saved'} role="status">{sourceDirty ? 'Unsaved changes' : 'Saved to Git'}</span>}</div>
         </div>
         <div className="student-coding-toolbar" aria-label="Workspace actions">
-          <button type="button" className="student-run-code" disabled={!capabilities.java.execution || !canRun || codeRun.requesting || isPracticePending(codeRun.record)} onClick={() => { setCodeInputOpen(true); setWorkspacePanel('output') }}>
+          <button type="button" className="student-run-code" disabled={!capabilities.java.execution || !canRun || codeRun.requesting || isPracticePending(codeRun.record)} onClick={() => { setCodeInputOpen(true); revealDiagnostics('output') }}>
             <ProjexIcon name="run" />{codeRun.requesting || isPracticePending(codeRun.record) ? 'Running code…' : 'Run Code'}
           </button>
           <button type="button" className="student-run-tests" disabled={!capabilities.java.execution || !canRun || practice.requesting || isPracticePending(practice.record)} onClick={runVisibleTests}>
@@ -893,7 +904,7 @@ export function StudentProgrammingWorkspace({
             {workspace.testCases.map((testCase) => (
               <article className="workspace-visible-example" key={testCase.id}>
                 <strong>{testCase.name}</strong>
-                <span>Input</span><pre>{testCase.inputData ?? '(no input)'}</pre>
+                <span>Input</span><pre>{testCase.inputData || '(no input)'}</pre>
                 <span>Expected output</span><pre>{testCase.expectedOutput}</pre>
               </article>
             ))}
@@ -941,7 +952,7 @@ export function StudentProgrammingWorkspace({
           />
         )}
 
-        <section className="student-output-area" id="student-workspace-diagnostics">
+        <section ref={diagnosticsRef} className="student-output-area" id="student-workspace-diagnostics">
           <div className="student-workspace-panel-tabs" role="tablist" aria-label="Workspace results">
             {['tests', 'output', 'git'].map((panel) => <button type="button" role="tab" aria-selected={workspacePanel === panel} className={workspacePanel === panel ? 'is-active' : ''} key={panel} onClick={() => setWorkspacePanel(panel)}>{panel[0].toUpperCase() + panel.slice(1)}</button>)}
           </div>
@@ -984,7 +995,7 @@ export function StudentProgrammingWorkspace({
               <div className="student-panel-status-row"><strong>Git workspace</strong><span>{gitWorkspace.summary?.defaultBranch || gitWorkspace.repository?.defaultBranch || 'main'}</span></div>
               <p>Save to Git preserves your browser source. It does not submit the Activity.</p>
               {gitWorkspace.status === 'loading' && <small>Checking Git workspace…</small>}
-              {gitWorkspace.status === 'not-created' && <small>Prepare the coding workspace from Activity Detail before saving or loading code.</small>}
+              {gitWorkspace.status === 'not-created' && <small>Return to Activity Detail and choose Open workspace to prepare Git access.</small>}
               {gitWorkspace.status === 'provisioning' && <small>The Git workspace is still being prepared.</small>}
               {gitWorkspace.status === 'error' && <small className="student-coding-failure">{describeApiError(gitWorkspace.error)}</small>}
               {gitWorkspace.status === 'ready' && <dl><div><dt>Branch</dt><dd>{gitWorkspace.summary?.defaultBranch || 'main'}</dd></div><div><dt>Latest commit</dt><dd>{gitWorkspace.summary?.latestCommit?.commitId?.slice(0, 8) || 'No commits yet'}</dd></div><div><dt>Browser source</dt><dd>{sourceDirty ? 'Unsaved changes' : 'Up to date with last browser save'}</dd></div></dl>}
@@ -1018,7 +1029,7 @@ export function StudentProgrammingWorkspace({
           {currentAttemptState.status === 'ready' && !canSubmit && <span>Another submission is not currently available.</span>}
           {submission.status === 'error' && <span className="student-coding-failure">{submissionErrorMessage(submission.error)}</span>}
         </div>
-        <NavLink className="student-workspace-history-link" to={classHref(`/student/activity/${activity.id}/submissions`, selectedClass.id)}>Attempt history</NavLink>
+        <button type="button" className="student-workspace-history-link" onClick={() => setHistoryDialogOpen(true)} aria-haspopup="dialog">Attempt history</button>
       </footer>
       {!capabilities.java.execution && <RequestState kind="unavailable" compact title="Java execution unavailable" message="This environment preserves activity and submission records but cannot run or assess Java code." />}
 
@@ -1047,6 +1058,7 @@ export function StudentProgrammingWorkspace({
           onConfirm={confirmSubmission}
         />
       )}
+      {historyDialogOpen && <AppDialog title="Attempt history" className="academic-attempt-dialog" onClose={() => setHistoryDialogOpen(false)}><StudentSubmissionHistory compact api={api} submissions={submissions} /></AppDialog>}
       {confirmation}
       {navigationBlocker.state === 'blocked' && <UnsavedSourceConfirmation blocker={navigationBlocker} />}
     </div>
@@ -1077,7 +1089,7 @@ function SubmissionCard({ record, classId }) {
   )
 }
 
-export function StudentSubmissionHistory({ api = activityApi, submissions = submissionApi }) {
+export function StudentSubmissionHistory({ api = activityApi, submissions = submissionApi, compact = false }) {
   const { activityId } = useParams()
   const { selectedClass, selectionStatus } = useClasses()
   const [query, setQuery] = useState(FIRST_PAGE)
@@ -1108,13 +1120,13 @@ export function StudentSubmissionHistory({ api = activityApi, submissions = subm
   }, [load, selectionStatus])
 
   const current = state.key === key ? state : { ...state, status: 'loading', activity: null, items: [] }
-  if (current.status === 'loading') return <RequestState kind="loading" message="Loading submission history." />
+  if (current.status === 'loading') return compact ? <p role="status">Loading attempts…</p> : <RequestState kind="loading" message="Loading submission history." />
   if (current.status === 'error') return <RequestState kind={current.error?.status === 404 ? 'notFound' : current.error?.status === 403 ? 'forbidden' : 'unavailable'} error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />
   if (!current.activity) return null
 
   return (
-    <div className="student-assignment-board submission-history-page">
-      <header className="submission-page-heading">
+    <div className={compact ? 'academic-attempt-history' : 'student-assignment-board submission-history-page'}>
+      {!compact && <header className="submission-page-heading">
         <div>
           <NavLink className="student-back-link" to={classHref(`/student/activity/${activityId}`, selectedClass.id)}>Back to activity</NavLink>
           <p className="student-feedback-eyebrow">Official submissions</p>
@@ -1122,10 +1134,10 @@ export function StudentSubmissionHistory({ api = activityApi, submissions = subm
           <p>Attempts are immutable records. Practice runs do not appear here.</p>
           <small>{current.activity.gradingMode === 'COMPLETION' ? 'Ungraded · completion is independent of feedback release.' : `Credited result policy: ${current.activity.creditPolicy === 'HIGHEST' ? 'Highest released attempt' : 'Latest released attempt'}.`}</small>
         </div>
-        <NavLink className="student-primary-action" to={classHref(`/student/activity/${activityId}/workspace`, selectedClass.id)}>Open workspace</NavLink>
-      </header>
+        <ActivityWorkspaceAction key={`${selectedClass.id}:${activityId}`} activity={current.activity} classId={selectedClass.id} />
+      </header>}
       <section className="student-assignment-panel student-assignment-panel--board">
-        <div className="student-assignment-toolbar student-assignment-toolbar--board">
+        {compact ? <div className="academic-attempt-toolbar"><OutlinedSelect label="Status" value={query.status} onChange={status => setQuery({ ...FIRST_PAGE, status })} options={[{ value: '', label: 'All statuses' }, ...['QUEUED', 'ASSESSING', 'ASSESSED', 'ASSESSMENT_FAILED', 'REVIEWED', 'RELEASED', 'FAILED_RESOLVED'].map(value => ({ value, label: formatStatus(value).toLowerCase().replace(/^./, letter => letter.toUpperCase()) }))]} /></div> : <div className="student-assignment-toolbar student-assignment-toolbar--board">
           <div><strong>Attempt history</strong></div>
           <label className="student-sort-control">Status
             <select value={query.status} onChange={(event) => setQuery({ ...FIRST_PAGE, status: event.target.value })}>
@@ -1133,10 +1145,10 @@ export function StudentSubmissionHistory({ api = activityApi, submissions = subm
               {['QUEUED', 'ASSESSING', 'ASSESSED', 'ASSESSMENT_FAILED', 'REVIEWED', 'RELEASED', 'FAILED_RESOLVED'].map((status) => <option value={status} key={status}>{formatStatus(status)}</option>)}
             </select>
           </label>
-        </div>
+        </div>}
         {current.items.length === 0
-          ? <RequestState kind="empty" compact message="No official submission attempts match this view." />
-          : <div className="student-assignment-list">{current.items.map((record) => <SubmissionCard record={record} classId={selectedClass.id} key={record.id} />)}</div>}
+          ? compact ? <AcademicEmptyState icon="submission" title={query.status ? 'No matching attempts' : 'No attempts yet'} /> : <RequestState kind="empty" compact message="No official submission attempts match this view." />
+           : compact ? <ul className="academic-attempt-rows">{current.items.map(record => <li key={record.id}><NavLink to={classHref(`/student/activity/${record.activityId}/submissions/${record.id}`, selectedClass.id)}><span><strong>{record.attemptLabel}</strong><time dateTime={record.submittedAt}>{formatDate(record.submittedAt)}</time>{record.isLate && <small>Late</small>}</span><span className="academic-attempt-result"><span className={`submission-status submission-status--${record.status}`}>{submissionStatusLabel(record, formatStatus)}</span>{record.gradeStatus === 'released' && <strong>{record.finalScore ?? '—'} / {record.totalPoints ?? '—'}</strong>}{record.isCreditedResult && <small>Credited</small>}</span><ProjexIcon name="chevronRight" size={18} /></NavLink></li>)}</ul> : <div className="student-assignment-list">{current.items.map((record) => <SubmissionCard record={record} classId={selectedClass.id} key={record.id} />)}</div>}
         {current.pagination && current.pagination.totalPages > 1 && (
           <nav className="activity-pagination" aria-label="Submission pages">
             <button type="button" className="student-outline-action" disabled={!current.pagination.hasPreviousPage} onClick={() => setQuery((value) => ({ ...value, page: value.page - 1 }))}>Previous</button>
@@ -1272,7 +1284,7 @@ export function StudentSubmissionDetail({ api = activityApi, submissions = submi
         <section className="student-work-card">
           <h2>Activity</h2>
           <p>{current.activity?.title}</p>
-          <NavLink className="student-primary-action" to={classHref(`/student/activity/${activityId}/workspace`, selectedClass.id)}>Open workspace</NavLink>
+          <ActivityWorkspaceAction key={`${selectedClass.id}:${activityId}`} activity={current.activity} classId={selectedClass.id} />
         </section>
       </aside>
     </div>

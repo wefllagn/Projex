@@ -1,3 +1,7 @@
+import AppDialog from '../components/AppDialog.jsx'
+import AcademicEmptyState from '../components/AcademicEmptyState.jsx'
+import ClassCardGrid from '../classes/ClassCardGrid.jsx'
+import ClassOverviewCard from '../classes/ClassOverviewCard.jsx'
 import AccountMenu from '../components/AccountMenu.jsx'
 import useConfirmation from '../components/useConfirmation.jsx'
 import ProgramField from '../classes/ProgramField.jsx'
@@ -7,9 +11,9 @@ import { NavLink } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
-import { classHref, classInitial, classOfferingLabel, firstName } from '../classes/class-links.js'
+import { classHref, classInitial, classOfferingLabel } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
-import { WorkHubList, ReviewPreview } from '../work-hub/WorkHubViews.jsx'
+import { WorkHubList } from '../work-hub/WorkHubViews.jsx'
 import { InstructorClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
 import CsvInvitationPanel from '../classes/CsvInvitationPanel.jsx'
 import AcademicFields from '../classes/AcademicFields.jsx'
@@ -112,107 +116,27 @@ function InstructorClassPage({ activeTab, children, deferredLabel }) {
 }
 
 function InstructorDashboard() {
-  const auth = useAuth()
-  const { classes, error, pagination, status } = useClasses()
-  const stats = [
-    { label: 'Teaching Classes', value: pagination?.totalItems ?? classes.length, detail: 'classes', tone: 'blue', icon: 'teaching' },
-    { label: 'Active Classes', value: classes.filter((item) => item.status === 'ACTIVE').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'classes', tone: 'green', icon: 'active' },
-    { label: 'Archived Classes', value: classes.filter((item) => item.status === 'ARCHIVED').length, detail: pagination?.hasNextPage ? 'loaded classes' : 'read-only classes', tone: 'purple', icon: 'archived' },
-  ]
-  return (
-    <div className="instructor-home-page">
-      <header className="student-home-topbar instructor-dashboard-topbar">
-        <InstructorUserArea />
-      </header>
-
-      <main className="student-home-content instructor-home-content">
-        <section className="instructor-dashboard-hero">
-          <h1>Welcome back, {firstName(auth.user.fullName)}!</h1>
-
-        </section>
-
-        <section className="instructor-home-stat-grid" aria-label="Instructor dashboard summary">
-          {stats.map((stat) => (
-            <article className={`instructor-home-stat-card instructor-home-stat-card--${stat.tone}`} key={stat.label}>
-              <ProjexIcon name={stat.icon} size={28} />
-              <div>
-                <span>{stat.label}</span>
-                <strong>{stat.value}</strong>
-                <p>{stat.detail}</p>
-              </div>
-            </article>
-          ))}
-        </section>
-
-        <section className="instructor-home-dashboard-grid">
-          <section className="instructor-home-panel instructor-home-classes-panel">
-            <div className="instructor-home-panel-heading">
-              <div>
-                <ProjexIcon name="classes" />
-                <h2>Your Classes</h2>
-              </div>
-              <NavLink to="/instructor/classes">View all classes</NavLink>
-            </div>
-
-            {status === 'loading' && <RequestState kind="loading" compact message="Loading your classes." />}
-            {status === 'error' && <RequestState kind="unavailable" compact error={error} />}
-            {status === 'ready' && classes.length === 0 && <RequestState kind="empty" compact message="Create a class to see it here." />}
-            <div className="instructor-home-class-list">
-              {classes.map((item) => (
-                <NavLink to={classHref('/instructor/classes', item.id)} className="instructor-home-class-card" key={item.id}>
-                  <span className={`instructor-class-avatar instructor-class-avatar--${classInitial(item).toLowerCase()}`}>
-                    {classInitial(item)}
-                  </span>
-                  <div>
-                    <strong>{item.className}</strong>
-                    <span>{classOfferingLabel(item)}</span>
-                    <small>{item.status === 'ARCHIVED' ? 'Archived · read-only' : 'Active'}</small>
-                  </div>
-                  <span className="student-home-card-action" aria-hidden="true" />
-                </NavLink>
-              ))}
-            </div>
-          </section>
-
-          <section className="instructor-home-panel instructor-home-review-panel">
-            <div className="instructor-home-panel-heading">
-              <div>
-                <ProjexIcon name="preview" />
-                <h2>To Review</h2>
-              </div>
-              <NavLink to="/instructor/review-queues">View all</NavLink>
-            </div>
-
-            <ReviewPreview />
-          </section>
-        </section>
-      </main>
-    </div>
-  )
+  const { classes, error, pagination, status, loadMore } = useClasses()
+  return <div className="instructor-home-page">
+    <header className="student-home-topbar instructor-dashboard-topbar"><InstructorUserArea /></header>
+    <main className="student-home-content instructor-home-content">
+      <div className="academic-classes-heading"><h1>Classes</h1></div>
+      {status === 'loading' && <RequestState kind="loading" compact message="Loading your classes." />}
+      {status === 'error' && <RequestState kind="unavailable" compact error={error} />}
+      {status === 'ready' && classes.length === 0 && <RequestState kind="empty" compact message="Create a class from the sidebar to begin." />}
+      <ClassCardGrid classes={classes} role="instructor" />
+      {pagination?.hasNextPage && <button type="button" className="student-outline-action class-load-more" onClick={loadMore}>Load more classes</button>}
+    </main>
+  </div>
 }
 
 function InstructorClassesPage() {
   const { classes, error, loadMore, pagination, requestedClassId, selectedClass, status } = useClasses()
-  const { user } = useAuth()
-
   if (requestedClassId) {
     return (
       <InstructorClassPage activeTab="stream">
         {selectedClass && (
-          <div className="class-overview-grid">
-            <section className="student-global-panel class-overview-card">
-              <span className="class-status-chip">{selectedClass.status}</span>
-              <h2>{selectedClass.className}</h2>
-              <p>{classOfferingLabel(selectedClass)}</p>
-              <p>Primary Instructor: {selectedClass.instructor?.fullName ?? 'Not assigned'}</p>
-              <div className="class-overview-actions">
-                <NavLink className="student-primary-action" to={classHref('/instructor/class-info', selectedClass.id)}>Manage class</NavLink>
-                <NavLink className="student-outline-action" to={classHref('/instructor/people', selectedClass.id)}>View roster</NavLink>
-                {selectedClass.instructor?.userId === user.id ? <NavLink className="student-outline-action" to={classHref('/instructor/class-code', selectedClass.id)}>Join code</NavLink> : null}
-              </div>
-            </section>
-            <RequestState kind="unavailable" compact title="Class stream unavailable" message="Announcements and comments are not available yet." />
-          </div>
+          <ClassOverviewCard classRecord={selectedClass} />
         )}
       </InstructorClassPage>
     )
@@ -227,15 +151,7 @@ function InstructorClassesPage() {
         {status === 'error' && <RequestState kind="unavailable" error={error} />}
         {status === 'ready' && classes.length === 0 && <RequestState kind="empty" message="Create a class from the sidebar to begin." />}
         <StaffInvitationsPanel />
-        <section className="instructor-home-class-list class-catalog-grid">
-          {classes.map((item) => (
-            <NavLink to={classHref('/instructor/classes', item.id)} className="instructor-home-class-card" key={item.id}>
-              <span className={`instructor-class-avatar instructor-class-avatar--${classInitial(item).toLowerCase()}`}>{classInitial(item)}</span>
-              <div><strong>{item.className}</strong><span>{classOfferingLabel(item)}</span><small>{item.status}</small></div>
-              <span className="student-home-card-action" aria-hidden="true" />
-            </NavLink>
-          ))}
-        </section>
+        <ClassCardGrid classes={classes} role="instructor" />
         {pagination?.hasNextPage && <button type="button" className="student-outline-action class-load-more" onClick={loadMore}>Load more classes</button>}
       </main>
     </div>
@@ -261,7 +177,7 @@ function AssignmentSubTabs({ active }) {
 function InstructorActivitiesPage() {
   return (
     <InstructorClassPage activeTab="assignments" deferredLabel="">
-      <div className="instructor-assignment-toolbar"><AssignmentSubTabs active="activities" /></div>
+      <AssignmentSubTabs active="activities" />
       <InstructorActivityList />
     </InstructorClassPage>
   )
@@ -282,6 +198,9 @@ function InstructorPeoplePage() {
   const [rosterState, setRosterState] = useState({ classId: null, status: 'loading', members: [], pagination: null, error: null })
   const [mutatingMemberId, setMutatingMemberId] = useState(null)
   const [actionError, setActionError] = useState(null)
+  const [inviting, setInviting] = useState(false)
+  const [inviteBusy, setInviteBusy] = useState(false)
+  const [managingCode, setManagingCode] = useState(false)
 
   const loadRoster = useCallback(async (classId, page = 1, signal) => {
     const response = await api.listMembers(classId, { page, pageSize: 50 }, { signal })
@@ -350,41 +269,26 @@ function InstructorPeoplePage() {
   return (
     <InstructorClassPage activeTab="people">
       {confirmation}
-      <div className="student-people-panel instructor-people-panel">
-        <section className="instructor-people-hero">
-          <div className="instructor-people-hero-copy">
-            <span className="instructor-people-icon" aria-hidden="true" />
-            <h2>Class Roster</h2>
-            <p>Review enrollment details and manage active or removed memberships.</p>
-            <div className="instructor-people-summary-grid">
-              <article>
-                <strong>{roster.pagination?.totalItems ?? roster.members.length}</strong>
-                <span>membership records</span>
-              </article>
-              <article>
-                <strong>{roster.members.filter((member) => member.membershipStatus === 'ACTIVE').length}</strong>
-                <span>active on this page</span>
-              </article>
-              <article>
-                <strong>{roster.members.filter((member) => member.membershipStatus === 'REMOVED').length}</strong>
-                <span>removed on this page</span>
-              </article>
-            </div>
+      <div className="student-people-panel instructor-people-panel academic-people-panel academic-classwork-panel">
+        <header className="academic-people-toolbar">
+          <h2><ProjexIcon name="people" />People</h2>
+          <div className="academic-people-actions">
+            {selectedClass?.instructor?.userId === user.id && <button type="button" className="student-outline-action" onClick={() => setManagingCode(true)}>Manage join code</button>}
+            {selectedClass?.status === 'ACTIVE' && <>
+              <CsvInvitationPanel key={selectedClass.id} api={api} classId={selectedClass.id} />
+              <button type="button" className="student-primary-action" onClick={() => setInviting(true)}><ProjexIcon name="people" />Invite students</button>
+            </>}
           </div>
-          <img src="/assets/brand/projex-login-mascot.png" alt="" aria-hidden="true" />
-          <div className="instructor-people-actions">
-            {selectedClass?.instructor?.userId === user.id && <NavLink className="student-primary-action" to={classHref('/instructor/class-code', selectedClass.id)}>Manage join code</NavLink>}
-          </div>
-        </section>
-
+        </header>
+        {managingCode && <InstructorClassCodePage overlay onClose={() => setManagingCode(false)} />}
+        {inviting && selectedClass?.status === 'ACTIVE' && <AppDialog title="Invite students" className="academic-people-invite-dialog" busy={inviteBusy} onClose={() => setInviting(false)}><InstructorClassInvitationPanel embedded onBusyChange={setInviteBusy} /></AppDialog>}
         {selectedClass?.status === 'ARCHIVED' && <p className="instructor-people-action-status">Archived classes are read-only.</p>}
-        <InstructorClassInvitationPanel />
-        {selectedClass?.status === 'ACTIVE' ? <CsvInvitationPanel key={selectedClass.id} api={api} classId={selectedClass.id} /> : null}
         {actionError && <p className="class-form-error" role="alert">{describeApiError(actionError)}</p>}
         {selectionStatus === 'ready' && roster.status === 'loading' && <RequestState kind="loading" compact message="Loading the detailed roster." />}
         {roster.status === 'error' && <RequestState kind="unavailable" compact error={roster.error} />}
 
-        <div className="instructor-data-table instructor-people-table" role="table" aria-label="Class roster">
+        {roster.status === 'ready' && roster.members.length === 0 && <AcademicEmptyState icon="people" title="No students yet" description="Students will appear here after joining." />}
+        {roster.members.length > 0 && <div className="instructor-data-table instructor-people-table academic-roster-table" role="table" aria-label="Class roster">
           <div className="instructor-table-row instructor-table-row--head" role="row">
             <span>Student</span>
             <span>University email</span>
@@ -396,13 +300,13 @@ function InstructorPeoplePage() {
           {roster.members.map((student) => (
             <div className="instructor-table-row" role="row" key={student.memberId}>
               <div className="instructor-roster-student">
-                <span>{student.fullName.split(' ').map((part) => part.charAt(0)).join('').slice(0, 2)}</span>
+                <span aria-hidden="true">{student.fullName.split(' ').map((part) => part.charAt(0)).join('').slice(0, 2)}</span>
                 <strong>{student.fullName}</strong>
               </div>
-              <span>{student.email}</span>
-              <em>{student.userStatus}</em>
-              <em className={student.membershipStatus === 'ACTIVE' ? 'is-approved' : 'is-revision'}>{student.membershipStatus}</em>
-              <span>{new Date(student.joinedAt).toLocaleDateString()}</span>
+              <span data-label="University email">{student.email}</span>
+              <em data-label="Account" className="academic-member-status">{student.userStatus.toLowerCase().replaceAll('_', ' ')}</em>
+              <em data-label="Membership" className={`academic-member-status ${student.membershipStatus === 'ACTIVE' ? 'is-approved' : 'is-revision'}`}>{student.membershipStatus.toLowerCase()}</em>
+              <span data-label="Joined">{new Date(student.joinedAt).toLocaleDateString()}</span>
               <div>
                 <button
                   type="button"
@@ -415,7 +319,7 @@ function InstructorPeoplePage() {
               </div>
             </div>
           ))}
-        </div>
+        </div>}
         {roster.pagination?.hasNextPage && (
           <button type="button" className="student-outline-action class-load-more" onClick={loadNextPage}>Load more members</button>
         )}
@@ -430,6 +334,7 @@ function ClassInfoForm({ classRecord }) {
   const { user } = useAuth()
   const isPrimary = classRecord.instructor?.userId === user.id
   const official = Boolean(classRecord.officialClassCode)
+  const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({
     className: classRecord.className,
     program: classRecord.program ?? '',
@@ -455,6 +360,7 @@ function ClassInfoForm({ classRecord }) {
         : { ...(form.program ? { program: form.program } : {}), className: form.className, section: form.section || null, ...(form.semester !== (classRecord.semester ?? '') ? { semester: form.semester } : {}), ...(form.schoolYear !== (classRecord.schoolYear ?? '') ? { schoolYear: form.schoolYear } : {}), schedule: form.schedule || null, room: form.room || null })
       upsertClass(response.data)
       setMessage('Class information updated.')
+      setEditing(false)
     } catch (requestError) {
       setError(requestError)
     } finally {
@@ -464,7 +370,10 @@ function ClassInfoForm({ classRecord }) {
 
   const changeLifecycle = async () => {
     const archive = classRecord.status === 'ACTIVE'
-    if (!await confirm(`${archive ? 'Archive' : 'Restore'} ${classRecord.className}?`, 'Class availability')) return
+    const question = archive
+      ? `Archive ${classRecord.className}? You won’t be able to edit this class until it is restored. Existing work will be preserved.`
+      : `Restore ${classRecord.className}?`
+    if (!await confirm(question, archive ? 'Archive class?' : 'Restore class?')) return
     setSaving(true)
     setError(null)
     setMessage('')
@@ -486,10 +395,18 @@ function ClassInfoForm({ classRecord }) {
   return (
     <div className="student-people-panel instructor-info-panel">
       {confirmation}
-      <section>
-        <h2>Class Info</h2>
-        {official ? <p>Contact Admin to correct catalog details.</p> : null}
-      </section>
+      <div className="academic-class-info-heading"><div><h2>Class details</h2><p>{classRecord.className}</p></div>{isPrimary && classRecord.status === 'ACTIVE' && <button type="button" className="student-outline-action" onClick={() => setEditing(true)}><ProjexIcon name="draft" />Edit details</button>}</div>
+      <dl className="academic-class-info-facts">
+        <div><dt>Class Code</dt><dd>{classRecord.officialClassCode || classRecord.section || '—'}</dd></div>
+        <div><dt>Term</dt><dd>{classRecord.semester || classRecord.academicPeriod || '—'} · {classRecord.schoolYear || '—'}</dd></div>
+        <div><dt>Program</dt><dd>{classRecord.program ? classRecord.program.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, value => value.toUpperCase()) : '—'}</dd></div>
+        <div><dt>Schedule</dt><dd>{classRecord.schedule || '—'}</dd></div>
+        <div><dt>Room</dt><dd>{classRecord.room || '—'}</dd></div>
+        <div><dt>Status</dt><dd>{classRecord.status === 'ACTIVE' ? 'Active' : 'Archived'}</dd></div>
+        <div><dt>Date Created</dt><dd>{new Date(classRecord.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</dd></div>
+      </dl>
+      {official && <p className="academic-dialog-hint">Contact Admin to correct catalog details.</p>}
+      {editing && <AppDialog title="Edit class details" busy={saving} onClose={() => setEditing(false)}>
       <form className="instructor-form-grid class-info-form" onSubmit={save}>
         <label>Class Name<input value={form.className} onChange={updateField('className')} maxLength={200} required disabled={official || !isPrimary || classRecord.status !== 'ACTIVE'} /></label>
         {official ? <p>Official: {classRecord.courseName} · {classOfferingLabel(classRecord)}</p> : <>
@@ -501,16 +418,14 @@ function ClassInfoForm({ classRecord }) {
         <label>Room<input value={form.room} onChange={updateField('room')} maxLength={100} disabled={!isPrimary || classRecord.status !== 'ACTIVE'} /></label>
         <div className="class-info-actions">
           {isPrimary ? <button type="submit" className="student-primary-action" disabled={saving || classRecord.status !== 'ACTIVE'}>{saving ? 'Saving…' : 'Save changes'}</button> : null}
-          {isPrimary ? <button type="button" className="student-outline-action" onClick={changeLifecycle} disabled={saving}>{classRecord.status === 'ACTIVE' ? 'Archive class' : 'Restore class'}</button> : null}
+          <button type="button" className="student-outline-action" onClick={() => setEditing(false)} disabled={saving}>Cancel</button>
         </div>
       </form>
-      <div className="instructor-info-list">
-        <article><span>Primary Instructor</span><strong>{classRecord.instructor?.fullName ?? 'Not assigned'}</strong></article>
-        <article><span>Status</span><strong>{classRecord.status}</strong></article>
-        <article><span>Created</span><strong>{new Date(classRecord.createdAt).toLocaleString()}</strong></article>
-      </div>
-      {message && <p className="instructor-people-action-status" role="status">{message}</p>}
       {error && <p className="class-form-error" role="alert">{describeApiError(error)}</p>}
+      </AppDialog>}
+      {isPrimary && <footer className="academic-class-info-footer"><button type="button" className="student-outline-action academic-archive-action" onClick={changeLifecycle} disabled={saving}><ProjexIcon name="archived" />{classRecord.status === 'ACTIVE' ? 'Archive class' : 'Restore class'}</button></footer>}
+      {message && <p className="instructor-people-action-status" role="status">{message}</p>}
+      {!editing && error && <p className="class-form-error" role="alert">{describeApiError(error)}</p>}
     </div>
   )
 }
@@ -519,13 +434,15 @@ function InstructorClassInfoPage() {
   const { selectedClass } = useClasses()
   return (
     <InstructorClassPage activeTab="info">
-      {selectedClass && <ClassInfoForm key={selectedClass.id} classRecord={selectedClass} />}
-      {selectedClass && <ClassStaffPanel key={`${selectedClass.id}-staff`} classRecord={selectedClass} />}
+      {selectedClass && <div className="academic-class-info-layout">
+        <ClassInfoForm key={selectedClass.id} classRecord={selectedClass} />
+        <ClassStaffPanel key={`${selectedClass.id}-staff`} classRecord={selectedClass} />
+      </div>}
     </InstructorClassPage>
   )
 }
 
-function InstructorClassCodePage() {
+function InstructorClassCodePage({ overlay = false, onClose }) {
   const [confirm, confirmation] = useConfirmation()
   const { api, selectedClass, selectionStatus } = useClasses()
   const [codeState, setCodeState] = useState({ classId: null, status: 'loading', data: null, error: null })
@@ -570,31 +487,34 @@ function InstructorClassCodePage() {
     }
   }
 
-  return (
-    <InstructorClassPage activeTab="info">
+  const content = (
+    <>
       {confirmation}
-      <div className="student-people-panel instructor-info-panel">
-        <section><h2>Class Join Code</h2><p>Join codes are generated and validated only by the Projex server.</p></section>
+      <div className={overlay ? 'academic-join-code-content' : 'student-people-panel instructor-info-panel'}>
+        {overlay ? <p className="academic-join-code-class">{selectedClass?.className}</p> : <section><h2>Class Join Code</h2><p>Join codes are generated and validated only by the Projex server.</p></section>}
         {selectionStatus === 'ready' && current.status === 'loading' && <RequestState kind="loading" compact message="Loading the join-code status." />}
         {current.status === 'error' && <RequestState kind="unavailable" compact error={current.error} />}
         {current.status === 'ready' && (
           <section className="instructor-generated-code">
-            <span>{current.data.active ? 'Active join code' : 'Join code inactive'}</span>
+            <span className={`academic-join-code-status${current.data.active ? '' : ' is-inactive'}`}>{current.data.active ? 'Active join code' : 'Join code inactive'}</span>
             {current.data.active ? (
               <div className="instructor-code-copy-row"><strong>{current.data.classCode}</strong><button type="button" onClick={copy}>Copy</button></div>
             ) : <p>No usable join code is available. Rotate the code to allow new joins.</p>}
-            <small>Changed {new Date(current.data.changedAt).toLocaleString()}</small>
+            <small>Updated {new Date(current.data.changedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</small>
             <div className="class-info-actions">
               <button type="button" className="student-primary-action" onClick={() => mutate('rotate')} disabled={action === 'rotate' || action === 'revoke' || selectedClass?.status === 'ARCHIVED'}>{action === 'rotate' ? 'Rotating…' : 'Rotate code'}</button>
               <button type="button" className="student-outline-action" onClick={() => mutate('revoke')} disabled={action === 'rotate' || action === 'revoke' || !current.data.active || selectedClass?.status === 'ARCHIVED'}>{action === 'revoke' ? 'Revoking…' : 'Revoke code'}</button>
             </div>
-            {action === 'copied' && <em>Copied</em>}
-            {action === 'copy-failed' && <em>Copy unavailable. Select and copy the code manually.</em>}
+            {action === 'copied' && <em role="status">Copied</em>}
+            {action === 'copy-failed' && <em role="status">Copy unavailable. Select and copy the code manually.</em>}
           </section>
         )}
       </div>
-    </InstructorClassPage>
+    </>
   )
+  return overlay
+    ? <AppDialog title="Manage join code" className="academic-join-code-dialog" busy={action === 'rotate' || action === 'revoke'} onClose={onClose}>{content}</AppDialog>
+    : <InstructorClassPage activeTab="info">{content}</InstructorClassPage>
 }
 
 function InstructorInviteStudentsPage() {
@@ -615,11 +535,12 @@ function DeferredInstructorPage({ title, message }) {
 }
 
 function InstructorReviewQueuePage() {
-  return <div className="student-global-page"><header className="student-home-topbar"><InstructorUserArea /></header><main className="student-global-content"><div className="student-global-heading"><div><p>Academic Work</p><h1>To Review</h1></div></div><WorkHubList view="review" /></main></div>
+  const { classes, pagination, loadMore } = useClasses()
+  return <div className="student-global-page"><header className="student-home-topbar"><InstructorUserArea /></header><main className="student-global-content"><div className="student-global-heading"><div><h1>To Review</h1></div></div><WorkHubList view="review" classes={classes} moreClasses={pagination?.hasNextPage} onMoreClasses={loadMore} /></main></div>
 }
 
 function InstructorProjectListPage() {
-  return <InstructorClassPage activeTab="assignments" deferredLabel=""><InstructorProjectList /></InstructorClassPage>
+  return <InstructorClassPage activeTab="assignments" deferredLabel=""><AssignmentSubTabs active="projects" /><InstructorProjectList /></InstructorClassPage>
 }
 
 function InstructorProjectDetailPage() {

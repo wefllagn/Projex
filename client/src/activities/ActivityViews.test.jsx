@@ -1,8 +1,9 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
+import { AuthContext } from '../auth/auth-context.js'
 import { ClassContext } from '../classes/class-context.js'
 import { InstructorActivityEditor, InstructorActivityList } from './InstructorActivityViews.jsx'
 import { StudentActivityDetail, StudentActivityList } from './StudentActivityViews.jsx'
@@ -75,21 +76,6 @@ const activityWorkspace = {
   updatedAt: '2026-08-10T00:00:00.000Z',
 }
 
-function repositorySummary(commit = null) {
-  return {
-    data: {
-      repositoryId: activityWorkspace.id,
-      repositoryStatus: 'ACTIVE',
-      storageStatus: 'READY',
-      empty: commit === null,
-      defaultBranch: 'main',
-      branchCount: commit ? 1 : 0,
-      commitCount: commit ? 1 : 0,
-      latestCommit: commit,
-    },
-  }
-}
-
 function submissionApiMock() {
   return {
     getAttemptState: vi.fn().mockResolvedValue({ data: {
@@ -134,12 +120,14 @@ function renderView(element, { entry = '/', path = '*' } = {}) {
   if (element.props.api && !element.props.api.listTopics) element.props.api.listTopics = vi.fn().mockResolvedValue({ data: { version: 0, topics: [], page: 1, hasNextPage: false } })
   return render(
     <MemoryRouter initialEntries={[entry]}>
-      <ClassContext.Provider value={classValue()}>
-        <Routes><Route path={path} element={element} /></Routes>
-      </ClassContext.Provider>
+      <AuthContext.Provider value={{ user: { id: 'student-1', role: 'STUDENT', status: 'ACTIVE' } }}><ClassContext.Provider value={classValue()}>
+        <Routes><Route path={path} element={element} /><Route path="/student/repositories/:repositoryId" element={<Destination />} /><Route path="/student/activity/:activityId/workspace" element={<Destination />} /></Routes>
+      </ClassContext.Provider></AuthContext.Provider>
     </MemoryRouter>,
   )
 }
+
+function Destination() { const location = useLocation(); return <output aria-label="Destination">{location.pathname}{location.search}</output> }
 
 describe('student activity integration', () => {
   it('lists real selected-class activities with dynamic links and bounded pagination', async () => {
@@ -176,213 +164,95 @@ describe('student activity integration', () => {
     expect(screen.queryByText(hiddenSecret)).not.toBeInTheDocument()
     expect(screen.queryByText(/Hidden tests and their count|\d+ hidden tests/i)).not.toBeInTheDocument()
     expect(screen.getByText('0 of 2 used')).toBeInTheDocument()
-    expect(screen.getByText('Latest attempt')).toBeInTheDocument()
-    expect(await screen.findByText('Not prepared')).toBeInTheDocument()
+    expect(screen.queryByText('Credited result policy', { exact: true })).not.toBeInTheDocument()
+    expect(screen.getByText('Due', { exact: true })).toBeInTheDocument()
+    expect(repositories.getActivityWorkspace).not.toHaveBeenCalled()
   })
 
-  it('keeps Activity Detail usable when no Git Workspace exists and offers lifecycle-safe creation', async () => {
-    const repositories = {
-      getActivityWorkspace: vi.fn().mockRejectedValue(new ApiError({ status: 404, code: 'ACTIVITY_WORKSPACE_NOT_FOUND', message: 'Not found' })),
-      createActivityWorkspace: vi.fn(),
-    }
+  it('does not prepare repositories or issue credentials merely by viewing Activity Detail', async () => {
+    const repositories = { getActivityWorkspace: vi.fn(), createActivityWorkspace: vi.fn() }
     renderView(<StudentActivityDetail api={studentActivityApi()} submissions={submissionApiMock()} repositories={repositories} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
-
-    expect(await screen.findByText('Visible sample')).toBeInTheDocument()
-    expect(await screen.findByText('Not prepared')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Prepare workspace' })).toBeInTheDocument()
-    expect(screen.getByText('Git push saves your work. It does not submit the Activity.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Open workspace' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Code/ })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: 'View repository' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open workspace' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Attempt history' })).toHaveAttribute('aria-haspopup', 'dialog')
+    expect(repositories.getActivityWorkspace).not.toHaveBeenCalled()
+    expect(repositories.createActivityWorkspace).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByText('View Git')).not.toBeInTheDocument()
   })
 
-  it('creates exactly one matching Activity Workspace and issues the correct native Git credential from Code', async () => {
-    const repositories = {
-      getActivityWorkspace: vi.fn().mockRejectedValue(new ApiError({ status: 404, code: 'ACTIVITY_WORKSPACE_NOT_FOUND', message: 'Not found' })),
-      createActivityWorkspace: vi.fn().mockResolvedValue({ data: activityWorkspace }),
-    }
-    const repositoryContent = {
-      getSummary: vi.fn().mockResolvedValue(repositorySummary()),
-      getTransportUrl: vi.fn().mockReturnValue(`http://localhost:3300/api/v1/git/repositories/${activityWorkspace.id}`),
-      issueCredential: vi.fn().mockResolvedValue({ data: {
-        credentialId: 'credential-1', repositoryId: activityWorkspace.id, operations: ['READ', 'WRITE'],
-        createdAt: '2026-08-10T00:00:00.000Z', expiresAt: '2099-09-03T09:15:00.000Z', lastUsedAt: null, revokedAt: null,
-        username: 'student-git-user', secret: 'temporary-secret',
-      } }),
-    }
-    const user = userEvent.setup()
-    renderView(<StudentActivityDetail api={studentActivityApi()} submissions={submissionApiMock()} repositories={repositories} repositoryContent={repositoryContent} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
-
-    const create = await screen.findByRole('button', { name: 'Prepare workspace' })
-    await user.dblClick(create)
-    expect((await screen.findAllByText('Ready')).length).toBeGreaterThan(0)
-    expect(repositories.createActivityWorkspace).toHaveBeenCalledTimes(1)
-    expect(repositories.createActivityWorkspace).toHaveBeenCalledWith(activityId)
-    expect(screen.getByText('main · 0 commits')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Code/ }))
-    expect(repositoryContent.issueCredential).toHaveBeenCalledWith(activityWorkspace.id, ['READ', 'WRITE'])
-    expect(await screen.findByText('student-git-user')).toBeInTheDocument()
-    expect(screen.getByText('temporary-secret')).toBeInTheDocument()
-    expect(screen.getByText('Temporary access token')).toBeInTheDocument()
-    expect(screen.queryByText(/Clone command/i)).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Issue Read/i })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Close Code menu' }))
-    expect(screen.queryByText('temporary-secret')).not.toBeInTheDocument()
+  it.each([['Open workspace', `/student/activity/${activityId}/workspace`], ['View repository', `/student/repositories/${activityWorkspace.id}`]])('ensures a missing workspace on %s and navigates directly with Class context', async (action, path) => {
+    const repositories = { getActivityWorkspace: vi.fn().mockRejectedValue(new ApiError({ status: 404 })), createActivityWorkspace: vi.fn().mockResolvedValue({ data: activityWorkspace }) }
+    const submissions = submissionApiMock()
+    renderView(<StudentActivityDetail api={studentActivityApi()} submissions={submissions} repositories={repositories} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
+    const button = await screen.findByRole('button', { name: action })
+    fireEvent.click(button); fireEvent.click(button)
+    expect(await screen.findByLabelText('Destination')).toHaveTextContent(`${path}?classId=${classId}`)
+    expect(repositories.createActivityWorkspace).toHaveBeenCalledExactlyOnceWith(activityId)
+    expect(Object.keys(submissions)).toEqual(['getAttemptState'])
   })
 
-  it('fails closed when creation returns a workspace linked to another Activity', async () => {
-    const repositories = {
-      getActivityWorkspace: vi.fn().mockRejectedValue(new ApiError({ status: 404, code: 'ACTIVITY_WORKSPACE_NOT_FOUND', message: 'Not found' })),
-      createActivityWorkspace: vi.fn().mockResolvedValue({ data: { ...activityWorkspace, activityId: 'other-activity' } }),
-    }
-    const user = userEvent.setup()
+  it('fails closed on mismatched repository identity and offers an intentional retry', async () => {
+    const repositories = { getActivityWorkspace: vi.fn().mockResolvedValueOnce({ data: { ...activityWorkspace, activityId: 'other' } }).mockResolvedValue({ data: activityWorkspace }), createActivityWorkspace: vi.fn() }
     renderView(<StudentActivityDetail api={studentActivityApi()} submissions={submissionApiMock()} repositories={repositories} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
-
-    await user.click(await screen.findByRole('button', { name: 'Prepare workspace' }))
-    expect(await screen.findByText(/latest Git Workspace status could not be loaded/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Code/ })).toBeDisabled()
-    expect(repositories.createActivityWorkspace).toHaveBeenCalledTimes(1)
+    fireEvent.click(await screen.findByRole('button', { name: 'View repository' }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Destination')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByLabelText('Destination')).toHaveTextContent(activityWorkspace.id)
+    expect(repositories.createActivityWorkspace).not.toHaveBeenCalled()
   })
 
-  it('discards a one-time Git secret if the Code menu closes while issuance is still in flight', async () => {
-    let resolveCredential
-    const repositoryContent = {
-      getSummary: vi.fn().mockResolvedValue(repositorySummary()),
-      getTransportUrl: vi.fn().mockReturnValue(`http://localhost:3300/api/v1/git/repositories/${activityWorkspace.id}`),
-      issueCredential: vi.fn(() => new Promise((resolve) => { resolveCredential = resolve })),
-    }
-    const user = userEvent.setup()
-    renderView(<StudentActivityDetail api={studentActivityApi()} submissions={submissionApiMock()} repositories={{ getActivityWorkspace: vi.fn().mockResolvedValue({ data: activityWorkspace }) }} repositoryContent={repositoryContent} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
-
-    await user.click(await screen.findByRole('button', { name: /Code/ }))
-    await user.click(screen.getByRole('button', { name: 'Close Code menu' }))
-    await act(async () => resolveCredential({ data: {
-      credentialId: 'credential-late', repositoryId: activityWorkspace.id, operations: ['READ', 'WRITE'],
-      createdAt: '2026-08-10T00:00:00.000Z', expiresAt: '2099-09-03T09:15:00.000Z', lastUsedAt: null, revokedAt: null,
-      username: 'late-user', secret: 'late-secret',
-    } }))
-
-    expect(screen.queryByText('late-secret')).not.toBeInTheDocument()
-    expect(screen.queryByRole('dialog', { name: 'Native Git access' })).not.toBeInTheDocument()
-  })
-
-  it('polls a provisioning Activity Workspace until Ready', async () => {
-    const repositories = {
-      getActivityWorkspace: vi.fn()
-        .mockResolvedValueOnce({ data: { ...activityWorkspace, storageStatus: 'PENDING' } })
-        .mockResolvedValueOnce({ data: { ...activityWorkspace, storageStatus: 'PROVISIONING' } })
-        .mockResolvedValueOnce({ data: activityWorkspace }),
-    }
-    renderView(<StudentActivityDetail api={studentActivityApi()} submissions={submissionApiMock()} repositories={repositories} repositoryContent={{ getSummary: vi.fn().mockResolvedValue(repositorySummary()) }} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
-
-    expect(await screen.findByText('Projex is preparing your private Git workspace.')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getAllByText('Ready').length).toBeGreaterThan(0), { timeout: 3500 })
+  it('polls preparation only after the action, then navigates when Ready', async () => {
+    vi.useFakeTimers()
+    const repositories = { getActivityWorkspace: vi.fn().mockResolvedValueOnce({ data: { ...activityWorkspace, storageStatus: 'PENDING' } }).mockResolvedValueOnce({ data: { ...activityWorkspace, storageStatus: 'PROVISIONING' } }).mockResolvedValue({ data: activityWorkspace }) }
+    renderView(<StudentActivityDetail api={studentActivityApi()} submissions={submissionApiMock()} repositories={repositories} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
+    await act(async () => {})
+    expect(repositories.getActivityWorkspace).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'View repository' }))
+    await act(async () => {})
+    expect(screen.getByRole('button', { name: 'View repository' })).toBeDisabled()
+    await act(async () => vi.advanceTimersByTimeAsync(3000))
+    expect(screen.getByLabelText('Destination')).toHaveTextContent(activityWorkspace.id)
     expect(repositories.getActivityWorkspace).toHaveBeenCalledTimes(3)
   })
 
-  it('keeps automatic polling paused until a bounded-stop manual refresh completes', async () => {
+  it('bounds polling and waits for a single manual check before resuming', async () => {
     vi.useFakeTimers()
-    let activeRequests = 0
-    let maximumActiveRequests = 0
-    let holdNextRequest = false
-    let resolveManualRefresh
-    let finishWithReady = false
-    const getActivityWorkspace = vi.fn(() => {
-      activeRequests += 1
-      maximumActiveRequests = Math.max(maximumActiveRequests, activeRequests)
-      if (holdNextRequest) {
-        holdNextRequest = false
-        return new Promise((resolve) => {
-          resolveManualRefresh = () => {
-            activeRequests -= 1
-            resolve({ data: { ...activityWorkspace, storageStatus: 'PROVISIONING' } })
-          }
-        })
-      }
-      activeRequests -= 1
-      return Promise.resolve({ data: { ...activityWorkspace, storageStatus: finishWithReady ? 'READY' : 'PENDING' } })
-    })
-    const repositories = { getActivityWorkspace }
-    renderView(<StudentActivityDetail api={studentActivityApi()} submissions={submissionApiMock()} repositories={repositories} repositoryContent={{ getSummary: vi.fn().mockResolvedValue(repositorySummary()) }} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
-
-    await act(async () => {})
-    await act(async () => { await vi.advanceTimersByTimeAsync(60_000) })
-    const refresh = screen.getByRole('button', { name: 'Refresh status' })
-    const callsBeforeRefresh = getActivityWorkspace.mock.calls.length
-    holdNextRequest = true
-    fireEvent.click(refresh)
-    expect(getActivityWorkspace).toHaveBeenCalledTimes(callsBeforeRefresh + 1)
-    expect(activeRequests).toBe(1)
-
-    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
-    expect(getActivityWorkspace).toHaveBeenCalledTimes(callsBeforeRefresh + 1)
-    expect(maximumActiveRequests).toBe(1)
-
-    finishWithReady = true
-    await act(async () => { resolveManualRefresh() })
-    expect(screen.queryByRole('button', { name: 'Refresh status' })).not.toBeInTheDocument()
-    await act(async () => { await vi.advanceTimersByTimeAsync(750) })
-    expect(getActivityWorkspace).toHaveBeenCalledTimes(callsBeforeRefresh + 2)
-    expect(maximumActiveRequests).toBe(1)
-  })
-
-  it.each(['FAILED', 'QUARANTINED'])('shows %s storage as unavailable without credential actions', async (storageStatus) => {
-    const repositories = { getActivityWorkspace: vi.fn().mockResolvedValue({ data: { ...activityWorkspace, storageStatus } }) }
+    let finish
+    const repositories = { getActivityWorkspace: vi.fn().mockResolvedValue({ data: { ...activityWorkspace, storageStatus: 'PENDING' } }) }
     renderView(<StudentActivityDetail api={studentActivityApi()} submissions={submissionApiMock()} repositories={repositories} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
-
-    expect(await screen.findByText('Repository storage is unavailable. Internal worker and storage details are not shown.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Code/ })).toBeDisabled()
+    await act(async () => {})
+    fireEvent.click(screen.getByRole('button', { name: 'View repository' }))
+    await act(async () => {})
+    await act(async () => vi.advanceTimersByTimeAsync(60_000))
+    const before = repositories.getActivityWorkspace.mock.calls.length
+    repositories.getActivityWorkspace.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }))
+    fireEvent.click(screen.getByRole('button', { name: 'View repository' }))
+    await act(async () => vi.advanceTimersByTimeAsync(10_000))
+    expect(repositories.getActivityWorkspace).toHaveBeenCalledTimes(before + 1)
+    await act(async () => finish({ data: activityWorkspace }))
+    expect(screen.getByLabelText('Destination')).toHaveTextContent(activityWorkspace.id)
   })
 
-  it('keeps a closed Activity Workspace visible with read-only guidance', async () => {
-    const closed = { ...activity, status: 'CLOSED', dueState: 'CLOSED' }
-    const repositories = { getActivityWorkspace: vi.fn().mockResolvedValue({ data: activityWorkspace }) }
-    const repositoryContent = {
-      getSummary: vi.fn().mockResolvedValue(repositorySummary()),
-      getTransportUrl: vi.fn().mockReturnValue(`http://localhost:3300/api/v1/git/repositories/${activityWorkspace.id}`),
-      issueCredential: vi.fn().mockResolvedValue({ data: {
-        credentialId: 'credential-read', repositoryId: activityWorkspace.id, operations: ['READ'],
-        createdAt: '2026-08-10T00:00:00.000Z', expiresAt: '2099-09-03T09:15:00.000Z', lastUsedAt: null, revokedAt: null,
-        username: 'student-read-only', secret: 'read-secret',
-      } }),
-    }
-    const user = userEvent.setup()
-    renderView(<StudentActivityDetail api={studentActivityApi(closed)} submissions={submissionApiMock()} repositories={repositories} repositoryContent={repositoryContent} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
-
-    expect(await screen.findByText('Activity closed — repository is read-only.')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Code/ }))
-    expect(repositoryContent.issueCredential).toHaveBeenCalledWith(activityWorkspace.id, ['READ'])
-    expect(await screen.findByText('student-read-only')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Prepare workspace' })).not.toBeInTheDocument()
+  it.each(['FAILED', 'QUARANTINED'])('does not navigate or create over %s storage', async (storageStatus) => {
+    const repositories = { getActivityWorkspace: vi.fn().mockResolvedValue({ data: { ...activityWorkspace, storageStatus } }), createActivityWorkspace: vi.fn() }
+    renderView(<StudentActivityDetail api={studentActivityApi()} submissions={submissionApiMock()} repositories={repositories} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
+    fireEvent.click(await screen.findByRole('button', { name: 'View repository' }))
+    expect(await screen.findByText('Repository storage is unavailable. Try again later.')).toBeInTheDocument()
+    expect(repositories.createActivityWorkspace).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText('Destination')).not.toBeInTheDocument()
   })
 
-  it('shows current repository history and refetches a native Git HEAD on focus', async () => {
-    const firstCommit = {
-      commitId: 'a'.repeat(40),
-      subject: 'Initial browser save',
-      authorName: 'Student',
-      authoredAt: '2026-10-18T00:00:00.000Z',
-    }
-    const pushedCommit = {
-      commitId: 'b'.repeat(40),
-      subject: 'Native IDE update',
-      authorName: 'Student',
-      authoredAt: '2026-10-18T01:00:00.000Z',
-    }
-    const repositoryContent = {
-      getSummary: vi.fn()
-        .mockResolvedValueOnce({ data: { ...repositorySummary(firstCommit).data, commitCount: 1 } })
-        .mockResolvedValue({ data: { ...repositorySummary(pushedCommit).data, commitCount: 2 } }),
-      getTransportUrl: vi.fn().mockReturnValue('http://localhost/repository.git'),
-      issueCredential: vi.fn(),
-    }
-    renderView(<StudentActivityDetail api={studentActivityApi()} submissions={submissionApiMock()} repositories={{ getActivityWorkspace: vi.fn().mockResolvedValue({ data: activityWorkspace }) }} repositoryContent={repositoryContent} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
-
-    expect(await screen.findByText('Initial browser save')).toBeInTheDocument()
-    expect(screen.getByText('main · 1 commit')).toBeInTheDocument()
-    act(() => window.dispatchEvent(new Event('focus')))
-    expect(await screen.findByText('Native IDE update')).toBeInTheDocument()
-    expect(screen.getByText('main · 2 commits')).toBeInTheDocument()
-    expect(repositoryContent.getSummary.mock.calls.length).toBeGreaterThanOrEqual(2)
+  it('reuses an existing closed Activity repository, but never creates a missing one', async () => {
+    const repositories = { getActivityWorkspace: vi.fn().mockRejectedValueOnce(new ApiError({ status: 404 })).mockResolvedValue({ data: activityWorkspace }), createActivityWorkspace: vi.fn() }
+    renderView(<StudentActivityDetail api={studentActivityApi({ ...activity, status: 'CLOSED', dueState: 'CLOSED' })} submissions={submissionApiMock()} repositories={repositories} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
+    fireEvent.click(await screen.findByRole('button', { name: 'View repository' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('only while this Activity is open')
+    expect(repositories.createActivityWorkspace).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByLabelText('Destination')).toHaveTextContent(activityWorkspace.id)
   })
 
   it('renders loading and empty states without falling back to activity mocks', async () => {
@@ -393,7 +263,8 @@ describe('student activity integration', () => {
     await waitFor(() => expect(resolve).toBeTypeOf('function'))
     resolve({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } })
     await waitFor(() => expect(screen.queryByText('Loading activities…')).not.toBeInTheDocument())
-    expect(screen.queryByRole('heading', { name: 'No topic' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'No topic' })).toBeInTheDocument()
+    expect(screen.getByText('No activities in this topic.')).toBeInTheDocument()
   })
 
   it('loads the next bounded activity page without mixing class context', async () => {
@@ -704,4 +575,26 @@ describe('Instructor authoring overhaul', () => {
     await user.click(screen.getByRole('button', { name: 'Remove case' }))
     expect(screen.queryByRole('button', { name: /3\. Untitled/ })).not.toBeInTheDocument()
   })
+})
+
+
+it('keeps only due date and attempts in Your work and opens history without leaving the Activity', async () => {
+  const api = studentActivityApi(), submissions = submissionApiMock()
+  submissions.listSubmissions = vi.fn().mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } })
+  const repositories = { getActivityWorkspace: vi.fn().mockRejectedValue(new ApiError({ status: 404, code: 'ACTIVITY_WORKSPACE_NOT_FOUND' })) }
+  const user = userEvent.setup()
+  renderView(<StudentActivityDetail api={api} submissions={submissions} repositories={repositories} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
+  const history = await screen.findByRole('button', { name: 'Attempt history' })
+  expect(screen.getByText('0 of 2 used')).toBeInTheDocument()
+  for (const label of ['Language', 'Entry class', 'Maximum attempts', 'Ordinary attempts remaining', 'Credited result policy', 'Total points']) expect(screen.queryByText(label, { exact: true })).not.toBeInTheDocument()
+  expect(screen.getByText('Due', { exact: true })).toBeInTheDocument()
+  expect(submissions.listSubmissions).not.toHaveBeenCalled()
+  await user.click(history)
+  expect(screen.getByRole('dialog', { name: 'Attempt history' })).toBeInTheDocument()
+  expect(await screen.findByText('No attempts yet')).toBeInTheDocument()
+  expect(submissions.listSubmissions).toHaveBeenCalledWith(activityId, { page: 1, pageSize: 20, status: '' }, expect.any(Object))
+  expect(screen.queryByText('Attempts are immutable records. Practice runs do not appear here.')).not.toBeInTheDocument()
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(history).toHaveFocus()
 })

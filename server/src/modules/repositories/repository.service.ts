@@ -1,4 +1,5 @@
 import type { Logger } from 'pino'
+import type { GitTransportRepository } from '../git-transport/git-transport.repository.js'
 import { evaluateGitPermission } from '../git-transport/git-authorization.js'
 import type { GroupContextProjection } from './group-context.types.js'
 import { AppError } from '../../shared/errors/app-error.js'
@@ -196,6 +197,7 @@ function unwrapFeedback(result: FeedbackWriteResult): RepositoryFeedbackProjecti
 
 export function createRepositoryService(dependencies: {
   repository: RepositoryRepository
+  accessRepository?: Pick<GitTransportRepository, 'findAccess'>
   logger: Logger
   now?: () => Date
   provisioningEnabled?: boolean
@@ -315,7 +317,11 @@ export function createRepositoryService(dependencies: {
     },
     async get(caller, repositoryId) {
       const access = await loadAccess(caller, repositoryId)
-      return toRepositoryProjection(access.repository)
+      const gitAccess = await dependencies.accessRepository?.findAccess(repositoryId, caller.id)
+      return {
+        ...toRepositoryProjection(access.repository),
+        gitPermissions: gitAccess ? evaluateGitPermission(gitAccess, now()) : { read: false, write: false, canUpdateMain: false },
+      }
     },
     async listRecordedActivity(caller, repositoryId, query) {
       const access = await loadAccess(caller, repositoryId)

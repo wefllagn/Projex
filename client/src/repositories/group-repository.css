@@ -263,3 +263,29 @@
   .group-dialog { padding: 16px; max-height: calc(100dvh - 24px); }
   .group-repository-page .repository-git-history-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Shared repository access and secondary Activity information. */
+.repository-access-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.group-code-menu .repository-access-actions button { flex: 1 1 140px; width: auto; min-height: 40px; padding: 8px 10px; font-size: 12px; }
+.repository-access-details { border-top: 1px solid var(--px-border); padding-top: 12px; font-size: 12px; }
+.repository-access-details summary { cursor: pointer; font-weight: 600; padding: 4px 0 8px; }
+.repository-access-details pre { background: var(--px-subtle); border-radius: 6px; padding: 10px; }
+.repository-access-details article { display: grid; gap: 7px; border-top: 1px solid var(--px-border); padding: 12px 0; }
+.repository-access-details article small { line-height: 1.5; color: var(--px-muted); }
+.repository-access-details .student-outline-action { width: auto; min-height: 36px; justify-self: start; font-size: 12px; }
+.repository-open-ide { width: auto; min-height: 36px; padding: 8px 12px; font-size: 12px; white-space: nowrap; }
+.repository-empty-guidance > .student-primary-action { display: inline-flex; width: auto; margin-top: 10px; padding: 10px 16px; }
+.repository-about { margin-top: 22px; padding: 18px 0; border-top: 1px solid var(--px-border); font-size: 13px; color: var(--px-muted); }
+.repository-about summary { cursor: pointer; font-weight: 600; color: var(--px-ink); }
+.repository-about dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 20px 0; }
+.repository-about dt { font-size: 12px; margin-bottom: 5px; }
+.repository-about dd { margin: 0; color: var(--px-ink); overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .repository-about dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .group-code-toolbar .group-toolbar-end { flex-wrap: wrap; }
+  .repository-open-ide, .group-code-toolbar .activity-code-button { min-height: 44px; }
+}
+
+@media (max-width: 600px) {
+  .group-code-menu .repository-access-actions button { min-height: 44px; }
+}

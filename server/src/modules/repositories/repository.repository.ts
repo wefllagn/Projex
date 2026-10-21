@@ -44,22 +44,24 @@ export const repositoryRecordSelect = {
   approvedAt: true,
   archivedAt: true,
   owner: { select: { id: true, fullName: true } },
-  class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
+  class: { select: { id: true, className: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
   activity: {
     select: {
       id: true,
+      title: true,
       dueDate: true,
       status: true,
-      class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
+      class: { select: { id: true, className: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
     },
   },
   projectTask: {
     select: {
       id: true,
       classId: true,
+      title: true,
       dueDate: true,
       status: true,
-      class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
+      class: { select: { id: true, className: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
     },
   },
   team: { select: { id: true, leadStudentId: true } },

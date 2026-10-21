@@ -172,13 +172,14 @@ export function StudentClassInvitationPanel({ preview = false, autoRefresh = fal
   )
 }
 
-export function InstructorClassInvitationPanel() {
+export function InstructorClassInvitationPanel({ embedded = false, onBusyChange } = {}) {
   const { api, selectedClass } = useClasses()
   const [email, setEmail] = useState('')
   const [lookup, setLookup] = useState({ status: 'idle', data: null, error: null })
   const [list, setList] = useState({ status: 'loading', invitations: [], pagination: null, error: null })
   const [busy, setBusy] = useState(false)
   const classId = selectedClass?.id
+  useEffect(() => { onBusyChange?.(busy) }, [busy, onBusyChange])
 
   const load = useCallback(async (page = 1, signal) => {
     if (!classId || selectedClass?.status !== 'ACTIVE') return
@@ -268,13 +269,13 @@ export function InstructorClassInvitationPanel() {
 
   return (
     <section className="instructor-invitation-panel">
-      <div className="student-panel-heading">
+      {!embedded && <div className="student-panel-heading">
         <div>
           <h2>Invite Students</h2>
           <p>Invite an existing registered Student using their university email.</p>
         </div>
         {list.pagination && <span>{list.pagination.totalItems} pending</span>}
-      </div>
+      </div>}
       <form className="class-invitation-lookup" onSubmit={event => { event.preventDefault(); if (!busy) sendInvitation() }}>
         <label>
           University email
@@ -306,7 +307,7 @@ export function InstructorClassInvitationPanel() {
       {lookup.status === 'error' && <p className="class-form-error" role="alert">{describeApiError(lookup.error)}</p>}
       {list.status === 'loading' && <RequestState kind="loading" compact message="Loading pending invitations." />}
       {list.status === 'error' && <RequestState kind="unavailable" compact error={list.error} />}
-      {list.status === 'ready' && list.invitations.length === 0 && <RequestState kind="empty" compact message="No invitations are currently pending." />}
+      {list.status === 'ready' && list.invitations.length === 0 && (embedded ? <p className="academic-invite-empty">No pending invitations.</p> : <RequestState kind="empty" compact message="No invitations are currently pending." />)}
       {list.invitations.length > 0 && (
         <div className="instructor-data-table instructor-invitation-table" role="table" aria-label="Pending invitations">
           <div className="instructor-table-row instructor-table-row--head" role="row">

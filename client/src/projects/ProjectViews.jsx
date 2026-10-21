@@ -1,3 +1,5 @@
+import AcademicEmptyState from '../components/AcademicEmptyState.jsx'
+import OutlinedSelect from '../components/OutlinedSelect.jsx'
 import AcademicIcon from '../components/icons/ProjexIcon.jsx'
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
@@ -87,21 +89,20 @@ export function StudentProjectList({ api = projectApi }) {
   const current = state.classId === selectedClass?.id ? state : { ...state, status: 'loading', items: [] }
   return (
     <div className="student-assignment-board project-task-board">
-      <section className="student-assignment-panel student-assignment-panel--board">
+      <section className="student-assignment-panel student-assignment-panel--board academic-classwork-panel">
         <div className="student-assignment-toolbar student-assignment-toolbar--board">
-          <h2>My Projects</h2>
-          <label className="student-sort-control"><span className="academic-sr-only">Filter project status</span><select aria-label="Filter project status" value={query.status} onChange={(event) => setQuery({ ...FIRST_PAGE, status: event.target.value })}><option value="">Published and closed</option><option value="PUBLISHED">Published</option><option value="CLOSED">Closed</option></select></label>
+          <h2>Group Projects</h2>
+          <OutlinedSelect label="Project filter" value={query.status} onChange={status => setQuery({ ...FIRST_PAGE, status })} options={[{ value: '', label: 'All projects' }, { value: 'PUBLISHED', label: 'Active projects' }, { value: 'CLOSED', label: 'Closed projects' }]} />
         </div>
         {current.status === 'loading' && <RequestState kind="loading" compact message="Loading project requirements." />}
         {current.status === 'error' && <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} compact error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />}
-        {current.status === 'ready' && current.items.length === 0 && <RequestState kind="empty" compact message="No project requirements match this view." />}
+        {current.status === 'ready' && current.items.length === 0 && <AcademicEmptyState icon="project" title="No projects to show" description="Published group projects will appear here." />}
         {current.status === 'ready' && current.items.length > 0 && (
           <div className="student-assignment-list">
             {current.items.map((project) => (
-              <NavLink to={classHref(`/student/projects/${project.id}`, selectedClass.id)} className="academic-project-row" key={project.id}>
+              <NavLink to={classHref(`/student/projects/${project.id}`, selectedClass.id)} className="classwork-row academic-project-row" key={project.id}>
                 <span className="academic-row-icon"><AcademicIcon name="project" size={24} /></span>
-                <strong>{project.title}</strong>
-                <span className="academic-project-due"><time dateTime={project.dueDate}>{formatProjectDate(project.dueDate)}</time><ProjectStatus value={project.dueState} /></span>
+                <span className="academic-project-identity classwork-row-content"><strong>{project.title}</strong><span className="academic-project-meta"><span className="academic-project-topic">No topic</span><span>{formatProjectStatus(project.status)}</span><time dateTime={project.dueDate}>Due {formatProjectDate(project.dueDate)}</time><span>Up to {project.maxTeamSize} members</span><ProjectStatus value={project.dueState} /></span></span>
                 <AcademicIcon name="chevronRight" size={18} />
               </NavLink>
             ))}
@@ -252,12 +253,12 @@ export function InstructorProjectList({ api = projectApi }) {
   }, [load, selectionStatus])
   const current = state.classId === selectedClass?.id ? state : { ...state, status: 'loading', items: [] }
   return (
-    <div className="student-assignment-panel instructor-assignment-panel">
-      <div className="instructor-assignment-toolbar instructor-assignment-toolbar--board"><div><strong>Project Requirements</strong><p>Repository-backed project tasks for {selectedClass?.className}.</p></div><div className="instructor-assignment-toolbar-actions"><label className="instructor-status-filter"><span>Status</span><select value={query.status} onChange={(event) => setQuery({ ...FIRST_PAGE, status: event.target.value })}><option value="">All statuses</option>{['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED'].map((status) => <option value={status} key={status}>{formatProjectStatus(status)}</option>)}</select></label>{selectedClass?.status === 'ARCHIVED' ? <button type="button" className="student-primary-action" disabled>New Project</button> : <NavLink to={classHref('/instructor/projects/new', selectedClass?.id)} className="student-primary-action">New Project</NavLink>}</div></div>
+    <div className="student-assignment-panel instructor-assignment-panel academic-classwork-panel">
+      <div className="instructor-assignment-toolbar instructor-assignment-toolbar--board"><div><h2>Group Projects</h2></div><div className="instructor-assignment-toolbar-actions"><OutlinedSelect label="Status" value={query.status} onChange={status => setQuery({ ...FIRST_PAGE, status })} options={[{ value: '', label: 'All statuses' }, ...['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED'].map(value => ({ value, label: formatProjectStatus(value) }))]} />{selectedClass?.status === 'ARCHIVED' ? <button type="button" className="student-primary-action" disabled>New Project</button> : <NavLink to={classHref('/instructor/projects/new', selectedClass?.id)} className="student-primary-action">New Project</NavLink>}</div></div>
       {current.status === 'loading' && <RequestState kind="loading" compact message="Loading project requirements." />}
       {current.status === 'error' && <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} compact error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />}
-      {current.status === 'ready' && current.items.length === 0 && <RequestState kind="empty" compact message="Create a draft project requirement for this class to begin." />}
-      {current.status === 'ready' && current.items.length > 0 && <div className="instructor-data-table" role="table" aria-label="Project requirements"><div className="instructor-table-row instructor-table-row--head instructor-project-row" role="row"><span>Project</span><span>Due date</span><span>Status</span><span>Team size</span><span>Actions</span></div>{current.items.map((project) => <div className="instructor-table-row instructor-project-row" role="row" key={project.id}><div><strong>{project.title}</strong><small>{project.instructions}</small></div><span>{formatProjectDate(project.dueDate)}</span><ProjectStatus value={project.status} /><span>{project.maxTeamSize}</span><div><NavLink to={classHref(`/instructor/projects/${project.id}`, selectedClass.id)}>Monitor</NavLink><NavLink to={classHref(`/instructor/projects/${project.id}/settings`, selectedClass.id)}>Configure</NavLink></div></div>)}</div>}
+      {current.status === 'ready' && current.items.length === 0 && <AcademicEmptyState icon="project" title="No group projects yet" description="Create a project when your class is ready to collaborate." />}
+      {current.status === 'ready' && current.items.length > 0 && <div className="instructor-data-table" role="table" aria-label="Project requirements"><div className="instructor-table-row instructor-table-row--head instructor-project-row" role="row"><span>Project</span><span>Due date</span><span>Status</span><span>Team size</span><span>Actions</span></div>{current.items.map((project) => <div className="instructor-table-row instructor-project-row" role="row" key={project.id}><div><strong>{project.title}</strong></div><span>{formatProjectDate(project.dueDate)}</span><ProjectStatus value={project.status} /><span>{project.maxTeamSize}</span><div><NavLink to={classHref(`/instructor/projects/${project.id}`, selectedClass.id)}>Monitor</NavLink><NavLink to={classHref(`/instructor/projects/${project.id}/settings`, selectedClass.id)}>Configure</NavLink></div></div>)}</div>}
       <Pagination pagination={current.pagination} onPage={(page) => setQuery((value) => ({ ...value, page }))} />
     </div>
   )

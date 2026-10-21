@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
 import { ClassContext } from '../classes/class-context.js'
-import { InstructorProjectEditor, StudentProjectDetail, StudentProjectList } from './ProjectViews.jsx'
+import { InstructorProjectEditor, InstructorProjectList, StudentProjectDetail, StudentProjectList } from './ProjectViews.jsx'
 
 const selectedClass = { id: 'class-1', className: 'Synthetic Class', status: 'ACTIVE' }
 const project = {
@@ -172,4 +172,32 @@ describe('Phase 10C.1 project views', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     await waitFor(() => expect(api.transitionProjectTask).toHaveBeenNthCalledWith(2, 'task-1', 'close', { expectedUpdatedAt: newer.updatedAt }))
   })
+})
+
+it('uses the outlined Instructor project Status filter and resets pagination on a new status', async () => {
+  const api = { listProjectTasks: vi.fn((_classId, query) => Promise.resolve({ data: [project], pagination: { ...query, totalPages: 2, hasPreviousPage: query.page > 1, hasNextPage: query.page < 2 } })) }
+  renderWithClass(<InstructorProjectList api={api} />)
+  await screen.findByText('Repository Project')
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(api.listProjectTasks).toHaveBeenLastCalledWith('class-1', { page: 2, pageSize: 20, status: '' }, expect.any(Object)))
+  fireEvent.click(screen.getByRole('combobox', { name: 'Status' }))
+  fireEvent.click(screen.getByRole('option', { name: 'Closed' }))
+  await waitFor(() => expect(api.listProjectTasks).toHaveBeenLastCalledWith('class-1', { page: 1, pageSize: 20, status: 'CLOSED' }, expect.any(Object)))
+  expect(screen.getByRole('combobox', { name: 'Status' })).toHaveTextContent('Closed')
+})
+
+it('uses clear Student project filter labels while preserving server lifecycle queries', async () => {
+  const api = { listProjectTasks: vi.fn().mockResolvedValue({ data: [], pagination: { totalPages: 0 } }) }
+  renderWithClass(<StudentProjectList api={api} />)
+  await screen.findByText('No projects to show')
+  expect(screen.getByRole('combobox', { name: 'Project filter' })).toHaveTextContent('All projects')
+  fireEvent.click(screen.getByRole('combobox', { name: 'Project filter' }))
+  fireEvent.click(screen.getByRole('option', { name: 'Active projects' }))
+  await waitFor(() => expect(api.listProjectTasks).toHaveBeenLastCalledWith('class-1', { page: 1, pageSize: 20, status: 'PUBLISHED' }, expect.any(Object)))
+  fireEvent.click(screen.getByRole('combobox', { name: 'Project filter' }))
+  fireEvent.click(screen.getByRole('option', { name: 'Closed projects' }))
+  await waitFor(() => expect(api.listProjectTasks).toHaveBeenLastCalledWith('class-1', { page: 1, pageSize: 20, status: 'CLOSED' }, expect.any(Object)))
+  fireEvent.click(screen.getByRole('combobox', { name: 'Project filter' }))
+  fireEvent.click(screen.getByRole('option', { name: 'All projects' }))
+  await waitFor(() => expect(api.listProjectTasks).toHaveBeenLastCalledWith('class-1', { page: 1, pageSize: 20, status: '' }, expect.any(Object)))
 })

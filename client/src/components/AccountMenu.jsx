@@ -38,8 +38,7 @@ export default function AccountMenu({ expanded, onExpandedChange }) {
       <strong className="academic-account-email">{auth.user.email}</strong>
       <span className="academic-account-organization">Managed by slu.edu.ph</span>
       <div className="student-profile-photo" aria-hidden="true"><span className="student-user-avatar" /></div>
-      <h2>Hi, {auth.user.fullName.toUpperCase()}!</h2>
-      <button type="button" className="student-manage-account" disabled title="Account management is not available yet.">Manage your Projex account</button>
+      <h2>{auth.user.fullName}</h2>
       <div className="student-profile-menu-list">
         <button type="button" className="academic-account-signout" disabled={busy} onClick={signOut}><ProjexIcon name="signout" />{busy ? 'Signing out…' : 'Sign out'}</button>
       </div>

@@ -42,15 +42,18 @@ describe('Academic Work Hub views', () => {
     await waitFor(() => expect(get).toHaveBeenCalledTimes(3))
   })
 
-  it('shows exact Instructor review targets and an honest empty state', async () => {
-    const get = vi.spyOn(apiClient, 'get').mockResolvedValueOnce({ data: [{ id: 'submission-1', kind: 'submission', title: 'Java exercise', activityId: 'activity-1', student: { id: 'student-1', fullName: 'Student One' }, status: 'assessed', action: 'Review submission', class: classRecord }], pagination }).mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } })
+  it('links aggregated Instructor Activities and distinguishes count units and reviewed state', async () => {
+    const get = vi.spyOn(apiClient, 'get').mockImplementation(async endpoint => ({ data: endpoint.includes('review-activities') && !endpoint.includes('state=reviewed') ? [{ id: 'activity-1', title: 'Java exercise', gradingMode: 'POINTS', dueDate: '2026-10-30T00:00:00.000Z', class: classRecord, submittedAttempts: 7, reviewedAttempts: 3, assignedStudents: 5, releasedAttempts: 1 }] : [], pagination }))
     render(<MemoryRouter><WorkHubList view="review" /></MemoryRouter>)
     expect(await screen.findByText('Java exercise')).toBeInTheDocument()
-    expect(screen.getByText(/Review submission/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Open record' })).toHaveAttribute('href', '/instructor/activity/activity-1/submissions/submission-1?classId=class-1')
-    fireEvent.change(screen.getByLabelText('Filter'), { target: { value: 'repository' } })
-    expect(await screen.findByText('No records match these filters.')).toBeInTheDocument()
-    expect(get).toHaveBeenCalledWith('/work-hub/instructor/review-queue?page=1&pageSize=20&kind=repository', expect.any(Object))
+    expect(screen.getByText('Java exercise').closest('a')).toHaveAttribute('href', '/instructor/activity/activity-1/submissions?classId=class-1')
+    expect(screen.getByText('Submitted attempts').parentElement).toHaveTextContent('7')
+    expect(screen.getByText('Assigned students').parentElement).toHaveTextContent('5')
+    expect(screen.getByText('Reviewed attempts').parentElement).toHaveTextContent('3')
+    expect(screen.getByText(/1 released attempt/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: 'Reviewed', exact: true }))
+    expect(await screen.findByText('No fully reviewed Activities.')).toBeInTheDocument()
+    expect(get).toHaveBeenCalledWith('/work-hub/instructor/review-activities?page=1&pageSize=20&state=reviewed', expect.any(Object))
   })
 
   it('exposes a retry after a failed load', async () => {
