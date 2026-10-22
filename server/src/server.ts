@@ -1,3 +1,5 @@
+import { createGroupBrowserCommitService } from './modules/group-browser-commits/group-browser-commit.service.js'
+import { createGroupBrowserCommitRouter } from './modules/group-browser-commits/group-browser-commit.routes.js'
 import { createTopicService } from './modules/activities/topic.service.js'
 import 'dotenv/config'
 import { createServer, type Server } from 'node:http'
@@ -347,6 +349,7 @@ async function bootstrap(): Promise<void> {
         service: repositoryContentService,
         requireAuthentication,
       }),
+      groupBrowserCommits: createGroupBrowserCommitRouter({ service: createGroupBrowserCommitService({ prisma, accessRepository: gitTransportRepository, enabled: env.gitExecutionMode === 'local_process' }), requireAuthentication, requireCsrf }),
       activityWorkspaceCheckpoints: createActivityWorkspaceCheckpointRouter({
         service: activityWorkspaceCheckpointService,
         requireAuthentication,

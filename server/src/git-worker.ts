@@ -1,3 +1,5 @@
+import { createGroupBrowserCommitWorker } from './modules/group-browser-commits/group-browser-commit-worker.js'
+import { BrowserCommitError, createGitGroupBrowserWriter } from './infrastructure/git/git-group-browser-writer.js'
 import 'dotenv/config'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -44,6 +46,7 @@ async function bootstrap(): Promise<void> {
     accessRepository: createPrismaGitTransportRepository(prisma),
     logger,
   })
+  const groupBrowserWorker = createGroupBrowserCommitWorker({ prisma, logger, writer: createGitGroupBrowserWriter({ git, checkSize: async root => { if (await storage.measure(root) + 8192 > env.gitRepositorySizeLimitBytes) throw new BrowserCommitError('BROWSER_STORAGE_LIMIT') }, resolveRepository: (id, storagePath) => storage.resolveManagedRepository(id,storagePath) }) })
   const workerId = randomUUID()
   let stopping = false
   const stop = () => {
@@ -57,6 +60,7 @@ async function bootstrap(): Promise<void> {
   )
   try {
     while (!stopping) {
+      const browserWork = await groupBrowserWorker.processNext(workerId)
       const job = await queue.claimNext({
         workerId,
         now: new Date(),
@@ -73,7 +77,7 @@ async function bootstrap(): Promise<void> {
           await checkpointService.process(checkpoint)
           continue
         }
-        await delay(env.gitProvisioningWorkerPollMs)
+        if (!browserWork) await delay(env.gitProvisioningWorkerPollMs)
         continue
       }
       logger.info(

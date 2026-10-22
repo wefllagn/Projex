@@ -40,6 +40,7 @@ export interface AppDependencies {
     repositories?: Router
     gitTransport?: Router
     repositoryContent?: Router
+    groupBrowserCommits?: Router
     activityWorkspaceCheckpoints?: Router
     capabilities?: Router
     workHub?: Router
@@ -112,6 +113,7 @@ export function createApp({
     if (featureRouters.repositoryContent) {
       app.use('/api/v1', featureRouters.repositoryContent)
     }
+    if (featureRouters.groupBrowserCommits) app.use('/api/v1', featureRouters.groupBrowserCommits)
     if (featureRouters.activityWorkspaceCheckpoints) {
       app.use('/api/v1', featureRouters.activityWorkspaceCheckpoints)
     }

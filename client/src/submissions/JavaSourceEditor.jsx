@@ -1,3 +1,4 @@
+import SourceEditorSurface from '../components/SourceEditorSurface.jsx'
 import useConfirmation from '../components/useConfirmation.jsx'
 import ProjexIcon from '../components/icons/ProjexIcon.jsx'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -9,8 +10,6 @@ export default function JavaSourceEditor({ value, onChange, entryClassName, edit
   const [message, setMessage] = useState('')
   const [reading, setReading] = useState(false)
   const [captureTab, setCaptureTab] = useState(true)
-  const gutterRef = useRef(null)
-  const guidesRef = useRef(null)
   const selection = useRef(null)
   const generation = useRef(0)
   const currentValue = useRef(value)
@@ -23,11 +22,6 @@ export default function JavaSourceEditor({ value, onChange, entryClassName, edit
     }
   }, [value, editorRef])
 
-  const syncScroll = () => {
-    const editor = editorRef.current
-    if (gutterRef.current) gutterRef.current.style.transform = `translateY(${-editor.scrollTop}px)`
-    if (guidesRef.current) guidesRef.current.style.transform = `translate(${-editor.scrollLeft}px, ${-editor.scrollTop}px)`
-  }
   const importFile = async (event) => {
     const files = Array.from(event.target.files ?? [])
     event.target.value = ''
@@ -68,13 +62,7 @@ export default function JavaSourceEditor({ value, onChange, entryClassName, edit
         <details className="academic-editor-help"><summary>Editor help</summary><small id="java-editor-help">Tab indents; Shift+Tab unindents. Escape then Tab leaves the editor. Maximum 100,000 characters and 100,000 UTF-8 bytes.</small></details>
         {message && <p role="status">{message}</p>}
       </div>
-      <div className="java-source-surface">
-        <div className="java-source-gutter" aria-hidden="true"><div ref={gutterRef}>{value.split('\n').map((_, i) => <div key={i}>{i + 1}</div>)}</div></div>
-        <div className="java-source-input-wrap">
-          <div className="java-source-guides" aria-hidden="true"><div ref={guidesRef}>{value.split('\n').map((line, i) => <div key={i}><span style={{ width: `${Math.floor(line.match(/^[\t ]*/)[0].replace(/\t/g, '    ').length / 4) * 4}ch` }} /></div>)}</div></div>
-          <textarea ref={editorRef} aria-label="Java source code" aria-describedby="java-editor-help" className="student-code-editor-input java-source-input" spellCheck="false" autoCapitalize="off" autoCorrect="off" wrap="off" maxLength={MAX_SOURCE_CHARACTERS} value={value} onFocus={() => setCaptureTab(true)} onChange={(event) => onChange(event.target.value)} onKeyDown={keyDown} onScroll={syncScroll} />
-        </div>
-      </div>
+      <SourceEditorSurface value={value} onChange={onChange} editorRef={editorRef} label="Java source code" description="java-editor-help" maxLength={MAX_SOURCE_CHARACTERS} onFocus={() => setCaptureTab(true)} onKeyDown={keyDown} />
       {confirmation}
     </div>
   )
