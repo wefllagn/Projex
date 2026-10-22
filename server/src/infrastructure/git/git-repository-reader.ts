@@ -262,7 +262,7 @@ export function createGitRepositoryReader(options: {
 
   async function commitSummaries(
     repositoryPath: string,
-    revision: string,
+    revision: string | readonly string[],
     optionsInput: { skip: number; limit: number },
   ): Promise<GitCommitSummary[]> {
     const result = await run(
@@ -274,7 +274,7 @@ export function createGitRepositoryReader(options: {
         `--skip=${optionsInput.skip}`,
         `--max-count=${optionsInput.limit}`,
         '--format=%H%x00%an%x00%aI%x00%s',
-        revision,
+        ...(typeof revision === 'string' ? [revision] : revision),
       ],
       options.commandOutputLimitBytes,
     )
@@ -282,6 +282,22 @@ export function createGitRepositoryReader(options: {
   }
 
   return {
+    async branchComparison(repositoryPath: string, sourceBranchName: string, targetBranchName: string) {
+      const sourceCommitHash=await resolveBranch(repositoryPath,sourceBranchName)
+      const targetCommitHash=await resolveBranch(repositoryPath,targetBranchName)
+      let fastForward=true
+      try { await run(repositoryPath,['merge-base','--is-ancestor',targetCommitHash,sourceCommitHash],options.commandOutputLimitBytes) }
+      catch(error) { if(error instanceof GitRepositoryReadError && error.code==='GIT_COMMAND_FAILED') fastForward=false; else throw error }
+      const count=await run(repositoryPath,['rev-list','--count',sourceCommitHash,'^'+targetCommitHash],options.commandOutputLimitBytes)
+      const commitCount=Number(count.stdout.toString('utf8').trim())
+      if(!Number.isSafeInteger(commitCount)||commitCount<0) throw new GitRepositoryReadError('GIT_OUTPUT_INVALID')
+      const names=await run(repositoryPath,['diff','--no-ext-diff','--no-textconv','--name-only','-z',targetCommitHash,sourceCommitHash],options.commandOutputLimitBytes)
+      const files=names.stdout.toString('utf8').split('\0').filter(Boolean).map(normalizeGitRepositoryPath)
+      if(files.length>options.maxChangedFiles) throw new GitRepositoryReadError('GIT_CHANGED_FILE_LIMIT_EXCEEDED')
+      const commits=await commitSummaries(repositoryPath,[sourceCommitHash,'^'+targetCommitHash],{skip:0,limit:5})
+      return {sourceBranchName,targetBranchName,sourceCommitHash,targetCommitHash,fastForward,upToDate:sourceCommitHash===targetCommitHash,commitCount,files,commits}
+    },
+
     async summary(repositoryPath: string, defaultBranch: string) {
       const branches = await listRawBranches(repositoryPath)
       if (branches.length === 0) {

@@ -30,7 +30,7 @@ async function fixture() {
   const {team,record}=await prisma.$transaction(async tx=>{
   const team = await tx.team.create({ data: { projectTaskId:project.id,leadStudentId:lead.id,name:'Browser QA team',normalizedName:'browser qa team' } })
   for (const student of [lead,developer]) await tx.teamMember.create({ data: { teamId:team.id,projectTaskId:project.id,studentId:student.id,memberRole:student.id===lead.id?'LEAD':'MEMBER',status:'ACTIVE' } })
-  const record = await tx.repository.create({ data: { projectTaskId:project.id,teamId:team.id,ownerId:lead.id,repositoryType:'CLASS_PROJECT',repositoryName:'Browser QA repository',slug:`browser-${randomUUID()}`,visibility:'CLASS_ONLY',status:'ACTIVE',reviewStatus:'WORKING',storageStatus:'PENDING', members:{create:[{studentId:lead.id,memberRole:'OWNER',status:'ACTIVE'},{studentId:developer.id,memberRole:'MEMBER',status:'ACTIVE'}]},provisioningJob:{create:{maxClaimAttempts:3}} } })
+  const record = await tx.repository.create({ data: { projectTaskId:project.id,teamId:team.id,ownerId:lead.id,repositoryType:'CLASS_PROJECT',repositoryName:'Browser QA repository',slug:`browser-${randomUUID()}`,visibility:'CLASS_ONLY',status:'ACTIVE',reviewStatus:'WORKING',storageStatus:'PENDING', members:{create:[{studentId:lead.id,memberRole:'OWNER',status:'ACTIVE'},{studentId:developer.id,memberRole:'MEMBER',status:'ACTIVE'}]},provisioningJob:{create:{maxClaimAttempts:3,availableAt:new Date(0)}} } })
     return {team,record}
   })
   const queue = createPostgresRepositoryProvisioningQueue(prisma)

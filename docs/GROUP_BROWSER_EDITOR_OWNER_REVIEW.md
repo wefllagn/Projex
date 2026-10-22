@@ -91,3 +91,7 @@ Read-only evidence and logs live outside Git in the new QA root. Screenshots liv
 ## J. Integration recommendation
 
 READY for Product Owner/independent reviewer assessment of this isolated candidate. No unresolved data-integrity/authorization defect was found in completed checks. V1 limits and temporary inspection recovery above remain explicit. Integration with the dirty UI continuation, migration of any preserved database, Friday candidate inclusion and deployment require separate owner approval. Native Git remains the presentation fallback.
+
+## Approved follow-up: three core Git actions
+
+The initial existing-branches-only limit above is superseded for this isolated candidate by the approved New Branch and fast-forward Merge Branch extension. All earlier commit, security and preservation guarantees remain. Current implementation, verification, runtime and deliberate limits are recorded in THREE_CORE_GROUP_GIT_ACTIONS_REVIEW.md; final checkpoint identity is in the owner handoff/Git HEAD.

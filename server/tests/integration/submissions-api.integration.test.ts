@@ -414,6 +414,8 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
       .send({ sourceCode: source })
       .expect(202)
     const practiceId = practiceResponse.body.data.id as string
+    // Make this projection test independent of database/client millisecond clock boundaries.
+    await prisma.executionJob.update({ where: { practiceExecutionId: practiceId }, data: { availableAt: new Date(0) } })
     const practiceJob = await queue.claimNext({
       workerId: 'phase6-practice-worker',
       now: new Date(),

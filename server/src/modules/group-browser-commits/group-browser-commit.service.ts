@@ -35,7 +35,7 @@ export function createGroupBrowserCommitService(deps: { prisma: PrismaClient; ac
         await tx.$queryRaw`SELECT repository_id FROM repositories WHERE repository_id = ${repositoryId}::uuid FOR UPDATE`
         const existing = await tx.groupBrowserCommitJob.findUnique({ where })
         if (existing) return existing
-        if (await tx.groupBrowserCommitJob.count({ where: { actorId: caller.id, repositoryId, status: { in: ['PENDING','RUNNING'] } } })) throw new AppError({ statusCode: 409, code: 'BROWSER_COMMIT_IN_PROGRESS', message: 'Your previous commit is still processing. Check its result before starting another.' })
+        if (await tx.groupBrowserRefJob.count({ where: { actorId: caller.id, repositoryId, status: { in: ['PENDING','RUNNING'] } } }) || await tx.groupBrowserCommitJob.count({ where: { actorId: caller.id, repositoryId, status: { in: ['PENDING','RUNNING'] } } })) throw new AppError({ statusCode: 409, code: 'BROWSER_COMMIT_IN_PROGRESS', message: 'Your previous commit is still processing. Check its result before starting another.' })
         return tx.groupBrowserCommitJob.create({ data: { ...input, repositoryId, actorId: caller.id, idempotencyKeyHash, payloadHash } })
       })
       if (job.payloadHash !== payloadHash) throw new AppError({ statusCode: 409, code: 'BROWSER_IDEMPOTENCY_CONFLICT', message: 'This request key was already used for different changes.' })
