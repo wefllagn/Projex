@@ -19,4 +19,3 @@ export function editSourceSelection(source, start, end, key, shift = false) {
   const value = source.slice(0, lineStart) + lines.map((line, i) => shift ? line.slice(-changes[i]) : `    ${line}`).join('\n') + source.slice(stop)
   return { value, start: Math.max(lineStart, start + changes[0]), end: Math.max(lineStart, end + changes.reduce((a, b) => a + b, 0)) }
 }
-
