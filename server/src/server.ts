@@ -1,3 +1,4 @@
+import { createConsoleRouter } from './modules/interactive-console/console.routes.js'
 import { createGroupBrowserRefService } from './modules/group-browser-refs/group-browser-ref.service.js'
 import { createGroupBrowserRefRouter } from './modules/group-browser-refs/group-browser-ref.routes.js'
 import { createGroupBrowserCommitService } from './modules/group-browser-commits/group-browser-commit.service.js'
@@ -327,6 +328,11 @@ async function bootstrap(): Promise<void> {
         requireAuthentication,
         requireCsrf,
       }),
+      interactiveConsole: createConsoleRouter({ prisma, requireAuthentication, requireCsrf, config: {
+        mode: env.javaExecutionMode, sourceLimitBytes: env.javaSourceLimitBytes,
+        practiceRunTtlHours: env.practiceRunTtlHours, practiceRunsPerMinute: env.practiceRunsPerMinute,
+        practiceMaxActivePerActivity: env.practiceMaxActivePerActivity,
+      } }),
       submissions: createSubmissionRouter({
         service: submissionService,
         requireAuthentication,

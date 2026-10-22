@@ -77,6 +77,12 @@ export function createSubmissionApi(client = apiClient) {
     getVisibleTestRun(runId, options) {
       return client.get(`/visible-test-runs/${runId}`, options)
     },
+    createInteractiveCodeRun(activityId, sourceCode, requestKey, options) {
+      return client.post(`/activities/${activityId}/interactive-code-runs`, { sourceCode, requestKey }, options)
+    },
+    getInteractiveCodeRun(id, options) { return client.get(`/interactive-code-runs/${id}`, options) },
+    sendInteractiveInput(id, input, options) { return client.post(`/interactive-code-runs/${id}/input`, input, options) },
+    stopInteractiveCodeRun(id, options) { return client.post(`/interactive-code-runs/${id}/stop`, {}, options) },
     createCodeRun(activityId, sourceCode, stdin, options) {
       return client.post(
         `/activities/${activityId}/code-runs`,

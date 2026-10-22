@@ -1,3 +1,4 @@
+import InteractiveConsole from './InteractiveConsole.jsx'
 import SubmissionSections from './SubmissionSections.jsx'
 import { ActivityWorkspaceAction } from '../repositories/ActivityWorkspaceAction.jsx'
 import AppDialog from '../components/AppDialog.jsx'
@@ -31,7 +32,6 @@ import { formatOutputWhitespace } from './output-diagnostics.js'
 import {
   isPracticePending,
   isSubmissionPending,
-  projectCodeRun,
   projectPracticeRun,
   projectStudentAttemptState,
   projectStudentSubmission,
@@ -409,9 +409,8 @@ export function StudentProgrammingWorkspace({
   const [workspace, reloadWorkspace] = useWorkspaceActivity(api, activityId, selectedClass, selectionStatus)
   const [source, setSource] = useState({ key: null, initial: '', value: '' })
   const [practice, setPractice] = useState({ record: null, error: null, requesting: false, bounded: false })
-  const [codeRun, setCodeRun] = useState({ record: null, error: null, requesting: false, bounded: false })
-  const [programInput, setProgramInput] = useState('')
-  const [codeInputOpen, setCodeInputOpen] = useState(false)
+  const [consoleActive, setConsoleActive] = useState(false)
+  const consoleRef = useRef(null)
   const [attemptState, setAttemptState] = useState({ key: null, status: 'idle', record: null, error: null })
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
   const [history, setHistory] = useState({ key: null, status: 'idle', items: [], error: null, reviewedAfterAmbiguity: false })
@@ -427,7 +426,6 @@ export function StudentProgrammingWorkspace({
   const mounted = useRef(true)
   const editorRef = useRef(null)
   const practicedSource = useRef(null)
-  const codeRunSource = useRef(null)
   const checkpointIntent = useRef(null)
   const observedGitHead = useRef(null)
   const acceptedNavigation = useRef(false)
@@ -449,9 +447,6 @@ export function StudentProgrammingWorkspace({
       ? current
       : { key, initial: workspace.activity.starterCode ?? '', value: workspace.activity.starterCode ?? '' })
     setPractice({ record: null, error: null, requesting: false, bounded: false })
-    setCodeRun({ record: null, error: null, requesting: false, bounded: false })
-    setProgramInput('')
-    setCodeInputOpen(false)
     setSubmission({ status: 'idle', intent: null, error: null })
     setAttemptState({ key: workspace.activity.id, status: 'loading', record: null, error: null })
     setHistory({ key: workspace.activity.id, status: 'idle', items: [], error: null, reviewedAfterAmbiguity: false })
@@ -559,27 +554,6 @@ export function StudentProgrammingWorkspace({
     onData: updateCheckpoint,
     onError: (error) => setCheckpoint((current) => ({ ...current, error, requesting: false })),
     onBoundedStop: () => setCheckpoint((current) => ({ ...current, bounded: true })),
-    ...pollingOptions,
-  })
-
-  const codeRunLoad = useCallback(
-    (runId, options) => submissions.getCodeRun(runId, options),
-    [submissions],
-  )
-  const updateCodeRun = useCallback((response) => {
-    const record = projectCodeRun(response.data)
-    if (record.activityId !== activityId) throw contextMismatchError('The code run does not match this activity.')
-    setCodeRun({ record, error: null, requesting: false, bounded: false })
-    return isPracticePending(record)
-  }, [activityId])
-
-  useBoundedPolling({
-    identity: codeRun.record?.id,
-    active: isPracticePending(codeRun.record) && !codeRun.error && !codeRun.bounded,
-    load: codeRunLoad,
-    onData: updateCodeRun,
-    onError: (error) => setCodeRun((current) => ({ ...current, error, requesting: false })),
-    onBoundedStop: () => setCodeRun((current) => ({ ...current, bounded: true })),
     ...pollingOptions,
   })
 
@@ -746,30 +720,9 @@ export function StudentProgrammingWorkspace({
     }
   }
 
-  const runCode = async () => {
-    codeRunSource.current = source.value
-    setCodeRun({ record: null, error: null, requesting: true, bounded: false })
+  const runCode = () => {
     revealDiagnostics('output')
-    try {
-      const response = await submissions.createCodeRun(activityId, source.value, programInput)
-      if (!mounted.current) return
-      const record = projectCodeRun(response.data)
-      if (record.activityId !== activityId) throw contextMismatchError('The code run does not match this activity.')
-      setCodeRun({ record, error: null, requesting: false, bounded: false })
-      setCodeInputOpen(false)
-    } catch (error) {
-      if (mounted.current) setCodeRun({ record: null, error, requesting: false, bounded: false })
-    }
-  }
-
-  const refreshCodeRun = async () => {
-    if (!codeRun.record?.id) return
-    setCodeRun((current) => ({ ...current, requesting: true, error: null }))
-    try {
-      updateCodeRun(await submissions.getCodeRun(codeRun.record.id))
-    } catch (error) {
-      setCodeRun((current) => ({ ...current, requesting: false, error }))
-    }
+    consoleRef.current?.start(source.value)
   }
 
   const refreshPractice = async () => {
@@ -868,8 +821,8 @@ export function StudentProgrammingWorkspace({
           <div><h1>{activity.title}</h1>{(sourceDirty || checkpoint.record?.status === 'SUCCEEDED') && <span className={sourceDirty ? 'is-unsaved' : 'is-saved'} role="status">{sourceDirty ? 'Unsaved changes' : 'Saved to Git'}</span>}</div>
         </div>
         <div className="student-coding-toolbar" aria-label="Workspace actions">
-          <button type="button" className="student-run-code" disabled={!capabilities.java.execution || !canRun || codeRun.requesting || isPracticePending(codeRun.record)} onClick={() => { setCodeInputOpen(true); revealDiagnostics('output') }}>
-            <ProjexIcon name="run" />{codeRun.requesting || isPracticePending(codeRun.record) ? 'Running code…' : 'Run Code'}
+          <button type="button" className="student-run-code" disabled={!capabilities.java.execution || !canRun || consoleActive} onClick={runCode}>
+            <ProjexIcon name="run" />{consoleActive ? 'Running code…' : 'Run Code'}
           </button>
           <button type="button" className="student-run-tests" disabled={!capabilities.java.execution || !canRun || practice.requesting || isPracticePending(practice.record)} onClick={runVisibleTests}>
             <ProjexIcon name="tests" />{practice.requesting || isPracticePending(practice.record) ? 'Running tests…' : 'Run Visible Tests'}
@@ -966,32 +919,12 @@ export function StudentProgrammingWorkspace({
               {practice.bounded && <p>Automatic refresh stopped. The server-side run may still be processing.</p>}
               {(practice.bounded || practice.error) && practice.record?.id && <button type="button" className="student-outline-action" disabled={practice.requesting} onClick={refreshPractice}>Refresh status</button>}
             </>}
-            {workspacePanel === 'output' && <>
-              <div className="student-panel-status-row"><strong>Compiler / runtime output</strong><button type="button" onClick={() => { setCodeRun({ record: null, error: null, requesting: false, bounded: false }); setPractice({ record: null, error: null, requesting: false, bounded: false }) }}>Clear</button></div>
-              {codeInputOpen && <section className="student-run-code-form" aria-label="Run code input">
-                <label htmlFor="student-program-input">Program input (stdin)</label>
-                <textarea id="student-program-input" value={programInput} onChange={(event) => setProgramInput(event.target.value)} placeholder={'Enter input before running. Line boundaries are preserved.'} maxLength={20000} />
-                <div><button type="button" className="student-outline-action" disabled={codeRun.requesting} onClick={() => setCodeInputOpen(false)}>Cancel</button><button type="button" className="student-primary-action" disabled={codeRun.requesting || !source.value.trim()} onClick={runCode}>{codeRun.requesting ? 'Running…' : 'Run'}</button></div>
-              </section>}
-              {!codeRun.record && !practice.record?.compilerOutput && !codeRun.error && <p>No output yet.</p>}
-              {codeRun.requesting && <p>Queueing this bounded Java run…</p>}
-              {codeRun.record && <div className="student-code-run-output" aria-live="polite">
-                <div className="student-panel-status-row"><strong>Run Code</strong><span>{isPracticePending(codeRun.record) ? formatStatus(codeRun.record.status) : codeRun.record.compileStatus === 'student_error' ? 'Compilation failed' : codeRun.record.runtimeStatus === 'passed' ? 'Completed' : formatStatus(codeRun.record.runtimeStatus)}</span></div>
-                {codeRun.record.compilerOutput && <><span>Compiler output</span><pre>{codeRun.record.compilerOutput}</pre></>}
-                {codeRun.record.stdout !== null && <><span>Standard output</span><pre>{codeRun.record.stdout || '(no output)'}</pre></>}
-                {codeRun.record.stderr && <><span>Standard error</span><pre>{codeRun.record.stderr}</pre></>}
-                {codeRun.record.runtimeStatus === 'timeout' && <p className="student-coding-failure">Execution timed out.</p>}
-                {codeRun.record.runtimeStatus === 'output_limit' && <p className="student-coding-failure">Execution exceeded the output limit.</p>}
-                {codeRunSource.current !== source.value && <p>Source changed since this run.</p>}
-                {codeRun.record.executionTimeMs !== null && <small>{codeRun.record.executionTimeMs} ms</small>}
-              </div>}
-              {codeRun.error && <p className="student-coding-failure">{executionErrorMessage(codeRun.error)}</p>}
-              {codeRun.bounded && <p>Automatic refresh stopped. The server-side run may still be processing.</p>}
-              {(codeRun.bounded || codeRun.error) && codeRun.record?.id && <button type="button" className="student-outline-action" disabled={codeRun.requesting} onClick={refreshCodeRun}>Refresh Run Code status</button>}
+            <div hidden={workspacePanel !== 'output'}>
+              <InteractiveConsole key={`${selectedClass.id}:${activity.id}`} ref={consoleRef} activityId={activity.id} source={source.value} api={submissions} onActiveChange={setConsoleActive} />
               {practice.record?.compilerOutput && <><span>Visible-test compiler output</span><pre>{practice.record.compilerOutput}</pre></>}
               {practice.record?.compilerOutput && practicedSource.current !== source.value && <p>Source changed since this visible-test run. Run again for current line references.</p>}
               {practice.record?.compilerOutput && practicedSource.current === source.value && compilerLines(practice.record.compilerOutput, activity.entryClassName, source.value).map((line) => <button key={line} type="button" className="student-outline-action" onClick={() => focusJavaLine(editorRef.current, line)}>Go to line {line}</button>)}
-            </>}
+            </div>
             {workspacePanel === 'git' && <div className="student-workspace-git-panel" aria-live="polite">
               <div className="student-panel-status-row"><strong>Git workspace</strong><span>{gitWorkspace.summary?.defaultBranch || gitWorkspace.repository?.defaultBranch || 'main'}</span></div>
               <p>Save to Git preserves your browser source. It does not submit the Activity.</p>

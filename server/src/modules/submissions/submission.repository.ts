@@ -229,6 +229,7 @@ export interface SubmissionRepository {
     studentId: string
     sourceCode: string
     sourceHash: string
+    consoleRequestKey?: string
     stdin: string
     now: Date
     expiresAt: Date
@@ -1129,6 +1130,7 @@ export function createPrismaSubmissionRepository(
     createCodeRun(input) {
       return prisma.$transaction(
         async (transaction) => {
+          await lockScope(transaction, `practice-student:${input.studentId}`)
           await lockScope(
             transaction,
             `practice:${input.activityId}:${input.studentId}`,
@@ -1179,6 +1181,20 @@ export function createPrismaSubmissionRepository(
           ) {
             return { kind: 'activity_not_accepting' } as const
           }
+          if (input.consoleRequestKey) {
+            const replay = await transaction.interactiveConsole.findUnique({
+              where: { requestKey: input.consoleRequestKey }, include: { practice: { include: practiceInclude } },
+            })
+            if (replay) {
+              if (replay.practice.studentId !== input.studentId || replay.practice.activityId !== input.activityId
+                || replay.practice.sourceCode !== input.sourceCode) return { kind: 'forbidden' } as const
+              return { kind: 'created', practice: replay.practice } as const
+            }
+            const activeConsoles = await transaction.interactiveConsole.count({
+              where: { practice: { studentId: input.studentId, status: { in: ['QUEUED', 'RUNNING'] } } },
+            })
+            if (activeConsoles > 0) return { kind: 'capacity_unavailable' } as const
+          }
           const minuteAgo = new Date(input.now.getTime() - 60_000)
           const [active, recent] = await Promise.all([
             transaction.practiceExecution.count({
@@ -1220,7 +1236,8 @@ export function createPrismaSubmissionRepository(
                   expectedOutputSnapshot: '',
                 },
               },
-              executionJob: { create: { jobType: 'VISIBLE_TEST_RUN' } },
+              ...(input.consoleRequestKey ? { console: { create: { requestKey: input.consoleRequestKey, lastSeenAt: input.now } } } : {}),
+              executionJob: { create: { jobType: 'VISIBLE_TEST_RUN', ...(input.consoleRequestKey ? { maxClaimAttempts: 1 } : {}) } },
             },
             select: { id: true },
           })

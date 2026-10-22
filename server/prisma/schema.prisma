@@ -888,6 +888,24 @@ model ReviewExecutionCase {
   @@map("review_execution_cases")
 }
 
+model InteractiveConsole {
+  id              String   @id @map("practice_execution_id") @db.Uuid
+  requestKey      String   @unique @map("request_key") @db.Uuid
+  phase           String   @default("QUEUED")
+  stdout          String   @default("") @db.Text
+  stderr          String   @default("") @db.Text
+  transcript      String   @default("") @db.Text
+  exitCode        Int?     @map("exit_code")
+  inputs          Json     @default("[]")
+  inputBytes      Int      @default(0) @map("input_bytes")
+  inputClosed     Boolean  @default(false) @map("input_closed")
+  cancelRequested Boolean  @default(false) @map("cancel_requested")
+  lastSeenAt      DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  practice        PracticeExecution @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("interactive_consoles")
+}
+
 model PracticeExecution {
   id             String                  @id @default(uuid()) @map("practice_execution_id") @db.Uuid
   activityId     String                  @map("activity_id") @db.Uuid
@@ -905,6 +923,7 @@ model PracticeExecution {
   expiresAt      DateTime                @map("expires_at") @db.Timestamptz(3)
   activity       ProgrammingActivity     @relation(fields: [activityId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   student        User                    @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  console        InteractiveConsole?
   cases          PracticeExecutionCase[]
   executionJob   ExecutionJob?
 

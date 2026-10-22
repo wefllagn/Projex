@@ -35,6 +35,7 @@ export interface AppDependencies {
     classInvitationImport?: Router
     classInvitations?: Router
     activities: Router
+    interactiveConsole?: Router
     submissions: Router
     projectTasks?: Router
     repositories?: Router
@@ -86,6 +87,7 @@ export function createApp({
   app.use('/api/v1/health', createHealthRouter(healthService))
   if (featureRouters?.capabilities) app.use('/api/v1/capabilities', featureRouters.capabilities)
   if (featureRouters) {
+    if (featureRouters.interactiveConsole) app.use('/api/v1', featureRouters.interactiveConsole)
     app.use('/api/v1/auth', featureRouters.auth)
     app.use('/api/v1/account-setup', featureRouters.accountSetup)
     if (featureRouters.admin) {

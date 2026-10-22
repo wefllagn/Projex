@@ -581,16 +581,16 @@ describe('student programming workspace', () => {
     expect(submissions.getVisibleTestRun).toHaveBeenCalledTimes(2)
   })
 
-  it('runs unsaved Scanner code with multiline stdin without submission or Git side effects', async () => {
+  it('runs unsaved Scanner code with live stdin without submission or Git side effects', async () => {
     mockWorkspaceViewport(false)
     const scannerSource = 'import java.util.Scanner; public class Main { public static void main(String[] args) { Scanner scanner = new Scanner(System.in); System.out.println("Hello " + scanner.nextLine()); } }'
     const submissions = submissionTransport({
-      createCodeRun: vi.fn().mockResolvedValue({ data: {
-        id: runId, activityId, status: 'queued', compileStatus: 'pending', runtimeStatus: 'not_run',
+      createInteractiveCodeRun: vi.fn().mockResolvedValue({ data: {
+        id: runId, activityId, phase: 'RUNNING', transcript: 'Enter your name: ', inputClosed: false, nextSequence: 1,
       } }),
-      getCodeRun: vi.fn().mockResolvedValue({ data: {
-        id: runId, activityId, status: 'succeeded', compileStatus: 'success', runtimeStatus: 'passed',
-        stdout: 'Hello Julius\n', stderr: null, executionTimeMs: 12,
+      sendInteractiveInput: vi.fn().mockResolvedValue({ data: { id: runId, activityId, phase: 'COMPLETED', transcript: 'Enter your name: Julius\nHello Julius\n', exitCode: 0 } }),
+      getInteractiveCodeRun: vi.fn().mockResolvedValue({ data: {
+        id: runId, activityId, phase: 'COMPLETED', transcript: 'Enter your name: Julius\nHello Julius\n', exitCode: 0,
         hiddenTestResults: ['HIDDEN'], score: 100,
       } }),
     })
@@ -603,11 +603,12 @@ describe('student programming workspace', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Run Code' }))
     expect(screen.getByRole('tab', { name: 'Output' })).toHaveAttribute('aria-selected', 'true')
     expect(revealOutput).toHaveBeenCalledWith({ block: 'start' })
-    fireEvent.change(screen.getByLabelText('Program input (stdin)'), { target: { value: 'Julius\n23' } })
-    await userEvent.click(screen.getByRole('button', { name: 'Run' }))
+    fireEvent.change(await screen.findByLabelText('Program input'), { target: { value: 'Julius' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }))
 
-    expect(submissions.createCodeRun).toHaveBeenCalledWith(activityId, scannerSource, 'Julius\n23')
-    expect(await screen.findByText('Hello Julius')).toBeInTheDocument()
+    expect(submissions.createInteractiveCodeRun).toHaveBeenCalledWith(activityId, scannerSource, expect.any(String))
+    expect(submissions.sendInteractiveInput).toHaveBeenCalledWith(runId, { sequence: 1, text: 'Julius', eof: false })
+    expect(await screen.findByText(/Hello Julius/)).toBeInTheDocument()
     expect(screen.queryByText('HIDDEN')).not.toBeInTheDocument()
     expect(submissions.createSubmission).not.toHaveBeenCalled()
     expect(git.repositories.createActivityCheckpoint).not.toHaveBeenCalled()

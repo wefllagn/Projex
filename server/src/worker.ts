@@ -1,3 +1,4 @@
+import { executeConsoleJob } from './modules/interactive-console/console.worker.js'
 import 'dotenv/config'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -6,6 +7,7 @@ import { createPrismaClient } from './infrastructure/database/prisma.js'
 import { createPostgresExecutionQueue } from './infrastructure/job-queue/execution-queue.js'
 import {
   createJavaRunner,
+  cleanupAbandonedConsoleDirectories,
   JavaInfrastructureError,
 } from './infrastructure/java/java-runner.js'
 import { createLogger } from './infrastructure/logging/logger.js'
@@ -43,6 +45,7 @@ async function bootstrap(): Promise<void> {
     while (!stopping) {
       const now = new Date()
       if (iteration % 60 === 0) {
+        await cleanupAbandonedConsoleDirectories(env.javaJobRoot)
         const deleted = await queue.cleanupExpiredPractice(now)
         if (deleted > 0) {
           logger.info(
@@ -71,6 +74,11 @@ async function bootstrap(): Promise<void> {
         'execution job claimed',
       )
       try {
+        const console = job.practiceExecutionId && await prisma.interactiveConsole.findUnique({ where: { id: job.practiceExecutionId } })
+        if (console) {
+          await executeConsoleJob(prisma, runner, job, { leaseMs: env.executionJobLeaseMs, stopping: () => stopping })
+          continue
+        }
         const result = await runner.execute({
           sourceCode: job.sourceCode,
           entryClassName: job.entryClassName,
