@@ -9,6 +9,8 @@ export function createIntegrationPrisma(): PrismaClient {
 export async function cleanIntegrationDatabase(
   prisma: PrismaClient,
 ): Promise<void> {
+  await prisma.groupBrowserRefJob.deleteMany()
+  await prisma.groupBrowserCommitJob.deleteMany()
   await prisma.adminAuditEvent.deleteMany()
   await prisma.gitCredential.deleteMany()
   await prisma.repositoryProvisioningJob.deleteMany()

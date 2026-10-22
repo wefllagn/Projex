@@ -106,15 +106,21 @@ export function createGitCommandRunner(options: {
     })
   }
 
-  function run(args: readonly string[], cwd?: string): Promise<{ stdout: string; stderr: string }> {
+  function run(args: readonly string[], cwd?: string, input?: { stdin?: string; indexFile?: string; actorId?: string; commitDate?: string }): Promise<{ stdout: string; stderr: string; stdoutBuffer: Buffer }> {
     return new Promise((resolve, reject) => {
       const child = spawn(executable, [...args], {
         cwd,
-        env: createSanitizedGitEnvironment(),
+        env: { ...createSanitizedGitEnvironment(),
+          ...(input?.indexFile ? { GIT_INDEX_FILE: input.indexFile } : {}),
+          ...(input?.actorId ? { GIT_AUTHOR_NAME: `Projex Student ${input.actorId}`, GIT_AUTHOR_EMAIL: `student-${input.actorId}@projex.local`, GIT_COMMITTER_NAME: `Projex Student ${input.actorId}`, GIT_COMMITTER_EMAIL: `student-${input.actorId}@projex.local` } : {}),
+          ...(input?.commitDate ? { GIT_AUTHOR_DATE: input.commitDate, GIT_COMMITTER_DATE: input.commitDate } : {}),
+        },
         shell: false,
         windowsHide: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['pipe', 'pipe', 'pipe'],
       })
+      child.stdin.on('error', () => {})
+      child.stdin.end(input?.stdin)
       const stdout: Buffer[] = []
       const stderr: Buffer[] = []
       let outputBytes = 0
@@ -163,6 +169,7 @@ export function createGitCommandRunner(options: {
         }
         resolve({
           stdout: Buffer.concat(stdout).toString('utf8'),
+          stdoutBuffer: Buffer.concat(stdout),
           stderr: Buffer.concat(stderr).toString('utf8'),
         })
       })

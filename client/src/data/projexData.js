@@ -210,6 +210,10 @@ export const routeCatalog = [
           'Identifier-less route that directs the student to choose an authorized repository record.',
       },
       {
+        path: 'projects/:projectTaskId/repositories/:repositoryId/editor',
+        label: 'Group Browser Editor', group: 'Project Collaboration Mode', status: 'Backend connected', summary: 'Bounded authorized single-file Group Git commits.',
+      },
+      {
         path: 'projects/:projectTaskId/repositories/:repositoryId',
         label: 'Project Repository',
         group: 'Project Collaboration Mode',

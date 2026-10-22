@@ -1,3 +1,7 @@
+import { createGroupBrowserRefService } from './modules/group-browser-refs/group-browser-ref.service.js'
+import { createGroupBrowserRefRouter } from './modules/group-browser-refs/group-browser-ref.routes.js'
+import { createGroupBrowserCommitService } from './modules/group-browser-commits/group-browser-commit.service.js'
+import { createGroupBrowserCommitRouter } from './modules/group-browser-commits/group-browser-commit.routes.js'
 import { createTopicService } from './modules/activities/topic.service.js'
 import 'dotenv/config'
 import { createServer, type Server } from 'node:http'
@@ -210,11 +214,7 @@ async function bootstrap(): Promise<void> {
     root: env.gitStorageRoot || process.cwd(),
     repositorySizeLimitBytes: env.gitRepositorySizeLimitBytes,
   })
-  const repositoryContentService = createRepositoryContentService({
-    enabled: env.gitExecutionMode === 'local_process',
-    accessRepository: gitTransportRepository,
-    storage: gitStorage,
-    reader: createGitRepositoryReader({
+  const groupGitReader = createGitRepositoryReader({
       executable: env.gitExecutable || process.execPath,
       timeoutMs: env.gitCommandTimeoutMs,
       commandOutputLimitBytes: env.gitOutputLimitBytes,
@@ -223,7 +223,12 @@ async function bootstrap(): Promise<void> {
       maxChangedFiles: env.gitInspectionMaxChangedFiles,
       maxBranches: env.gitMaxBranches,
       maxConcurrent: env.gitHttpMaxConcurrent,
-    }),
+    })
+  const repositoryContentService = createRepositoryContentService({
+    enabled: env.gitExecutionMode === 'local_process',
+    accessRepository: gitTransportRepository,
+    storage: gitStorage,
+    reader: groupGitReader,
     logger,
   })
   const activityWorkspaceCheckpointService = createActivityWorkspaceCheckpointService({
@@ -347,6 +352,8 @@ async function bootstrap(): Promise<void> {
         service: repositoryContentService,
         requireAuthentication,
       }),
+      groupBrowserRefs: createGroupBrowserRefRouter({service:createGroupBrowserRefService({prisma,accessRepository:gitTransportRepository,enabled:env.gitExecutionMode==='local_process',reader:groupGitReader,storage:gitStorage}),requireAuthentication,requireCsrf}),
+      groupBrowserCommits: createGroupBrowserCommitRouter({ service: createGroupBrowserCommitService({ prisma, accessRepository: gitTransportRepository, enabled: env.gitExecutionMode === 'local_process' }), requireAuthentication, requireCsrf }),
       activityWorkspaceCheckpoints: createActivityWorkspaceCheckpointRouter({
         service: activityWorkspaceCheckpointService,
         requireAuthentication,

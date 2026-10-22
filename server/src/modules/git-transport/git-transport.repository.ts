@@ -1,4 +1,4 @@
-import type { GitCredentialOperation, PrismaClient } from '@prisma/client'
+import type { GitCredentialOperation, PrismaClient, Prisma } from '@prisma/client'
 import type {
   AcceptedPushReceipt,
   GitCredentialProjection,
@@ -47,15 +47,15 @@ function credentialProjection(record: {
   }
 }
 
-export function createPrismaGitTransportRepository(prisma: PrismaClient): GitTransportRepository {
+export function createPrismaGitTransportRepository(prisma: PrismaClient, accessClient: Pick<Prisma.TransactionClient, 'user' | 'repository'> = prisma): GitTransportRepository {
   return {
     async findAccess(repositoryId, userId) {
       const [user, repository] = await Promise.all([
-        prisma.user.findUnique({
+        accessClient.user.findUnique({
           where: { id: userId },
           select: { id: true, role: true, status: true },
         }),
-        prisma.repository.findUnique({
+        accessClient.repository.findUnique({
           where: { id: repositoryId },
           select: {
             id: true,

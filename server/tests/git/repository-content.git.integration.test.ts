@@ -277,7 +277,7 @@ describe('Phase 8C repository inspection', () => {
           reviewStatus: 'WORKING',
           storageStatus: 'PENDING',
           members: { create: { studentId: owner.id, memberRole: 'OWNER', status: 'ACTIVE' } },
-          provisioningJob: { create: { maxClaimAttempts: 3 } },
+          provisioningJob: { create: { maxClaimAttempts: 3, availableAt: new Date(0) } },
         },
       })
       return record

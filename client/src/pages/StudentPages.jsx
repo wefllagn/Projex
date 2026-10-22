@@ -1,3 +1,4 @@
+import GroupBrowserEditor from '../repositories/GroupBrowserEditor.jsx'
 import ClassCardGrid from '../classes/ClassCardGrid.jsx'
 import ClassOverviewCard from '../classes/ClassOverviewCard.jsx'
 import StudentWorkOverview from '../activities/StudentWorkOverview.jsx'
@@ -456,6 +457,7 @@ export function StudentRoutePage({ pagePath }) {
     projects: <ProjectListPage />,
     'projects/:projectTaskId': <ProjectDetailPage />,
     'projects/:projectTaskId/repository': <StudentClassPage activeTab="assignments" wide><RepositorySelectionRequired /></StudentClassPage>,
+    'projects/:projectTaskId/repositories/:repositoryId/editor': <GroupBrowserEditor />,
     'projects/:projectTaskId/repositories/:repositoryId': <ProjectRepositoryPage />,
     'projects/:projectTaskId/repositories/:repositoryId/contributions': <DeferredStudentPage title="Contribution Tracking" message="Verified contribution analytics require a separately approved identity and evidence contract." />,
     repositories: <RepositoryCatalogPage />,
