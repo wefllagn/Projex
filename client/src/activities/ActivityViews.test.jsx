@@ -283,12 +283,12 @@ describe('student activity integration', () => {
 })
 
 describe('instructor activity integration', () => {
-  it('lists drafts and links to the dynamic settings route', async () => {
+  it('lists drafts and opens the submission queue before settings', async () => {
     const api = { listActivities: vi.fn().mockResolvedValue({ data: [activity], pagination }) }
     renderView(<InstructorActivityList api={api} />)
 
     expect(await screen.findByText('Repository-backed Loops')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: activity.title })).toHaveAttribute('href', `/instructor/activity/${activityId}/settings?classId=${classId}`)
+    expect(screen.getByRole('link', { name: activity.title })).toHaveAttribute('href', `/instructor/activity/${activityId}/submissions?classId=${classId}`)
     expect(screen.getByText(/Draft · Due/)).toBeInTheDocument()
   })
 
@@ -329,7 +329,8 @@ describe('instructor activity integration', () => {
     try {
       renderView(<InstructorActivityEditor api={api} mode="edit" />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
 
-      await user.click(await screen.findByRole('button', { name: 'Add test case' }))
+      await user.click(await screen.findByRole('tab', { name: /^Test cases/ }))
+      await user.click(screen.getByRole('button', { name: 'Add test case' }))
       await user.click(screen.getByRole('button', { name: 'Add test case' }))
 
       expect(screen.queryByRole('group', { name: 'Test case 1' })).not.toBeInTheDocument()
@@ -353,6 +354,7 @@ describe('instructor activity integration', () => {
     const user = userEvent.setup()
     renderView(<InstructorActivityEditor api={api} mode="edit" />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
 
+    await user.click(await screen.findByRole('tab', { name: /^Test cases/ }))
     const name = await screen.findByLabelText('Name')
     await user.clear(name)
     await user.type(name, 'Updated visible sample')
@@ -408,6 +410,7 @@ describe('instructor activity integration', () => {
     }
     renderView(<InstructorActivityEditor api={api} mode="edit" />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
 
+    fireEvent.click(await screen.findByRole('tab', { name: /^Test cases/ }))
     expect(await screen.findByDisplayValue(hiddenSecret)).toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: 'Hidden from students' })).toBeChecked()
   })
@@ -560,6 +563,7 @@ describe('Instructor authoring overhaul', () => {
     const api = { getActivity: vi.fn().mockResolvedValue({ data: activity }), listTestCases: vi.fn().mockResolvedValue({ data: [testCase, { ...testCase, id: 'second', name: 'Boundary' }], pagination }) }
     const user = userEvent.setup()
     renderView(<InstructorActivityEditor api={api} />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
+    await user.click(await screen.findByRole('tab', { name: /^Test cases/ }))
     await screen.findByDisplayValue('Visible sample')
     await user.clear(screen.getByLabelText('Input')); await user.type(screen.getByLabelText('Input'), 'Unsaved case input')
     await user.click(screen.getByRole('button', { name: /2\. Boundary/ }))
@@ -597,4 +601,44 @@ it('keeps only due date and attempts in Your work and opens history without leav
   await user.keyboard('{Escape}')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(history).toHaveFocus()
+})
+
+
+it('keeps unsaved activity and test-case edits while switching compact settings sections by keyboard', async () => {
+  const api = { getActivity: vi.fn().mockResolvedValue({ data: activity }), listTestCases: vi.fn().mockResolvedValue({ data: [testCase], pagination }) }
+  const user = userEvent.setup()
+  renderView(<InstructorActivityEditor api={api} />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
+  const details = await screen.findByRole('tab', { name: 'Details' })
+  expect(details).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getAllByRole('tabpanel')).toHaveLength(1)
+  await user.clear(screen.getByLabelText('Activity title'))
+  await user.type(screen.getByLabelText('Activity title'), 'Unsaved title')
+  details.focus()
+  await user.keyboard('{ArrowRight}')
+  expect(screen.getByRole('tab', { name: 'Java starter' })).toHaveFocus()
+  expect(screen.getByRole('tab', { name: 'Java starter' })).toHaveAttribute('aria-selected', 'true')
+  await user.keyboard('{End}')
+  await user.clear(screen.getByLabelText('Name'))
+  await user.type(screen.getByLabelText('Name'), 'Unsaved test name')
+  await user.click(details)
+  expect(screen.getByLabelText('Activity title')).toHaveValue('Unsaved title')
+  await user.click(screen.getByRole('tab', { name: /^Test cases/ }))
+  expect(screen.getByLabelText('Name')).toHaveValue('Unsaved test name')
+  expect(screen.getByRole('link', { name: 'Back to submissions' })).toHaveAttribute('href', `/instructor/activity/${activityId}/submissions?classId=${classId}`)
+})
+
+it('reveals Java validation errors when saving from another settings section', async () => {
+  const api = { createActivity: vi.fn() }
+  const user = userEvent.setup()
+  renderView(<InstructorActivityEditor api={api} mode="create" />, { entry: `/instructor/activity/new?classId=${classId}`, path: '/instructor/activity/new' })
+  await user.type(screen.getByLabelText('Activity title'), 'New activity')
+  await user.type(screen.getByLabelText('Instructions'), 'Print a greeting.')
+  await user.type(screen.getByLabelText('Deadline'), '2099-09-03T17:00')
+  await user.click(screen.getByRole('tab', { name: 'Java starter' }))
+  await user.clear(screen.getByLabelText('Starter source'))
+  await user.click(screen.getByRole('tab', { name: 'Details' }))
+  await user.click(screen.getByRole('button', { name: 'Create draft' }))
+  expect(api.createActivity).not.toHaveBeenCalled()
+  expect(screen.getByRole('tab', { name: 'Java starter' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByText('Enter starter source of no more than 100,000 characters.')).toBeVisible()
 })

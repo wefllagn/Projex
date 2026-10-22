@@ -94,7 +94,7 @@ export function GroupRepositoryView({ repository, project, role, api, classApi, 
     } catch (error) { setReviewError(error); if (error?.status === 409) updated() }
     finally { setReviewBusy(false) }
   }
-  return <main className="group-repository-page">
+  return <main className="group-repository-page academic-class-frame">
     <NavLink className="student-back-link" to={classHref(`/${role}/projects/${context.project.id}`, context.class.id)}>{context.project.title}</NavLink>
     <header className="group-repository-header"><div><h1><ProjexIcon name="repository" size={26} /> {repository.repositoryName}</h1><dl className="group-context-metadata"><div><dt>Group</dt><dd>{context.team.name}</dd></div><div><dt>Class</dt><dd>{context.class.className}</dd></div><div><dt>Project</dt><dd>{context.project.title}</dd></div><div><dt><ProjexIcon name="calendar" size={14} /> Due</dt><dd>{formatProjectDate(context.project.dueDate)}</dd></div></dl><div className="group-state"><ProjexStatus value={repository.reviewStatus}>{formatRepositoryLabel(repository.reviewStatus)}</ProjexStatus>{!context.permissions.canWrite && !metadataOnly && <small>Git read-only</small>}{repository.status !== 'ACTIVE' && <small>{formatRepositoryLabel(repository.status)}</small>}{repository.storageStatus !== 'READY' && <small>{formatRepositoryLabel(repository.storageStatus)}</small>}</div></div>
       <div className="group-header-actions">

@@ -34,7 +34,7 @@ export function TopicSelector({ classId, value, onChange, disabled, api = activi
 
 function ClassworkActivityRow({ activity, classId, instructor }) {
   const titleId = `classwork-activity-${activity.id}`
-  const href = classHref(instructor ? `/instructor/activity/${activity.id}/settings` : `/student/activity/${activity.id}`, classId)
+  const href = classHref(instructor ? `/instructor/activity/${activity.id}/submissions` : `/student/activity/${activity.id}`, classId)
   return <li>
     <NavLink to={href} className="classwork-row" aria-labelledby={titleId}>
       <ProjexIcon name="activity" className="classwork-row-icon" />

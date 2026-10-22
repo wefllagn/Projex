@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
 import { ClassContext } from '../classes/class-context.js'
-import { InstructorProjectEditor, InstructorProjectList, StudentProjectDetail, StudentProjectList } from './ProjectViews.jsx'
+import { InstructorProjectDetail, InstructorProjectEditor, InstructorProjectList, StudentProjectDetail, StudentProjectList } from './ProjectViews.jsx'
 
 const selectedClass = { id: 'class-1', className: 'Synthetic Class', status: 'ACTIVE' }
 const project = {
@@ -89,6 +89,7 @@ describe('Phase 10C.1 project views', () => {
     const limit = await screen.findByLabelText('Maximum members (including Maintainer)')
     expect(limit).toHaveValue('4')
     expect(limit).toBeDisabled()
+    expect(screen.getByText('Project details, including the member limit, are locked after publishing.')).toBeInTheDocument()
   })
 
   it('prioritizes the server-authorized My Group and does not offer duplicate creation', async () => {
@@ -166,10 +167,13 @@ describe('Phase 10C.1 project views', () => {
         .mockResolvedValueOnce({ data: closed }),
     }
     renderWithClass(<Routes><Route path="/instructor/projects/:projectTaskId/settings" element={<InstructorProjectEditor mode="edit" api={api} />} /></Routes>, '/instructor/projects/task-1/settings?classId=class-1')
-    fireEvent.click(await screen.findByRole('button', { name: 'Close' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Close project' }))
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Close project?' })).getByRole('button', { name: 'Confirm' }))
     expect(await screen.findByText(/latest version is loaded/i)).toBeInTheDocument()
     expect(api.transitionProjectTask).toHaveBeenNthCalledWith(1, 'task-1', 'close', { expectedUpdatedAt: project.updatedAt })
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close project' }))
+    expect(api.transitionProjectTask).toHaveBeenCalledTimes(1)
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Close project?' })).getByRole('button', { name: 'Confirm' }))
     await waitFor(() => expect(api.transitionProjectTask).toHaveBeenNthCalledWith(2, 'task-1', 'close', { expectedUpdatedAt: newer.updatedAt }))
   })
 })
@@ -200,4 +204,71 @@ it('uses clear Student project filter labels while preserving server lifecycle q
   fireEvent.click(screen.getByRole('combobox', { name: 'Project filter' }))
   fireEvent.click(screen.getByRole('option', { name: 'All projects' }))
   await waitFor(() => expect(api.listProjectTasks).toHaveBeenLastCalledWith('class-1', { page: 1, pageSize: 20, status: '' }, expect.any(Object)))
+})
+
+
+it('presents real Group monitoring counts and repository links without implementation explainers', async () => {
+  const api = {
+    getProjectTask: vi.fn().mockResolvedValue({ data: project }),
+    listTeams: vi.fn().mockResolvedValue({ data: [{ teamId: 'team', name: 'Library builders', status: 'ACTIVE', lead: { userId: 'student', fullName: 'Alex Rivera' }, activeMemberCount: 2, repository: { repositoryId: 'repo', repositoryName: 'Campus Library', reviewStatus: 'READY_FOR_REVIEW' } }] }),
+    getMonitoring: vi.fn().mockResolvedValue({ data: { projectTaskId: project.id, teamCount: 1, repositoryCount: 1, activeMemberCount: 2 } }),
+  }
+  renderWithClass(<Routes><Route path="/instructor/projects/:projectTaskId" element={<InstructorProjectDetail api={api} />} /></Routes>, '/instructor/projects/task-1?classId=class-1')
+  const groups = await screen.findByRole('list', { name: 'Project groups' })
+  const row = within(groups).getByRole('link', { name: /Library builders/ })
+  expect(row).toHaveTextContent('2 / 4 members')
+  expect(row).toHaveTextContent('Maintainer: Alex Rivera')
+  expect(row).toHaveTextContent('Campus Library')
+  expect(row).toHaveAttribute('href', '/instructor/projects/task-1/repositories/repo?classId=class-1')
+  expect(within(groups).queryByRole('button')).not.toBeInTheDocument()
+  expect(screen.queryByRole('columnheader', { name: 'Action' })).not.toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Project settings' })).toHaveAttribute('href', '/instructor/projects/task-1/settings?classId=class-1')
+  const summary = screen.getByLabelText('Project overview')
+  expect(summary).toHaveTextContent('Groups1Repositories1Active members2')
+  expect(screen.queryByText(/authoritative records|backend-supported|not part of the project-task contract|Repository evidence and academic review/)).not.toBeInTheDocument()
+})
+
+
+it.each([
+  ['PUBLISHED', 'close', 'Close project', 'CLOSED'],
+  ['CLOSED', 'archive', 'Archive project', 'ARCHIVED'],
+])('confirms %s lifecycle changes and lets Cancel leave the project intact', async (status, action, label, nextStatus) => {
+  const record = { ...project, status }
+  const api = { getProjectTask: vi.fn().mockResolvedValue({ data: record }), transitionProjectTask: vi.fn().mockResolvedValue({ data: { ...record, status: nextStatus, updatedAt: '2026-08-04T00:00:00.000Z' } }) }
+  renderWithClass(<Routes><Route path="/instructor/projects/:projectTaskId/settings" element={<InstructorProjectEditor mode="edit" api={api} />} /></Routes>, '/instructor/projects/task-1/settings?classId=class-1')
+  const trigger = await screen.findByRole('button', { name: label })
+  trigger.focus()
+  fireEvent.click(trigger)
+  const dialog = await screen.findByRole('dialog', { name: `${label}?` })
+  expect(within(dialog).getByText(/Are you sure/)).toBeInTheDocument()
+  expect(api.transitionProjectTask).not.toHaveBeenCalled()
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(trigger).toHaveFocus()
+  expect(api.transitionProjectTask).not.toHaveBeenCalled()
+  fireEvent.click(trigger)
+  fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Confirm' }))
+  await waitFor(() => expect(api.transitionProjectTask).toHaveBeenCalledExactlyOnceWith(project.id, action, { expectedUpdatedAt: record.updatedAt }))
+})
+
+it.each([
+  ['student', StudentProjectList],
+  ['instructor', InstructorProjectList],
+])('uses a whole project link for the %s list instead of action buttons', async (role, Component) => {
+  const api = { listProjectTasks: vi.fn().mockResolvedValue({ data: [project], pagination: {} }) }
+  renderWithClass(<Component api={api} />)
+  const row = await screen.findByRole('link', { name: /Repository Project/ })
+  expect(row).toHaveAttribute('href', `/${role}/projects/task-1?classId=class-1`)
+  expect(row).toHaveTextContent('Up to 4 members')
+  expect(screen.queryByRole('link', { name: /Monitor|Configure/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('columnheader', { name: 'Actions' })).not.toBeInTheDocument()
+})
+
+it.each([
+  [null, 'Back to project', '/instructor/projects/task-1?classId=class-1'],
+  [{ projectRepositoryId: 'repo-1' }, 'Back to project', '/instructor/projects/task-1?classId=class-1'],
+])('returns project settings to its project even with obsolete repository navigation state', async (state, label, href) => {
+  const api = { getProjectTask: vi.fn().mockResolvedValue({ data: project }) }
+  render(<ClassContext.Provider value={classValue()}><MemoryRouter initialEntries={[{ pathname: '/instructor/projects/task-1/settings', search: '?classId=class-1', state }]}><Routes><Route path="/instructor/projects/:projectTaskId/settings" element={<InstructorProjectEditor mode="edit" api={api} />} /></Routes></MemoryRouter></ClassContext.Provider>)
+  expect(await screen.findByRole('link', { name: label })).toHaveAttribute('href', href)
 })

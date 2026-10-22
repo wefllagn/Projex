@@ -28,6 +28,13 @@ async function openAccess() {
   await act(async () => {})
 }
 describe('Group Repository MVP', () => {
+  it('keeps project settings out of the repository view and links back to its project', async () => {
+    const deps = dependencies(context({ currentRole: 'INSTRUCTOR' }))
+    render(<MemoryRouter><GroupRepositoryView repository={repository} role="instructor" {...deps} onReload={vi.fn()} /></MemoryRouter>)
+    const back = await screen.findByRole('link', { name: 'Enrollment System' })
+    expect(back).toHaveAttribute('href', '/instructor/projects/project-1?classId=class-1')
+    expect(screen.queryByRole('link', { name: 'Project settings' })).not.toBeInTheDocument()
+  })
   it('preserves search text if an already-started background source refresh fails and retries after clearing', async () => {
     const deps = dependencies()
     let reject
@@ -234,7 +241,7 @@ describe('Group Repository MVP', () => {
     render(<MemoryRouter><GroupRepositoryView repository={{ ...repository, reviewStatus: 'READY_FOR_REVIEW' }} role="instructor" {...deps} onReload={vi.fn()} /></MemoryRouter>)
     fireEvent.click(await screen.findByRole('button', { name: 'Review', exact: true }))
     const dialog = await screen.findByRole('dialog', { name: 'Review repository' })
-    expect(within(dialog).getByRole('button', { name: 'Request Changes' })).toBeEnabled()
+    expect(await within(dialog).findByRole('button', { name: 'Request Changes' })).toBeEnabled()
     expect(within(dialog).getByRole('button', { name: 'Approve Repository' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Mark Ready for Review' })).not.toBeInTheDocument()
     expect(screen.getByText('Git read-only')).toBeInTheDocument()

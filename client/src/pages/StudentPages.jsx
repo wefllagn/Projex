@@ -224,7 +224,7 @@ function ActivityDetailPage() {
 function SubmissionHistoryPage() {
   return (
     <StudentClassPage activeTab="assignments" wide deferredLabel="">
-      <StudentSubmissionHistory />
+      <AssignmentSubTabs active="activities" /><StudentSubmissionHistory />
     </StudentClassPage>
   )
 }
@@ -232,7 +232,7 @@ function SubmissionHistoryPage() {
 function SubmissionDetailPage() {
   return (
     <StudentClassPage activeTab="assignments" wide deferredLabel="">
-      <StudentSubmissionDetail />
+      <AssignmentSubTabs active="activities" /><StudentSubmissionDetail />
     </StudentClassPage>
   )
 }
@@ -428,6 +428,12 @@ function RepositoryCatalogPage({ archived = false }) {
   )
 }
 
+function ProjectRepositoryPage() {
+  const { requestedClassId } = useClasses()
+  const repository = <RepositoryFoundationDetail />
+  return requestedClassId ? <StudentClassPage activeTab="assignments" deferredLabel=""><AssignmentSubTabs active="projects" />{repository}</StudentClassPage> : repository
+}
+
 export function StudentRoutePage({ pagePath }) {
   const pages = {
     dashboard: <HomeDashboardPage />,
@@ -450,7 +456,7 @@ export function StudentRoutePage({ pagePath }) {
     projects: <ProjectListPage />,
     'projects/:projectTaskId': <ProjectDetailPage />,
     'projects/:projectTaskId/repository': <StudentClassPage activeTab="assignments" wide><RepositorySelectionRequired /></StudentClassPage>,
-    'projects/:projectTaskId/repositories/:repositoryId': <RepositoryFoundationDetail />,
+    'projects/:projectTaskId/repositories/:repositoryId': <ProjectRepositoryPage />,
     'projects/:projectTaskId/repositories/:repositoryId/contributions': <DeferredStudentPage title="Contribution Tracking" message="Verified contribution analytics require a separately approved identity and evidence contract." />,
     repositories: <RepositoryCatalogPage />,
     'repositories/:repositoryId': <RepositoryFoundationDetail />,

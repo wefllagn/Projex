@@ -1,3 +1,4 @@
+import SubmissionSections from './SubmissionSections.jsx'
 import { ActivityWorkspaceAction } from '../repositories/ActivityWorkspaceAction.jsx'
 import AppDialog from '../components/AppDialog.jsx'
 import AcademicEmptyState from '../components/AcademicEmptyState.jsx'
@@ -278,7 +279,7 @@ function isCheckpointPending(record) {
   return ['PENDING', 'RUNNING'].includes(record?.status)
 }
 
-function VisibleOutcomeList({ outcomes, emptyMessage = 'No visible-test outcomes are available yet.' }) {
+function VisibleOutcomeList({ outcomes, emptyMessage = 'No visible-test outcomes are available yet.', hideHeading = false }) {
   if (!outcomes.length) return <p className="submission-muted-copy">{emptyMessage}</p>
   return (
     <div className="submission-outcome-list">
@@ -286,12 +287,12 @@ function VisibleOutcomeList({ outcomes, emptyMessage = 'No visible-test outcomes
         const showComparison = outcome.outcome === 'failed' && outcome.expectedOutput !== null && outcome.actualOutput !== null
         return (
           <article className="submission-outcome" key={`${outcome.order}:${outcome.name}`}>
-            <div>
+            {!hideHeading && <div>
               <strong>{outcome.name}</strong>
               <span className={`submission-status submission-status--${outcome.outcome}`}>
                 {formatStatus(outcome.outcome)}
               </span>
-            </div>
+            </div>}
             {showComparison ? (
               <section className="submission-output-comparison" aria-label={`${outcome.name} output comparison`}>
                 <small>Whitespace markers: · space, → tab, ↵ line ending.</small>
@@ -1065,30 +1066,6 @@ export function StudentProgrammingWorkspace({
   )
 }
 
-function SubmissionCard({ record, classId }) {
-  return (
-    <article className="student-assignment-row submission-history-card">
-      <div>
-        <span className={`submission-status submission-status--${record.gradingMode === 'COMPLETION' ? 'complete' : record.status}`}>{submissionStatusLabel(record, formatStatus)}</span>
-        <h2>{record.attemptLabel}</h2>
-        <p>Submitted {formatDate(record.submittedAt)}</p>
-        {record.isLate && <small>Accepted after the ordinary deadline</small>}
-      </div>
-      <div>
-        <strong>{record.gradingMode === 'COMPLETION' ? `Complete · Feedback ${record.feedbackReleased ? 'released' : 'not released'}` : record.gradeStatus === 'released' ? 'Result released' : 'Result not released'}</strong>
-        {record.gradeStatus === 'released' && <small>{record.finalScore ?? 'Not available'} / {record.totalPoints ?? 'Not available'} points</small>}
-        {record.isCreditedResult && <span className="submission-status submission-status--released">Credited result</span>}
-        {record.failureResolution?.replacementGranted && (
-          <small>
-            Replacement {record.failureResolution.replacementAvailable ? 'available' : 'no longer available'}; expiration {formatDate(record.failureResolution.replacementExpiresAt)}
-          </small>
-        )}
-      </div>
-      <NavLink className="student-assignment-action" to={classHref(`/student/activity/${record.activityId}/submissions/${record.id}`, classId)}>View record</NavLink>
-    </article>
-  )
-}
-
 export function StudentSubmissionHistory({ api = activityApi, submissions = submissionApi, compact = false }) {
   const { activityId } = useParams()
   const { selectedClass, selectionStatus } = useClasses()
@@ -1125,40 +1102,32 @@ export function StudentSubmissionHistory({ api = activityApi, submissions = subm
   if (!current.activity) return null
 
   return (
-    <div className={compact ? 'academic-attempt-history' : 'student-assignment-board submission-history-page'}>
-      {!compact && <header className="submission-page-heading">
-        <div>
-          <NavLink className="student-back-link" to={classHref(`/student/activity/${activityId}`, selectedClass.id)}>Back to activity</NavLink>
-          <p className="student-feedback-eyebrow">Official submissions</p>
-          <h1>{current.activity.title}</h1>
-          <p>Attempts are immutable records. Practice runs do not appear here.</p>
-          <small>{current.activity.gradingMode === 'COMPLETION' ? 'Ungraded · completion is independent of feedback release.' : `Credited result policy: ${current.activity.creditPolicy === 'HIGHEST' ? 'Highest released attempt' : 'Latest released attempt'}.`}</small>
-        </div>
-        <ActivityWorkspaceAction key={`${selectedClass.id}:${activityId}`} activity={current.activity} classId={selectedClass.id} />
-      </header>}
-      <section className="student-assignment-panel student-assignment-panel--board">
-        {compact ? <div className="academic-attempt-toolbar"><OutlinedSelect label="Status" value={query.status} onChange={status => setQuery({ ...FIRST_PAGE, status })} options={[{ value: '', label: 'All statuses' }, ...['QUEUED', 'ASSESSING', 'ASSESSED', 'ASSESSMENT_FAILED', 'REVIEWED', 'RELEASED', 'FAILED_RESOLVED'].map(value => ({ value, label: formatStatus(value).toLowerCase().replace(/^./, letter => letter.toUpperCase()) }))]} /></div> : <div className="student-assignment-toolbar student-assignment-toolbar--board">
-          <div><strong>Attempt history</strong></div>
-          <label className="student-sort-control">Status
-            <select value={query.status} onChange={(event) => setQuery({ ...FIRST_PAGE, status: event.target.value })}>
-              <option value="">All statuses</option>
-              {['QUEUED', 'ASSESSING', 'ASSESSED', 'ASSESSMENT_FAILED', 'REVIEWED', 'RELEASED', 'FAILED_RESOLVED'].map((status) => <option value={status} key={status}>{formatStatus(status)}</option>)}
-            </select>
-          </label>
-        </div>}
-        {current.items.length === 0
-          ? compact ? <AcademicEmptyState icon="submission" title={query.status ? 'No matching attempts' : 'No attempts yet'} /> : <RequestState kind="empty" compact message="No official submission attempts match this view." />
-           : compact ? <ul className="academic-attempt-rows">{current.items.map(record => <li key={record.id}><NavLink to={classHref(`/student/activity/${record.activityId}/submissions/${record.id}`, selectedClass.id)}><span><strong>{record.attemptLabel}</strong><time dateTime={record.submittedAt}>{formatDate(record.submittedAt)}</time>{record.isLate && <small>Late</small>}</span><span className="academic-attempt-result"><span className={`submission-status submission-status--${record.status}`}>{submissionStatusLabel(record, formatStatus)}</span>{record.gradeStatus === 'released' && <strong>{record.finalScore ?? '—'} / {record.totalPoints ?? '—'}</strong>}{record.isCreditedResult && <small>Credited</small>}</span><ProjexIcon name="chevronRight" size={18} /></NavLink></li>)}</ul> : <div className="student-assignment-list">{current.items.map((record) => <SubmissionCard record={record} classId={selectedClass.id} key={record.id} />)}</div>}
-        {current.pagination && current.pagination.totalPages > 1 && (
-          <nav className="activity-pagination" aria-label="Submission pages">
-            <button type="button" className="student-outline-action" disabled={!current.pagination.hasPreviousPage} onClick={() => setQuery((value) => ({ ...value, page: value.page - 1 }))}>Previous</button>
-            <span>Page {current.pagination.page} of {current.pagination.totalPages}</span>
-            <button type="button" className="student-outline-action" disabled={!current.pagination.hasNextPage} onClick={() => setQuery((value) => ({ ...value, page: value.page + 1 }))}>Next</button>
-          </nav>
-        )}
-      </section>
-    </div>
+    <section className={compact ? 'academic-attempt-history' : 'student-assignment-panel submission-history-page academic-class-frame'}>
+      {!compact && <><nav className="academic-project-toolbar" aria-label="Submission navigation"><NavLink className="student-back-link" to={classHref(`/student/activity/${activityId}`, selectedClass.id)}>Back to activity</NavLink><ActivityWorkspaceAction key={`${selectedClass.id}:${activityId}`} activity={current.activity} classId={selectedClass.id} /></nav><header className="academic-project-heading"><div><p>My submissions</p><h2>{current.activity.title}</h2><span>{current.activity.gradingMode === 'COMPLETION' ? 'Ungraded · completion' : `Credited result: ${current.activity.creditPolicy === 'HIGHEST' ? 'highest released attempt' : 'latest released attempt'}`}</span></div></header></>}
+      <div className="academic-submission-toolbar">{!compact && <h3>Attempt history</h3>}<OutlinedSelect label="Status" value={query.status} onChange={status => setQuery({ ...FIRST_PAGE, status })} options={[{ value: '', label: 'All statuses' }, ...['QUEUED', 'ASSESSING', 'ASSESSED', 'ASSESSMENT_FAILED', 'REVIEWED', 'RELEASED', 'FAILED_RESOLVED'].map(value => ({ value, label: formatStatus(value).toLowerCase().replace(/^./, letter => letter.toUpperCase()) }))]} /></div>
+      {current.items.length === 0 ? <AcademicEmptyState icon="submission" title={query.status ? 'No matching attempts' : 'No attempts yet'} /> : <ul className="academic-attempt-rows">{current.items.map(record => <li key={record.id}><NavLink to={classHref(`/student/activity/${record.activityId}/submissions/${record.id}`, selectedClass.id)}><span><strong>{record.attemptLabel}</strong><time dateTime={record.submittedAt}>{formatDate(record.submittedAt)}</time>{record.isLate && <small>Accepted late</small>}{record.failureResolution?.replacementGranted && <small>Replacement {record.failureResolution.replacementAvailable ? 'available' : 'no longer available'} · Expires {formatDate(record.failureResolution.replacementExpiresAt)}</small>}</span><span className="academic-attempt-result"><span className={`submission-status submission-status--${record.gradingMode === 'COMPLETION' ? 'complete' : record.status}`}>{submissionStatusLabel(record, formatStatus)}</span>{record.gradeStatus === 'released' && <strong>{record.finalScore ?? '—'} / {record.totalPoints ?? '—'} points</strong>}{record.isCreditedResult && <small>Credited result</small>}</span><ProjexIcon name="chevronRight" size={18} /></NavLink></li>)}</ul>}
+      {current.pagination && current.pagination.totalPages > 1 && <nav className="activity-pagination" aria-label="Submission pages"><button type="button" className="student-outline-action" disabled={!current.pagination.hasPreviousPage} onClick={() => setQuery(value => ({ ...value, page: value.page - 1 }))}>Previous</button><span>Page {current.pagination.page} of {current.pagination.totalPages}</span><button type="button" className="student-outline-action" disabled={!current.pagination.hasNextPage} onClick={() => setQuery(value => ({ ...value, page: value.page + 1 }))}>Next</button></nav>}
+    </section>
   )
+}
+
+// Receives only the Student-safe projection; shared with the isolated design sample.
+export function StudentSubmissionRecord({ record, activity, backAction, workspaceAction, children }) {
+  const completion = record.gradingMode === 'COMPLETION'
+  return <section className="academic-submission-review student-submission-record academic-class-frame">
+    <nav className="academic-project-toolbar" aria-label="Submission navigation">{backAction}<div className="academic-record-actions">{workspaceAction}<span className={`submission-status submission-status--${completion ? 'complete' : record.status}`}>{submissionStatusLabel(record, formatStatus)}</span></div></nav>
+    <header className="academic-project-heading"><div><p>Submission record</p><h2>{record.activityTitle}</h2><span>{record.attemptLabel} · Submitted {formatDate(record.submittedAt)} · {record.isLate ? 'Accepted late' : 'On time'}</span></div></header>
+    {children}
+    <SubmissionSections label="Student submission sections" sections={[
+      { id: 'result', label: 'Result & feedback', content: <>
+        {completion ? <section className="submission-released-result"><h2>Complete · Ungraded</h2><p>Official submission accepted.</p><h3>{record.feedbackReleased ? 'Feedback released' : 'Feedback not released'}</h3>{record.feedbackReleased && <p>{record.feedback || 'No comments were released.'}</p>}</section> : record.gradeStatus === 'released' ? <section className="submission-released-result"><p className="student-feedback-eyebrow">{record.isCreditedResult ? 'Credited result' : 'Released result'}</p><h2>{record.finalScore ?? 'Not available'} / {record.totalPoints ?? 'Not available'} points</h2><h3>Instructor feedback</h3><p>{record.feedback || 'No textual feedback was released.'}</p></section> : <section className="submission-pending-grade"><h2>Result not released</h2><p>Your grade and feedback will appear when your Instructor releases them.</p></section>}
+        <dl className="academic-record-facts"><div><dt>Submitted</dt><dd>{formatDate(record.submittedAt)}</dd></div><div><dt>{completion ? 'Completion' : 'Grade'}</dt><dd>{completion ? 'Complete · Ungraded' : record.gradeStatus === 'released' ? 'Released' : 'Not released'}</dd></div><div><dt>Deadline</dt><dd>{record.isLate ? 'Accepted late' : 'On time'}</dd></div>{!completion && <div><dt>Credited result policy</dt><dd>{activity?.creditPolicy === 'HIGHEST' ? 'Highest released attempt' : 'Latest released attempt'}</dd></div>}</dl>
+        {record.failureResolution && <section className="submission-resolution"><h3>Infrastructure resolution</h3><p>{record.failureResolution.replacementGranted ? 'A replacement attempt was granted.' : 'The failure was resolved without a replacement.'}</p>{record.failureResolution.replacementGranted && <p>Replacement {record.failureResolution.replacementAvailable ? 'available' : 'no longer available'}; expiration {formatDate(record.failureResolution.replacementExpiresAt)}.</p>}</section>}
+      </> },
+      { id: 'source', label: 'Submitted code', content: <section className="submission-source"><h3>Submitted source</h3><small>Saved at submission · Read-only</small><pre>{record.sourceCode}</pre></section> },
+      { id: 'tests', label: 'Test results', content: <section className="submission-visible-results"><h3>Visible-test outcomes</h3><p>Visible cases only.</p>{record.visibleTestOutcomes.length ? record.visibleTestOutcomes.map(outcome => <details className="academic-visible-case" key={`${outcome.order}:${outcome.name}`}><summary><strong>{outcome.name}</strong><span>{formatStatus(outcome.outcome)}</span></summary><VisibleOutcomeList outcomes={[outcome]} hideHeading /></details>) : <p>No visible-test outcomes are available yet.</p>}</section> },
+    ]} />
+  </section>
 }
 
 export function StudentSubmissionDetail({ api = activityApi, submissions = submissionApi, pollingOptions }) {
@@ -1226,69 +1195,16 @@ export function StudentSubmissionDetail({ api = activityApi, submissions = submi
   if (!current.record) return null
 
   const record = current.record
-  return (
-    <div className="student-detail-layout submission-detail-page">
-      <main className="student-activity-detail-card">
-        <NavLink className="student-back-link" to={classHref(`/student/activity/${activityId}/submissions`, selectedClass.id)}>Back to attempt history</NavLink>
-        {location.state?.idempotentReplay && <p className="submission-notice">The original accepted submission was recovered safely.</p>}
-        <article className="student-detail-card">
-          <div className="submission-record-heading">
-            <div><p className="student-feedback-eyebrow">Submission record</p><h1>{record.attemptLabel}</h1><p>{record.activityTitle}</p></div>
-            <span className={`submission-status submission-status--${record.gradingMode === 'COMPLETION' ? 'complete' : record.status}`}>{submissionStatusLabel(record, formatStatus)}</span>
-          </div>
-          <dl className="activity-facts submission-facts">
-            <div><dt>Submitted</dt><dd>{formatDate(record.submittedAt)}</dd></div>
-            <div><dt>{record.gradingMode === 'COMPLETION' ? 'Completion' : 'Grade'}</dt><dd>{record.gradingMode === 'COMPLETION' ? 'Complete · Ungraded' : record.gradeStatus === 'released' ? 'Released' : 'Not released'}</dd></div>
-            <div><dt>Deadline</dt><dd>{record.isLate ? 'Accepted late' : 'On time'}</dd></div>
-          </dl>
-          {isSubmissionPending(record) && <p className="submission-notice">Assessment is processing. This page refreshes status without changing the accepted submission.</p>}
-          {current.bounded && <p className="submission-notice">Automatic refresh stopped. Assessment may still be processing.</p>}
-          {current.error && <p className="student-coding-failure">{describeApiError(current.error)}</p>}
-          {(current.bounded || current.error) && isSubmissionPending(record) && <button type="button" className="student-outline-action" onClick={() => initialLoad()}>Refresh status</button>}
-          {record.status === 'assessment_failed' && <p className="student-coding-failure">Projex could not complete assessment because of an infrastructure failure. The original submission remains preserved for instructor resolution.</p>}
-          {record.failureResolution && (
-            <section className="submission-resolution">
-              <h2>Infrastructure resolution</h2>
-              <p>{record.failureResolution.replacementGranted ? 'A replacement attempt was granted.' : 'The failure was resolved without a replacement.'}</p>
-              {record.failureResolution.replacementGranted && (
-                <p>
-                  Replacement {record.failureResolution.replacementAvailable ? 'available' : 'no longer available'}; expiration {formatDate(record.failureResolution.replacementExpiresAt)}.
-                </p>
-              )}
-            </section>
-          )}
-          <section className="submission-source">
-            <h2>Submitted source</h2>
-            <pre>{record.sourceCode}</pre>
-          </section>
-          <section className="submission-visible-results">
-            <h2>Visible-test outcomes</h2>
-            <p>Hidden-test definitions, count, and breakdown remain private.</p>
-            <VisibleOutcomeList outcomes={record.visibleTestOutcomes} />
-          </section>
-          {record.gradingMode === 'COMPLETION' ? <section className="submission-released-result"><h2>Complete · Ungraded</h2><p>Official submission accepted. Code and test outcomes provide technical feedback.</p><h3>{record.feedbackReleased ? 'Feedback released' : 'Feedback not released'}</h3>{record.feedbackReleased && <p>{record.feedback || 'No comments were released.'}</p>}</section> : record.gradeStatus === 'released' ? (
-            <section className="submission-released-result">
-              <p className="student-feedback-eyebrow">{record.isCreditedResult ? 'Credited result' : 'Released result'}</p>
-              <h2>{record.finalScore ?? 'Not available'} / {record.totalPoints ?? 'Not available'} points</h2>
-              <p>{record.feedback || 'No textual feedback was released.'}</p>
-            </section>
-          ) : (
-            <section className="submission-pending-grade">
-              <h2>Result not released</h2>
-              <p>Numeric scores, score corrections, instructor points, and feedback remain private until release.</p>
-            </section>
-          )}
-        </article>
-      </main>
-      <aside className="student-work-rail">
-        <section className="student-work-card">
-          <h2>Activity</h2>
-          <p>{current.activity?.title}</p>
-          <ActivityWorkspaceAction key={`${selectedClass.id}:${activityId}`} activity={current.activity} classId={selectedClass.id} />
-        </section>
-      </aside>
-    </div>
-  )
+  return <StudentSubmissionRecord record={record} activity={current.activity}
+    backAction={<NavLink className="student-back-link" to={classHref(`/student/activity/${activityId}/submissions`, selectedClass.id)}>Back to attempt history</NavLink>}
+    workspaceAction={<ActivityWorkspaceAction key={`${selectedClass.id}:${activityId}`} activity={current.activity} classId={selectedClass.id} />}>
+    {location.state?.idempotentReplay && <p className="submission-notice">The original accepted submission was recovered safely.</p>}
+    {isSubmissionPending(record) && <p className="submission-notice">Assessment is processing.</p>}
+    {current.bounded && <p className="submission-notice">Automatic refresh stopped. Assessment may still be processing.</p>}
+    {current.error && <p className="student-coding-failure">{describeApiError(current.error)}</p>}
+    {(current.bounded || current.error) && isSubmissionPending(record) && <button type="button" className="student-outline-action" onClick={() => initialLoad()}>Refresh status</button>}
+    {record.status === 'assessment_failed' && <p className="student-coding-failure">Assessment could not finish. Your submission is preserved for Instructor resolution.</p>}
+  </StudentSubmissionRecord>
 }
 
 export function LegacySubmissionRoute() {

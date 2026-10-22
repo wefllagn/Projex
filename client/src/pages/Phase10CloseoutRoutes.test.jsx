@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { AuthContext } from '../auth/auth-context.js'
@@ -106,4 +106,15 @@ describe('Phase 10 closeout routes', () => {
     expect(screen.queryByText('To Review')).not.toBeInTheDocument()
     expect(screen.queryByText(/will be connected in Phase 10B and 10C/i)).not.toBeInTheDocument()
   })
+})
+
+
+it.each([['STUDENT', StudentRoutePage], ['INSTRUCTOR', InstructorRoutePage]])('preserves authorized %s repository deep links without a Class query', async (role, Page) => {
+  const get = vi.spyOn(apiClient, 'get').mockImplementation(() => new Promise(() => {}))
+  const prefix = role.toLowerCase()
+  try {
+    render(<AuthContext.Provider value={auth(role)}><MemoryRouter initialEntries={[`/${prefix}/projects/project-1/repositories/repo-1`]}><ClassContext.Provider value={{ requestedClassId: null, selectedClass: null, selectionStatus: 'ready' }}><Routes><Route path={`/${prefix}/projects/:projectTaskId/repositories/:repositoryId`} element={<Page pagePath="projects/:projectTaskId/repositories/:repositoryId" />} /></Routes></ClassContext.Provider></MemoryRouter></AuthContext.Provider>)
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/repositories/repo-1', expect.any(Object)))
+    expect(screen.queryByText('Choose a class')).not.toBeInTheDocument()
+  } finally { get.mockRestore() }
 })

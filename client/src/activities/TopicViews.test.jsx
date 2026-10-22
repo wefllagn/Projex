@@ -19,7 +19,7 @@ describe('Classwork topic organization', () => {
     expect(screen.queryByText(activity.instructions)).not.toBeInTheDocument()
     expect(screen.getByText(/3 submissions/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'First task' })).toHaveTextContent('3 submissions')
-    expect(screen.getByRole('link', { name: 'First task' })).toHaveAttribute('href', '/instructor/activity/one/settings?classId=class-one')
+    expect(screen.getByRole('link', { name: 'First task' })).toHaveAttribute('href', '/instructor/activity/one/submissions?classId=class-one')
     expect(screen.queryByRole('link', { name: 'Submissions', exact: true })).not.toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Status' })).toHaveTextContent('All statuses')
     expect(screen.getAllByRole('heading', { level: 3 }).map(node => node.textContent)).toEqual(['Fundamentals', 'Midterms', 'No topic'])

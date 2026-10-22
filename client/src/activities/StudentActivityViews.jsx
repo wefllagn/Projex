@@ -37,9 +37,9 @@ function StudentActivityReady({ activity, attemptState, testCases, classId, repo
   const repositoryAction = useActivityRepositoryAction({ activity, classId, api: repositories })
   const [historyOpen, setHistoryOpen] = useState(false)
   return (
-    <div className="student-detail-layout student-project-detail-layout">
+    <div className="student-detail-layout student-project-detail-layout academic-detail-layout">
+      <NavLink to={classHref('/student/activity', classId)} className="student-back-link academic-detail-back">Back to Activities</NavLink>
       <main className="student-activity-detail-card">
-        <NavLink to={classHref('/student/activity', classId)} className="student-back-link">Back to Activities</NavLink>
         <article className="student-detail-card">
           <div className="student-detail-heading activity-detail-heading">
             <span className="student-detail-icon" aria-hidden="true"><ProjexIcon name="activity" size={26} /></span>

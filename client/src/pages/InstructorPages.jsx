@@ -186,7 +186,7 @@ function InstructorActivitiesPage() {
 function CreateActivityPage({ mode = 'create' }) {
   return (
     <InstructorClassPage activeTab="assignments" deferredLabel="">
-      <InstructorActivityEditor mode={mode} />
+      <AssignmentSubTabs active="activities" /><InstructorActivityEditor mode={mode} />
     </InstructorClassPage>
   )
 }
@@ -544,11 +544,18 @@ function InstructorProjectListPage() {
 }
 
 function InstructorProjectDetailPage() {
-  return <InstructorClassPage activeTab="assignments" deferredLabel=""><InstructorProjectDetail /></InstructorClassPage>
+  return <InstructorClassPage activeTab="assignments" deferredLabel=""><AssignmentSubTabs active="projects" /><InstructorProjectDetail /></InstructorClassPage>
 }
 
 function InstructorProjectEditorPage({ mode }) {
-  return <InstructorClassPage activeTab="assignments" deferredLabel=""><InstructorProjectEditor mode={mode} /></InstructorClassPage>
+  return <InstructorClassPage activeTab="assignments" deferredLabel=""><AssignmentSubTabs active="projects" /><InstructorProjectEditor mode={mode} /></InstructorClassPage>
+}
+
+function InstructorProjectRepositoryPage() {
+  const { requestedClassId } = useClasses()
+  const repository = <RepositoryFoundationDetail role="instructor" />
+  // Keep authorized deep links without a Class query working as before.
+  return requestedClassId ? <InstructorClassPage activeTab="assignments" deferredLabel=""><AssignmentSubTabs active="projects" />{repository}</InstructorClassPage> : repository
 }
 
 export function InstructorRoutePage({ pagePath }) {
@@ -560,15 +567,15 @@ export function InstructorRoutePage({ pagePath }) {
     'activity/new': <CreateActivityPage mode="create" />,
     'activity/:activityId/settings': <CreateActivityPage mode="edit" />,
     'activity/:activityId/monitor': <InstructorActivityMonitorRedirect />,
-    'activity/:activityId/submissions': <InstructorClassPage activeTab="assignments" deferredLabel=""><InstructorSubmissionQueue /></InstructorClassPage>,
-    'activity/:activityId/submissions/:submissionId': <InstructorClassPage activeTab="assignments" deferredLabel=""><InstructorSubmissionReview /></InstructorClassPage>,
+    'activity/:activityId/submissions': <InstructorClassPage activeTab="assignments" deferredLabel=""><AssignmentSubTabs active="activities" /><InstructorSubmissionQueue /></InstructorClassPage>,
+    'activity/:activityId/submissions/:submissionId': <InstructorClassPage activeTab="assignments" deferredLabel=""><AssignmentSubTabs active="activities" /><InstructorSubmissionReview /></InstructorClassPage>,
     'submission-review': <DeferredInstructorPage title="Submission Review" message="Choose an activity and an accepted submission from its real queue. This legacy route has no submission identity and cannot select one safely." />,
     projects: <InstructorProjectListPage />,
     'projects/new': <InstructorProjectEditorPage mode="create" />,
     'projects/:projectTaskId': <InstructorProjectDetailPage />,
     'projects/:projectTaskId/settings': <InstructorProjectEditorPage mode="edit" />,
     'projects/:projectTaskId/repository': <InstructorClassPage activeTab="assignments"><RepositorySelectionRequired role="instructor" /></InstructorClassPage>,
-    'projects/:projectTaskId/repositories/:repositoryId': <RepositoryFoundationDetail role="instructor" />,
+    'projects/:projectTaskId/repositories/:repositoryId': <InstructorProjectRepositoryPage />,
     'projects/:projectTaskId/repositories/:repositoryId/contributions': <DeferredInstructorPage title="Contribution Review" message="Verified contribution analytics are not available without an approved identity and evidence contract." />,
     'projects/:projectTaskId/repositories/:repositoryId/similarity': <DeferredInstructorPage title="Project Similarity" message="Similarity analysis remains a deferred research and product decision." />,
     people: <InstructorPeoplePage />,

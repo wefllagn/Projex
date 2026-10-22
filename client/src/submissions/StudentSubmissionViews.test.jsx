@@ -835,7 +835,7 @@ describe('student submission records', () => {
 
     expect(await screen.findByText('Replacement attempt for Attempt 2')).toBeInTheDocument()
     expect(screen.queryByText(/Attempt 3 of 2/)).not.toBeInTheDocument()
-    expect(screen.getByText('Accepted after the ordinary deadline')).toBeInTheDocument()
+    expect(screen.getByText('Accepted late')).toBeInTheDocument()
     expect(screen.getByText('90 / 100 points')).toBeInTheDocument()
     expect(screen.getByText('Credited result')).toBeInTheDocument()
     expect(submissions.listSubmissions).toHaveBeenCalledWith(activityId, { page: 1, pageSize: 20, status: '' }, expect.objectContaining({ signal: expect.any(AbortSignal) }))
@@ -939,4 +939,21 @@ it('keeps embedded attempt history concise and hides unreleased results', async 
   expect(screen.queryByText(/UNRELEASED-HISTORY-FEEDBACK|91/)).not.toBeInTheDocument()
   expect(screen.queryByText('Attempts are immutable records. Practice runs do not appear here.')).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: /Attempt 1/ })).toHaveAttribute('href', `/student/activity/${activityId}/submissions/${record.id}?classId=${classId}`)
+})
+
+
+it('puts the returned grade and feedback first and opens saved code and visible tests without extra requests', async () => {
+  const submissions = submissionTransport({ getSubmission: vi.fn().mockResolvedValue({ data: submissionRecord({ status: 'released', gradeStatus: 'released', finalScore: 92, totalPoints: 100, feedback: 'Returned sample feedback.', isCreditedResult: true }) }) })
+  renderWithClass(<StudentSubmissionDetail api={activityTransport()} submissions={submissions} />, { entry: `/student/activity/${activityId}/submissions/${submissionId}?classId=${classId}`, path: '/student/activity/:activityId/submissions/:submissionId' })
+  expect(await screen.findByText('92 / 100 points')).toBeVisible()
+  expect(screen.getByText('Returned sample feedback.')).toBeVisible()
+  expect(screen.getByRole('tab', { name: 'Result & feedback' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByText('Submitted source')).not.toBeVisible()
+  await userEvent.click(screen.getByRole('tab', { name: 'Submitted code' }))
+  expect(screen.getByText('Submitted source')).toBeVisible()
+  await userEvent.click(screen.getByRole('tab', { name: 'Test results' }))
+  expect(screen.getByText('Visible-test outcomes')).toBeVisible()
+  await userEvent.click(screen.getByRole('tab', { name: 'Result & feedback' }))
+  expect(screen.getByText('Returned sample feedback.')).toBeVisible()
+  expect(submissions.getSubmission).toHaveBeenCalledTimes(1)
 })

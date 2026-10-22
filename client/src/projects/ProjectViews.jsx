@@ -7,6 +7,7 @@ import { ApiError, describeApiError } from '../api/api-client.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import useConfirmation from '../components/useConfirmation.jsx'
 import { ProjexIcon } from '../design/ProjexIcon.jsx'
 import { ProjexStatus } from '../design/ProjexStatus.jsx'
 import { useGroupFreshness } from '../repositories/use-group-freshness.js'
@@ -49,6 +50,14 @@ function repositoryContextError() {
 
 function ProjectStatus({ value }) {
   return <em className={`project-status project-status--${String(value).toLowerCase()}`}>{formatProjectStatus(value)}</em>
+}
+
+function ProjectListRow({ project, role, classId }) {
+  return <NavLink to={classHref(`/${role}/projects/${project.id}`, classId)} className="classwork-row academic-project-row">
+    <span className="academic-row-icon"><AcademicIcon name="project" size={24} /></span>
+    <span className="academic-project-identity classwork-row-content"><strong>{project.title}</strong><span className="academic-project-meta"><span className="academic-project-topic">No topic</span><span>{formatProjectStatus(project.status)}</span><time dateTime={project.dueDate}>Due {formatProjectDate(project.dueDate)}</time><span>Up to {project.maxTeamSize} members</span><ProjectStatus value={project.dueState} /></span></span>
+    <AcademicIcon name="chevronRight" size={18} />
+  </NavLink>
 }
 
 function Pagination({ pagination, onPage }) {
@@ -99,13 +108,7 @@ export function StudentProjectList({ api = projectApi }) {
         {current.status === 'ready' && current.items.length === 0 && <AcademicEmptyState icon="project" title="No projects to show" description="Published group projects will appear here." />}
         {current.status === 'ready' && current.items.length > 0 && (
           <div className="student-assignment-list">
-            {current.items.map((project) => (
-              <NavLink to={classHref(`/student/projects/${project.id}`, selectedClass.id)} className="classwork-row academic-project-row" key={project.id}>
-                <span className="academic-row-icon"><AcademicIcon name="project" size={24} /></span>
-                <span className="academic-project-identity classwork-row-content"><strong>{project.title}</strong><span className="academic-project-meta"><span className="academic-project-topic">No topic</span><span>{formatProjectStatus(project.status)}</span><time dateTime={project.dueDate}>Due {formatProjectDate(project.dueDate)}</time><span>Up to {project.maxTeamSize} members</span><ProjectStatus value={project.dueState} /></span></span>
-                <AcademicIcon name="chevronRight" size={18} />
-              </NavLink>
-            ))}
+            {current.items.map((project) => <ProjectListRow key={project.id} project={project} role="student" classId={selectedClass.id} />)}
           </div>
         )}
         <Pagination pagination={current.pagination} onPage={(page) => setQuery((value) => ({ ...value, page }))} />
@@ -198,9 +201,9 @@ export function StudentProjectDetail({ api = projectApi, repositories = reposito
   const project = current.project
   const open = selectedClass.status === 'ACTIVE' && project.status === 'PUBLISHED' && project.dueState === 'OPEN'
   const mayCreate = !current.myRepository && open && capabilities.git.provisioning
-  return <div className="student-detail-layout student-project-detail-layout group-project-detail">
+  return <div className="student-detail-layout student-project-detail-layout group-project-detail academic-detail-layout">
+    <NavLink to={classHref('/student/projects', selectedClass.id)} className="student-back-link academic-detail-back">Back to Group Projects</NavLink>
     <main className="student-activity-detail-card">
-      <NavLink to={classHref('/student/projects', selectedClass.id)} className="student-back-link">Back to Group Projects</NavLink>
       <article className="student-detail-card student-project-detail-card">
         <div className="student-detail-heading"><ProjexIcon name="group-project" size={32} /><div><h2>{project.title}</h2><p>{project.createdBy.fullName}{project.status !== 'PUBLISHED' ? ` · ${formatProjectStatus(project.status)}` : ''}</p><p className="group-project-due">Due {formatProjectDate(project.dueDate)}</p></div></div>
         <div className="student-detail-divider" />
@@ -253,12 +256,12 @@ export function InstructorProjectList({ api = projectApi }) {
   }, [load, selectionStatus])
   const current = state.classId === selectedClass?.id ? state : { ...state, status: 'loading', items: [] }
   return (
-    <div className="student-assignment-panel instructor-assignment-panel academic-classwork-panel">
+    <div className="student-assignment-panel instructor-assignment-panel academic-classwork-panel project-task-board">
       <div className="instructor-assignment-toolbar instructor-assignment-toolbar--board"><div><h2>Group Projects</h2></div><div className="instructor-assignment-toolbar-actions"><OutlinedSelect label="Status" value={query.status} onChange={status => setQuery({ ...FIRST_PAGE, status })} options={[{ value: '', label: 'All statuses' }, ...['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED'].map(value => ({ value, label: formatProjectStatus(value) }))]} />{selectedClass?.status === 'ARCHIVED' ? <button type="button" className="student-primary-action" disabled>New Project</button> : <NavLink to={classHref('/instructor/projects/new', selectedClass?.id)} className="student-primary-action">New Project</NavLink>}</div></div>
       {current.status === 'loading' && <RequestState kind="loading" compact message="Loading project requirements." />}
       {current.status === 'error' && <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} compact error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />}
       {current.status === 'ready' && current.items.length === 0 && <AcademicEmptyState icon="project" title="No group projects yet" description="Create a project when your class is ready to collaborate." />}
-      {current.status === 'ready' && current.items.length > 0 && <div className="instructor-data-table" role="table" aria-label="Project requirements"><div className="instructor-table-row instructor-table-row--head instructor-project-row" role="row"><span>Project</span><span>Due date</span><span>Status</span><span>Team size</span><span>Actions</span></div>{current.items.map((project) => <div className="instructor-table-row instructor-project-row" role="row" key={project.id}><div><strong>{project.title}</strong></div><span>{formatProjectDate(project.dueDate)}</span><ProjectStatus value={project.status} /><span>{project.maxTeamSize}</span><div><NavLink to={classHref(`/instructor/projects/${project.id}`, selectedClass.id)}>Monitor</NavLink><NavLink to={classHref(`/instructor/projects/${project.id}/settings`, selectedClass.id)}>Configure</NavLink></div></div>)}</div>}
+      {current.status === 'ready' && current.items.length > 0 && <div className="student-assignment-list">{current.items.map((project) => <ProjectListRow key={project.id} project={project} role="instructor" classId={selectedClass.id} />)}</div>}
       <Pagination pagination={current.pagination} onPage={(page) => setQuery((value) => ({ ...value, page }))} />
     </div>
   )
@@ -270,6 +273,7 @@ function formFromProject(project) {
 
 export function InstructorProjectEditor({ mode, api = projectApi }) {
   const { projectTaskId } = useParams()
+  const [confirm, confirmation] = useConfirmation()
   const navigate = useNavigate()
   const { selectedClass, selectionStatus } = useClasses()
   const [project, setProject] = useState(null)
@@ -305,7 +309,7 @@ export function InstructorProjectEditor({ mode, api = projectApi }) {
   }, [load, mode, selectionStatus])
 
   const setField = (field, value) => { setDirty(true); setNotice(''); setForm((current) => ({ ...current, [field]: value })) }
-  const adopt = (next) => { const projected = projectTaskProjection(next); if (!projectMatchesClass(projected, selectedClass)) throw projectContextError(); setProject(projected); setForm(formFromProject(projected)); setDirty(false); setNotice('Project task updated from the server.') }
+  const adopt = (next) => { const projected = projectTaskProjection(next); if (!projectMatchesClass(projected, selectedClass)) throw projectContextError(); setProject(projected); setForm(formFromProject(projected)); setDirty(false); setNotice('Project changes saved.') }
 
   const save = async (event) => {
     event.preventDefault()
@@ -333,6 +337,13 @@ export function InstructorProjectEditor({ mode, api = projectApi }) {
   }
 
   const transition = async (action) => {
+    if (busy) return
+    const question = action === 'close'
+      ? 'Are you sure? Closing this project stops new student collaboration and Git writes. Existing work stays available for instructor review.'
+      : action === 'archive'
+        ? 'Are you sure? Archiving makes this project read-only and preserves its records. Projex checks that repository reviews and invitations are resolved first. Restoring returns the project to Closed.'
+        : null
+    if (question && !await confirm(question, action === 'close' ? 'Close project?' : 'Archive project?')) return
     setBusy(true); setError(null); setNotice('')
     try {
       const response = await api.transitionProjectTask(project.id, action, { expectedUpdatedAt: project.updatedAt })
@@ -350,10 +361,12 @@ export function InstructorProjectEditor({ mode, api = projectApi }) {
   if (loadState === 'error') return <RequestState kind={error?.status === 404 ? 'notFound' : 'unavailable'} error={error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />
   const status = project?.status ?? 'DRAFT'
   const editable = mode === 'create' || (status === 'DRAFT' && selectedClass?.status !== 'ARCHIVED')
+  const backPath = mode === 'create' ? '/instructor/projects' : `/instructor/projects/${projectTaskId}`
+  const backLabel = mode === 'create' ? 'Back to projects' : 'Back to project'
   return (
-    <div className="student-assignment-panel instructor-create-panel">
-      <div className="instructor-assignment-toolbar"><NavLink to={classHref('/instructor/projects', selectedClass?.id)} className="student-outline-action">Back to projects</NavLink></div>
-      <section className="instructor-page-heading"><p>{mode === 'create' ? 'New Project Requirement' : 'Project Requirement Settings'}</p><h2>{mode === 'create' ? 'Create a project task' : project?.title}</h2><span>Only backend-supported project metadata and lifecycle controls are available.</span></section>
+    <div className="student-assignment-panel instructor-create-panel academic-project-screen academic-class-frame">
+      <nav className="academic-project-toolbar" aria-label="Project navigation"><NavLink to={classHref(backPath, selectedClass?.id)} className="student-back-link">{backLabel}</NavLink></nav>
+      <header className="academic-project-heading"><div><p>{mode === 'create' ? 'New group project' : 'Project settings'}</p><h2>{mode === 'create' ? 'Create a group project' : project?.title}</h2></div><ProjexStatus value={status}>{formatProjectStatus(status)}</ProjexStatus></header>
       <form onSubmit={save}>
         <div className="instructor-form-grid">
           <label>Project title<input value={form.title} maxLength={200} disabled={!editable || busy} onChange={(event) => setField('title', event.target.value)} />{fieldErrors.title && <small className="activity-field-error">{fieldErrors.title}</small>}</label>
@@ -362,17 +375,18 @@ export function InstructorProjectEditor({ mode, api = projectApi }) {
           <label>Lifecycle<span className="instructor-fixed-value">{formatProjectStatus(status)}</span></label>
         </div>
         <label className="instructor-wide-field">Instructions<textarea value={form.instructions} maxLength={20000} disabled={!editable || busy} onChange={(event) => setField('instructions', event.target.value)} />{fieldErrors.instructions && <small className="activity-field-error">{fieldErrors.instructions}</small>}</label>
-        <p className="activity-lifecycle-note">Rubrics, attachments, grading configuration, similarity, and contribution settings are not part of the project-task contract.</p>
+        {status !== 'DRAFT' && <p className="academic-project-readonly">Project details, including the member limit, are locked after publishing.</p>}
         <div className="instructor-form-actions">
           {editable && <button type="submit" className="student-primary-action" disabled={busy || (mode === 'edit' && !dirty)}>{busy ? 'Saving…' : mode === 'create' ? 'Create Draft' : 'Save Changes'}</button>}
           {status === 'DRAFT' && project && <button type="button" className="student-primary-action" disabled={busy || dirty} onClick={() => transition('publish')}>Publish</button>}
-          {status === 'PUBLISHED' && <button type="button" className="student-outline-action" disabled={busy} onClick={() => transition('close')}>Close</button>}
-          {status === 'CLOSED' && <button type="button" className="student-outline-action" disabled={busy} onClick={() => transition('archive')}>Archive</button>}
+          {status === 'PUBLISHED' && <button type="button" className="student-outline-action" disabled={busy} onClick={() => transition('close')}>Close project</button>}
+          {status === 'CLOSED' && <button type="button" className="student-outline-action" disabled={busy} onClick={() => transition('archive')}>Archive project</button>}
           {status === 'ARCHIVED' && <button type="button" className="student-outline-action" disabled={busy} onClick={() => transition('restore')}>Restore to Closed</button>}
         </div>
         {notice && <p className="activity-action-success">{notice}</p>}
         {error && <p className="activity-action-error">{describeApiError(error)}</p>}
       </form>
+      {confirmation}
     </div>
   )
 }
@@ -406,13 +420,16 @@ export function InstructorProjectDetail({ api = projectApi }) {
   if (current.status === 'loading') return <RequestState kind="loading" message="Loading project monitoring." />
   if (current.status === 'error') return <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />
   return (
-    <div className="student-assignment-panel instructor-assignment-panel">
-      <div className="instructor-assignment-toolbar"><NavLink to={classHref('/instructor/projects', selectedClass.id)} className="student-outline-action">Back to projects</NavLink><NavLink to={classHref(`/instructor/projects/${projectTaskId}/settings`, selectedClass.id)} className="student-primary-action">Configure</NavLink></div>
-      <section className="instructor-page-heading"><p>Project Requirement Monitoring</p><h2>{current.project.title}</h2><span>Due {formatProjectDate(current.project.dueDate)} · {formatProjectStatus(current.project.status)}</span></section>
-      <div className="instructor-stat-grid instructor-monitor-grid"><article className="instructor-stat-card"><span>Teams</span><strong>{current.monitoring.teamCount}</strong><p>authoritative records</p></article><article className="instructor-stat-card"><span>Repositories</span><strong>{current.monitoring.repositoryCount}</strong><p>created for this task</p></article><article className="instructor-stat-card"><span>Active members</span><strong>{current.monitoring.activeMemberCount}</strong><p>across project teams</p></article></div>
-      {current.teams.length === 0 && <RequestState kind="empty" compact message="No teams or repositories have been created for this project task." />}
-      {current.teams.length > 0 && <div className="instructor-data-table" role="table" aria-label="Project teams"><div className="instructor-table-row instructor-table-row--head instructor-team-row project-team-foundation-row" role="row"><span>Group</span><span>Maintainer</span><span>Members</span><span>Repository</span><span>Status</span><span>Action</span></div>{current.teams.map((team) => <div className="instructor-table-row instructor-team-row project-team-foundation-row" role="row" key={team.teamId}><strong>{team.name}</strong><span>{team.lead.fullName}</span><span>{team.activeMemberCount}</span><span>{team.repository?.repositoryName ?? 'No repository'}</span><ProjectStatus value={team.repository?.reviewStatus ?? team.status} /><div>{team.repository ? <NavLink to={classHref(`/instructor/projects/${projectTaskId}/repositories/${team.repository.repositoryId}`, selectedClass.id)}>Open Repository</NavLink> : <span>Unavailable</span>}</div></div>)}</div>}
-      <RequestState kind="unavailable" compact title="Repository evidence and academic review" message="Open an authorized repository above for Git history, source inspection, collaboration, feedback, and academic review. Contribution analytics and similarity are not available yet." />
-    </div>
+    <section className="student-assignment-panel instructor-assignment-panel academic-project-screen academic-class-frame">
+      <nav className="academic-project-toolbar" aria-label="Project navigation"><NavLink to={classHref('/instructor/projects', selectedClass.id)} className="student-back-link">Back to projects</NavLink><NavLink to={classHref(`/instructor/projects/${projectTaskId}/settings`, selectedClass.id)} className="student-outline-action"><AcademicIcon name="draft" size={18} />Project settings</NavLink></nav>
+      <header className="academic-project-heading"><div><p>Group project</p><h2>{current.project.title}</h2><span>Due {formatProjectDate(current.project.dueDate)} · Up to {current.project.maxTeamSize} members per group</span></div><ProjexStatus value={current.project.status}>{formatProjectStatus(current.project.status)}</ProjexStatus></header>
+      <dl className="academic-project-summary" aria-label="Project overview"><div><dt>Groups</dt><dd>{current.monitoring.teamCount}</dd></div><div><dt>Repositories</dt><dd>{current.monitoring.repositoryCount}</dd></div><div><dt>Active members</dt><dd>{current.monitoring.activeMemberCount}</dd></div></dl>
+      <div className="academic-project-section-heading"><h3>Groups</h3></div>
+      {current.teams.length === 0 && <AcademicEmptyState icon="people" title="No groups yet" description="Groups appear when students create their repositories." />}
+      {current.teams.length > 0 && <ul className="academic-project-groups" aria-label="Project groups">{current.teams.map((team) => {
+        const content = <><span className="academic-row-icon"><AcademicIcon name="people" size={24} /></span><span className="academic-project-identity"><strong>{team.name}</strong><span className="academic-project-meta"><span>Maintainer: {team.lead.fullName}</span><span>{team.activeMemberCount} / {current.project.maxTeamSize} members</span><span>{team.repository?.repositoryName ?? 'No repository'}</span></span></span><ProjexStatus value={team.repository?.reviewStatus ?? team.status}>{formatProjectStatus(team.repository?.reviewStatus ?? team.status)}</ProjexStatus>{team.repository && <AcademicIcon name="chevronRight" size={18} />}</>
+        return <li key={team.teamId}>{team.repository ? <NavLink className="academic-project-group" to={classHref(`/instructor/projects/${projectTaskId}/repositories/${team.repository.repositoryId}`, selectedClass.id)}>{content}</NavLink> : <div className="academic-project-group">{content}</div>}</li>
+      })}</ul>}
+    </section>
   )
 }

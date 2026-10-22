@@ -7,6 +7,7 @@ import { ApiError, describeApiError } from '../api/api-client.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
+import { ProjexStatus } from '../design/ProjexStatus.jsx'
 import { activityApi } from './activity-api.js'
 import {
   activityClassMatches,
@@ -68,16 +69,18 @@ function emptyTestCase() {
   return { id: createTemporaryTestCaseId(), name: '', inputData: '', expectedOutput: '', isHidden: false, points: '0' }
 }
 
-function ActivityFormFields({ form, errors, onChange, readOnly, status }) {
+function ActivityFormFields({ form, errors, onChange, readOnly, status, section, topicSelector }) {
   const frozen = readOnly || status === 'PUBLISHED'
   const field = key => ({ 'aria-invalid': Boolean(errors[key]), 'aria-describedby': errors[key] ? `activity-${key}-error` : undefined })
   const error = key => errors[key] && <small id={`activity-${key}-error`} className="activity-field-error">{errors[key]}</small>
   return <>
-    <section className="activity-authoring-section"><h3>Activity details</h3><label>Activity title<input {...field('title')} value={form.title} onChange={event => onChange('title', event.target.value)} disabled={readOnly} />{error('title')}</label><label>Instructions<GrowingTextarea {...field('instructions')} value={form.instructions} onChange={event => onChange('instructions', event.target.value)} disabled={readOnly} />{error('instructions')}</label></section>
-    <section className="activity-authoring-section"><h3>Grading</h3><div className="instructor-form-grid"><label>Grading mode<select value={form.gradingMode} onChange={event => onChange('gradingMode', event.target.value)} disabled={frozen}><option value="GRADED">Graded</option><option value="COMPLETION">Ungraded · completion</option></select></label>{form.gradingMode !== 'COMPLETION' && <><label>Total points<input type="number" min="0.01" max="1000" step="0.01" {...field('totalPoints')} value={form.totalPoints} onChange={event => onChange('totalPoints', event.target.value)} disabled={frozen} />{error('totalPoints')}</label><label>Credited result<select {...field('creditPolicy')} value={form.creditPolicy} onChange={event => onChange('creditPolicy', event.target.value)} disabled={frozen}><option value="LATEST">Latest attempt</option><option value="HIGHEST">Highest attempt</option></select>{error('creditPolicy')}</label></>}</div></section>
-    <section className="activity-authoring-section"><h3>Deadline &amp; attempts</h3><div className="instructor-form-grid"><label>Deadline<input type="datetime-local" {...field('dueDate')} value={form.dueDate} onChange={event => onChange('dueDate', event.target.value)} disabled={readOnly} />{error('dueDate')}</label><label>Maximum attempts<select {...field('maxAttempts')} value={form.maxAttempts} onChange={event => onChange('maxAttempts', event.target.value)} disabled={readOnly}><option value="1">1 attempt</option><option value="2">2 attempts</option><option value="3">3 attempts</option></select>{error('maxAttempts')}</label></div></section>
-    <section className="activity-authoring-section"><h3>Java starter</h3><div className="instructor-form-grid"><label>Programming language<span className="instructor-fixed-value">Java</span></label><label>Java entry class<input {...field('entryClassName')} value={form.entryClassName} onChange={event => onChange('entryClassName', event.target.value)} disabled={frozen} />{error('entryClassName')}</label></div><label>Starter source<GrowingTextarea className="activity-source-input" {...field('starterCode')} value={form.starterCode} onChange={event => onChange('starterCode', event.target.value)} disabled={frozen} />{error('starterCode')}</label></section>
-    {status === 'PUBLISHED' && <p className="activity-lifecycle-note">Published grading and test cases are locked. You can extend the deadline or increase attempts.</p>}
+    <div className="activity-settings-details" role="tabpanel" id="activity-settings-details" aria-labelledby="activity-tab-details" hidden={section !== 'details'}>
+      <div className="activity-settings-description">{topicSelector}<section className="activity-authoring-section"><h3>Activity details</h3><label>Activity title<input {...field('title')} value={form.title} onChange={event => onChange('title', event.target.value)} disabled={readOnly} />{error('title')}</label><label>Instructions<GrowingTextarea {...field('instructions')} value={form.instructions} onChange={event => onChange('instructions', event.target.value)} disabled={readOnly} />{error('instructions')}</label></section></div>
+      <div className="activity-settings-policy"><section className="activity-authoring-section"><h3>Grading</h3><div className="instructor-form-grid"><label>Grading mode<select value={form.gradingMode} onChange={event => onChange('gradingMode', event.target.value)} disabled={frozen}><option value="GRADED">Graded</option><option value="COMPLETION">Ungraded · completion</option></select></label>{form.gradingMode !== 'COMPLETION' && <><label>Total points<input type="number" min="0.01" max="1000" step="0.01" {...field('totalPoints')} value={form.totalPoints} onChange={event => onChange('totalPoints', event.target.value)} disabled={frozen} />{error('totalPoints')}</label><label>Credited result<select {...field('creditPolicy')} value={form.creditPolicy} onChange={event => onChange('creditPolicy', event.target.value)} disabled={frozen}><option value="LATEST">Latest attempt</option><option value="HIGHEST">Highest attempt</option></select>{error('creditPolicy')}</label></>}</div></section>
+      <section className="activity-authoring-section"><h3>Deadline &amp; attempts</h3><div className="instructor-form-grid"><label>Deadline<input type="datetime-local" {...field('dueDate')} value={form.dueDate} onChange={event => onChange('dueDate', event.target.value)} disabled={readOnly} />{error('dueDate')}</label><label>Maximum attempts<select {...field('maxAttempts')} value={form.maxAttempts} onChange={event => onChange('maxAttempts', event.target.value)} disabled={readOnly}><option value="1">1 attempt</option><option value="2">2 attempts</option><option value="3">3 attempts</option></select>{error('maxAttempts')}</label></div></section></div>
+      {status === 'PUBLISHED' && <p className="activity-lifecycle-note">Published grading and test cases are locked. You can extend the deadline or increase attempts.</p>}
+    </div>
+    <section className="activity-authoring-section" role="tabpanel" id="activity-settings-java" aria-labelledby="activity-tab-java" hidden={section !== 'java'}><h3>Java starter</h3><div className="instructor-form-grid"><label>Programming language<span className="instructor-fixed-value">Java</span></label><label>Java entry class<input {...field('entryClassName')} value={form.entryClassName} onChange={event => onChange('entryClassName', event.target.value)} disabled={frozen} />{error('entryClassName')}</label></div><label>Starter source<GrowingTextarea className="activity-source-input" {...field('starterCode')} value={form.starterCode} onChange={event => onChange('starterCode', event.target.value)} disabled={frozen} />{error('starterCode')}</label></section>
   </>
 }
 
@@ -125,6 +128,7 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState('')
   const [confirmation, setConfirmation] = useState('')
+  const [settingsSection, setSettingsSection] = useState('details')
   const mutationLock = useRef(false)
   const acceptedNavigation = useRef(false)
 
@@ -169,6 +173,7 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
     event.preventDefault()
     const nextErrors = validateActivityForm(form)
     setErrors(nextErrors)
+    if (Object.keys(nextErrors).length) setSettingsSection(nextErrors.entryClassName || nextErrors.starterCode ? 'java' : 'details')
     if (Object.keys(nextErrors).length > 0 || !selectedClass) return
     setBusy('create'); setNotice('')
     try {
@@ -181,6 +186,7 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
   const saveActivity = async () => {
     const nextErrors = validateActivityForm(form)
     setErrors(nextErrors)
+    if (Object.keys(nextErrors).length) setSettingsSection(nextErrors.entryClassName || nextErrors.starterCode ? 'java' : 'details')
     if (Object.keys(nextErrors).length > 0 || !state.activity) return
     setBusy('activity'); setNotice('')
     try {
@@ -236,26 +242,28 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
   if (!creating && current.status === 'error') return <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />
 
   return (
-    <div className="student-assignment-panel instructor-assignment-panel instructor-form-panel">
+    <div className="student-assignment-panel instructor-assignment-panel instructor-form-panel academic-activity-settings academic-class-frame">
       <UnsavedChangesGuard dirty={formDirty || testsDirty} bypass={acceptedNavigation} />
-      <div className="instructor-assignment-toolbar">
-        <NavLink to={classHref('/instructor/activity', selectedClass?.id)} className="student-outline-action">Back to activities</NavLink>
-        {current.activity && <div className="activity-editor-actions">
-          <span className="class-status-chip">{formatActivityStatus(current.activity.status)}</span>
-          <NavLink to={classHref(`/instructor/activity/${current.activity.id}/submissions`, selectedClass?.id)} className="student-outline-action">View submissions</NavLink>
-        </div>}
-      </div>
-      <section className="instructor-page-heading"><p>{creating ? 'Create Activity' : 'Activity Settings'}</p><h2>{creating ? 'Programming activity setup' : current.activity?.title}</h2></section>
+      <nav className="academic-project-toolbar" aria-label="Activity navigation">
+        <NavLink to={classHref(creating ? '/instructor/activity' : `/instructor/activity/${current.activity?.id}/submissions`, selectedClass?.id)} className="student-back-link">{creating ? 'Back to activities' : 'Back to submissions'}</NavLink>
+        {current.activity && <ProjexStatus value={current.activity.status}>{formatActivityStatus(current.activity.status)}</ProjexStatus>}
+      </nav>
+      <header className="academic-project-heading"><div><p>{creating ? 'New activity' : 'Activity settings'}</p><h2>{creating ? 'Create a programming activity' : current.activity?.title}</h2></div></header>
+      <div className="activity-settings-tabs" role="tablist" aria-label="Activity settings sections" onKeyDown={event => {
+        const tabs = [...event.currentTarget.querySelectorAll('[role=tab]')]
+        const index = tabs.indexOf(event.target)
+        const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null
+        if (next !== null) { event.preventDefault(); tabs[next].focus(); tabs[next].click() }
+      }}>{[['details', 'Details'], ['java', 'Java starter'], ...(current.activity ? [['tests', 'Test cases']] : [])].map(([id, label]) => <button type="button" role="tab" key={id} id={`activity-tab-${id}`} aria-controls={`activity-settings-${id}`} aria-selected={settingsSection === id} tabIndex={settingsSection === id ? 0 : -1} onClick={() => setSettingsSection(id)}>{label}{id === 'tests' && ` (${testCases.length})`}</button>)}</div>
       {notice && (noticeIsSuccess ? <div className="activity-save-notice" role="status"><strong>Changes saved</strong><p>{notice}</p></div> : <RequestState kind={noticeIsConflict ? 'conflict' : 'unavailable'} compact title={noticeIsConflict ? 'Review the latest changes' : 'Action not completed'} message={notice} />)}
-      <form onSubmit={creating ? create : event => event.preventDefault()}>
-        <TopicSelector classId={selectedClass?.id} value={form.topicId} onChange={value => changeForm('topicId', value)} disabled={Boolean(busy) || selectedClass?.status === 'ARCHIVED' || current.activity?.status === 'ARCHIVED'} api={api} />
-        <ActivityFormFields form={form} errors={errors} onChange={changeForm} readOnly={readOnly || Boolean(busy)} status={current.activity?.status || 'DRAFT'} />
-        <div className="instructor-form-actions">
+      <form noValidate onSubmit={creating ? create : event => event.preventDefault()}>
+        <ActivityFormFields form={form} errors={errors} onChange={changeForm} readOnly={readOnly || Boolean(busy)} status={current.activity?.status || 'DRAFT'} section={settingsSection} topicSelector={<TopicSelector classId={selectedClass?.id} value={form.topicId} onChange={value => changeForm('topicId', value)} disabled={Boolean(busy) || selectedClass?.status === 'ARCHIVED' || current.activity?.status === 'ARCHIVED'} api={api} />} />
+        <div className="instructor-form-actions" hidden={settingsSection === 'tests'}>
           {creating ? <button type="submit" className="student-primary-action" disabled={busy === 'create' || selectedClass?.status === 'ARCHIVED'}>{busy === 'create' ? 'Creating…' : 'Create draft'}</button> : <button type="button" className="student-primary-action" onClick={saveActivity} disabled={!formDirty || current.activity?.status === 'ARCHIVED' || selectedClass?.status === 'ARCHIVED' || Boolean(busy)}>{busy === 'activity' ? 'Saving…' : 'Save activity'}</button>}
           <p>{creating ? 'Add test cases after saving the draft.' : formDirty ? 'Unsaved activity changes.' : ''}</p>
         </div>
       </form>
-      {current.activity && <TestCaseEditor activity={current.activity} testCases={testCases} setTestCases={setTestCases} dirty={testsDirty} setDirty={setTestsDirty} busy={Boolean(busy)} onSave={saveTestCases} />}
+      {current.activity && <div role="tabpanel" id="activity-settings-tests" aria-labelledby="activity-tab-tests" hidden={settingsSection !== 'tests'}><TestCaseEditor activity={current.activity} testCases={testCases} setTestCases={setTestCases} dirty={testsDirty} setDirty={setTestsDirty} busy={Boolean(busy)} onSave={saveTestCases} /></div>}
       {current.activity && (
         <section className="activity-lifecycle-panel">
           <div><h3>Publishing &amp; availability</h3><p>Save changes before changing availability.</p></div>
