@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, apiClient } from '../api/api-client.js'
+import { clearPrivateSessionDrafts } from './private-session-drafts.js'
 import { AuthContext } from './auth-context.js'
 
 const SESSION_SIGNAL = 'origin-session-change'
@@ -14,6 +15,8 @@ export function AuthProvider({ children, client = apiClient, autoBootstrap = tru
   const [state, setState] = useState({ status: autoBootstrap ? 'loading' : 'anonymous', user: null, error: null })
   const current = useRef(state), version = useRef(0), validation = useRef(null), channel = useRef(null), identity = useRef(null)
   const adopt = useCallback(next => {
+    const previous = identity.current
+    if (next.status === 'anonymous' || (previous && (next.user || next.pendingUser) && !sameIdentity(previous, next.user || next.pendingUser))) clearPrivateSessionDrafts()
     if (next.user) identity.current = next.user
     else if (next.status === 'anonymous') identity.current = null
     current.current = next; setState(next)

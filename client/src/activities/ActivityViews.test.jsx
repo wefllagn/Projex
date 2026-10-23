@@ -104,7 +104,7 @@ function studentActivityApi(record = { ...activity, status: 'PUBLISHED' }) {
   }
 }
 
-afterEach(() => vi.useRealTimers())
+afterEach(() => { vi.useRealTimers(); sessionStorage.clear() })
 
 function classValue(overrides = {}) {
   return {
@@ -299,12 +299,13 @@ describe('instructor activity integration', () => {
 
     await user.type(screen.getByLabelText('Activity title'), 'Loop practice')
     await user.type(screen.getByLabelText('Instructions'), 'Solve the loop exercise.')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Grading period' }), 'PRELIM')
     const creditedResult = screen.getByRole('combobox', { name: /^Credited result/ })
     expect(creditedResult).toHaveValue('LATEST')
     await user.selectOptions(creditedResult, 'HIGHEST')
     await user.clear(screen.getByLabelText('Deadline'))
     await user.type(screen.getByLabelText('Deadline'), '2099-09-03T17:00')
-    await user.click(screen.getByRole('button', { name: 'Create draft' }))
+    await user.click(screen.getByRole('button', { name: 'Next' }))
 
     await waitFor(() => expect(api.createActivity).toHaveBeenCalled())
     expect(api.createActivity.mock.calls[0][0]).toBe(classId)
@@ -312,7 +313,7 @@ describe('instructor activity integration', () => {
       title: 'Loop practice', instructions: 'Solve the loop exercise.', language: 'JAVA', entryClassName: 'Main', maxAttempts: 1, creditPolicy: 'HIGHEST', totalPoints: 100,
     }))
     expect(api.createActivity.mock.calls[0][1]).not.toHaveProperty('attachments')
-    expect(screen.queryByText(/rubric/i)).not.toBeInTheDocument()
+    expect(api.createActivity.mock.calls[0][1]).toHaveProperty('creationRequestId', expect.any(String))
   })
 
   it('adds temporary test-case rows when crypto.randomUUID is unavailable', async () => {
@@ -329,7 +330,7 @@ describe('instructor activity integration', () => {
     try {
       renderView(<InstructorActivityEditor api={api} mode="edit" />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
 
-      await user.click(await screen.findByRole('tab', { name: /^Test cases/ }))
+      await screen.findByLabelText('Activity title'); await user.click(screen.getByRole('button', { name: 'Next' })); await user.click(screen.getByRole('button', { name: 'Next' }))
       await user.click(screen.getByRole('button', { name: 'Add test case' }))
       await user.click(screen.getByRole('button', { name: 'Add test case' }))
 
@@ -354,12 +355,12 @@ describe('instructor activity integration', () => {
     const user = userEvent.setup()
     renderView(<InstructorActivityEditor api={api} mode="edit" />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
 
-    await user.click(await screen.findByRole('tab', { name: /^Test cases/ }))
+    await screen.findByLabelText('Activity title'); await user.click(screen.getByRole('button', { name: 'Next' })); await user.click(screen.getByRole('button', { name: 'Next' }))
     const name = await screen.findByLabelText('Name')
     await user.clear(name)
     await user.type(name, 'Updated visible sample')
-    await user.click(screen.getByRole('button', { name: 'Save test cases' }))
-    expect(await screen.findByText('Test cases saved.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    expect(await screen.findByRole('region', { name: 'Publication summary' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Publish' }))
     await user.click(screen.getByRole('button', { name: 'Confirm publish' }))
 
@@ -410,7 +411,7 @@ describe('instructor activity integration', () => {
     }
     renderView(<InstructorActivityEditor api={api} mode="edit" />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
 
-    fireEvent.click(await screen.findByRole('tab', { name: /^Test cases/ }))
+    await screen.findByLabelText('Activity title'); await userEvent.click(screen.getByRole('button', { name: 'Next' })); await userEvent.click(screen.getByRole('button', { name: 'Next' }))
     expect(await screen.findByDisplayValue(hiddenSecret)).toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: 'Hidden from students' })).toBeChecked()
   })
@@ -535,10 +536,14 @@ describe('instructor activity integration', () => {
     const title = await screen.findByLabelText('Activity title')
     await user.clear(title)
     await user.type(title, 'My unsaved title')
-    await user.click(screen.getByRole('button', { name: 'Save activity' }))
+    await user.click(screen.getByRole('button', { name: 'Next' }))
 
     expect(await screen.findByText('This record changed while you were working. Refresh it before trying again.')).toBeInTheDocument()
     expect(screen.getByLabelText('Activity title')).toHaveValue('My unsaved title')
+    expect(api.getActivity).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Load latest saved draft' }))
+    expect(await screen.findByDisplayValue('Server title')).toBeInTheDocument()
     expect(api.getActivity).toHaveBeenCalledTimes(2)
   })
 })
@@ -554,7 +559,7 @@ describe('Instructor authoring overhaul', () => {
     await user.selectOptions(screen.getByLabelText('Grading mode'), 'COMPLETION')
     expect(screen.queryByLabelText('Total points')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Credited result')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Create draft' }))
+    await user.click(screen.getByRole('button', { name: 'Next' }))
     await waitFor(() => expect(api.createActivity).toHaveBeenCalled())
     expect(api.createActivity.mock.calls[0][1]).toMatchObject({ gradingMode: 'COMPLETION', totalPoints: null, maxAttempts: 1, language: 'JAVA' })
     expect(api.createActivity.mock.calls[0][1].starterCode).toContain('public class Main')
@@ -563,7 +568,7 @@ describe('Instructor authoring overhaul', () => {
     const api = { getActivity: vi.fn().mockResolvedValue({ data: activity }), listTestCases: vi.fn().mockResolvedValue({ data: [testCase, { ...testCase, id: 'second', name: 'Boundary' }], pagination }) }
     const user = userEvent.setup()
     renderView(<InstructorActivityEditor api={api} />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
-    await user.click(await screen.findByRole('tab', { name: /^Test cases/ }))
+    await screen.findByLabelText('Activity title'); await user.click(screen.getByRole('button', { name: 'Next' })); await user.click(screen.getByRole('button', { name: 'Next' }))
     await screen.findByDisplayValue('Visible sample')
     await user.clear(screen.getByLabelText('Input')); await user.type(screen.getByLabelText('Input'), 'Unsaved case input')
     await user.click(screen.getByRole('button', { name: /2\. Boundary/ }))
@@ -604,41 +609,30 @@ it('keeps only due date and attempts in Your work and opens history without leav
 })
 
 
-it('keeps unsaved activity and test-case edits while switching compact settings sections by keyboard', async () => {
+it('keeps draft form and test-case edits while moving Back and Next', async () => {
+  const api = { getActivity: vi.fn().mockResolvedValue({ data: activity }), listTestCases: vi.fn().mockResolvedValue({ data: [testCase], pagination }), updateActivity: vi.fn().mockImplementation((_id, body) => Promise.resolve({ data: { ...activity, ...body, updatedAt: '2026-08-10T01:00:00.000Z' } })) }
+  const user = userEvent.setup()
+  renderView(<InstructorActivityEditor api={api} />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
+  await user.clear(await screen.findByLabelText('Activity title')); await user.type(screen.getByLabelText('Activity title'), 'Saved via Next')
+  await user.click(screen.getByRole('button', { name: 'Next' })); await user.click(screen.getByRole('button', { name: 'Next' }))
+  await user.clear(screen.getByLabelText('Name')); await user.type(screen.getByLabelText('Name'), 'Unsaved test name')
+  await user.click(screen.getByRole('button', { name: 'Back', exact: true })); await user.click(screen.getByRole('button', { name: 'Back', exact: true }))
+  expect(screen.getByLabelText('Activity title')).toHaveValue('Saved via Next')
+  await user.click(screen.getByRole('button', { name: 'Next' })); await user.click(screen.getByRole('button', { name: 'Next' }))
+  expect(screen.getByLabelText('Name')).toHaveValue('Unsaved test name')
+  expect(screen.queryByText('Before publishing')).not.toBeInTheDocument()
+})
+
+
+it('validates Java only when advancing from the Java step', async () => {
   const api = { getActivity: vi.fn().mockResolvedValue({ data: activity }), listTestCases: vi.fn().mockResolvedValue({ data: [testCase], pagination }) }
   const user = userEvent.setup()
   renderView(<InstructorActivityEditor api={api} />, { entry: `/instructor/activity/${activityId}/settings?classId=${classId}`, path: '/instructor/activity/:activityId/settings' })
-  const details = await screen.findByRole('tab', { name: 'Details' })
-  expect(details).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getAllByRole('tabpanel')).toHaveLength(1)
-  await user.clear(screen.getByLabelText('Activity title'))
-  await user.type(screen.getByLabelText('Activity title'), 'Unsaved title')
-  details.focus()
-  await user.keyboard('{ArrowRight}')
-  expect(screen.getByRole('tab', { name: 'Java starter' })).toHaveFocus()
-  expect(screen.getByRole('tab', { name: 'Java starter' })).toHaveAttribute('aria-selected', 'true')
-  await user.keyboard('{End}')
-  await user.clear(screen.getByLabelText('Name'))
-  await user.type(screen.getByLabelText('Name'), 'Unsaved test name')
-  await user.click(details)
-  expect(screen.getByLabelText('Activity title')).toHaveValue('Unsaved title')
-  await user.click(screen.getByRole('tab', { name: /^Test cases/ }))
-  expect(screen.getByLabelText('Name')).toHaveValue('Unsaved test name')
-  expect(screen.getByRole('link', { name: 'Back to submissions' })).toHaveAttribute('href', `/instructor/activity/${activityId}/submissions?classId=${classId}`)
-})
-
-it('reveals Java validation errors when saving from another settings section', async () => {
-  const api = { createActivity: vi.fn() }
-  const user = userEvent.setup()
-  renderView(<InstructorActivityEditor api={api} mode="create" />, { entry: `/instructor/activity/new?classId=${classId}`, path: '/instructor/activity/new' })
-  await user.type(screen.getByLabelText('Activity title'), 'New activity')
-  await user.type(screen.getByLabelText('Instructions'), 'Print a greeting.')
-  await user.type(screen.getByLabelText('Deadline'), '2099-09-03T17:00')
-  await user.click(screen.getByRole('tab', { name: 'Java starter' }))
+  await screen.findByLabelText('Activity title'); await user.click(screen.getByRole('button', { name: 'Next' }))
   await user.clear(screen.getByLabelText('Starter source'))
-  await user.click(screen.getByRole('tab', { name: 'Details' }))
-  await user.click(screen.getByRole('button', { name: 'Create draft' }))
-  expect(api.createActivity).not.toHaveBeenCalled()
-  expect(screen.getByRole('tab', { name: 'Java starter' })).toHaveAttribute('aria-selected', 'true')
+  await user.click(screen.getByRole('button', { name: 'Back', exact: true }))
+  expect(screen.queryByText('Enter starter source of no more than 100,000 characters.')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Next' })); await user.click(screen.getByRole('button', { name: 'Next' }))
   expect(screen.getByText('Enter starter source of no more than 100,000 characters.')).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Step 2: Java starter' })).toBeInTheDocument()
 })

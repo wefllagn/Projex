@@ -215,8 +215,18 @@ export function createPrismaActivityRepository(
   prisma: PrismaClient,
 ): ActivityRepository {
   return {
-    create(input) {
-      return prisma.$transaction(async (transaction) => {
+    async create(input) {
+      const replay = async () => {
+        if (!input.activity.creationRequestId) return null
+        const activity = await prisma.programmingActivity.findUnique({ where: { id: input.activity.creationRequestId }, select: activityRecordSelect })
+        if (!activity) return null
+        if (activity.classId !== input.classId || activity.createdById !== input.createdById) throw new AppError({ statusCode: 409, code: 'ACTIVITY_CREATION_CONFLICT', message: 'This draft request cannot be reused. Open your Activity list to continue.' })
+        if (activity.class.status === 'ARCHIVED') return { kind: 'class_archived' } as const
+        return { kind: 'created', activity } as const
+      }
+      const previous = await replay()
+      if (previous) return previous
+      try { return await prisma.$transaction(async (transaction) => {
         const classRecord = await transaction.class.findUnique({
           where: { id: input.classId },
           select: { status: true },
@@ -229,6 +239,7 @@ export function createPrismaActivityRepository(
         const derived = input.activity.gradingConfiguration && input.activity.gradingMode !== 'COMPLETION' ? configuredAllocation(input.activity.totalPoints!, input.activity.gradingConfiguration) : null
         const activity = await transaction.programmingActivity.create({
           data: {
+            ...(input.activity.creationRequestId ? { id: input.activity.creationRequestId } : {}),
             classId: input.classId,
             createdById: input.createdById,
             title: input.activity.title,
@@ -252,7 +263,10 @@ export function createPrismaActivityRepository(
           select: activityRecordSelect,
         })
         return { kind: 'created', activity } as const
-      })
+      }) } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') { const recovered = await replay(); if (recovered) return recovered }
+        throw error
+      }
     },
     async list(input) {
       const studentStatuses: ActivityStatus[] = ['PUBLISHED', 'CLOSED']

@@ -68,8 +68,14 @@ describe('AuthProvider', () => {
     expect(await screen.findByText('Synthetic Student')).toBeInTheDocument()
     expect(api.post).toHaveBeenCalledWith('/auth/login', expect.any(Object), expect.objectContaining({ csrf: false }))
 
+    sessionStorage.setItem('origin.activity-draft:user-1:class-1:new', '{"private":"draft"}')
+    sessionStorage.setItem('origin-ux-unrelated', 'retained')
+
     await user.click(screen.getByRole('button', { name: 'Logout' }))
     expect(await screen.findByText('anonymous')).toBeInTheDocument()
+    expect(sessionStorage.getItem('origin.activity-draft:user-1:class-1:new')).toBeNull()
+    expect(sessionStorage.getItem('origin-ux-unrelated')).toBe('retained')
+    sessionStorage.removeItem('origin-ux-unrelated')
   })
 
   it('clears protected content even when backend logout fails', async () => {

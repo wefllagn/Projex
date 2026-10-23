@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import './gradebook-interactions.css'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useClasses } from '../classes/class-context.js'
 import { classHref } from '../classes/class-links.js'
 import { apiClient } from '../api/api-client.js'
@@ -32,6 +33,7 @@ function Request({ state, retry, children }) {
 export default function Gradebook({ client = apiClient }) {
   const { selectedClass } = useClasses()
   const [parameters] = useSearchParams()
+  const navigate = useNavigate()
   const [revision, setRevision] = useState(0)
   const classId = selectedClass?.id
   const overview = useGradebookRequest(client, classId ? `/classes/${classId}/gradebook/overview` : null, revision)
@@ -44,7 +46,7 @@ export default function Gradebook({ client = apiClient }) {
     <div className="instructor-section-title"><h2>Gradebook</h2><button type="button" className="student-outline-action" onClick={refresh}>Refresh grades</button></div>
     <p className="academic-inline-help">Activity score summary. Only credited released graded results contribute to totals. Missing, pending, unreleased and ungraded work is not counted as zero. Coverage refers to currently published Activities, including retained published history. This is not an official course grade.</p>
     <Request state={overview} retry={refresh}>{data => <>
-      {!studentId && <><div className="instructor-data-table" style={{ overflowX: 'auto' }}><table className="admin-table"><caption>Student results by grading period</caption><thead><tr><th>Student</th>{PERIODS.slice(0, 3).map(([key, label]) => <th key={key}>{label}</th>)}</tr></thead><tbody>{data.rows.map(row => <tr key={row.studentId}><th scope="row"><Link className="admin-row-link" to={studentHref(row.studentId)}>{row.fullName}</Link></th>{PERIODS.slice(0, 3).map(([key]) => <td key={key}><PeriodResult period={row.periods.find(period => period.period === key)} /></td>)}</tr>)}</tbody></table></div>{!data.rows.length && <p>No enrolled Students in this Class.</p>}<p className="academic-inline-help">Select a Student to inspect their Activities, submission records and legacy Unassigned work.</p></>}
+      {!studentId && <><div className="instructor-data-table" style={{ overflowX: 'auto' }}><table className="admin-table" aria-label="Student results by grading period"><thead><tr><th>Student</th>{PERIODS.slice(0, 3).map(([key, label]) => <th key={key}>{label}</th>)}</tr></thead><tbody>{data.rows.map(row => <tr key={row.studentId} className="gradebook-student-row" tabIndex={0} aria-label={`Open ${row.fullName}'s Gradebook`} onClick={event => { if (!event.target.closest('a,button,input,select,textarea,[role="button"]') && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) navigate(studentHref(row.studentId)) }} onKeyDown={event => { if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) { event.preventDefault(); navigate(studentHref(row.studentId)) } }}><th scope="row"><Link className="admin-row-link" to={studentHref(row.studentId)}>{row.fullName}</Link></th>{PERIODS.slice(0, 3).map(([key]) => <td key={key}><PeriodResult period={row.periods.find(period => period.period === key)} /></td>)}</tr>)}</tbody></table></div>{!data.rows.length && <p>No enrolled Students in this Class.</p>}<p className="academic-inline-help">Select a Student to inspect their Activities, submission records and legacy Unassigned work.</p></>}
       {studentId && <>{data.viewerRole === 'INSTRUCTOR' && <Link className="student-back-link" to={studentHref(null)}>Back to Class overview</Link>}<Request state={details} retry={refresh}>{record => <>
         <h3>{record.fullName}</h3>
         {PERIODS.map(([key, label]) => {

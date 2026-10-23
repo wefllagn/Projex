@@ -30,6 +30,7 @@ export const activityIdParamsSchema = z.object({ activityId: z.uuid() }).strict(
 
 export const createActivitySchema = z
   .object({
+    creationRequestId: z.uuid().optional(),
     gradingConfiguration: gradingConfigurationSchema.nullable().optional(),
     gradingPeriod: gradingPeriodSchema.nullable().optional(),
     rubricCriteria: rubricCriteriaSchema.optional(),

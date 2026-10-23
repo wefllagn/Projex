@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -34,6 +34,16 @@ describe('Student-centered Gradebook', () => {
     expect(within(first).getByRole('link', { name: 'Credited released result' })).toHaveAttribute('href', '/instructor/activity/a/submissions/credited?classId=class-one')
     await userEvent.click(screen.getByRole('link', { name: 'Back to Class overview' }))
     expect(screen.getByRole('link', { name: 'Alex Morgan' })).toBeInTheDocument()
+  })
+  it.each(['Prelim', 'Midterm', 'Final', 'empty', 'Enter', ' '])('opens a Student by interacting with %s in the row', async action => {
+    const client = { get: vi.fn(path => Promise.resolve({ data: path.endsWith('/overview') ? overview : details })) }
+    render(view(client))
+    const row = await screen.findByRole('row', { name: "Open Alex Morgan's Gradebook" })
+    expect(screen.queryByText('Student results by grading period')).not.toBeInTheDocument()
+    if (['Enter', ' '].includes(action)) { row.focus(); fireEvent.keyDown(row, { key: action }) }
+    else if (action === 'empty') fireEvent.click(row)
+    else fireEvent.click(within(row).getAllByRole('cell')[['Prelim','Midterm','Final'].indexOf(action)])
+    expect(await screen.findByRole('heading', { name: 'Alex Morgan' })).toBeInTheDocument()
   })
   it('opens only the authenticated Student record and uses Student submission routes', async () => {
     const client = { get: vi.fn(path => Promise.resolve({ data: path.endsWith('/overview') ? { ...overview, viewerRole: 'STUDENT' } : { ...details, viewerRole: 'STUDENT' } })) }

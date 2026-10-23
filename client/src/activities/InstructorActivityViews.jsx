@@ -1,11 +1,9 @@
-import ActivityGrading from './ActivityGrading.jsx'
-import { DEFAULT_GRADING_CONFIGURATION, IMPORTANCE_OPTIONS, weightedPreview } from './weighted-grading.js'
 import AppDialog from '../components/AppDialog.jsx'
 import UnsavedChangesGuard from '../components/UnsavedChangesGuard.jsx'
 import { TopicSelector, GroupedClasswork } from './TopicViews.jsx'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, describeApiError } from '../api/api-client.js'
+import { describeApiError } from '../api/api-client.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
@@ -19,107 +17,12 @@ import {
   publicationRequirements,
   sumTestCasePoints,
   testCasePayload,
-  toDateTimeLocal,
   validateActivityForm,
   validateTestCases,
 } from './activity-utils.js'
-import { createTemporaryTestCaseId } from './temporary-test-case-id.js'
-
-const EMPTY_FORM = {
-  gradingMode: 'GRADED',
-  gradingPeriod: '',
-  gradingConfiguration: DEFAULT_GRADING_CONFIGURATION,
-  rubricCriteria: [],
-  topicId: '',
-  title: '',
-  instructions: '',
-  dueDate: '',
-  entryClassName: 'Main',
-  starterCode: 'public class Main {\n    public static void main(String[] args) {\n        \n    }\n}\n',
-  maxAttempts: '1',
-  creditPolicy: 'LATEST',
-  totalPoints: '100',
-}
-
-function contextMismatchError() {
-  return new ApiError({ status: 404, code: 'ACTIVITY_NOT_FOUND', message: 'The activity is not available in the selected class.' })
-}
-
-function formFromActivity(activity) {
-  return {
-    gradingMode: activity.gradingMode ?? 'GRADED',
-    gradingPeriod: activity.gradingPeriod ?? '',
-    gradingConfiguration: activity.gradingConfiguration ?? null,
-    rubricCriteria: activity.rubricCriteria ?? null,
-    topicId: activity.topicId ?? '',
-    title: activity.title,
-    instructions: activity.instructions,
-    dueDate: toDateTimeLocal(activity.dueDate),
-    entryClassName: activity.entryClassName,
-    starterCode: activity.starterCode,
-    maxAttempts: String(activity.maxAttempts),
-    creditPolicy: activity.creditPolicy ?? 'LATEST',
-    totalPoints: activity.totalPoints === null ? '' : String(activity.totalPoints),
-  }
-}
-
-function rowsFromResponse(testCases) {
-  return testCases.map((testCase) => ({
-    id: testCase.id,
-    name: testCase.name,
-    inputData: testCase.inputData ?? '',
-    expectedOutput: testCase.expectedOutput,
-    isHidden: Boolean(testCase.isHidden),
-    importance: testCase.importance ?? 'NORMAL',
-    points: String(testCase.points),
-  }))
-}
-
-function emptyTestCase() {
-  return { id: createTemporaryTestCaseId(), name: '', inputData: '', expectedOutput: '', isHidden: false, points: '0', importance: 'NORMAL' }
-}
-
-function ActivityFormFields({ automatedPoints = 0, form, errors, onChange, readOnly, status, section, topicSelector }) {
-  const frozen = readOnly || status === 'PUBLISHED'
-  const field = key => ({ 'aria-invalid': Boolean(errors[key]), 'aria-describedby': errors[key] ? `activity-${key}-error` : undefined })
-  const error = key => errors[key] && <small id={`activity-${key}-error`} className="activity-field-error">{errors[key]}</small>
-  return <>
-    <div className="activity-settings-details" role="tabpanel" id="activity-settings-details" aria-labelledby="activity-tab-details" hidden={section !== 'details'}>
-      <div className="activity-settings-description">{topicSelector}<section className="activity-authoring-section"><h3>Activity details</h3><label>Activity title<input {...field('title')} value={form.title} onChange={event => onChange('title', event.target.value)} disabled={readOnly} />{error('title')}</label><label>Instructions<GrowingTextarea {...field('instructions')} value={form.instructions} onChange={event => onChange('instructions', event.target.value)} disabled={readOnly} />{error('instructions')}</label></section></div>
-      <div className="activity-settings-policy"><section className="activity-authoring-section"><h3>Grading</h3><div className="instructor-form-grid"><label>Grading mode<select value={form.gradingMode} onChange={event => onChange('gradingMode', event.target.value)} disabled={frozen}><option value="GRADED">Graded</option><option value="COMPLETION">Ungraded · completion</option></select></label>{form.gradingMode !== 'COMPLETION' && <><label>Total points<input type="number" min="0.01" max="1000" step="0.01" {...field('totalPoints')} value={form.totalPoints} onChange={event => onChange('totalPoints', event.target.value)} disabled={frozen} />{error('totalPoints')}</label><label>Credited result<select {...field('creditPolicy')} value={form.creditPolicy} onChange={event => onChange('creditPolicy', event.target.value)} disabled={frozen}><option value="LATEST">Latest attempt</option><option value="HIGHEST">Highest attempt</option></select>{error('creditPolicy')}</label></>}</div><ActivityGrading form={form} onChange={onChange} automatedPoints={automatedPoints} frozen={frozen} />{error('rubricCriteria')}{error('gradingConfiguration')}</section>
-      <section className="activity-authoring-section"><h3>Deadline &amp; attempts</h3><div className="instructor-form-grid"><label>Deadline<input type="datetime-local" {...field('dueDate')} value={form.dueDate} onChange={event => onChange('dueDate', event.target.value)} disabled={readOnly} />{error('dueDate')}</label><label>Maximum attempts<select {...field('maxAttempts')} value={form.maxAttempts} onChange={event => onChange('maxAttempts', event.target.value)} disabled={readOnly}><option value="1">1 attempt</option><option value="2">2 attempts</option><option value="3">3 attempts</option></select>{error('maxAttempts')}</label></div></section></div>
-      {status === 'PUBLISHED' && <p className="activity-lifecycle-note">Published grading and test cases are locked. You can extend the deadline or increase attempts.</p>}
-    </div>
-    <section className="activity-authoring-section" role="tabpanel" id="activity-settings-java" aria-labelledby="activity-tab-java" hidden={section !== 'java'}><h3>Java starter</h3><div className="instructor-form-grid"><label>Programming language<span className="instructor-fixed-value">Java</span></label><label>Java entry class<input {...field('entryClassName')} value={form.entryClassName} onChange={event => onChange('entryClassName', event.target.value)} disabled={frozen} />{error('entryClassName')}</label></div><label>Starter source<GrowingTextarea className="activity-source-input" {...field('starterCode')} value={form.starterCode} onChange={event => onChange('starterCode', event.target.value)} disabled={frozen} />{error('starterCode')}</label></section>
-  </>
-}
-
-function GrowingTextarea(props) {
-  const ref = useRef(null)
-  useEffect(() => { if (ref.current) { ref.current.style.height = 'auto'; ref.current.style.height = `${Math.min(260, Math.max(72, ref.current.scrollHeight))}px` } }, [props.value])
-  return <textarea {...props} ref={ref} rows={3} />
-}
-function TestCaseEditor({ activity, testCases, setTestCases, dirty, setDirty, busy, onSave, configurationDirty }) {
-  const [selected, setSelected] = useState(null)
-  const [removing, setRemoving] = useState(false)
-  const nameInput = useRef(null)
-  const editable = activity.status === 'DRAFT'
-  const completion = activity.gradingMode === 'COMPLETION'
-  const index = Math.max(0, testCases.findIndex(row => row.id === selected))
-  const row = testCases[index]
-  const weighted = Boolean(activity.gradingConfiguration)
-  const calculated = weighted && activity.gradingMode !== 'COMPLETION' ? weightedPreview(activity.totalPoints, activity.gradingConfiguration, testCases).testPoints : []
-  const errors = validateTestCases(testCases, activity.totalPoints, activity.gradingMode, activity.gradingConfiguration)
-  const update = (field, value) => { setDirty(true); setTestCases(rows => rows.map(item => item.id === row.id ? { ...item, [field]: value } : item)) }
-  const move = offset => {
-    const target = index + offset
-    if (target < 0 || target >= testCases.length) return
-    setSelected(row.id); setDirty(true)
-    setTestCases(rows => { const next = [...rows]; [next[index], next[target]] = [next[target], next[index]]; return next })
-  }
-  const add = () => { const item = emptyTestCase(); setDirty(true); setTestCases(rows => [...rows, item]); setSelected(item.id); requestAnimationFrame(() => nameInput.current?.focus()) }
-  return <section className="instructor-testcase-panel activity-testcase-editor"><div className="instructor-section-title"><div><h3>Test cases</h3><p>{testCases.length} of 50{!completion && (weighted ? ' · Correctness points are calculated automatically' : ` · ${sumTestCasePoints(testCases)} of ${activity.totalPoints} points`)}</p></div>{editable && <button type="button" className="student-outline-action" onClick={add} disabled={testCases.length >= 50 || busy}>Add test case</button>}</div>{!editable && <p>Test cases are read-only after publication.</p>}{testCases.length === 0 && <p>Add a visible test case to provide feedback.</p>}<div className="case-workbench"><nav className="case-navigator" aria-label="Test cases">{testCases.map((item, number) => <button type="button" key={item.id} aria-current={row?.id === item.id ? 'true' : undefined} onClick={() => setSelected(item.id)}><strong>{number + 1}. {item.name || 'Untitled case'}</strong><small>{item.isHidden ? 'Hidden' : 'Visible'}</small></button>)}</nav>{row && <fieldset className="case-selected" disabled={!editable || busy}><legend>Test case {index + 1}</legend><div className="instructor-form-grid"><label>Name<input ref={nameInput} value={row.name} onChange={event => update('name', event.target.value)} /></label>{!completion && (weighted ? <label>Importance<select value={row.importance ?? 'NORMAL'} onChange={event => update('importance', event.target.value)}>{IMPORTANCE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><small>Calculated maximum: {calculated[index] ?? '—'} points</small></label> : <label>Points<input type="number" min="0" max="1000" step="0.01" value={row.points} onChange={event => update('points', event.target.value)} /></label>)}<label className="activity-testcase-wide">Input<GrowingTextarea value={row.inputData} onChange={event => update('inputData', event.target.value)} /></label><label className="activity-testcase-wide">Expected output<GrowingTextarea value={row.expectedOutput} onChange={event => update('expectedOutput', event.target.value)} /></label></div><label><input type="checkbox" checked={row.isHidden} onChange={event => update('isHidden', event.target.checked)} /> Hidden from students</label>{editable && <div className="activity-testcase-actions"><button type="button" onClick={() => move(-1)} disabled={index === 0}>Move up</button><button type="button" onClick={() => move(1)} disabled={index === testCases.length - 1}>Move down</button><button type="button" onClick={() => setRemoving(true)}>Remove</button></div>}</fieldset>}</div>{errors.length > 0 && <div className="activity-validation-summary" role="alert"><strong>Check your test cases</strong><ul>{errors.map(error => <li key={error}>{error}</li>)}</ul></div>}{editable && <div className="instructor-form-actions"><button type="button" className="student-primary-action" onClick={onSave} disabled={!dirty || busy || errors.length > 0 || configurationDirty}>{busy ? 'Saving…' : 'Save test cases'}</button>{dirty && <p>Unsaved test-case changes.</p>}{configurationDirty && <p>Save Activity changes before saving test cases.</p>}</div>}{removing && <AppDialog title="Remove test case?" onClose={() => setRemoving(false)}><p>Remove “{row?.name || `Test case ${index + 1}`}” from this draft?</p><footer><button type="button" className="student-primary-action" onClick={() => setRemoving(false)}>Keep case</button><button type="button" className="student-outline-action" onClick={() => { setDirty(true); setTestCases(rows => rows.filter(item => item.id !== row.id)); setRemoving(false) }}>Remove case</button></footer></AppDialog>}</section>
-}
+import { ActivityFormFields, TestCaseEditor } from './activity-authoring-fields.jsx'
+import { EMPTY_FORM, contextMismatchError, formFromActivity, rowsFromResponse } from './activity-authoring-model.js'
+import ActivityCreationWizard from './ActivityCreationWizard.jsx'
 
 export function InstructorActivityList({ api = activityApi }) {
   const { selectedClass } = useClasses()
@@ -253,6 +156,8 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
 
   if (!creating && current.status === 'loading') return <RequestState kind="loading" message="Loading activity settings." />
   if (!creating && current.status === 'error') return <RequestState kind={current.error?.status === 404 ? 'notFound' : 'unavailable'} error={current.error} action={<button type="button" className="student-outline-action" onClick={() => load()}>Try again</button>} />
+
+  if (creating || (current.activity?.status === 'DRAFT' && !current.activity.publishedAt && selectedClass?.status !== 'ARCHIVED')) return <ActivityCreationWizard key={`${selectedClass?.id}:${activityId || 'new'}`} api={api} initialActivity={current.activity} initialCases={testCases} selectedClass={selectedClass} onPublished={() => load()} />
 
   return (
     <div className="student-assignment-panel instructor-assignment-panel instructor-form-panel academic-activity-settings academic-class-frame">
