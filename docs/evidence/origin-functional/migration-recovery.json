@@ -1,0 +1,172 @@
+{
+  "clusterPort": 55496,
+  "tablesUnchanged": 40,
+  "before": {
+    "account_setup_tokens": {
+      "rows": 4,
+      "sha256": "580be3927fea48a5300a5260897235ddabb152cf560091c5edc3452e84eb05ad"
+    },
+    "activity_submissions": {
+      "rows": 3,
+      "sha256": "58487874f82efe57449d9997c783ff339be549b0a8955b2c4f85b57fbc20b9bb"
+    },
+    "admin_audit_events": {
+      "rows": 6,
+      "sha256": "f529e2986e3cbb26293dd81fd7e2382ba014b5ae63a03cd5bebece3cec80d557"
+    },
+    "class_invitations": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "class_members": {
+      "rows": 6,
+      "sha256": "e1e3413e9cc6e6edd3d9058df9df11c1f898ef60c91ea753a69d9522f700c9e7"
+    },
+    "class_staff_events": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "class_teaching_staff": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "class_topics": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "classes": {
+      "rows": 2,
+      "sha256": "a59d673080d3c0970617c42128722724770440895039e80fa6ec4ee92b18a774"
+    },
+    "courses": {
+      "rows": 2,
+      "sha256": "5410cecddcef4315fb1cdc74d96cf4b148e93ea9d1b029c97391ab9aa7cadae4"
+    },
+    "execution_jobs": {
+      "rows": 12,
+      "sha256": "2fd5313099c937a994777314ca199a3f8c2daababa9e9275132e69d403889b90"
+    },
+    "git_credentials": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "group_browser_commit_jobs": {
+      "rows": 3,
+      "sha256": "1ac51f218c401678c8cc45fc09bc5900469a1d9e5e4ba7c5f534972e84b42963"
+    },
+    "group_browser_ref_jobs": {
+      "rows": 2,
+      "sha256": "269f629f342e7f0aa241c9a411285c82cb34f864a556cdea97a79e61cde102cf"
+    },
+    "interactive_consoles": {
+      "rows": 3,
+      "sha256": "2e07d8b68c5587faa47393768bf330fee3a23efaeb43663b258c13b6b09b369c"
+    },
+    "practice_execution_cases": {
+      "rows": 15,
+      "sha256": "3ec103b970f82e275eea8fa6f0e4e1e4cee6453962c6f4dfa139edcd8fc8dd98"
+    },
+    "practice_executions": {
+      "rows": 9,
+      "sha256": "330cccef98ee4d16484be6b4172aee8e5f52d879e66bbd503e554b6ab3fb7a36"
+    },
+    "programming_activities": {
+      "rows": 5,
+      "sha256": "246fa4f8a50b99b79f0d2eeac96d5e6c59fb841fbcbd19b2274e9e4f630094ef"
+    },
+    "project_tasks": {
+      "rows": 1,
+      "sha256": "77a649998f63303272861ef44450da5248286e2d5f7b1826a53dd83767c5302a"
+    },
+    "refresh_sessions": {
+      "rows": 22,
+      "sha256": "0840de12d7373733c0be2c378ca3861bebb80fef2f3de182398264da5433a935"
+    },
+    "repositories": {
+      "rows": 2,
+      "sha256": "1649bdf39b9322509974d054cdcae62369e099d86d789fa39a25bb971ab33cc0"
+    },
+    "repository_activity": {
+      "rows": 8,
+      "sha256": "bc0389872b047e6134b34db3049d0f8d54547cba01285f69db984989c41fa311"
+    },
+    "repository_checkpoint_jobs": {
+      "rows": 1,
+      "sha256": "bc5d7a476dee8c1a187f53397c32b415a56ef3500a394c8c6e3f9225a7ed0546"
+    },
+    "repository_feedback": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "repository_invitations": {
+      "rows": 1,
+      "sha256": "0d3f66c1af14b7a831ac3ff1d53338254d4ca6e46a70841b7839674a01bb5682"
+    },
+    "repository_members": {
+      "rows": 3,
+      "sha256": "3214d0f1f1c1d902bdd78724f22c4133f13cad9218340da81146971ec7c04855"
+    },
+    "repository_provisioning_jobs": {
+      "rows": 2,
+      "sha256": "61178c037c3a314ba0b20c19722f5792dc72101291fb3c87591a6e59d94ef1df"
+    },
+    "review_execution_cases": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "review_executions": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "similarity_results": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "submission_executions": {
+      "rows": 3,
+      "sha256": "c1e829ea521fd35c3bc9b0c32bbc7e32d04bf1a38793b6b66c29af45d6d9242b"
+    },
+    "submission_failure_resolutions": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "submission_feedback": {
+      "rows": 2,
+      "sha256": "d742c1c30a6f04166f9ea0df3b4fecc11127203b6e4b25b091de64e2c2ea6c21"
+    },
+    "submission_idempotencies": {
+      "rows": 3,
+      "sha256": "2518d30de709da256d4fbedab158d0b0253db6658f409071c36812abbc6c509b"
+    },
+    "submission_score_corrections": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "team_members": {
+      "rows": 2,
+      "sha256": "0c8561e3a2df23a8ad8283bddf4e1707170399d7e7392fde4a2b88a63539a06b"
+    },
+    "teams": {
+      "rows": 1,
+      "sha256": "71c3a88432e9f8c2e2974b7431dc21f13718bdeeb716fff134005aa81f4d425b"
+    },
+    "test_case_results": {
+      "rows": 3,
+      "sha256": "048964cc3cf430f9ce177da2426915960d1a88ae1b66117194b7861aaf4a4b16"
+    },
+    "test_cases": {
+      "rows": 11,
+      "sha256": "edabe72ffc50ea49ae8c7834a7f86d4d5cc9431ef07257c0914c508bd1b99968"
+    },
+    "users": {
+      "rows": 5,
+      "sha256": "75caf4336baefe5d42560209f64c88e571d7794efe2ce9edf7c6a39dc93b8618"
+    }
+  },
+  "migratedOriginalColumnsMatch": true,
+  "restoredOriginalColumnsMatch": true,
+  "migrationsBefore": 28,
+  "migrationsAfter": 29,
+  "migrationsRestored": 28,
+  "legacyFieldsNull": true
+}

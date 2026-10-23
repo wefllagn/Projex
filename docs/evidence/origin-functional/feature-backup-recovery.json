@@ -1,0 +1,174 @@
+{
+  "source": "f4bea628f1ccbb812a81fecd3aa2d337a3351332",
+  "databasePort": 55496,
+  "tablesMatched": 41,
+  "releasedRubricScoreRestored": 91,
+  "restoredRepositoriesFsckPassed": 3,
+  "quiescent": true,
+  "rows": {
+    "_prisma_migrations": {
+      "rows": 29,
+      "sha256": "0bbc720a3e2433b9a85cb31ba538f55f21013ffb9ce557e3111a664762fe8d05"
+    },
+    "account_setup_tokens": {
+      "rows": 5,
+      "sha256": "98a79a297024e55bbc369377a494b6227859e12ecfb0ae5968f01eae5cdab189"
+    },
+    "activity_submissions": {
+      "rows": 4,
+      "sha256": "8738378285ca82923af25bcccd03267f1f814a5ecfcf0e60bd4129ede9378fb5"
+    },
+    "admin_audit_events": {
+      "rows": 7,
+      "sha256": "af6e856dd79586b52b1f350fa2f5c8772f746671bdc321f1a4a6f87e24e6b60c"
+    },
+    "class_invitations": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "class_members": {
+      "rows": 6,
+      "sha256": "e1e3413e9cc6e6edd3d9058df9df11c1f898ef60c91ea753a69d9522f700c9e7"
+    },
+    "class_staff_events": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "class_teaching_staff": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "class_topics": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "classes": {
+      "rows": 2,
+      "sha256": "a59d673080d3c0970617c42128722724770440895039e80fa6ec4ee92b18a774"
+    },
+    "courses": {
+      "rows": 2,
+      "sha256": "5410cecddcef4315fb1cdc74d96cf4b148e93ea9d1b029c97391ab9aa7cadae4"
+    },
+    "execution_jobs": {
+      "rows": 15,
+      "sha256": "dc924d97daf534a717d56d5a48eae640d86c6df0a08d6e3357009d1f7ab0edc6"
+    },
+    "git_credentials": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "group_browser_commit_jobs": {
+      "rows": 3,
+      "sha256": "1ac51f218c401678c8cc45fc09bc5900469a1d9e5e4ba7c5f534972e84b42963"
+    },
+    "group_browser_ref_jobs": {
+      "rows": 2,
+      "sha256": "269f629f342e7f0aa241c9a411285c82cb34f864a556cdea97a79e61cde102cf"
+    },
+    "interactive_consoles": {
+      "rows": 4,
+      "sha256": "f3b5fe96df30a59e6cb1f54518619bf6a5d3cc38281a7d5f6497bda67406ac95"
+    },
+    "practice_execution_cases": {
+      "rows": 17,
+      "sha256": "cba716dbbd970892efc5be0040eadcc94dd9ba9f4304ccd0eafd61be9121918f"
+    },
+    "practice_executions": {
+      "rows": 11,
+      "sha256": "efdb5a305a7320f629dd039b6db12013d7e6f1ca1e699e277bc9aa7d39b2afae"
+    },
+    "programming_activities": {
+      "rows": 6,
+      "sha256": "3d1e91a88f09812b6f4712db5294b3dc6dc339c58d5be2f1b1adf5219beeb230"
+    },
+    "project_tasks": {
+      "rows": 1,
+      "sha256": "77a649998f63303272861ef44450da5248286e2d5f7b1826a53dd83767c5302a"
+    },
+    "refresh_sessions": {
+      "rows": 27,
+      "sha256": "55c222fde19e4e44dcbc637c2f810ef93f3dc05d4e576d0ca115e95bc4966f8d"
+    },
+    "repositories": {
+      "rows": 3,
+      "sha256": "e6ddb6dbd0769cd31d41e49970ef435703660d4747a65bec650ffa828b94e61f"
+    },
+    "repository_activity": {
+      "rows": 10,
+      "sha256": "2e5e2d74e582272e84a4976c529908a54dadb79e843282f08c83601187ba8cd6"
+    },
+    "repository_checkpoint_jobs": {
+      "rows": 2,
+      "sha256": "a8a4f4078ddb8b76ca5fcae97f629ae8f1e7f70ac79a83c9e34b2d2349355c09"
+    },
+    "repository_feedback": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "repository_invitations": {
+      "rows": 1,
+      "sha256": "0d3f66c1af14b7a831ac3ff1d53338254d4ca6e46a70841b7839674a01bb5682"
+    },
+    "repository_members": {
+      "rows": 4,
+      "sha256": "f8d289c7a61fd86afaa6215bb82f7afa94973a8de52b330ccbde64fb597eae99"
+    },
+    "repository_provisioning_jobs": {
+      "rows": 3,
+      "sha256": "6c23862dfb592a04f0b29901b93e5c4a2885e09b2df5d58c57998487149ee729"
+    },
+    "review_execution_cases": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "review_executions": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "similarity_results": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "submission_executions": {
+      "rows": 4,
+      "sha256": "b447657e88beae125be1a6210bdb3af339b8f95142eeac7d2e351f58f5d4cee3"
+    },
+    "submission_failure_resolutions": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "submission_feedback": {
+      "rows": 3,
+      "sha256": "13627f4cb921ae163341785f469b3300f7ec1fc011879bda44c033a7c3169501"
+    },
+    "submission_idempotencies": {
+      "rows": 4,
+      "sha256": "20053adcb70e94ee6de9e0ea26d6d3e8fbcf238ba9260402156a60f430d15040"
+    },
+    "submission_score_corrections": {
+      "rows": 1,
+      "sha256": "46c3509fccb704012f0b19bdf06da600d79065fcfc1618188ae8833dede5ba2e"
+    },
+    "team_members": {
+      "rows": 2,
+      "sha256": "0c8561e3a2df23a8ad8283bddf4e1707170399d7e7392fde4a2b88a63539a06b"
+    },
+    "teams": {
+      "rows": 1,
+      "sha256": "71c3a88432e9f8c2e2974b7431dc21f13718bdeeb716fff134005aa81f4d425b"
+    },
+    "test_case_results": {
+      "rows": 4,
+      "sha256": "da74849ba56a6f3c93467307cf20e441e68f8dd9e20f62489e4eb8c888989f6d"
+    },
+    "test_cases": {
+      "rows": 12,
+      "sha256": "cde817b7239c9f15b7b63d383349e78733f52f2fabc29f348e621aa6bdd325c8"
+    },
+    "users": {
+      "rows": 5,
+      "sha256": "5afb574bf97711f4a14d5171841a59789e74c2663efa64529185ae9cc997b5c8"
+    }
+  }
+}
