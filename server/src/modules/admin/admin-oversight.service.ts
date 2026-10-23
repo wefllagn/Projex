@@ -94,6 +94,10 @@ function safeAuditMetadata(action: string, value: Prisma.JsonValue | null): Reco
         ? { provisionedRole, initialClassAssigned }
         : null
     }
+    case 'USER_PASSWORD_RECOVERY_ISSUED': {
+      const expiresAt = stringValue(value, 'expiresAt')
+      return expiresAt && Number.isFinite(Date.parse(expiresAt)) ? { expiresAt } : null
+    }
     case 'USER_SETUP_REISSUED': {
       const setupState = stringValue(value, 'setupState')
       return setupState === 'SETUP_PENDING' ? { setupState } : null
@@ -258,9 +262,9 @@ export function createAdminOversightService(dependencies: {
       return {
         items: result.items.map(({ testCases, _count, totalPoints, ...item }) => ({
           ...item,
-          totalPoints: Number(totalPoints),
+          totalPoints: item.gradingMode === 'COMPLETION' ? null : Number(totalPoints),
           testCaseCount: testCases.length,
-          testCasePointTotal: testCases.reduce((sum, testCase) => sum + Number(testCase.points), 0),
+          testCasePointTotal: item.gradingMode === 'COMPLETION' ? null : testCases.reduce((sum, testCase) => sum + Number(testCase.points), 0),
           submissionCount: _count.submissions,
         })),
         pagination: pagination(query, result.totalItems),
@@ -273,7 +277,9 @@ export function createAdminOversightService(dependencies: {
       return {
         items: result.items.map(({ releasedFinalScore, ...item }) => ({
           ...item,
-          releasedScore: item.submissionStatus === 'RELEASED' && releasedFinalScore !== null
+          gradingMode: item.gradingModeSnapshot,
+          ...(item.gradingModeSnapshot === 'COMPLETION' ? { completionState: 'COMPLETE' } : {}),
+          releasedScore: item.gradingModeSnapshot !== 'COMPLETION' && item.submissionStatus === 'RELEASED' && releasedFinalScore !== null
             ? Number(releasedFinalScore)
             : null,
         })),

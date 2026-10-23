@@ -3,6 +3,7 @@ import { listResponse, successResponse } from '../../shared/http/response.js'
 import { parseRequest } from '../../shared/http/validation.js'
 import {
   activitySubmissionParamsSchema,
+  createCodeRunSchema,
   createPracticeRunSchema,
   createReviewRunSchema,
   createSubmissionSchema,
@@ -247,6 +248,34 @@ export function createSubmissionController(service: SubmissionService) {
         next(error)
       }
     },
+    createCodeRun: async (
+      request: Request,
+      response: Response,
+      next: NextFunction,
+    ) => {
+      try {
+        const { activityId } = parseRequest(
+          activitySubmissionParamsSchema,
+          request.params,
+        )
+        const input = parseRequest(createCodeRunSchema, request.body)
+        response
+          .status(202)
+          .json(
+            successResponse(
+              await service.createCodeRun(
+                request.auth!.user,
+                activityId,
+                input.sourceCode,
+                input.stdin,
+              ),
+              request.requestId,
+            ),
+          )
+      } catch (error) {
+        next(error)
+      }
+    },
     getPractice: async (
       request: Request,
       response: Response,
@@ -259,6 +288,25 @@ export function createSubmissionController(service: SubmissionService) {
           .json(
             successResponse(
               await service.getPracticeRun(request.auth!.user, runId),
+              request.requestId,
+            ),
+          )
+      } catch (error) {
+        next(error)
+      }
+    },
+    getCodeRun: async (
+      request: Request,
+      response: Response,
+      next: NextFunction,
+    ) => {
+      try {
+        const { runId } = parseRequest(practiceRunParamsSchema, request.params)
+        response
+          .status(200)
+          .json(
+            successResponse(
+              await service.getCodeRun(request.auth!.user, runId),
               request.requestId,
             ),
           )

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import path from 'node:path'
 import { EnvironmentValidationError, loadEnv } from './env.js'
+
+const nativeGitPaths = {
+  GIT_EXECUTABLE: path.resolve('test-fixtures', 'bin', 'git'),
+  GIT_STORAGE_ROOT: path.resolve('test-fixtures', 'git-storage'),
+  GIT_HTTP_BACKEND_EXECUTABLE: path.resolve('test-fixtures', 'bin', 'git-http-backend'),
+}
 
 function validEnvironment(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   return {
@@ -15,13 +22,20 @@ function validEnvironment(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv 
 
 describe('execution environment boundaries', () => {
   it('requires secure cookies and exactly one proxy hop in production', () => {
-    const production = { NODE_ENV: 'production', MAIL_TRANSPORT: 'smtp', SMTP_HOST: 'smtp.example.invalid', SMTP_USER: 'placeholder', SMTP_PASSWORD: 'placeholder' }
+    const production = { NODE_ENV: 'production', FRONTEND_ORIGIN: 'https://origin.example.invalid', MAIL_TRANSPORT: 'smtp', SMTP_HOST: 'smtp.example.invalid', SMTP_USER: 'placeholder', SMTP_PASSWORD: 'placeholder' }
     expect(() => loadEnv(validEnvironment(production))).toThrow(EnvironmentValidationError)
     const env = loadEnv(validEnvironment({ ...production, AUTH_COOKIE_SECURE: 'true', TRUST_PROXY_HOPS: '1' }))
     expect(env.authCookieSecure).toBe(true)
     expect(env.trustProxyHops).toBe(1)
     expect(env.javaExecutionMode).toBe('disabled')
     expect(env.gitExecutionMode).toBe('disabled')
+  })
+
+  it('accepts only pinned container images and confined browser Git for the hosted pilot', () => {
+    const production = validEnvironment({ NODE_ENV: 'production', FRONTEND_ORIGIN: 'https://origin.example.invalid', AUTH_COOKIE_SECURE: 'true', TRUST_PROXY_HOPS: '1', MAIL_TRANSPORT: 'smtp', SMTP_HOST: 'smtp.example.invalid', SMTP_USER: 'placeholder', SMTP_PASSWORD: 'placeholder', JAVA_EXECUTION_MODE: 'container', JAVA_DOCKER_IMAGE: 'sha256:' + 'a'.repeat(64), GIT_EXECUTION_MODE: 'service_isolated', GIT_EXECUTABLE: '/usr/bin/git', GIT_STORAGE_ROOT: '/var/lib/origin/git' })
+    expect(loadEnv(production).javaExecutionMode).toBe('container')
+    expect(loadEnv(production).gitExecutionMode).toBe('service_isolated')
+    for (const unsafe of [{ JAVA_DOCKER_IMAGE: 'eclipse-temurin:17' }, { JAVA_DOCKER_EXECUTABLE: 'docker' }, { FRONTEND_ORIGIN: 'http://origin.example.invalid' }, { FRONTEND_ORIGIN: 'not a url' }, { GIT_SMART_HTTP_ENABLED: 'true' }, { HOST: '0.0.0.0' }, { JAVA_EXECUTION_MODE: 'local_process' }, { GIT_EXECUTION_MODE: 'local_process' }]) expect(() => loadEnv({ ...production, ...unsafe })).toThrow(EnvironmentValidationError)
   })
 
   it('bounds idle expiry within the absolute refresh lifetime', () => {
@@ -76,8 +90,7 @@ describe('execution environment boundaries', () => {
     const local = loadEnv(
       validEnvironment({
         GIT_EXECUTION_MODE: 'local_process',
-        GIT_EXECUTABLE: 'C:\\Program Files\\Git\\cmd\\git.exe',
-        GIT_STORAGE_ROOT: 'C:\\projex-storage',
+        ...nativeGitPaths,
       }),
     )
     expect(local.gitExecutionMode).toBe('local_process')
@@ -91,12 +104,26 @@ describe('execution environment boundaries', () => {
           SMTP_USER: 'placeholder',
           SMTP_PASSWORD: 'placeholder',
           GIT_EXECUTION_MODE: 'local_process',
-          GIT_EXECUTABLE: 'C:\\Program Files\\Git\\cmd\\git.exe',
-          GIT_STORAGE_ROOT: 'C:\\projex-storage',
+          ...nativeGitPaths,
         }),
       ),
     ).toThrow(EnvironmentValidationError)
   })
+
+  it.each(['GIT_EXECUTABLE', 'GIT_STORAGE_ROOT', 'GIT_HTTP_BACKEND_EXECUTABLE'] as const)(
+    'rejects non-absolute executable and storage paths for %s', (key) => {
+      const invalidPaths = ['', 'relative/git', '../outside/git', 'C:relative\\git', 'file:///fixture/git']
+      if (process.platform !== 'win32') invalidPaths.push('C:\\fixture\\git.exe')
+      for (const invalidPath of invalidPaths) {
+        expect(() => loadEnv(validEnvironment({
+          ...nativeGitPaths,
+          GIT_EXECUTION_MODE: 'local_process',
+          GIT_SMART_HTTP_ENABLED: 'true',
+          [key]: invalidPath,
+        }))).toThrow(EnvironmentValidationError)
+      }
+    },
+  )
 
   it('keeps Smart HTTP disabled by default', () => {
     const env = loadEnv(validEnvironment())
@@ -127,10 +154,8 @@ describe('execution environment boundaries', () => {
   it('requires local Git, an absolute backend, and a loopback host for Smart HTTP', () => {
     const smartHttp = {
       GIT_EXECUTION_MODE: 'local_process',
-      GIT_EXECUTABLE: 'C:\\Program Files\\Git\\cmd\\git.exe',
-      GIT_STORAGE_ROOT: 'C:\\projex-storage',
+      ...nativeGitPaths,
       GIT_SMART_HTTP_ENABLED: 'true',
-      GIT_HTTP_BACKEND_EXECUTABLE: 'C:\\Program Files\\Git\\mingw64\\libexec\\git-core\\git-http-backend.exe',
     }
     expect(loadEnv(validEnvironment(smartHttp)).gitSmartHttpEnabled).toBe(true)
     expect(() => loadEnv(validEnvironment({ ...smartHttp, HOST: '0.0.0.0' }))).toThrow(
@@ -141,7 +166,7 @@ describe('execution environment boundaries', () => {
     )
     expect(() => loadEnv(validEnvironment({
       GIT_SMART_HTTP_ENABLED: 'true',
-      GIT_HTTP_BACKEND_EXECUTABLE: 'C:\\backend.exe',
+      GIT_HTTP_BACKEND_EXECUTABLE: nativeGitPaths.GIT_HTTP_BACKEND_EXECUTABLE,
     }))).toThrow(EnvironmentValidationError)
   })
 })

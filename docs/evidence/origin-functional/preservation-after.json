@@ -1,0 +1,37 @@
+{
+  "protectedFilesUnchanged": 293,
+  "environments": [
+    {
+      "environment": "origin-presentation-20261023",
+      "frontendPort": 5198,
+      "apiPort": 3024,
+      "databasePort": 55492,
+      "migrations": 28,
+      "frontendHealthy": true,
+      "databaseHealthy": true,
+      "rcMigrationAbsent": true
+    },
+    {
+      "environment": "presentation-demo-20261023",
+      "frontendPort": 5196,
+      "apiPort": 3022,
+      "databasePort": 55490,
+      "migrations": 28,
+      "frontendHealthy": true,
+      "databaseHealthy": true,
+      "rcMigrationAbsent": true
+    },
+    {
+      "environment": "origin-phase2-review",
+      "frontendPort": 5202,
+      "apiPort": 3026,
+      "databasePort": 55494,
+      "migrations": 28,
+      "frontendHealthy": true,
+      "databaseHealthy": true,
+      "rcMigrationAbsent": true
+    }
+  ],
+  "phase2HeadUnchanged": true,
+  "readOnlyChecks": true
+}

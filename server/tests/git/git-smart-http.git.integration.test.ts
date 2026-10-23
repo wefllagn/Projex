@@ -1,13 +1,14 @@
 import { spawn } from 'node:child_process'
 import { createServer, type Server } from 'node:http'
 import { request as nodeRequest } from 'node:http'
-import { mkdir, readdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import express, { type RequestHandler } from 'express'
 import pino from 'pino'
 import type { PrismaClient } from '@prisma/client'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { createGitCommandRunner } from '../../src/infrastructure/git/git-command-runner.js'
+import { createGitRepositoryReader } from '../../src/infrastructure/git/git-repository-reader.js'
 import { createGitSmartHttpBackend } from '../../src/infrastructure/git/git-smart-http.js'
 import { createPostgresRepositoryProvisioningQueue } from '../../src/infrastructure/job-queue/repository-provisioning-queue.js'
 import { createErrorHandler } from '../../src/middleware/error-handler.js'
@@ -19,8 +20,13 @@ import { createGitCredentialService } from '../../src/modules/git-transport/git-
 import { createPrismaGitTransportRepository } from '../../src/modules/git-transport/git-transport.repository.js'
 import { createGitTransportRouter } from '../../src/modules/git-transport/git-transport.routes.js'
 import { createGitTransportService } from '../../src/modules/git-transport/git-transport.service.js'
+import { createRepositoryContentService } from '../../src/modules/repository-content/repository-content.service.js'
 import { createRepositoryProvisioningService } from '../../src/modules/repositories/repository-provisioning.service.js'
 import { createPrismaRepositoryRepository } from '../../src/modules/repositories/repository.repository.js'
+import { createRepositoryService } from '../../src/modules/repositories/repository.service.js'
+import { createPrismaClassRepository } from '../../src/modules/classes/class.repository.js'
+import { createPrismaProjectTaskRepository } from '../../src/modules/project-tasks/project-task.repository.js'
+import { createProjectTaskService } from '../../src/modules/project-tasks/project-task.service.js'
 import {
   cleanIntegrationDatabase,
   createActiveClass,
@@ -37,6 +43,23 @@ const prisma: PrismaClient = createIntegrationPrisma()
 const storage = createRepositoryStorage({ root: storageRoot, repositorySizeLimitBytes: 104_857_600 })
 const git = createGitCommandRunner({ executable: gitExecutable, timeoutMs: 30_000, outputLimitBytes: 4_194_304 })
 const transportRepository = createPrismaGitTransportRepository(prisma)
+const repositoryReader = createGitRepositoryReader({
+  executable: gitExecutable,
+  timeoutMs: 30_000,
+  commandOutputLimitBytes: 1_048_576,
+  fileLimitBytes: 262_144,
+  diffLimitBytes: 524_288,
+  maxChangedFiles: 500,
+  maxBranches: 100,
+  maxConcurrent: 4,
+})
+const contentService = createRepositoryContentService({
+  enabled: true,
+  accessRepository: transportRepository,
+  storage,
+  reader: repositoryReader,
+  logger,
+})
 const credentialService = createGitCredentialService({
   issuanceEnabled: true,
   repository: transportRepository,
@@ -101,6 +124,7 @@ function customTransport(overrides: Partial<Parameters<typeof createGitSmartHttp
 }
 
 function closeServer(): Promise<void> {
+  if (!server) return Promise.resolve()
   return new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
 }
 
@@ -114,6 +138,7 @@ function clientEnvironment(authorization?: string): NodeJS.ProcessEnv {
     ...environment,
     GIT_CONFIG_NOSYSTEM: '1',
     GIT_CONFIG_GLOBAL: process.platform === 'win32' ? 'NUL' : '/dev/null',
+    ...(process.platform === 'win32' ? { GIT_CONFIG_PARAMETERS: "'core.longpaths=true'" } : {}),
     GIT_TERMINAL_PROMPT: '0',
     GIT_PAGER: 'cat',
     GIT_EDITOR: 'true',
@@ -189,6 +214,72 @@ async function provisionClassWorkspace() {
   return { owner, instructor, classRecord, repository: ready }
 }
 
+async function provisionActivityWorkspace() {
+  const primary = await createActiveUser(prisma, 'INSTRUCTOR', 'Activity Primary Instructor')
+  const coInstructor = await createActiveUser(prisma, 'INSTRUCTOR', 'Activity Co-Instructor')
+  const unrelatedInstructor = await createActiveUser(prisma, 'INSTRUCTOR', 'Activity Unrelated Instructor')
+  const owner = await createActiveUser(prisma, 'STUDENT', 'Activity Workspace Student')
+  const otherStudent = await createActiveUser(prisma, 'STUDENT', 'Activity Other Student')
+  const removedStudent = await createActiveUser(prisma, 'STUDENT', 'Activity Removed Student')
+  const admin = await createActiveUser(prisma, 'ADMIN', 'Activity Admin')
+  const classRecord = await createActiveClass(prisma, primary.id, 'Activity Smart HTTP Class')
+  for (const student of [owner, otherStudent, removedStudent]) {
+    await createActiveMembership(prisma, classRecord.id, student.id)
+  }
+  await prisma.classMember.update({
+    where: { classId_studentId: { classId: classRecord.id, studentId: removedStudent.id } },
+    data: { status: 'REMOVED', removedAt: new Date() },
+  })
+  await prisma.classTeachingStaff.create({
+    data: {
+      classId: classRecord.id,
+      instructorId: coInstructor.id,
+      invitedById: primary.id,
+      status: 'ACTIVE',
+      acceptedAt: new Date(),
+    },
+  })
+  const activity = await prisma.programmingActivity.create({
+    data: {
+      classId: classRecord.id,
+      createdById: primary.id,
+      title: 'Activity Workspace Smart HTTP Laboratory',
+      instructions: 'Save work through Git without submitting the Activity.',
+      dueDate: new Date(Date.now() + 86_400_000),
+      language: 'JAVA',
+      entryClassName: 'Main',
+      starterCode: 'class Main {}',
+      maxAttempts: 3,
+      totalPoints: 100,
+      status: 'PUBLISHED',
+      publishedAt: new Date(),
+    },
+  })
+  const created = await createPrismaRepositoryRepository(prisma).createActivityWorkspace({
+    activityId: activity.id,
+    ownerId: owner.id,
+    now: new Date(),
+  })
+  if (created.kind !== 'ok') throw new Error('ACTIVITY_WORKSPACE_FIXTURE_FAILED')
+  const queue = createPostgresRepositoryProvisioningQueue(prisma)
+  const job = await queue.claimNext({ workerId: crypto.randomUUID(), now: new Date(), leaseMs: 60_000 })
+  if (!job) throw new Error('ACTIVITY_PROVISIONING_JOB_MISSING')
+  await createRepositoryProvisioningService({ queue, git, storage, logger }).process(job)
+  const repository = await prisma.repository.findUniqueOrThrow({ where: { id: created.repository.id } })
+  expect(repository.storageStatus).toBe('READY')
+  return {
+    primary,
+    coInstructor,
+    unrelatedInstructor,
+    owner,
+    otherStudent,
+    removedStudent,
+    admin,
+    activity,
+    repository,
+  }
+}
+
 async function issue(user: Awaited<ReturnType<typeof createActiveUser>>, repositoryId: string, operations: ('READ' | 'WRITE')[]) {
   const credential = await credentialService.issue(user, repositoryId, operations)
   return basic(credential.username, credential.secret)
@@ -216,6 +307,103 @@ afterAll(async () => {
 })
 
 describe('authenticated Git Smart HTTP', () => {
+  it('runs the Activity Workspace two-clone save/resume workflow without academic submission', async () => {
+    const fixture = await provisionActivityWorkspace()
+    const ownerAuthorization = await issue(fixture.owner, fixture.repository.id, ['READ', 'WRITE'])
+    const primaryAuthorization = await issue(fixture.primary, fixture.repository.id, ['READ'])
+    const coInstructorAuthorization = await issue(fixture.coInstructor, fixture.repository.id, ['READ'])
+    await expect(issue(fixture.primary, fixture.repository.id, ['WRITE']))
+      .rejects.toMatchObject({ code: 'GIT_OPERATION_NOT_AUTHORIZED' })
+    await expect(issue(fixture.coInstructor, fixture.repository.id, ['WRITE']))
+      .rejects.toMatchObject({ code: 'GIT_OPERATION_NOT_AUTHORIZED' })
+    for (const denied of [fixture.otherStudent, fixture.removedStudent, fixture.unrelatedInstructor, fixture.admin]) {
+      await expect(issue(denied, fixture.repository.id, ['READ']))
+        .rejects.toMatchObject({ code: 'GIT_OPERATION_NOT_AUTHORIZED' })
+    }
+
+    const clients = path.join(storageRoot, 'clients', crypto.randomUUID())
+    const first = path.join(clients, 'activity-workspace-client-a')
+    const second = path.join(clients, 'activity-workspace-client-b')
+    await mkdir(clients, { recursive: true })
+    expect((await runGit(['clone', remoteUrl(fixture.repository.id), first], clients, ownerAuthorization)).code).toBe(0)
+    expect((await runGit(['checkout', '-b', 'main'], first)).code).toBe(0)
+    const firstSource = 'public class Main { public static void main(String[] args) {} }\n'
+    await writeFile(path.join(first, 'Main.java'), firstSource)
+    expect((await runGit(['add', 'Main.java'], first)).code).toBe(0)
+    expect((await runGit(['-c', 'user.name=Self Declared Activity Alias', 'commit', '-m', 'Start Activity work'], first)).code).toBe(0)
+    const firstCommit = (await runGit(['rev-parse', 'HEAD'], first)).stdout.trim()
+    const firstPush = await runGit(['push', 'origin', 'main'], first, ownerAuthorization)
+    expect(firstPush.code, firstPush.stderr).toBe(0)
+
+    for (const reader of [fixture.owner, fixture.primary, fixture.coInstructor]) {
+      await expect(contentService.file(reader, fixture.repository.id, { path: 'Main.java' }))
+        .resolves.toMatchObject({ commitId: firstCommit, content: firstSource })
+    }
+    for (const denied of [fixture.otherStudent, fixture.removedStudent, fixture.unrelatedInstructor, fixture.admin]) {
+      await expect(contentService.file(denied, fixture.repository.id, { path: 'Main.java' }))
+        .rejects.toMatchObject({ code: 'REPOSITORY_NOT_FOUND' })
+    }
+    expect(await prisma.repositoryActivity.count({
+      where: { repositoryId: fixture.repository.id, activityType: 'PUSH', userId: fixture.owner.id },
+    })).toBe(1)
+    expect(await prisma.activitySubmission.count({
+      where: { activityId: fixture.activity.id, studentId: fixture.owner.id },
+    })).toBe(0)
+
+    expect((await runGit(['clone', remoteUrl(fixture.repository.id), second], clients, ownerAuthorization)).code).toBe(0)
+    expect(await readFile(path.join(second, 'Main.java'), 'utf8')).toBe(firstSource)
+    const continuedSource = 'public class Main { public static void main(String[] args) { System.out.println("continued"); } }\n'
+    await writeFile(path.join(second, 'Main.java'), continuedSource)
+    expect((await runGit(['commit', '-am', 'Continue Activity work'], second)).code).toBe(0)
+    const secondCommit = (await runGit(['rev-parse', 'HEAD'], second)).stdout.trim()
+    expect(secondCommit).not.toBe(firstCommit)
+    const secondPush = await runGit(['push', 'origin', 'main'], second, ownerAuthorization)
+    expect(secondPush.code, secondPush.stderr).toBe(0)
+    await expect(contentService.file(fixture.owner, fixture.repository.id, { path: 'Main.java' }))
+      .resolves.toMatchObject({ commitId: secondCommit, content: continuedSource })
+
+    const primaryClone = path.join(clients, 'activity-primary-instructor')
+    const coInstructorClone = path.join(clients, 'activity-co-instructor')
+    expect((await runGit(['clone', remoteUrl(fixture.repository.id), primaryClone], clients, primaryAuthorization)).code).toBe(0)
+    expect((await runGit(['clone', remoteUrl(fixture.repository.id), coInstructorClone], clients, coInstructorAuthorization)).code).toBe(0)
+    await writeFile(path.join(primaryClone, 'Instructor.java'), 'class Instructor {}\n')
+    expect((await runGit(['add', 'Instructor.java'], primaryClone)).code).toBe(0)
+    expect((await runGit(['commit', '-m', 'Unauthorized instructor change'], primaryClone)).code).toBe(0)
+    expect((await runGit(['push', 'origin', 'main'], primaryClone, primaryAuthorization)).code).not.toBe(0)
+    expect((await runGit(['push', 'origin', ':main'], second, ownerAuthorization)).code).not.toBe(0)
+
+    const events = await prisma.repositoryActivity.findMany({
+      where: { repositoryId: fixture.repository.id, activityType: 'PUSH' },
+      orderBy: { activityAt: 'asc' },
+    })
+    expect(events).toHaveLength(2)
+    expect(events.every((event) => event.userId === fixture.owner.id && event.actorType === 'USER')).toBe(true)
+    const declaredAuthors = await runGit(['log', '--reverse', '--format=%an'], second)
+    expect(declaredAuthors.stdout.trim().split('\n')[0]).toBe('Self Declared Activity Alias')
+    expect(await prisma.activitySubmission.count({
+      where: { activityId: fixture.activity.id, studentId: fixture.owner.id },
+    })).toBe(0)
+    expect(await prisma.submissionExecution.count()).toBe(0)
+
+    await prisma.programmingActivity.update({
+      where: { id: fixture.activity.id },
+      data: { status: 'CLOSED', closedAt: new Date() },
+    })
+    const closedReadAuthorization = await issue(fixture.owner, fixture.repository.id, ['READ'])
+    await expect(issue(fixture.owner, fixture.repository.id, ['WRITE']))
+      .rejects.toMatchObject({ code: 'GIT_OPERATION_NOT_AUTHORIZED' })
+    expect((await runGit(['fetch', 'origin'], second, closedReadAuthorization)).code).toBe(0)
+    await writeFile(path.join(second, 'Main.java'), 'public class Main { int closed = 1; }\n')
+    expect((await runGit(['commit', '-am', 'Attempt work after close'], second)).code).toBe(0)
+    expect((await runGit(['push', 'origin', 'main'], second, ownerAuthorization)).code).not.toBe(0)
+    expect(await prisma.repositoryActivity.count({
+      where: { repositoryId: fixture.repository.id, activityType: 'PUSH' },
+    })).toBe(2)
+    expect(await prisma.activitySubmission.count({
+      where: { activityId: fixture.activity.id, studentId: fixture.owner.id },
+    })).toBe(0)
+  })
+
   it('preserves an individual class workspace across pushes without academic submission and attributes the authenticated pusher', async () => {
     const { owner, instructor, repository } = await provisionClassWorkspace()
     const ownerAuthorization = await issue(owner, repository.id, ['READ', 'WRITE'])
@@ -483,10 +671,11 @@ describe('authenticated Git Smart HTTP', () => {
     for (const student of [owner, member, classmate]) {
       await createActiveMembership(prisma, classRecord.id, student.id)
     }
-    const projectTask = await prisma.projectTask.create({
-      data: { classId: classRecord.id, createdById: instructor.id, title: 'Branch Policy Project', instructions: 'Test branch policy.', dueDate: new Date(Date.now() + 86_400_000), maxTeamSize: 4, status: 'PUBLISHED', publishedAt: new Date() },
-    })
+    const tasks = createProjectTaskService({ repository: createPrismaProjectTaskRepository(prisma), classRepository: createPrismaClassRepository(prisma), logger })
+    const draft = await tasks.create(instructor, classRecord.id, { title: 'Branch Policy Project', instructions: 'Test branch policy.', dueDate: new Date(Date.now() + 86_400_000), maxTeamSize: 4 })
+    const projectTask = await tasks.publish(instructor, draft.id, { expectedUpdatedAt: draft.updatedAt })
     const repositoryRecord = createPrismaRepositoryRepository(prisma)
+    const collaboration = createRepositoryService({ repository: repositoryRecord, logger })
     const created = await repositoryRecord.createClassProject({
       projectTaskId: projectTask.id,
       ownerId: owner.id,
@@ -494,14 +683,8 @@ describe('authenticated Git Smart HTTP', () => {
       now: new Date(),
     })
     if (created.kind !== 'ok' || !created.repository.teamId) throw new Error('CLASS_REPOSITORY_FIXTURE_FAILED')
-    await prisma.$transaction(async (transaction) => {
-      await transaction.teamMember.create({
-        data: { teamId: created.repository.teamId!, projectTaskId: projectTask.id, studentId: member.id, memberRole: 'MEMBER', status: 'ACTIVE' },
-      })
-      await transaction.repositoryMember.create({
-        data: { repositoryId: created.repository.id, studentId: member.id, memberRole: 'MEMBER', status: 'ACTIVE' },
-      })
-    })
+    const invitation = await collaboration.createInvitation(owner, created.repository.id, { inviteeUserId: member.id })
+    await collaboration.acceptInvitation(member, invitation.invitationId)
     const queue = createPostgresRepositoryProvisioningQueue(prisma)
     const job = await queue.claimNext({ workerId: crypto.randomUUID(), now: new Date(), leaseMs: 60_000 })
     if (!job) throw new Error('CLASS_PROVISIONING_JOB_MISSING')
@@ -539,6 +722,26 @@ describe('authenticated Git Smart HTTP', () => {
     expect(atomicRef.code).toBe(0)
     expect(atomicRef.stdout.trim()).toBe('')
     expect(await prisma.repositoryActivity.count({ where: { repositoryId: created.repository.id, activityType: 'PUSH' } })).toBe(2)
+
+    // Full local integration: Developer feature -> Maintainer fetch/merge -> protected main.
+    expect((await runGit(['fetch', 'origin'], ownerWork, ownerAuthorization)).code).toBe(0)
+    expect((await runGit(['merge', '--no-ff', 'origin/feature/member-work', '-m', 'Integrate member feature'], ownerWork)).code).toBe(0)
+    expect((await runGit(['push', 'origin', 'main'], ownerWork, ownerAuthorization)).code).toBe(0)
+    const merged = await contentService.summary(owner, created.repository.id)
+    expect(merged.latestCommit?.subject).toBe('Integrate member feature')
+    const commit = await contentService.commit(instructor, created.repository.id, merged.latestCommit!.commitId)
+    expect(commit.parentCommitIds).toHaveLength(2)
+    expect((await contentService.file(instructor, created.repository.id, { branchName: 'main', path: 'Member.java' })).content).toContain('class Member')
+    expect((await contentService.diff(instructor, created.repository.id, { baseCommitId: commit.parentCommitIds[0]!, targetCommitId: commit.commitId })).patch).toContain('Member.java')
+    await expect(issue(instructor, created.repository.id, ['WRITE'])).rejects.toMatchObject({ code: 'GIT_OPERATION_NOT_AUTHORIZED' })
+    expect((await collaboration.listRecordedActivity(owner, created.repository.id, { page: 1, pageSize: 20 })).contributions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ userId: owner.id, acceptedPushes: 2 }), expect.objectContaining({ userId: member.id, acceptedPushes: 1 }),
+    ]))
+    const current = await collaboration.get(owner, created.repository.id)
+    await collaboration.readyForReview(owner, created.repository.id, { expectedUpdatedAt: current.updatedAt })
+    expect((await collaboration.groupContext(member, created.repository.id)).permissions).toMatchObject({ canRead: true, canWrite: false })
+    expect((await runGit(['push', 'origin', 'HEAD:feature/after-review'], memberWork, memberAuthorization)).code).not.toBe(0)
+    expect(await prisma.activitySubmission.count()).toBe(0)
 
     const repositoryMember = await prisma.repositoryMember.findUniqueOrThrow({
       where: { repositoryId_studentId: { repositoryId: created.repository.id, studentId: member.id } },

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ApiError, describeApiError } from '../api/api-client.js'
 import RequestState from '../components/RequestState.jsx'
@@ -14,6 +14,8 @@ import {
 } from './admin-operational-projections.js'
 import { AdminDialog, AdminMetric, AdminPageHeader, AdminPanel } from './AdminViews.jsx'
 import { formatByteCount, formatDate, humanize, pageNumber } from './admin-view-utils.js'
+import { useAdminFreshness } from './use-admin-freshness.js'
+import { AdminPagination } from './AdminListControls.jsx'
 
 const PAGE_SIZE = 20
 const REASON_MIN = 10
@@ -23,7 +25,7 @@ const EXECUTION_STATUSES = ['QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED']
 const PROVISIONING_STATUSES = ['PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED']
 const CREDENTIAL_LIFECYCLES = ['ACTIVE', 'EXPIRED', 'REVOKED']
 const AUDIT_ACTIONS = [
-  'USER_STUDENT_PROVISIONED', 'USER_INSTRUCTOR_PROVISIONED', 'USER_SETUP_REISSUED',
+  'USER_STUDENT_PROVISIONED', 'USER_INSTRUCTOR_PROVISIONED', 'USER_SETUP_REISSUED', 'USER_PASSWORD_RECOVERY_ISSUED',
   'USER_STATUS_CHANGED', 'USER_SESSIONS_REVOKED', 'CLASS_CREATED', 'CLASS_UPDATED',
   'CLASS_ARCHIVED', 'CLASS_RESTORED', 'CLASS_JOIN_CODE_ROTATED',
   'CLASS_JOIN_CODE_REVOKED', 'CLASS_MEMBER_REMOVED', 'CLASS_MEMBER_REACTIVATED',
@@ -41,8 +43,7 @@ function updateQuery(setSearchParams, current, changes) {
 }
 
 function Paginator({ pagination, page, onPage }) {
-  if (!pagination || pagination.totalItems === 0) return null
-  return <div className="admin-pagination"><span>Page {page} of {Math.max(pagination.totalPages, 1)} &middot; {pagination.totalItems} records</span><div><button type="button" className="student-outline-action" disabled={!pagination.hasPreviousPage} onClick={() => onPage(page - 1)}>Previous</button><button type="button" className="student-outline-action" disabled={!pagination.hasNextPage} onClick={() => onPage(page + 1)}>Next</button></div></div>
+  return <AdminPagination pagination={pagination} page={page} onPage={onPage} />
 }
 
 function IdValue({ children }) {
@@ -51,7 +52,7 @@ function IdValue({ children }) {
 
 function QueueCounts({ title, observation }) {
   if (!observation) return <div className="admin-observation"><strong>{title}</strong><span>Observation unavailable</span></div>
-  return <div className="admin-observation"><strong>{title}</strong><div>{Object.entries(observation.byStatus).map(([status, total]) => <span key={status}><StatusBadge label={humanize(status)} /> {total}</span>)}</div><small>{observation.stuck} lease-derived stuck record{observation.stuck === 1 ? '' : 's'}</small></div>
+  return <div className="admin-observation"><strong>{title}</strong><div>{Object.keys(observation.byStatus).length ? Object.entries(observation.byStatus).map(([status, total]) => <span key={status}><StatusBadge label={humanize(status)} /> {total}</span>) : <span>No jobs</span>}</div>{observation.stuck ? <small className="admin-stuck-label">{observation.stuck} lease-derived stuck record{observation.stuck === 1 ? '' : 's'}</small> : null}</div>
 }
 
 export function AdminOperationsOverviewPage({ api = adminApi }) {
@@ -73,54 +74,44 @@ export function AdminOperationsOverviewPage({ api = adminApi }) {
       } else setStorage({ status: 'error', value: null, error: storageResult.reason })
     }), [api])
 
-  useEffect(() => {
-    const controller = new AbortController()
-    load({ signal: controller.signal })
-    return () => controller.abort()
-  }, [load])
-
-  const refresh = () => {
-    setHealth((current) => ({ ...current, status: current.value ? 'ready' : 'loading', error: null }))
-    setStorage((current) => ({ ...current, status: current.value ? 'ready' : 'loading', error: null }))
-    load()
-  }
+  const refresh = useAdminFreshness(load)
 
   return <div className="admin-page-stack">
-    <AdminPageHeader eyebrow="Measured operational observations" title="Operations" summary="Inspect persisted service, queue, storage, job, and credential metadata. Projex does not infer worker health or infrastructure capacity." actions={<button type="button" className="student-outline-action" onClick={refresh}>Refresh observations</button>} />
-    <div className="admin-operations-links">
-      <Link to="/admin/operations/execution-jobs">Execution jobs<span>Read-only Java queue records</span></Link>
-      <Link to="/admin/operations/repository-provisioning-jobs">Provisioning jobs<span>Inspect and retry eligible failures</span></Link>
-      <Link to="/admin/operations/git-credentials">Git credentials<span>Lifecycle metadata and revocation</span></Link>
-      <Link to="/admin/audit-events">Audit events<span>Allowlisted administrative history</span></Link>
-    </div>
+    <AdminPageHeader title="Operations" />
     <div className="admin-detail-grid">
-      <AdminPanel title="Service observation" eyebrow="API, database, and persisted queues">
+      <AdminPanel title="System status">
         {health.status === 'loading' ? <RequestState kind="loading" compact /> : null}
         {health.status === 'error' ? <RequestState error={health.error} compact action={<button type="button" onClick={refresh}>Try again</button>} /> : null}
         {health.value ? <>
           <div className="admin-metric-grid admin-metric-grid--compact">
-            <AdminMetric label="API" value={humanize(health.value.apiStatus)} detail="This request reached the API process" tone="good" />
-            <AdminMetric label="PostgreSQL" value={humanize(health.value.databaseStatus)} detail="Direct connectivity observation" tone={health.value.databaseStatus === 'connected' ? 'good' : 'attention'} />
-            <AdminMetric label="Worker health" value="Not observed" detail="Jobs and leases do not prove worker availability" />
+            <AdminMetric label="API" value={humanize(health.value.apiStatus)} tone="good" />
+            <AdminMetric label="Database" value={humanize(health.value.databaseStatus)} tone={health.value.databaseStatus === 'connected' ? 'good' : 'attention'} />
+            <AdminMetric label="Workers" value="Not monitored" />
           </div>
           <div className="admin-observation-grid"><QueueCounts title="Java execution queue" observation={health.value.execution} /><QueueCounts title="Repository provisioning queue" observation={health.value.repositoryProvisioning} /></div>
-          <p className="admin-panel-note">Queue source: {humanize(health.value.queueSource)}. Observed {formatDate(health.value.timestamp)}.</p>
+          <details className="admin-context-details"><summary>Observation details</summary><p>Observed {formatDate(health.value.timestamp)}. Queue source: {humanize(health.value.queueSource)}. Jobs and leases do not measure worker availability.</p></details>
         </> : null}
       </AdminPanel>
-      <AdminPanel title="Repository storage" eyebrow="Measured records only">
+      <AdminPanel title="Repository storage">
         {storage.status === 'loading' ? <RequestState kind="loading" compact /> : null}
         {storage.status === 'error' ? <RequestState error={storage.error} compact action={<button type="button" onClick={refresh}>Try again</button>} /> : null}
         {storage.value ? <>
           <div className="admin-metric-grid admin-metric-grid--compact">
-            <AdminMetric label="Measured bytes" value={formatByteCount(storage.value.knownMeasuredBytes)} detail="Sum of known repository measurements" />
-            <AdminMetric label="Measured records" value={storage.value.measuredRecords} detail="Repositories with a measurement" tone="good" />
-            <AdminMetric label="Unmeasured records" value={storage.value.unmeasuredRecords} detail="No capacity inference is made" tone={storage.value.unmeasuredRecords ? 'attention' : 'default'} />
+            <AdminMetric label="Measured size" value={formatByteCount(storage.value.knownMeasuredBytes)} />
+            <AdminMetric label="Measured repositories" value={storage.value.measuredRecords} />
+            <AdminMetric label="Not measured" value={storage.value.unmeasuredRecords} />
           </div>
           <div className="admin-status-counts">{Object.entries(storage.value.byStorageStatus).map(([status, total]) => <span key={status}><StatusBadge label={humanize(status)} /><strong>{total}</strong></span>)}</div>
-          <p className="admin-panel-note">Projex does not report host capacity, utilization percentages, integrity, snapshots, or retention readiness.</p>
+          <details className="admin-context-details"><summary>Measurement details</summary><p>Size includes known repository measurements only. Host capacity, utilization, integrity, snapshots and retention readiness are not measured.</p></details>
         </> : null}
       </AdminPanel>
     </div>
+    <AdminPanel title="Tools"><div className="admin-secondary-links">
+      <Link to="/admin/operations/execution-jobs">Execution jobs</Link>
+      <Link to="/admin/operations/repository-provisioning-jobs">Provisioning jobs</Link>
+      <Link to="/admin/operations/git-credentials">Git credentials</Link>
+      <Link to="/admin/audit-events">Audit events</Link>
+    </div></AdminPanel>
   </div>
 }
 
@@ -227,44 +218,38 @@ export function AdminOperationalListPage({ kind, api = adminApi }) {
   const query = useMemo(() => ({ page, pageSize: PAGE_SIZE, status: kind === 'credentials' ? '' : status, lifecycle: kind === 'credentials' ? status : '', jobType, operation, stuck, sortBy, sortOrder }), [jobType, kind, operation, page, sortBy, sortOrder, status, stuck])
 
   const load = useCallback(({ signal } = {}) => api[config.list](query, { signal }).then((response) => {
-    const items = response.data.map(config.project)
+    if (signal?.aborted) return []
+    const items = response.data.map((item) => config.project(item))
     setState({ status: 'ready', items, pagination: response.pagination, error: null })
     return items
   }).catch((error) => {
-    if (error?.name !== 'AbortError') setState({ status: 'error', items: [], pagination: null, error })
+    if (!signal?.aborted && error?.name !== 'AbortError') setState({ status: 'error', items: [], pagination: null, error })
     return []
   }), [api, config, query])
 
-  useEffect(() => {
-    const controller = new AbortController(); load({ signal: controller.signal })
-    return () => controller.abort()
-  }, [load])
+  const refresh = useAdminFreshness(load, !!selected)
 
-  const submit = (event) => {
-    event.preventDefault(); const form = new FormData(event.currentTarget)
-    updateQuery(setSearchParams, searchParams, { page: 1, status: form.get('status'), lifecycle: form.get('lifecycle'), jobType: form.get('jobType'), operation: form.get('operation'), stuck: form.get('stuck'), sortBy: form.get('sortBy'), sortOrder: form.get('sortOrder') })
-  }
+  const filter = (event) => updateQuery(setSearchParams, searchParams, { page: 1, [event.target.name]: event.target.value })
 
   return <div className="admin-page-stack">
-    <AdminPageHeader eyebrow="Operational administration" title={config.title} summary={config.summary} actions={<Link className="student-outline-action" to="/admin/operations">Back to operations</Link>} />
+    <AdminPageHeader title={config.title} actions={<Link className="student-outline-action" to="/admin/operations">Back to operations</Link>} />
     {notice ? <p className="admin-notice" role="status">{notice}</p> : null}
-    <AdminPanel title={config.title} eyebrow="Server-filtered records">
-      <form className="admin-filter-bar admin-filter-bar--operations" onSubmit={submit} key={searchParams.toString()}>
-        <label>{kind === 'credentials' ? 'Lifecycle' : 'Status'}<select name={kind === 'credentials' ? 'lifecycle' : 'status'} defaultValue={status}><option value="">All states</option>{config.statuses.map((item) => <option key={item}>{item}</option>)}</select></label>
-        {kind === 'execution' ? <label>Job type<select name="jobType" defaultValue={jobType}><option value="">All job types</option><option>OFFICIAL_ASSESSMENT</option><option>VISIBLE_TEST_RUN</option><option>INSTRUCTOR_REVIEW_RUN</option></select></label> : null}
-        {kind === 'credentials' ? <label>Operation<select name="operation" defaultValue={operation}><option value="">All operations</option><option>READ</option><option>WRITE</option></select></label> : <label>Stuck observation<select name="stuck" defaultValue={stuck}><option value="">All records</option><option value="true">Stuck</option><option value="false">Not stuck</option></select></label>}
-        <label>Sort<select name="sortBy" defaultValue={sortBy}>{config.sort.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label>Order<select name="sortOrder" defaultValue={sortOrder}><option value="desc">Descending</option><option value="asc">Ascending</option></select></label>
-        <button className="student-primary-action" type="submit">Apply</button>
-      </form>
+    <AdminPanel>
+      <div className="admin-filter-bar admin-filter-bar--operations">
+        <label>{kind === 'credentials' ? 'Lifecycle' : 'Status'}<select name={kind === 'credentials' ? 'lifecycle' : 'status'} value={status} onChange={filter}><option value="">All states</option>{config.statuses.map((item) => <option key={item} value={item}>{humanize(item)}</option>)}</select></label>
+        {kind === 'execution' ? <label>Job type<select name="jobType" value={jobType} onChange={filter}><option value="">All job types</option>{['OFFICIAL_ASSESSMENT', 'VISIBLE_TEST_RUN', 'INSTRUCTOR_REVIEW_RUN'].map((item) => <option key={item} value={item}>{humanize(item)}</option>)}</select></label> : null}
+        {kind === 'credentials' ? <label>Operation<select name="operation" value={operation} onChange={filter}><option value="">All operations</option><option value="READ">Read</option><option value="WRITE">Write</option></select></label> : <label>Stuck observation<select name="stuck" value={stuck} onChange={filter}><option value="">All records</option><option value="true">Stuck</option><option value="false">Not stuck</option></select></label>}
+        <label>Sort<select name="sortBy" value={sortBy} onChange={filter}>{config.sort.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label>Order<select name="sortOrder" value={sortOrder} onChange={filter}><option value="desc">Descending</option><option value="asc">Ascending</option></select></label>
+      </div>
       {state.status === 'loading' && !state.items.length ? <RequestState kind="loading" compact /> : null}
-      {state.status === 'error' ? <RequestState error={state.error} compact action={<button type="button" onClick={() => load()}>Try again</button>} /> : null}
+      {state.status === 'error' ? <RequestState error={state.error} compact action={<button type="button" onClick={refresh}>Try again</button>} /> : null}
       {state.status === 'ready' && !state.items.length ? <RequestState kind="empty" compact message="No operational records match these filters." /> : null}
       {state.items.length ? <div className="admin-table-scroll"><table className="admin-table admin-operations-table"><thead><tr>{kind === 'execution' ? <><th>Job</th><th>State</th><th>Claims</th><th>Related record</th><th>Timing</th></> : kind === 'provisioning' ? <><th>Job</th><th>State</th><th>Claims</th><th>Timing</th><th /></> : <><th>Credential</th><th>Repository</th><th>Lifecycle</th><th>Timing</th><th /></>}</tr></thead><tbody>{state.items.map((item) => <tr key={kind === 'credentials' ? item.credentialId : item.jobId}><OperationalRow kind={kind} item={item} onAction={setSelected} /></tr>)}</tbody></table></div> : null}
       <Paginator pagination={state.pagination} page={page} onPage={(next) => updateQuery(setSearchParams, searchParams, { page: next })} />
     </AdminPanel>
-    {selected && kind === 'provisioning' ? <ProvisioningRetryDialog job={selected} api={api} onClose={() => setSelected(null)} onRefetch={load} onCompleted={async () => { setNotice('Provisioning retry queued for the same repository job.'); await load() }} /> : null}
-    {selected && kind === 'credentials' ? <CredentialRevokeDialog credential={selected} api={api} onClose={() => setSelected(null)} onCompleted={async (changed) => { setNotice(changed ? 'Git credential revoked.' : 'The Git credential was already revoked.'); await load() }} /> : null}
+    {selected && kind === 'provisioning' ? <ProvisioningRetryDialog job={selected} api={api} onClose={() => setSelected(null)} onRefetch={refresh} onCompleted={async () => { setNotice('Provisioning retry queued for the same repository job.'); await refresh() }} /> : null}
+    {selected && kind === 'credentials' ? <CredentialRevokeDialog credential={selected} api={api} onClose={() => setSelected(null)} onCompleted={async (changed) => { setNotice(changed ? 'Git credential revoked.' : 'The Git credential was already revoked.'); await refresh() }} /> : null}
   </div>
 }
 
@@ -274,14 +259,14 @@ function AuditDetailDialog({ event, onClose }) {
     if (typeof value === 'boolean') return value ? 'Yes' : 'No'
     return typeof value === 'string' && /^[A-Z][A-Z0-9_]*$/.test(value) ? humanize(value) : String(value)
   }
-  return <AdminDialog title={humanize(event.action)} summary="Read-only, action-specific administrative audit evidence." submitLabel="Close" onClose={onClose} onSubmit={submit}>
+  return <AdminDialog title={humanize(event.action)} submitLabel="Close" onClose={onClose} onSubmit={submit}>
     <div className="admin-audit-detail">
       <div><span>Actor</span><strong>{event.actor.fullName}</strong><small>{event.actor.universityEmail}</small></div>
       <div><span>Target</span><strong>{humanize(event.targetType)}</strong><IdValue>{event.targetId}</IdValue></div>
       <div><span>Request ID</span><IdValue>{event.requestId}</IdValue></div>
       <div><span>Recorded</span><strong>{formatDate(event.createdAt)}</strong></div>
       <div className="admin-audit-detail__wide"><span>Reason</span><p>{event.reason || 'No reason recorded for this action type.'}</p></div>
-      {event.metadata ? <div className="admin-audit-detail__wide"><span>Allowlisted metadata</span><dl>{Object.entries(event.metadata).map(([key, value]) => <div key={key}><dt>{humanize(key)}</dt><dd>{displayMetadataValue(value)}</dd></div>)}</dl></div> : null}
+      {event.metadata ? <div className="admin-audit-detail__wide"><span>Event details</span><dl>{Object.entries(event.metadata).map(([key, value]) => <div key={key}><dt>{humanize(key)}</dt><dd>{displayMetadataValue(value)}</dd></div>)}</dl></div> : null}
     </div>
   </AdminDialog>
 }
@@ -295,17 +280,17 @@ export function AdminAuditEventsPage({ api = adminApi }) {
   const [state, setState] = useState({ status: 'loading', items: [], pagination: null, error: null })
   const [selected, setSelected] = useState(null)
   const query = useMemo(() => ({ page, pageSize: PAGE_SIZE, action, targetType, sortOrder }), [action, page, sortOrder, targetType])
-  const load = useCallback(({ signal } = {}) => api.listAuditEvents(query, { signal }).then((response) => setState({ status: 'ready', items: response.data.map(projectAuditEvent), pagination: response.pagination, error: null })).catch((error) => { if (error?.name !== 'AbortError') setState({ status: 'error', items: [], pagination: null, error }) }), [api, query])
-  useEffect(() => { const controller = new AbortController(); load({ signal: controller.signal }); return () => controller.abort() }, [load])
-  const submit = (event) => { event.preventDefault(); const form = new FormData(event.currentTarget); updateQuery(setSearchParams, searchParams, { page: 1, action: form.get('action'), targetType: form.get('targetType'), sortOrder: form.get('sortOrder') }) }
+  const load = useCallback(({ signal } = {}) => api.listAuditEvents(query, { signal }).then((response) => { if (!signal?.aborted) setState({ status: 'ready', items: response.data.map((item) => projectAuditEvent(item)), pagination: response.pagination, error: null }) }).catch((error) => { if (!signal?.aborted && error?.name !== 'AbortError') setState({ status: 'error', items: [], pagination: null, error }) }), [api, query])
+  const refresh = useAdminFreshness(load, !!selected)
+  const filter = (event) => updateQuery(setSearchParams, searchParams, { page: 1, [event.target.name]: event.target.value })
   return <div className="admin-page-stack">
-    <AdminPageHeader eyebrow="Administrative accountability" title="Audit events" summary="Read-only allowlisted administrative actions, reasons, request identifiers, and typed metadata." />
-    <AdminPanel title="Audit event ledger" eyebrow="Server-filtered records">
-      <form className="admin-filter-bar admin-filter-bar--audit" onSubmit={submit} key={searchParams.toString()}><label>Action<select name="action" defaultValue={action}><option value="">All actions</option>{AUDIT_ACTIONS.map((item) => <option key={item}>{item}</option>)}</select></label><label>Target type<select name="targetType" defaultValue={targetType}><option value="">All target types</option>{AUDIT_TARGETS.map((item) => <option key={item}>{item}</option>)}</select></label><label>Order<select name="sortOrder" defaultValue={sortOrder}><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></label><button className="student-primary-action" type="submit">Apply</button></form>
+    <AdminPageHeader title="Audit Events" />
+    <AdminPanel>
+      <div className="admin-filter-bar admin-filter-bar--audit"><label>Action<select name="action" value={action} onChange={filter}><option value="">All actions</option>{AUDIT_ACTIONS.map((item) => <option key={item} value={item}>{humanize(item)}</option>)}</select></label><label>Target type<select name="targetType" value={targetType} onChange={filter}><option value="">All target types</option>{AUDIT_TARGETS.map((item) => <option key={item} value={item}>{humanize(item)}</option>)}</select></label><label>Order<select name="sortOrder" value={sortOrder} onChange={filter}><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></label></div>
       {state.status === 'loading' && !state.items.length ? <RequestState kind="loading" compact /> : null}
-      {state.status === 'error' ? <RequestState error={state.error} compact action={<button type="button" onClick={() => load()}>Try again</button>} /> : null}
+      {state.status === 'error' ? <RequestState error={state.error} compact action={<button type="button" onClick={refresh}>Try again</button>} /> : null}
       {state.status === 'ready' && !state.items.length ? <RequestState kind="empty" compact message="No audit events match these filters." /> : null}
-      {state.items.length ? <div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>Action</th><th>Actor</th><th>Target</th><th>Recorded</th><th /></tr></thead><tbody>{state.items.map((item) => <tr key={item.eventId}><td><strong>{humanize(item.action)}</strong><span>{item.reason || 'No reason recorded'}</span></td><td>{item.actor.fullName}<span>{item.actor.universityEmail}</span></td><td>{humanize(item.targetType)}<span><IdValue>{item.targetId}</IdValue></span></td><td>{formatDate(item.createdAt)}<span>Request <IdValue>{item.requestId}</IdValue></span></td><td><button type="button" className="student-outline-action" onClick={() => setSelected(item)}>View details</button></td></tr>)}</tbody></table></div> : null}
+      {state.items.length ? <div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>Action</th><th>Actor</th><th>Target</th><th>Timestamp</th><th><span className="sr-only">Details</span></th></tr></thead><tbody>{state.items.map((item) => <tr key={item.eventId}><td><strong>{humanize(item.action)}</strong>{item.reason ? <span>{item.reason}</span> : null}</td><td>{item.actor.fullName}<span>{item.actor.universityEmail}</span></td><td>{humanize(item.targetType)}</td><td>{formatDate(item.createdAt)}</td><td><button type="button" className="student-outline-action" onClick={() => setSelected(item)}>View details</button></td></tr>)}</tbody></table></div> : null}
       <Paginator pagination={state.pagination} page={page} onPage={(next) => updateQuery(setSearchParams, searchParams, { page: next })} />
     </AdminPanel>
     {selected ? <AuditDetailDialog event={selected} onClose={() => setSelected(null)} /> : null}

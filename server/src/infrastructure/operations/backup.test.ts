@@ -20,7 +20,7 @@ async function fixture() {
     projectRoot: path.join(root, 'project'),
     gitStorageRoot: path.join(root, 'storage'),
     backupOutputRoot: path.join(root, 'outputs'),
-    databaseUrl: 'postgresql://user:private@localhost/projex',
+    databaseUrl: 'postgresql://user:private@localhost/projex_recovery_source_i26aaron01',
     pgDumpExecutable: path.join(root, 'pg_dump'),
     tarExecutable: path.join(root, 'tar'),
     quiescence: { runningExecutionJobs: 0, runningProvisioningJobs: 0, provisioningRepositories: 0, stagingEntries: 0, transportRequestEntries: 0 },
@@ -41,9 +41,19 @@ describe('paired backup planning and execution safety', () => {
     await expect(buildPairedBackupPlan({
       confirmation: '', backupId: 'run-20260813', projectRoot: path.join(root, 'project'),
       gitStorageRoot: path.join(root, 'storage'), backupOutputRoot: path.join(root, 'outputs'),
-      databaseUrl: 'postgresql://user:private@localhost/projex', pgDumpExecutable: path.join(root, 'pg_dump'),
+      databaseUrl: 'postgresql://user:private@localhost/projex_recovery_source_i26aaron01', pgDumpExecutable: path.join(root, 'pg_dump'),
       tarExecutable: path.join(root, 'tar'), quiescence: { runningExecutionJobs: 0, runningProvisioningJobs: 0, provisioningRepositories: 0, stagingEntries: 0, transportRequestEntries: 0 },
     })).rejects.toThrowError('BACKUP_CONFIRMATION_REQUIRED')
+  })
+
+  it('inherits the fail-closed recovery-source guard', async () => {
+    const { root } = await fixture()
+    await expect(buildPairedBackupPlan({
+      confirmation: BACKUP_CONFIRMATION, backupId: 'run-20260813', projectRoot: path.join(root, 'project'),
+      gitStorageRoot: path.join(root, 'storage'), backupOutputRoot: path.join(root, 'outputs'),
+      databaseUrl: 'postgresql://user:private@localhost/projex', pgDumpExecutable: path.join(root, 'pg_dump'),
+      tarExecutable: path.join(root, 'tar'), quiescence: { runningExecutionJobs: 0, runningProvisioningJobs: 0, provisioningRepositories: 0, stagingEntries: 0, transportRequestEntries: 0 },
+    })).rejects.toThrowError('BACKUP_SOURCE_DATABASE_UNRECOGNIZED')
   })
 
   it('inspects the complete storage tree before archiving and rejects nested links', async () => {

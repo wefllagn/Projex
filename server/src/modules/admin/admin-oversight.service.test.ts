@@ -13,6 +13,14 @@ const admin: SafeUserProfile = {
 }
 
 describe('Phase 9B oversight service safety', () => {
+  it('shows recovery issuance expiry without disclosing token metadata', async () => {
+    const repository = { listAuditEvents: vi.fn().mockResolvedValue({ totalItems: 1, items: [{ action: 'USER_PASSWORD_RECOVERY_ISSUED', metadataJson: { expiresAt: '2031-01-01T09:00:00.000Z', token: 'private-token' } }] }) } as unknown as AdminOversightRepository
+    const service = createAdminOversightService({ repository, databaseHealth: { checkConnection: vi.fn() } })
+    const result = await service.listAuditEvents(admin, { page: 1, pageSize: 20, action: 'USER_PASSWORD_RECOVERY_ISSUED' })
+    expect(result.items[0]!.metadata).toEqual({ expiresAt: '2031-01-01T09:00:00.000Z' })
+    expect(JSON.stringify(result)).not.toContain('private-token')
+  })
+
   it('distinguishes database unavailability without claiming worker health', async () => {
     const repository = { queueObservations: vi.fn() } as unknown as AdminOversightRepository
     const databaseHealth: DatabaseHealth = { checkConnection: vi.fn(async () => { throw new Error('private database detail') }) }

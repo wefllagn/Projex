@@ -3,6 +3,7 @@ import { listResponse, successResponse } from '../../shared/http/response.js'
 import { parseRequest } from '../../shared/http/validation.js'
 import {
   approveRepositorySchema,
+  activityWorkspaceParamsSchema,
   createClassProjectRepositorySchema,
   classWorkspaceParamsSchema,
   createFeedbackDraftSchema,
@@ -26,6 +27,24 @@ import type { RepositoryService } from './repository.service.js'
 
 export function createRepositoryController(service: RepositoryService) {
   return {
+    groupContext: async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const { repositoryId } = parseRequest(repositoryParamsSchema, request.params)
+        response.status(200).json(successResponse(await service.groupContext(request.auth!.user, repositoryId), request.requestId))
+      } catch (error) { next(error) }
+    },
+    getActivityWorkspace: async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const { activityId } = parseRequest(activityWorkspaceParamsSchema, request.params)
+        response.status(200).json(successResponse(await service.getActivityWorkspace(request.auth!.user, activityId), request.requestId))
+      } catch (error) { next(error) }
+    },
+    createActivityWorkspace: async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const { activityId } = parseRequest(activityWorkspaceParamsSchema, request.params)
+        response.status(201).json(successResponse(await service.createActivityWorkspace(request.auth!.user, activityId), request.requestId))
+      } catch (error) { next(error) }
+    },
     createClassWorkspace: async (request: Request, response: Response, next: NextFunction) => {
       try {
         const { classId } = parseRequest(classWorkspaceParamsSchema, request.params)

@@ -8,7 +8,8 @@ export interface TestCaseRecord {
   inputData: string | null
   expectedOutput: string
   isHidden: boolean
-  points: Prisma.Decimal
+  importance?: string | null
+  points: Prisma.Decimal | null
   createdAt: Date
   updatedAt: Date
 }
@@ -19,7 +20,8 @@ export interface ManagerTestCaseProjection {
   inputData: string | null
   expectedOutput: string
   isHidden: boolean
-  points: number
+  importance?: string | null
+  points: number | null
   createdAt: Date
   updatedAt: Date
 }
@@ -30,7 +32,8 @@ export interface StudentTestCaseProjection {
   testCaseOrder: number
   inputData: string | null
   expectedOutput: string
-  points: number
+  importance?: string | null
+  points: number | null
 }
 
 export function toManagerTestCaseProjection(
@@ -43,7 +46,8 @@ export function toManagerTestCaseProjection(
     inputData: testCase.inputData,
     expectedOutput: testCase.expectedOutput,
     isHidden: testCase.isHidden,
-    points: Number(testCase.points),
+    importance: testCase.importance ?? null,
+    points: testCase.points === null ? null : Number(testCase.points),
     createdAt: testCase.createdAt,
     updatedAt: testCase.updatedAt,
   }
@@ -58,6 +62,7 @@ export function toStudentTestCaseProjection(
     testCaseOrder: testCase.testCaseOrder,
     inputData: testCase.inputData,
     expectedOutput: testCase.expectedOutput,
-    points: Number(testCase.points),
+    importance: testCase.importance ?? null,
+    points: testCase.points === null ? null : Number(testCase.points),
   }
 }

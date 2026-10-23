@@ -1,0 +1,48 @@
+/* The five Origin standards extend approved materials; geometry stays in place. */
+:root[data-origin-appearance] { --origin-hover: color-mix(in srgb,var(--origin-raised) 48%,var(--origin-surface)); --origin-pressed: color-mix(in srgb,var(--origin-raised) 84%,var(--origin-surface)); --origin-avatar-ground: #dce6ee; --origin-inset: #6d8ba126; }
+:root[data-origin-appearance='dark'] { --origin-avatar-ground: #243b4d; --origin-inset: #0005; }
+.origin-application :is(.student-primary-action,.student-outline-action,.admin-primary-button,.admin-secondary-button,.origin-app-theme), :root[data-origin-appearance] .projex-dialog :is(button,a), .origin-auth .origin-button { transition: background-color 150ms ease,border-color 150ms ease,box-shadow 150ms ease,color 150ms ease; }
+.origin-application :is(.student-primary-action,.student-outline-action,.admin-primary-button,.admin-secondary-button):hover:not(:disabled), :root[data-origin-appearance] .projex-dialog button:hover:not(:disabled) { border-color: var(--origin-control); box-shadow: inset 0 1px 0 var(--origin-edge-light),0 3px 8px var(--origin-shadow); }
+.origin-application :is(.student-primary-action,.student-outline-action):active:not(:disabled), :root[data-origin-appearance] .projex-dialog button:active:not(:disabled) { box-shadow: inset 0 2px 4px var(--origin-inset); }
+.origin-application .projex-academic-shell :is(.classwork-row,.academic-project-row.classwork-row,.academic-todo-row,.academic-review-row,.student-repository-index-row,.academic-submission-row), .origin-application .academic-project-reviews a, .origin-application .academic-attempt-rows a, .origin-application :is(.student-class-link,.student-sidebar__link) { background: transparent; box-shadow: none; transition: background-color 150ms ease,border-color 150ms ease,box-shadow 150ms ease,color 150ms ease; }
+.origin-application .projex-academic-shell :is(.classwork-row,.academic-project-row.classwork-row,.academic-todo-row,.academic-review-row,.student-repository-index-row,.academic-submission-row):hover, .origin-application .academic-project-reviews a:hover, .origin-application .academic-attempt-rows a:hover, .origin-application :is(.student-class-link,.student-sidebar__link):hover { background: var(--origin-hover); border-color: var(--origin-border); box-shadow: inset 0 1px 0 var(--origin-edge-light); }
+.origin-application .projex-academic-shell :is(.classwork-row,.academic-project-row.classwork-row,.academic-todo-row,.academic-review-row,.student-repository-index-row,.academic-submission-row):active, .origin-application :is(.student-class-link,.student-sidebar__link):active { background: var(--origin-pressed); box-shadow: inset 0 2px 4px var(--origin-inset); }
+.origin-application .projex-academic-shell :is(.classwork-row,.academic-project-row.classwork-row,.academic-todo-row,.academic-review-row,.student-repository-index-row,.academic-submission-row):is(.active,.is-active,[aria-current='page']), .origin-application :is(.student-class-link,.student-sidebar__link):is(.active,.is-active,[aria-current='page']) { color: var(--origin-ink); background: var(--origin-metal); border-color: var(--origin-control); box-shadow: inset 0 1px 0 var(--origin-edge-light),0 2px 5px var(--origin-shadow); }
+.origin-application :is(a,button,input,select,textarea,[tabindex]):focus-visible, :root[data-origin-appearance] .projex-dialog :is(a,button,input,select,textarea):focus-visible { outline: 2px solid var(--origin-accent); outline-offset: 3px; }
+.origin-application .projex-academic-shell .academic-overview-card { background: var(--origin-surface); border-color: var(--origin-border); box-shadow: inset 0 1px 0 var(--origin-edge-light); }
+.origin-application .origin-identity-badge { display: inline-grid; place-items: center; border-radius: 50%; color: var(--origin-ink); background: var(--origin-metal); border-color: var(--origin-control); box-shadow: inset 0 1px 2px var(--origin-edge-light),inset 0 -2px 3px var(--origin-inset),0 1px 3px var(--origin-shadow); overflow: hidden; }
+.origin-application .academic-classroom-avatar.origin-identity-badge { border-color: var(--origin-surface); }
+.origin-identity-badge img { width: 100%; height: 100%; object-fit: cover; }
+.origin-application .origin-user-avatar { display: inline-grid; place-items: center; background: var(--origin-avatar-ground); box-shadow: inset 0 0 0 1px var(--origin-control),inset 0 1px 2px var(--origin-edge-light); overflow: hidden; filter: none; }
+.origin-user-avatar :is(svg,img) { display: block; width: 100%; height: 100%; object-fit: cover; filter: none; }
+.origin-auth-account-switch > p { margin: 0; }
+.origin-auth-account-switch { gap: 12px; }
+.origin-auth-switch-title { font-weight: 500; }
+.origin-auth-switch-actions { display: grid; gap: 10px; margin-top: 8px; }
+.origin-auth-switch-actions .origin-button { width: 100%; justify-content: center; }
+.origin-auth-switch-actions .origin-auth-switch-secondary { background: transparent; box-shadow: none; }
+.origin-auth[data-theme='dark'] .origin-auth-switch-actions .origin-auth-switch-secondary { color: #fff; }
+.origin-auth-switch-actions .origin-auth-switch-secondary:hover { background: #8ba9c814; }
+.origin-auth-role-switch a { transition: color 150ms ease,background-color 150ms ease,box-shadow 150ms ease; }
+.origin-recovery-shell { min-height: 100dvh; color: var(--origin-ink); background: radial-gradient(ellipse at 50% 20%,var(--origin-raised),var(--origin-ground) 70%); }
+.origin-recovery-brand { display: block; padding: 28px; font: 600 25px var(--sans); letter-spacing: -.05em; }
+:root[data-origin-appearance] .origin-recovery-dialog { width: min(480px,calc(100vw - 32px)); }
+.origin-recovery-dialog > p { color: var(--origin-muted); line-height: 1.65; }
+.origin-recovery-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.origin-recovery-actions :is(button,a) { display: inline-flex; align-items: center; justify-content: center; }
+:root[data-origin-appearance] .projex-dialog { animation: origin-dialog-enter 160ms ease-out; }
+@keyframes origin-dialog-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .origin-application *, .origin-auth *, :root[data-origin-appearance] .projex-dialog { animation: none !important; transition: none !important; } }
+.origin-application .origin-identity-badge { outline: 1px solid var(--origin-control); outline-offset: -1px; }
+.origin-application :is(.student-segmented-tabs,.academic-todo-tabs) :is(a,button):is(.is-active,.active,[aria-selected='true']) { box-shadow: inset 0 1px 0 var(--origin-edge-light),0 1px 3px var(--origin-shadow); }
+.origin-landing .origin-button { transition: background-color 150ms ease,border-color 150ms ease,box-shadow 150ms ease,color 150ms ease; }
+.origin-landing :is(button,a,input,textarea):focus-visible { outline: 2px solid #79b8f4; outline-offset: 3px; }
+.origin-landing[data-theme='light'] :is(button,a,input,textarea):focus-visible { outline-color: #2468a8; }
+@media (prefers-reduced-motion: reduce) { .origin-landing * { transition: none !important; } }
+.origin-application .academic-repository-row { transition: background-color 150ms ease,box-shadow 150ms ease; }
+.origin-application .academic-repository-row:has(a:hover), .origin-application .academic-repository-row:focus-within { background: var(--origin-hover); box-shadow: inset 0 1px 0 var(--origin-edge-light); }
+.origin-application .academic-repository-row:has(a:active) { background: var(--origin-pressed); box-shadow: inset 0 2px 4px var(--origin-inset); }
+
+.origin-application .projex-academic-shell .origin-activity-icon { display: grid; place-items: center; background: transparent; border: 1px solid var(--origin-control); box-shadow: inset 0 1px 0 var(--origin-edge-light); border-radius: 9px; filter: none; }
+.origin-application .classwork-row-icon.origin-activity-icon { padding: 9px; }
+.origin-application .classwork-row-icon.origin-activity-icon .projex-icon { width: 22px; height: 22px; }

@@ -1,3 +1,4 @@
+import { criteriaFrom, awardedRubricPoints } from '../activities/activity-grading.js'
 import {
   Prisma,
   type PrismaClient,
@@ -10,6 +11,7 @@ import type {
   SubmissionListQuery,
 } from './submission.schemas.js'
 import { isOrdinarySubmissionOpen } from '../activities/activity.types.js'
+import { CODE_RUN_TEST_NAME } from '../../shared/code-run.js'
 import {
   selectCreditedReleasedAttempt,
   type AttemptCreditPolicyValue,
@@ -23,6 +25,7 @@ export const submissionInclude = {
       title: true,
       entryClassName: true,
       status: true,
+      gradingMode: true,
       totalPoints: true,
       creditPolicy: true,
       class: { select: { id: true, instructorId: true, status: true, teachingStaff: { where: { status: 'ACTIVE' }, select: { instructorId: true, status: true } } } },
@@ -106,9 +109,11 @@ export interface StudentAttemptStateRecord {
     status: 'PUBLISHED' | 'CLOSED'
     dueDate: Date
     maxAttempts: number
+    gradingMode?: 'GRADED' | 'COMPLETION'
     creditPolicy: AttemptCreditPolicyValue
     classStatus: 'PREPARED' | 'ACTIVE' | 'ARCHIVED'
   }
+  acceptedAttempts?: number
   countingAttemptsUsed: number
   availableReplacement: {
     replacementExpiresAt: Date
@@ -220,7 +225,20 @@ export interface SubmissionRepository {
     runsPerMinute: number
     maxActivePerActivity: number
   }): Promise<CreatePracticeResult>
+  createCodeRun(input: {
+    activityId: string
+    studentId: string
+    sourceCode: string
+    sourceHash: string
+    consoleRequestKey?: string
+    stdin: string
+    now: Date
+    expiresAt: Date
+    runsPerMinute: number
+    maxActivePerActivity: number
+  }): Promise<CreatePracticeResult>
   findPracticeById(runId: string): Promise<PracticeRecord | null>
+  findOwnCodeRun(runId: string, studentId: string): Promise<PracticeRecord | null>
   createReviewRun(input: {
     submissionId: string
     instructorId: string
@@ -429,9 +447,9 @@ export function createPrismaSubmissionRepository(
           }
 
           const automatedMaximum = activity.testCases.reduce(
-            (total, testCase) => total + Number(testCase.points),
-            0,
-          )
+            (total, testCase) => total.plus(testCase.points ?? 0),
+            new Prisma.Decimal(0),
+          ).toNumber()
           const totalPoints = Number(activity.totalPoints)
           const attemptNumber = (aggregate._max.attemptNumber ?? 0) + 1
           const submission = await transaction.activitySubmission.create({
@@ -443,11 +461,14 @@ export function createPrismaSubmissionRepository(
               sourceHash: input.sourceHash,
               activityTitleSnapshot: activity.title,
               dueDateSnapshot: activity.dueDate,
+              gradingModeSnapshot: activity.gradingMode,
+              gradingConfigurationSnapshot: activity.gradingMode === 'COMPLETION' ? Prisma.DbNull : activity.gradingConfiguration ?? Prisma.DbNull,
+              rubricSnapshot: activity.gradingMode === 'COMPLETION' ? Prisma.DbNull : activity.rubricCriteria ?? Prisma.DbNull,
+              rubricScores: activity.gradingMode !== 'COMPLETION' && criteriaFrom(activity.rubricCriteria).length ? criteriaFrom(activity.rubricCriteria).map(row => ({ criterionId: row.id, points: 0 })) : Prisma.DbNull,
               totalPointsSnapshot: activity.totalPoints,
-              automatedMaximum: new Prisma.Decimal(automatedMaximum),
-              instructorMaximum: new Prisma.Decimal(
-                totalPoints - automatedMaximum,
-              ),
+              instructorPoints: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(0),
+              automatedMaximum: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(automatedMaximum),
+              instructorMaximum: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(totalPoints).minus(automatedMaximum),
               submittedAt: input.now,
               updatedAt: input.now,
               submissionStatus: 'QUEUED',
@@ -463,7 +484,8 @@ export function createPrismaSubmissionRepository(
                       inputSnapshot: testCase.inputData,
                       expectedOutputSnapshot: testCase.expectedOutput,
                       isHiddenSnapshot: testCase.isHidden,
-                      maximumPoints: testCase.points,
+                      maximumPoints: activity.gradingMode === 'COMPLETION' ? null : testCase.points,
+                      automatedPoints: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(0),
                     })),
                   },
                 },
@@ -624,6 +646,7 @@ export function createPrismaSubmissionRepository(
                 status: true,
                 dueDate: true,
                 maxAttempts: true,
+                gradingMode: true,
                 creditPolicy: true,
                 class: {
                   select: {
@@ -649,7 +672,7 @@ export function createPrismaSubmissionRepository(
             return null
           }
 
-          const [countingAttemptsUsed, replacement, releasedAttempts] =
+          const [countingAttemptsUsed, replacement, releasedAttempts, acceptedAttempts] =
             await Promise.all([
               transaction.activitySubmission.count({
                 where: {
@@ -684,6 +707,7 @@ export function createPrismaSubmissionRepository(
                 select: releasedAttemptSelect,
                 orderBy: [{ attemptNumber: 'asc' }],
               }),
+              transaction.activitySubmission.count({ where: { activityId: input.activityId, studentId: input.studentId } }),
             ])
 
           return {
@@ -692,9 +716,11 @@ export function createPrismaSubmissionRepository(
               status: activity.status,
               dueDate: activity.dueDate,
               maxAttempts: activity.maxAttempts,
+              gradingMode: activity.gradingMode,
               creditPolicy: activity.creditPolicy,
               classStatus: activity.class.status,
             },
+            acceptedAttempts,
             countingAttemptsUsed,
             availableReplacement:
               replacement?.replacementExpiresAt
@@ -728,6 +754,7 @@ export function createPrismaSubmissionRepository(
         ) {
           return { kind: 'invalid_state' } as const
         }
+        if (record.gradingModeSnapshot === 'COMPLETION') return { kind: 'score_out_of_bounds' } as const
         const original = record.originalAutomatedScore
         const previous = effectiveScore(record)
         if (original === null || previous === null) {
@@ -779,11 +806,16 @@ export function createPrismaSubmissionRepository(
         }
         if (
           record.submissionStatus !== 'ASSESSED' &&
-          record.submissionStatus !== 'REVIEWED'
+          record.submissionStatus !== 'REVIEWED' &&
+          !(record.gradingModeSnapshot === 'COMPLETION' && ['FAILED_RESOLVED'].includes(record.submissionStatus))
         ) {
           return { kind: 'invalid_state' } as const
         }
-        if (input.review.instructorPoints > Number(record.instructorMaximum)) {
+        const criteria = criteriaFrom(record.rubricSnapshot)
+        const rubricPoints = criteria.length ? awardedRubricPoints(criteria, input.review.rubricScores) : null
+        const instructorPoints = criteria.length ? rubricPoints : input.review.instructorPoints
+        if ((!criteria.length && input.review.rubricScores !== undefined) || (criteria.length && (rubricPoints === null || (input.review.instructorPoints !== undefined && input.review.instructorPoints !== rubricPoints)))) return { kind: 'score_out_of_bounds' } as const
+        if (record.gradingModeSnapshot === 'COMPLETION' ? instructorPoints !== undefined : instructorPoints === undefined || instructorPoints === null || instructorPoints > Number(record.instructorMaximum)) {
           return { kind: 'score_out_of_bounds' } as const
         }
         if (input.review.feedbackText !== undefined) {
@@ -812,7 +844,8 @@ export function createPrismaSubmissionRepository(
         await transaction.activitySubmission.update({
           where: { id: record.id },
           data: {
-            instructorPoints: new Prisma.Decimal(input.review.instructorPoints),
+            instructorPoints: record.gradingModeSnapshot === 'COMPLETION' ? null : new Prisma.Decimal(instructorPoints!),
+            ...(criteria.length ? { rubricScores: input.review.rubricScores } : {}),
             submissionStatus: 'REVIEWED',
             reviewedAt: input.now,
             updatedAt: nextUpdatedAt(input.review.expectedUpdatedAt, input.now),
@@ -840,16 +873,17 @@ export function createPrismaSubmissionRepository(
           return { kind: 'invalid_state' } as const
         }
         const automated = effectiveScore(record)
-        if (automated === null) return { kind: 'invalid_state' } as const
-        const finalScore = automated + Number(record.instructorPoints)
-        if (finalScore > Number(record.totalPointsSnapshot)) {
+        const completion = record.gradingModeSnapshot === 'COMPLETION'
+        if (!completion && automated === null) return { kind: 'invalid_state' } as const
+        const finalScore = new Prisma.Decimal(automated ?? 0).plus(record.instructorPoints ?? 0).toNumber()
+        if (!completion && finalScore > Number(record.totalPointsSnapshot)) {
           return { kind: 'score_out_of_bounds' } as const
         }
         await transaction.activitySubmission.update({
           where: { id: record.id },
           data: {
             submissionStatus: 'RELEASED',
-            releasedFinalScore: new Prisma.Decimal(finalScore),
+            releasedFinalScore: completion ? null : new Prisma.Decimal(finalScore),
             releasedAt: input.now,
             updatedAt: nextUpdatedAt(input.expectedUpdatedAt, input.now),
           },
@@ -1100,9 +1134,147 @@ export function createPrismaSubmissionRepository(
       )
     },
 
+    createCodeRun(input) {
+      return prisma.$transaction(
+        async (transaction) => {
+          await lockScope(transaction, `practice-student:${input.studentId}`)
+          await lockScope(
+            transaction,
+            `practice:${input.activityId}:${input.studentId}`,
+          )
+          await transaction.$queryRaw`
+            SELECT activity."activity_id", class_record."class_id"
+            FROM "programming_activities" AS activity
+            JOIN "classes" AS class_record ON class_record."class_id" = activity."class_id"
+            WHERE activity."activity_id" = ${input.activityId}::uuid
+            FOR SHARE OF activity, class_record
+          `
+          const activity = await transaction.programmingActivity.findUnique({
+            where: { id: input.activityId },
+            include: {
+              class: {
+                include: {
+                  members: {
+                    where: { studentId: input.studentId },
+                    take: 1,
+                    select: { status: true },
+                  },
+                },
+              },
+              testCases: {
+                where: { isHidden: false },
+                orderBy: { testCaseOrder: 'asc' },
+                take: 1,
+              },
+            },
+          })
+          if (!activity) return { kind: 'activity_not_found' } as const
+          const student = await transaction.user.findUnique({
+            where: { id: input.studentId },
+            select: { role: true, status: true },
+          })
+          if (
+            !student
+            || student.role !== 'STUDENT'
+            || student.status !== 'ACTIVE'
+            || activity.class.members[0]?.status !== 'ACTIVE'
+          ) {
+            return { kind: 'forbidden' } as const
+          }
+          if (
+            activity.class.status !== 'ACTIVE'
+            || !isOrdinarySubmissionOpen(activity.status, activity.dueDate, input.now)
+            || activity.testCases.length === 0
+          ) {
+            return { kind: 'activity_not_accepting' } as const
+          }
+          if (input.consoleRequestKey) {
+            const replay = await transaction.interactiveConsole.findUnique({
+              where: { requestKey: input.consoleRequestKey }, include: { practice: { include: practiceInclude } },
+            })
+            if (replay) {
+              if (replay.practice.studentId !== input.studentId || replay.practice.activityId !== input.activityId
+                || replay.practice.sourceCode !== input.sourceCode) return { kind: 'forbidden' } as const
+              return { kind: 'created', practice: replay.practice } as const
+            }
+            const activeConsoles = await transaction.interactiveConsole.count({
+              where: { practice: { studentId: input.studentId, status: { in: ['QUEUED', 'RUNNING'] } } },
+            })
+            if (activeConsoles > 0) return { kind: 'capacity_unavailable' } as const
+          }
+          const minuteAgo = new Date(input.now.getTime() - 60_000)
+          const [active, recent] = await Promise.all([
+            transaction.practiceExecution.count({
+              where: {
+                activityId: input.activityId,
+                studentId: input.studentId,
+                status: { in: ['QUEUED', 'RUNNING'] },
+              },
+            }),
+            transaction.practiceExecution.count({
+              where: {
+                studentId: input.studentId,
+                createdAt: { gte: minuteAgo },
+              },
+            }),
+          ])
+          if (active >= input.maxActivePerActivity) {
+            return { kind: 'capacity_unavailable' } as const
+          }
+          if (recent >= input.runsPerMinute) {
+            return { kind: 'rate_limited' } as const
+          }
+          const anchor = activity.testCases[0]!
+          const practice = await transaction.practiceExecution.create({
+            data: {
+              activityId: activity.id,
+              studentId: input.studentId,
+              sourceCode: input.sourceCode,
+              sourceHash: input.sourceHash,
+              entryClassName: activity.entryClassName,
+              createdAt: input.now,
+              expiresAt: input.expiresAt,
+              cases: {
+                create: {
+                  testCaseId: anchor.id,
+                  testNameSnapshot: CODE_RUN_TEST_NAME,
+                  testOrderSnapshot: 1,
+                  inputSnapshot: input.stdin,
+                  expectedOutputSnapshot: '',
+                },
+              },
+              ...(input.consoleRequestKey ? { console: { create: { requestKey: input.consoleRequestKey, lastSeenAt: input.now } } } : {}),
+              executionJob: { create: { jobType: 'VISIBLE_TEST_RUN', ...(input.consoleRequestKey ? { maxClaimAttempts: 1 } : {}) } },
+            },
+            select: { id: true },
+          })
+          return {
+            kind: 'created',
+            practice: await transaction.practiceExecution.findUniqueOrThrow({
+              where: { id: practice.id },
+              include: practiceInclude,
+            }),
+          } as const
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      )
+    },
+
     findPracticeById(runId) {
       return prisma.practiceExecution.findUnique({
         where: { id: runId },
+        include: practiceInclude,
+      })
+    },
+
+    findOwnCodeRun(runId, studentId) {
+      return prisma.practiceExecution.findFirst({
+        where: {
+          id: runId,
+          studentId,
+          student: { role: 'STUDENT', status: 'ACTIVE' },
+          activity: { class: { members: { some: { studentId, status: 'ACTIVE' } } } },
+        },
         include: practiceInclude,
       })
     },

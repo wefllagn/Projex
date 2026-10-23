@@ -54,7 +54,7 @@ function PlaceholderPage({ role, page }) {
         <StatCard label="Role context" value={role.id} detail={role.person} />
       </div>
 
-      <Card title="Planned Projex surface" eyebrow="Feature placeholder">
+      <Card title="Planned Origin surface" eyebrow="Feature placeholder">
         <DataTable
           columns={[
             { key: 'item', label: 'Academic programming item' },

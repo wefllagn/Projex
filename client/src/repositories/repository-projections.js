@@ -1,4 +1,4 @@
-const REPOSITORY_TYPES = new Set(['CLASS_PROJECT', 'PERSONAL', 'CLASS_WORKSPACE'])
+const REPOSITORY_TYPES = new Set(['CLASS_PROJECT', 'PERSONAL', 'CLASS_WORKSPACE', 'ACTIVITY_WORKSPACE'])
 const REPOSITORY_STATUSES = new Set(['ACTIVE', 'INACTIVE', 'ARCHIVED'])
 const STORAGE_STATUSES = new Set(['PENDING', 'PROVISIONING', 'READY', 'FAILED', 'QUARANTINED'])
 const REVIEW_STATUSES = new Set(['WORKING', 'READY_FOR_REVIEW', 'CHANGES_REQUESTED', 'APPROVED'])
@@ -15,9 +15,15 @@ function safeDate(value) {
 
 export function repositoryProjection(value = {}) {
   return {
+    groupRelationship: value.groupRelationship === 'MY_GROUP' ? 'MY_GROUP' : 'CLASS_METADATA',
     id: typeof value.id === 'string' ? value.id : '',
     projectTaskId: typeof value.projectTaskId === 'string' ? value.projectTaskId : null,
+    activityId: typeof value.activityId === 'string' ? value.activityId : null,
     classId: typeof value.classId === 'string' ? value.classId : null,
+    contextClassId: typeof value.contextClassId === 'string' ? value.contextClassId : null,
+    className: typeof value.className === 'string' ? value.className : null,
+    activityTitle: typeof value.activityTitle === 'string' ? value.activityTitle : null,
+    projectTitle: typeof value.projectTitle === 'string' ? value.projectTitle : null,
     teamId: typeof value.teamId === 'string' ? value.teamId : null,
     repositoryType: REPOSITORY_TYPES.has(value.repositoryType) ? value.repositoryType : 'PERSONAL',
     repositoryName: typeof value.repositoryName === 'string' ? value.repositoryName : '',
@@ -75,9 +81,15 @@ export function formatRepositoryLabel(value) {
 export function repositoryCatalogProjection(value) {
   const repository = repositoryProjection(value)
   return {
+    groupRelationship: repository.groupRelationship,
     id: repository.id,
     projectTaskId: repository.projectTaskId,
+    activityId: repository.activityId,
     classId: repository.classId,
+    contextClassId: repository.contextClassId,
+    className: repository.className,
+    activityTitle: repository.activityTitle,
+    projectTitle: repository.projectTitle,
     repositoryType: repository.repositoryType,
     repositoryName: repository.repositoryName,
     description: repository.description,
@@ -88,6 +100,28 @@ export function repositoryCatalogProjection(value) {
     createdAt: repository.createdAt,
     updatedAt: repository.updatedAt,
     archivedAt: repository.archivedAt,
+  }
+}
+
+export function groupContextProjection(value, repository) {
+  if (value?.repositoryId !== repository.id || value.project?.id !== repository.projectTaskId
+    || value.team?.id !== repository.teamId || !value.class?.id || !value.class?.className
+    || !value.project?.title || !safeDate(value.project.dueDate) || !value.team?.name
+    || !Number.isSafeInteger(value.team.activeMemberCount) || !Array.isArray(value.teachingStaff)
+    || !['MAINTAINER', 'DEVELOPER', 'INSTRUCTOR', 'METADATA_ONLY'].includes(value.currentRole)) {
+    throw new Error('Group repository context did not match this repository.')
+  }
+  const keys = ['canRead', 'canWrite', 'canUpdateMain', 'canManageMembers', 'canInviteMembers', 'canReview', 'canRequestChanges', 'canSubmitForReview', 'canViewActivity', 'canEditFeedback', 'canArchive', 'canRestore']
+  if (keys.some((key) => typeof value.permissions?.[key] !== 'boolean')) throw new Error('Group repository permissions are unavailable.')
+  return {
+    repositoryId: value.repositoryId,
+    project: { id: value.project.id, title: value.project.title, dueDate: value.project.dueDate, status: value.project.status },
+    class: { id: value.class.id, className: value.class.className, status: value.class.status },
+    team: { id: value.team.id, name: value.team.name, status: value.team.status, activeMemberCount: value.team.activeMemberCount },
+    teachingStaff: value.teachingStaff.filter((person) => person.userId && person.fullName && ['PRIMARY', 'CO_INSTRUCTOR'].includes(person.role))
+      .map((person) => ({ userId: person.userId, fullName: person.fullName, role: person.role })),
+    currentRole: value.currentRole,
+    permissions: Object.fromEntries(keys.map((key) => [key, value.permissions[key]])),
   }
 }
 

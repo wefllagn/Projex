@@ -1,0 +1,7 @@
+{
+  "platform": "darwin",
+  "containerRunnerRefusedUnsupportedHost": true,
+  "fallbackToLocalProcess": false,
+  "linuxDockerEnforcementVerified": false,
+  "requiredNextGate": "origin-verify-java.service on Ubuntu"
+}

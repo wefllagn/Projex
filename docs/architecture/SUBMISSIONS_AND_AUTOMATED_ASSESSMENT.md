@@ -48,6 +48,8 @@ The serializable creation transaction:
 5. Creates immutable source/activity/test snapshots, one execution, per-test result placeholders, one durable job, and one idempotency record.
 6. When applicable, consumes and links exactly one valid replacement grant in the same transaction.
 
+I2.3 Activity Git Workspace saves are explicitly outside this transaction. A browser checkpoint or native Git push creates no `ActivitySubmission`, consumes no attempt, queues no Java assessment, and produces no score. Loading the latest pushed/checkpointed entry file only replaces the editable browser source. The Student must still review that source and use the existing explicit Submit confirmation; submission continues to persist its own immutable source snapshot.
+
 A new attempt returns `201`. An exact replay returns the original response with `200` and `meta.idempotentReplay=true`. Reusing the same scoped key with different source returns `DUPLICATE_SUBMISSION_REQUEST`. Another student has a separate scope.
 
 ## Attempt allowance and replacement grants
@@ -137,6 +139,73 @@ The transaction snapshots only `isHidden=false` test cases and creates a short-l
 
 Creation is protected by a per-student rate limit and per-student/activity active-job capacity. `GET /api/v1/visible-test-runs/:runId` returns only the owning student's result or the owning instructor's result. Phase 9A removes administrator access to individual practice-run outcomes.
 
+## Run Code with Student input
+
+`POST /api/v1/activities/:activityId/code-runs` accepts the current Java `sourceCode` and bounded `stdin` text. It is Student-only, uses the same account, membership, class, Activity lifecycle, rate, active-capacity, durable queue, worker, timeout, output-limit, and cleanup boundaries as Run Visible Tests, and preserves stdin line boundaries. The API process never invokes Java.
+
+A Run Code request creates one short-lived practice execution with a server-created debug case anchored to a visible test's ID, as required by the existing foreign key. No input or expected output is copied from that test. It deliberately performs no expected-output comparison and returns only compiler output, stdout, stderr, runtime state, and bounded timing through `GET /api/v1/code-runs/:runId`. It exposes no instructor test input, expected output, hidden-test data, score, or assessment result. The existing practice persistence is reused without a schema migration; a server-owned marker plus a domain-separated source hash distinguishes debug executions from visible-test runs, and each read endpoint rejects the other execution kind. An instructor test name alone cannot select debug behavior. Debug-result reads recheck current active Student membership and reject expired records.
+
+Run Code never creates an `ActivitySubmission`, consumes an attempt, changes a credited result, creates a Git checkpoint, writes repository state, or grades visible or hidden tests. It executes the current browser source snapshot only. This legacy endpoint remains bounded pre-supplied stdin execution. The Student IDE now uses the interactive console endpoints described below.
+
+## Interactive Student Run Code (October 23)
+
+The Student IDE uses `POST /api/v1/activities/:activityId/interactive-code-runs`
+with `{sourceCode, requestKey}`. It retains the existing practice snapshot, visible
+case foreign-key anchor, capacity/rate policy, and PostgreSQL execution queue.
+One `InteractiveConsole` row holds bounded live output/transcript, queued input,
+EOF, cancellation, and client presence. It has no relation to official attempts
+or Git checkpoints. The legacy batch code-run endpoints remain compatible.
+
+`GET /api/v1/interactive-code-runs/:runId` returns only session/activity IDs,
+phase, stdout/stderr, transcript, exit code, input closure, next input sequence,
+and cancellation state; it also renews client presence. All responses use
+`Cache-Control: no-store`. Read, input, and stop recheck the authenticated active
+Student, ownership, current active class membership, and record TTL. Mutations
+require CSRF and JSON. Input also requires current Activity execution eligibility.
+The worker rechecks eligibility while compiling/running; revoked access,
+closure/deadline, cancellation, shutdown, lost lease, or lost presence terminates
+execution. Stop remains available to an authorized owner after Activity closure.
+
+`POST /api/v1/interactive-code-runs/:runId/input` accepts
+`{sequence, text, eof}`. A line appends exactly one newline without trimming text;
+`eof: true` ends stdin. Up to 4,000 characters per line, 20,000 UTF-8 bytes total
+(including newlines), and 256 input messages bound storage/backpressure. Duplicate
+sequence/content acknowledges the same delivery; altered or skipped sequences
+are rejected. A start request UUID is unique and tied to its owner, Activity,
+and exact source snapshot, so ambiguous/concurrent request retries create one job.
+Serialization failures receive bounded transaction retries. Neither start nor
+input is silently replayed with a new key. `POST .../:runId/stop` requests an
+idempotent cancellation.
+
+The same separate Java worker claims the practice job, with **one claim attempt**.
+It uses the same Java runner, Java 17 compilation, minimal child environment,
+shell-free spawning, heap/stack/processor settings, temporary directories, and
+output bounds. The interactive extension keeps stdin open and incrementally
+decodes UTF-8 stdout/stderr, including partial lines. Polling is non-overlapping:
+worker control/output snapshots every 200 ms, browser every 250 ms, browser
+polling bounded to 180 seconds. Each worker executes one job at a time; each
+Student has at most one active console, and existing per-Activity practice and
+per-Student start-rate limits also apply.
+
+Runtime is limited to 90 seconds, with the configured compile timeout and output
+budget. A session expires after 30 seconds without successful presence polling or
+150 seconds from creation. Runtime/control limits are server-owned. Worker leases
+renew during execution. Lost jobs become failed, never replayed as new execution
+or assessment. A local supervisor owns the process group and kills it on worker
+death or a hard deadline; ordinary completion/cancellation cleans scratch files.
+After a hard worker kill, the next worker reaps only old `console-*` directories
+older than five minutes, beyond the absolute session lifetime. Completed practice
+retention uses existing expiry cleanup and cascades to the console row.
+
+Visible tests, official submission/assessment, Instructor reruns, attempt limits,
+scoring, immutable source/evidence, release controls, and Git saving retain their
+existing batch contracts. The UI keeps all four actions separate and renders
+program output as text. This is controlled **trusted local development** only;
+the lifecycle supervisor and JVM heap limit are not hostile-code filesystem,
+network, total-memory, CPU, fork, or OS isolation. Existing production/local-process
+restrictions remain in force. Public hosting requires a separately verified
+sandbox and deployment approval.
+
 ## Instructor review rerun (Iteration 2)
 
 `POST /api/v1/submissions/:submissionId/review-runs` accepts an empty JSON object. It requires an ACTIVE owning Instructor, cookie authentication, CSRF, controlled local Java execution, and an unarchived activity/class. The request does not accept source, stdin, test selection, paths, or execution limits. One active review run per Instructor and at most ten requests per rolling minute bound use. A CLOSED activity and a RELEASED submission may still be rerun; archive blocks new work.
@@ -167,6 +236,8 @@ GET  /api/v1/activities/:activityId/submissions
 GET  /api/v1/activities/:activityId/attempt-state
 POST /api/v1/activities/:activityId/visible-test-runs
 GET  /api/v1/visible-test-runs/:runId
+POST /api/v1/activities/:activityId/code-runs
+GET  /api/v1/code-runs/:runId
 GET  /api/v1/submissions/:submissionId
 POST /api/v1/submissions/:submissionId/score-corrections
 PUT  /api/v1/submissions/:submissionId/review
@@ -185,3 +256,31 @@ All mutation endpoints require JSON, cookie authentication, CSRF validation, Zod
 - `npm run test:java` invokes the locally installed `javac`/`java` and verifies Java 17 target compilation, deterministic stdin/stdout, student compiler errors, timeouts, output overflow, process termination, and temporary cleanup.
 - `npm run test:integration` accepts only private `TEST_DATABASE_URL` naming exactly `projex_test`, runs `prisma migrate deploy`, executes serial PostgreSQL tests, and removes fixture application rows while preserving migration history.
 - The integration runner never falls back to `DATABASE_URL` and never runs `prisma db push` or `prisma migrate reset`.
+
+
+## Completion-based Ungraded Activities (October 20)
+
+Official attempts snapshot `gradingModeSnapshot`, defaulting historical records
+to `GRADED`. For `COMPLETION`, server acceptance of an official submission
+establishes Complete immediately, independent of compilation, correctness,
+worker status, Instructor review or release. Not submitted means no accepted
+record exists. Completion derives from all accepted records, including a record
+later marked non-counting by an approved replacement resolution. A subsequent
+permitted attempt remains a separate immutable record. Saving/editing source,
+Git pushes/checkpoints and practice runs cannot establish completion.
+
+Ungraded total/automated/instructor maxima, per-test academic weights, original
+score, Instructor points and released score are null. The worker still saves
+compile/output/test diagnostics, but saves no numeric academic result. Score
+correction and numeric review input are rejected. Students receive no numeric
+score/percentage or academic pass/fail. Their visible tests remain technical
+feedback. Admin and Work Hub projections distinguish completion from scores.
+
+Feedback drafts stay private. Once assessment is reviewable (or an infrastructure
+failure has been explicitly resolved), Instructors may save comments and
+separately release them with an application-owned confirmation and version
+check. Ungraded release preserves a null final score. Unresolved infrastructure
+failure still requires the existing retry/resolution workflow; commenting does
+not bypass its audit/replacement controls. Release never creates completion.
+Existing attempt limits, deadlines, authorization, source/test snapshots,
+replacement grants and submission idempotency remain authoritative.

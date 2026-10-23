@@ -2,17 +2,17 @@ import { z } from 'zod'
 import { isValidClassCode, normalizeClassCode } from './class-code.js'
 import { adminReasonSchema } from '../admin/admin.schemas.js'
 import { normalizedEmailSchema } from '../auth/auth.schemas.js'
+import { semesterSchema, schoolYearSchema } from './academic-fields.js'
 
 const classNameSchema = z.string().trim().min(1).max(200)
 const sectionSchema = z.string().trim().min(1).max(100)
-const semesterSchema = z.string().trim().min(1).max(100)
-const schoolYearSchema = z.string().trim().min(1).max(20)
 const optionalText = (length: number) => z.string().trim().max(length).nullable().optional()
 
 export const classIdParamsSchema = z.object({ classId: z.uuid() }).strict()
 
 export const createClassSchema = z
   .object({
+    program: z.enum(['INFORMATION_TECHNOLOGY', 'COMPUTER_SCIENCE']),
     className: classNameSchema,
     section: sectionSchema.optional(),
     semester: semesterSchema.optional(),
@@ -27,6 +27,11 @@ export const createClassSchema = z
     invitationEmails: z.array(normalizedEmailSchema).max(50).optional(),
   })
   .strict()
+  .superRefine((value, context) => {
+    if (!value.officialClassCode && !value.section) context.addIssue({ code: 'custom', path: ['section'], message: 'Enter a Class Code.' })
+    if (!value.semester && !value.academicPeriod) context.addIssue({ code: 'custom', path: ['semester'], message: 'Select a semester or term.' })
+    if (!value.schoolYear) context.addIssue({ code: 'custom', path: ['schoolYear'], message: 'Select an academic year.' })
+  })
   .refine(
     (value) =>
       !value.invitationEmails ||
@@ -39,6 +44,7 @@ export const createClassSchema = z
 
 export const updateClassSchema = z
   .object({
+    program: z.enum(['INFORMATION_TECHNOLOGY', 'COMPUTER_SCIENCE']).optional(),
     className: classNameSchema.optional(),
     section: sectionSchema.nullable().optional(),
     semester: semesterSchema.nullable().optional(),
@@ -51,6 +57,7 @@ export const updateClassSchema = z
   .strict()
   .refine(
     (value) =>
+      value.program !== undefined ||
       value.className !== undefined ||
       value.section !== undefined ||
       value.semester !== undefined ||

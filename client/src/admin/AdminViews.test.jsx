@@ -97,11 +97,24 @@ function detailApi(summary = account()) {
 }
 
 describe('Phase 10D.1 admin views', () => {
+  it('generates a private recovery link for an activated account with explicit expiry and replacement confirmation', async () => {
+    const api = { ...detailApi(), issuePasswordRecovery: vi.fn().mockResolvedValue({ data: { ...manualSetup, setupLink: manualSetup.setupLink.replace('account-setup', 'password-recovery') } }) }
+    renderDetail(api)
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate password recovery link' }))
+    expect(screen.getByText(/link expires in one hour and can be used once/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Generate recovery link' }))
+    expect(await screen.findByRole('heading', { name: 'Password recovery link generated' })).toBeInTheDocument()
+    expect(api.issuePasswordRecovery).toHaveBeenCalledWith(directoryUser.id)
+    expect(screen.getByRole('textbox', { name: 'Recovery link' })).toHaveValue(manualSetup.setupLink.replace('account-setup', 'password-recovery'))
+    expect(screen.getByRole('button', { name: 'Copy Recovery Link' })).toBeInTheDocument()
+  })
+
   it('renders only authoritative overview metrics and an honest later-milestone boundary', async () => {
     const api = { getOverview: vi.fn().mockResolvedValue({ data: overview() }) }
     render(<MemoryRouter><AdminOverviewPage api={api} /></MemoryRouter>)
     expect(await screen.findByText('4')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Open detailed academic administration.' })).toHaveAttribute('href', '/admin/academic')
+    expect(screen.getByRole('link', { name: /Repositories 1/ })).toHaveAttribute('href', '/admin/academic/repositories')
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument()
     expect(screen.queryByText(/74%|worker healthy|integrity verified/i)).not.toBeInTheDocument()
   })
 
@@ -118,7 +131,7 @@ describe('Phase 10D.1 admin views', () => {
   it('shows truthful loading, empty, and request failure states without mock fallback', async () => {
     const api = { listUsers: vi.fn().mockResolvedValue({ data: [], pagination: { page: 1, totalPages: 0, totalItems: 0, hasPreviousPage: false, hasNextPage: false } }) }
     renderUsers(api)
-    expect(screen.getByText('Loading Projex')).toBeInTheDocument()
+    expect(screen.getByText('Loading Origin')).toBeInTheDocument()
     expect(await screen.findByText('No users match these filters.')).toBeInTheDocument()
     expect(screen.queryByText('Alyssa Mendoza')).not.toBeInTheDocument()
   })
@@ -139,6 +152,7 @@ describe('Phase 10D.1 admin views', () => {
     const user = userEvent.setup()
     renderUsers(api)
     await screen.findByText('No users match these filters.')
+    await user.click(screen.getByText('Add User'))
     await user.click(screen.getByRole('button', { name: 'Add student' }))
     await user.type(screen.getByLabelText('Full name'), 'Synthetic Student')
     await user.type(screen.getByLabelText('University email'), 'synthetic.student@slu.edu.ph')
@@ -148,6 +162,7 @@ describe('Phase 10D.1 admin views', () => {
     expect(screen.getByLabelText('Setup link')).toHaveValue(setupLink)
     expect(api.provisionStudent).toHaveBeenCalledWith({ fullName: 'Synthetic Student', universityEmail: 'synthetic.student@slu.edu.ph' })
     await user.click(screen.getByRole('button', { name: 'Close' }))
+    await user.click(screen.getByText('Add User'))
     await user.click(screen.getByRole('button', { name: 'Add instructor' }))
     await user.type(screen.getByLabelText('Full name'), 'Synthetic Instructor')
     await user.type(screen.getByLabelText('University email'), 'instructor@slu.edu.ph')
@@ -156,6 +171,26 @@ describe('Phase 10D.1 admin views', () => {
     expect(screen.getByLabelText('Setup link')).toHaveValue(setupLink)
     expect(api.provisionInstructor).toHaveBeenCalledWith({ fullName: 'Synthetic Instructor', universityEmail: 'instructor@slu.edu.ph' })
     expect(screen.queryByRole('button', { name: /add admin|change role/i })).not.toBeInTheDocument()
+  })
+
+  it('keeps provisioning entries and gives accurate recovery for an existing email', async () => {
+    const api = {
+      listUsers: vi.fn().mockResolvedValue({ data: [directoryUser], pagination: { page: 1, totalPages: 1, totalItems: 1, hasPreviousPage: false, hasNextPage: false } }),
+      provisionStudent: vi.fn().mockRejectedValue(new ApiError({ status: 409, code: 'EMAIL_ALREADY_EXISTS', message: 'private database diagnostic', requestId: 'private-reference' })),
+    }
+    const user = userEvent.setup()
+    renderUsers(api)
+    await screen.findByText('Synthetic Student')
+    await user.click(screen.getByText('Add User'))
+    await user.click(screen.getByRole('button', { name: 'Add student' }))
+    await user.type(screen.getByLabelText('Full name'), 'Retained draft name')
+    await user.type(screen.getByLabelText('University email'), directoryUser.email)
+    await user.click(screen.getByRole('button', { name: 'Provision account' }))
+    expect(await screen.findByText('An account with this email already exists. Use another email or manage the existing account.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Full name')).toHaveValue('Retained draft name')
+    expect(screen.getByLabelText('University email')).toHaveValue(directoryUser.email)
+    expect(screen.queryByText(/private database diagnostic|private-reference|record changed/i)).not.toBeInTheDocument()
+    expect(api.provisionStudent).toHaveBeenCalledTimes(1)
   })
 
   it('fails closed when account projections do not match the route identity', async () => {

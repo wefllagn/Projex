@@ -39,7 +39,7 @@ function RoleDashboard({ role }) {
         ))}
       </div>
 
-      <Card title="Current Projex signals" eyebrow="Placeholder data">
+      <Card title="Current Origin signals" eyebrow="Placeholder data">
         <DataTable
           columns={[
             { key: 'item', label: 'Item' },

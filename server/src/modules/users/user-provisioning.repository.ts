@@ -206,6 +206,7 @@ export function createPrismaUserProvisioningRepository(
           select: {
             ...safeUserSelect,
             accountSetupTokens: {
+              where: { purpose: 'ACCOUNT_SETUP' },
               orderBy: { createdAt: 'desc' },
               take: 1,
               select: { createdAt: true },

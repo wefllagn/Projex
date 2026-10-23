@@ -35,6 +35,24 @@ function renderAt(element, path, route = '*') {
 }
 
 describe('Phase 10D.2 admin academic views', () => {
+  it('identifies an Activity workspace accurately without implying a Group project or exposing source actions', async () => {
+    const record = { id: 'activity-repo', repositoryType: 'ACTIVITY_WORKSPACE', repositoryName: 'Student Activity Workspace', status: 'ACTIVE', reviewStatus: 'WORKING', storageStatus: 'READY', storageSizeBytes: null, owner: { id: 'student-1', fullName: 'Synthetic Student', email: 'student@example.test' }, projectTask: null, team: null, counts: {} }
+    const api = { listAcademicRepositories: vi.fn().mockResolvedValue({ data: [record], pagination }) }
+    renderAt(<AdminAcademicListPage kind="repositories" api={api} />, '/admin/academic/repositories')
+    expect(await screen.findByText('Activity workspace')).toBeInTheDocument()
+    expect(within(screen.getByText('Student Activity Workspace').closest('tr')).queryByText('Class project')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /source|credential|clone/i })).not.toBeInTheDocument()
+  })
+
+  it('filters existing Activity repository metadata without offering source or credential controls', async () => {
+    const api = { listAcademicRepositories: vi.fn().mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } }) }
+    const user = userEvent.setup()
+    renderAt(<AdminAcademicListPage kind="repositories" api={api} />, '/admin/academic/repositories')
+    await user.selectOptions(screen.getByLabelText('Type'), 'ACTIVITY_WORKSPACE')
+    await waitFor(() => expect(api.listAcademicRepositories).toHaveBeenLastCalledWith(expect.objectContaining({ repositoryType: 'ACTIVITY_WORKSPACE' }), expect.any(Object)))
+    expect(screen.queryByRole('button', { name: /source|credential|clone/i })).not.toBeInTheDocument()
+  })
+
   it('offers only the approved class and read-only academic areas', () => {
     renderAt(<AdminAcademicHomePage />, '/admin/academic')
     expect(screen.getByRole('link', { name: /classes/i })).toHaveAttribute('href', '/admin/academic/classes')
@@ -50,7 +68,7 @@ describe('Phase 10D.2 admin academic views', () => {
     expect(screen.queryByText('12 active courses')).not.toBeInTheDocument()
   })
 
-  it('creates an official offering from the Course catalog with a selected ACTIVE instructor', async () => {
+  it('creates a Class for an ACTIVE Instructor without a Course prerequisite', async () => {
     const api = {
       listCourses: vi.fn().mockResolvedValue({ data: { items: [{ id: 'course-1', courseNumber: 'IT 112', courseName: 'Programming 1' }] } }),
       listUsers: vi.fn().mockResolvedValue({ data: [{ id: 'instructor-1', fullName: 'Synthetic Instructor', email: 'instructor@slu.edu.ph', role: 'INSTRUCTOR', status: 'ACTIVE' }], pagination }),
@@ -60,14 +78,41 @@ describe('Phase 10D.2 admin academic views', () => {
     renderAt(<AdminClassCreatePage api={api} />, '/admin/academic/classes/new', '/admin/academic/classes/new')
     await user.click(screen.getByRole('button', { name: 'Search instructors' }))
     await user.click(await screen.findByRole('radio'))
-    await user.selectOptions(await screen.findByLabelText('Course'), 'course-1')
+    expect(screen.queryByLabelText('Course')).not.toBeInTheDocument()
     await user.type(screen.getByLabelText(/Class name/), 'Java Programming')
-    await user.type(screen.getByLabelText(/Section/), 'BSIT 2A')
-    await user.type(screen.getByLabelText('Official Class Code'), '9123A')
-    await user.selectOptions(screen.getByLabelText('Academic Period'), 'FIRST_SEMESTER')
-    await user.type(screen.getByLabelText('School year'), '2030-2031')
-    await user.click(screen.getByRole('button', { name: 'Create offering' }))
-    expect(api.createClass).toHaveBeenCalledWith(expect.objectContaining({ instructorId: 'instructor-1', className: 'Java Programming', courseId: 'course-1', officialClassCode: '9123A' }))
+    await user.type(screen.getByLabelText('Class Code'), 'BSIT 2A')
+    await user.selectOptions(screen.getByLabelText('Program'), 'COMPUTER_SCIENCE')
+    await user.selectOptions(screen.getByLabelText('Semester / Term'), 'Short Term')
+    await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
+    await user.click(screen.getByRole('button', { name: 'Create Class' }))
+    expect(api.createClass).toHaveBeenCalledWith({ instructorId: 'instructor-1', program: 'COMPUTER_SCIENCE', className: 'Java Programming', semester: 'Short Term', schoolYear: '2026-2027', section: 'BSIT 2A' })
+    expect(api.listCourses).not.toHaveBeenCalled()
+  })
+
+  it('retains Class inputs on failure and clears an Instructor selection when the search changes', async () => {
+    const api = {
+      listUsers: vi.fn().mockResolvedValue({ data: [{ id: 'instructor-1', fullName: 'Synthetic Instructor', email: 'instructor@slu.edu.ph', role: 'INSTRUCTOR', status: 'ACTIVE' }], pagination }),
+      createClass: vi.fn().mockRejectedValue(new ApiError({ status: 500, message: 'private database failure', requestId: 'private-reference' })),
+    }
+    const user = userEvent.setup()
+    renderAt(<AdminClassCreatePage api={api} />, '/admin/academic/classes/new')
+    expect(screen.getByRole('button', { name: 'Create Class' })).toBeDisabled()
+    await user.type(screen.getByLabelText('Class name'), 'Retained Class')
+    await user.type(screen.getByLabelText('Class Code'), '9123A')
+    await user.selectOptions(screen.getByLabelText('Program'), 'COMPUTER_SCIENCE')
+    await user.selectOptions(screen.getByLabelText('Semester / Term'), 'Short Term')
+    await user.selectOptions(screen.getByLabelText('Academic year'), '2026-2027')
+    await user.click(screen.getByRole('button', { name: 'Search instructors' }))
+    await user.click(await screen.findByRole('radio'))
+    await user.click(screen.getByRole('button', { name: 'Create Class' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Please try again')
+    expect(screen.getByLabelText('Class name')).toHaveValue('Retained Class')
+    expect(screen.getByLabelText('Semester / Term')).toHaveValue('Short Term')
+    expect(screen.getByLabelText('Academic year')).toHaveValue('2026-2027')
+    expect(screen.queryByText(/private database|private-reference/)).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('Find an active instructor'), 'Another')
+    expect(screen.getByRole('button', { name: 'Create Class' })).toBeDisabled()
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
   })
 
   it('fails closed when class detail does not match the route identity', async () => {
@@ -80,7 +125,7 @@ describe('Phase 10D.2 admin academic views', () => {
   it('reveals a join code deliberately and hides it after real revocation', async () => {
     const api = {
       getClass: vi.fn().mockResolvedValue({ data: classRecord }), listClassMembers: vi.fn().mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } }),
-      listCourses: vi.fn().mockResolvedValue({ data: { items: [] } }), getOfficialMetadataImpact: vi.fn().mockResolvedValue({ data: { class: { updatedAt: classRecord.updatedAt }, history: {} } }),
+      listCourses: vi.fn().mockResolvedValue({ data: { items: [] } }), getOfficialMetadataImpact: vi.fn().mockResolvedValue({ data: { class: { id: classRecord.id, updatedAt: classRecord.updatedAt }, history: {} } }),
       listClassStaff: vi.fn().mockResolvedValue({ data: { primary: { id: 'instructor-1', fullName: 'Synthetic Instructor' }, coInstructors: [] } }),
       getJoinCode: vi.fn().mockResolvedValue({ data: { classId: 'class-1', classCode: 'ABCDE-23456', active: true, changedAt: '2030-01-02T00:00:00.000Z' } }),
       revokeJoinCode: vi.fn().mockResolvedValue({ data: { classId: 'class-1', classCode: 'ABCDE-23456', active: false, changedAt: '2030-01-03T00:00:00.000Z' } }),
@@ -103,7 +148,7 @@ describe('Phase 10D.2 admin academic views', () => {
     const refreshed = { ...member, updatedAt: '2030-01-03T00:00:00.000Z' }
     const api = {
       getClass: vi.fn().mockResolvedValue({ data: classRecord }),
-      listCourses: vi.fn().mockResolvedValue({ data: { items: [] } }), getOfficialMetadataImpact: vi.fn().mockResolvedValue({ data: { class: { updatedAt: classRecord.updatedAt }, history: {} } }),
+      listCourses: vi.fn().mockResolvedValue({ data: { items: [] } }), getOfficialMetadataImpact: vi.fn().mockResolvedValue({ data: { class: { id: classRecord.id, updatedAt: classRecord.updatedAt }, history: {} } }),
       listClassStaff: vi.fn().mockResolvedValue({ data: { primary: { id: 'instructor-1', fullName: 'Synthetic Instructor' }, coInstructors: [] } }),
       listClassMembers: vi.fn().mockResolvedValueOnce({ data: [member], pagination }).mockResolvedValue({ data: [refreshed], pagination }),
       updateClassMember: vi.fn().mockRejectedValueOnce(new ApiError({ status: 409, code: 'STALE_CLASS_MEMBER_VERSION', message: 'The class membership changed.' })).mockResolvedValue({ data: { ...refreshed, membershipStatus: 'REMOVED', removedAt: '2030-01-04T00:00:00.000Z', updatedAt: '2030-01-04T00:00:00.000Z' } }),

@@ -43,13 +43,34 @@ export function projectPracticeRun(value = {}) {
   }
 }
 
+export function projectCodeRun(value = {}) {
+  return {
+    id: nullableString(value.id),
+    activityId: nullableString(value.activityId),
+    status: nullableString(value.status) ?? 'queued',
+    compileStatus: nullableString(value.compileStatus) ?? 'pending',
+    runtimeStatus: nullableString(value.runtimeStatus) ?? 'pending',
+    compilerOutput: nullableString(value.compilerOutput),
+    stdout: nullableString(value.stdout),
+    stderr: nullableString(value.stderr),
+    executionTimeMs: nullableNumber(value.executionTimeMs),
+    createdAt: nullableString(value.createdAt),
+    completedAt: nullableString(value.completedAt),
+    expiresAt: nullableString(value.expiresAt),
+  }
+}
+
 export function projectStudentSubmission(value = {}) {
   const status = nullableString(value.status) ?? 'queued'
-  const released = status === 'released' && value.gradeStatus === 'released'
+  const completion = value.gradingMode === 'COMPLETION'
+  const released = status === 'released' && (completion || value.gradeStatus === 'released')
   const failure = value.failureResolution
   return {
     id: nullableString(value.id),
     activityId: nullableString(value.activityId),
+    gradingMode: completion ? 'COMPLETION' : 'GRADED',
+    completionState: completion ? 'COMPLETE' : null,
+    feedbackReleased: released,
     activityTitle: nullableString(value.activityTitle),
     attemptLabel: nullableString(value.attemptLabel) ?? 'Submission attempt',
     replacementForAttemptNumber: nullableNumber(value.replacementForAttemptNumber),
@@ -59,7 +80,7 @@ export function projectStudentSubmission(value = {}) {
     updatedAt: nullableString(value.updatedAt),
     sourceCode: nullableString(value.sourceCode) ?? '',
     visibleTestOutcomes: visibleOutcomes(value.visibleTestOutcomes),
-    gradeStatus: released ? 'released' : 'pending',
+    gradeStatus: completion ? 'ungraded' : released ? 'released' : 'pending',
     isCreditedResult: released && value.isCreditedResult === true,
     failureResolution: failure && typeof failure === 'object'
       ? {
@@ -71,8 +92,7 @@ export function projectStudentSubmission(value = {}) {
       : null,
     ...(released
       ? {
-          finalScore: nullableNumber(value.finalScore),
-          totalPoints: nullableNumber(value.totalPoints),
+          ...(completion ? {} : { finalScore: nullableNumber(value.finalScore), totalPoints: nullableNumber(value.totalPoints) }),
           feedback: nullableString(value.feedback),
         }
       : {}),
@@ -88,6 +108,8 @@ export function projectStudentAttemptState(value = {}) {
     : null
   return {
     activityId: nullableString(value.activityId),
+    gradingMode: value.gradingMode === 'COMPLETION' ? 'COMPLETION' : 'GRADED',
+    completionState: value.gradingMode === 'COMPLETION' ? (value.completionState === 'COMPLETE' ? 'COMPLETE' : 'NOT_SUBMITTED') : null,
     activityStatus: nullableString(value.activityStatus),
     dueState: nullableString(value.dueState),
     maxAttempts: nullableNumber(value.maxAttempts) ?? 0,

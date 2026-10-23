@@ -1,9 +1,11 @@
 import {
   Navigate,
+  Outlet,
   RouterProvider,
   createBrowserRouter,
 } from 'react-router-dom'
 import './App.css'
+import { ApplicationErrorBoundary, RouteErrorRecovery, UnavailablePage } from './components/ApplicationErrorBoundary.jsx'
 import { AuthProvider } from './auth/AuthContext.jsx'
 import ProtectedRoute from './auth/ProtectedRoute.jsx'
 import ClassProvider from './classes/ClassProvider.jsx'
@@ -11,13 +13,19 @@ import DashboardLayout from './layouts/DashboardLayout.jsx'
 import AdminRoutePage from './admin/AdminViews.jsx'
 import { adminChildren } from './admin/admin-routes.jsx'
 import AccountSetupPage from './pages/AccountSetupPage.jsx'
-import LoginPage, { InstructorLoginPage, RoleLandingPage } from './pages/LoginPage.jsx'
+import LoginPage, { InstructorLoginPage } from './pages/LoginPage.jsx'
+import OriginLandingPage from './landing/OriginLandingPage.jsx'
 import PlaceholderPage from './pages/PlaceholderPage.jsx'
 import InstructorRoutePage from './pages/InstructorPages.jsx'
 import RoleDashboard from './pages/RoleDashboard.jsx'
 import StudentRoutePage from './pages/StudentPages.jsx'
 import { routeCatalog } from './data/projexData.js'
 import { CapabilityProvider } from './capabilities/CapabilityProvider.jsx'
+import './design/academic-refinement.css'
+import OriginApplication from './origin/OriginApplication.jsx'
+import './origin/origin-application.css'
+import './origin/origin-workspace.css'
+import './origin/origin-polish.css'
 
 function getRouteElement(role, route) {
   if (role.id === 'student') {
@@ -36,7 +44,7 @@ function getRouteElement(role, route) {
 }
 
 function RoleLayout({ role }) {
-  const layout = <DashboardLayout role={role} />
+  const layout = <OriginApplication role={role}><DashboardLayout role={role} /></OriginApplication>
   return role.id === 'student' || role.id === 'instructor'
     ? <ClassProvider>{layout}</ClassProvider>
     : layout
@@ -64,6 +72,7 @@ const roleRoutes = routeCatalog.flatMap((role) => [
             <RoleDashboard role={role} />
           ),
       },
+      { path: 'gradebook', element: getRouteElement(role, { path: 'gradebook' }) },
       ...role.routes.map((route) => ({
         path: route.path,
         element: getRouteElement(role, route),
@@ -72,10 +81,10 @@ const roleRoutes = routeCatalog.flatMap((role) => [
   },
 ])
 
-const router = createBrowserRouter([
+const router = createBrowserRouter([{ element: <Outlet />, errorElement: <RouteErrorRecovery />, children: [
   {
     path: '/',
-    element: <RoleLandingPage />,
+    element: <OriginLandingPage />,
   },
   {
     path: '/student-login',
@@ -93,20 +102,21 @@ const router = createBrowserRouter([
     path: '/account-setup',
     element: <AccountSetupPage />,
   },
+  { path: '/password-recovery', element: <AccountSetupPage recovery /> },
   ...roleRoutes,
   {
     path: '*',
-    element: <Navigate to="/" replace />,
+    element: <UnavailablePage />,
   },
-])
+]}])
 
 function App() {
   return (
-    <CapabilityProvider>
+    <ApplicationErrorBoundary><CapabilityProvider>
       <AuthProvider>
         <RouterProvider router={router} />
       </AuthProvider>
-    </CapabilityProvider>
+    </CapabilityProvider></ApplicationErrorBoundary>
   )
 }
 

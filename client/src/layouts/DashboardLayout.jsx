@@ -1,15 +1,26 @@
+import ClassIdentityBadge from '../classes/ClassIdentityBadge.jsx'
+import AccountMenu from '../components/AccountMenu.jsx'
+import { Brand } from '../origin/OriginPrimitives.jsx'
+import { StudentInvitationProvider, StudentNotificationMenu } from '../classes/StudentInvitationNotifications.jsx'
+import '../design/academic-ui.css'
+import AppDialog from '../components/AppDialog.jsx'
+import ProjexIcon from '../components/icons/ProjexIcon.jsx'
+import ProgramField from '../classes/ProgramField.jsx'
+import '../instructor-overhaul.css'
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
-import { classHref, classInitial, classOfferingLabel } from '../classes/class-links.js'
+import { classHref, classOfferingLabel } from '../classes/class-links.js'
 import { courseOptions, sectionOptions } from '../data/projexData.js'
+import AcademicFields from '../classes/AcademicFields.jsx'
+import '../admin/admin-refinement.css'
 
 function StudentSidebarLink({ to, children, end = false, count, icon }) {
   return (
-    <NavLink to={to} end={end} className="student-sidebar__link">
-      <span className={`student-sidebar__icon student-sidebar__icon--${icon}`} aria-hidden="true" />
+    <NavLink to={to} end={end} className="student-sidebar__link" aria-label={typeof children === 'string' ? children : undefined} title={typeof children === 'string' ? children : undefined}>
+      <ProjexIcon name={icon} className="sidebar-vector" />
       <span>{children}</span>
       {count && <span className="student-sidebar__count">{count}</span>}
     </NavLink>
@@ -28,7 +39,7 @@ function SidebarBrand({ to, label, collapsed, onToggle, onClose }) {
         <span aria-hidden="true" />
       </button>
       <NavLink to={to} className="student-brand" aria-label={label}>
-        <img src="/assets/brand/projex-sidebar-logo.png" alt="Projex" />
+        <Brand />
       </NavLink>
       <button type="button" className="student-mobile-nav-close" onClick={onClose} aria-label="Close navigation">×</button>
     </div>
@@ -63,11 +74,11 @@ function MobileShellNavigation({ role, open, setOpen, close, navigationId }) {
   const accountOpen = accountRoute === location.key
 
   useEffect(() => {
-    if (!accountOpen) return undefined
+    if (!accountOpen || role !== 'Administrator') return undefined
     const closeOnEscape = (event) => { if (event.key === 'Escape') setAccountRoute(null) }
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [accountOpen])
+  }, [accountOpen, role])
 
   return (
     <>
@@ -82,8 +93,11 @@ function MobileShellNavigation({ role, open, setOpen, close, navigationId }) {
         >
           <span aria-hidden="true">☰</span>
         </button>
-        <span className="student-mobile-header__brand">Projex</span>
-        <div className="student-mobile-account">
+        <span className="student-mobile-header__brand"><Brand /></span>
+        {role !== 'Administrator' ? <div className="academic-mobile-controls">
+          {role === 'Student' && <StudentNotificationMenu onOpen={() => { setAccountRoute(null); close() }} />}
+          <AccountMenu expanded={accountOpen} onExpandedChange={value => { if (value) close(); setAccountRoute(value ? location.key : null) }} />
+        </div> : <div className="student-mobile-account">
           <button
             type="button"
             className="student-mobile-header__identity"
@@ -108,7 +122,7 @@ function MobileShellNavigation({ role, open, setOpen, close, navigationId }) {
               }}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
             </div>
           )}
-        </div>
+        </div>}
       </header>
       {open && <button type="button" className="student-mobile-nav-backdrop" onClick={close} aria-label="Close navigation menu" />}
     </>
@@ -120,20 +134,19 @@ function closeMobileNavigationOnLink(event, close) {
 }
 
 function SidebarClassLink({ item, to, active }) {
-  const initial = classInitial(item)
   return (
-    <NavLink
+    <Link
       to={to}
+      aria-current={active ? 'page' : undefined}
+      aria-label={`${item.className} · ${classOfferingLabel(item)}${item.status === 'ARCHIVED' ? ' · Archived' : ''}`}
       className={active ? 'student-class-link is-active' : 'student-class-link'}
     >
-      <span className={`student-class-dot student-class-dot--${initial.toLowerCase()}`}>
-        {initial}
-      </span>
+      <ClassIdentityBadge className="student-class-dot" classRecord={item} />
       <span className="student-class-link__text">
         <strong>{item.className}</strong>
         <small>{classOfferingLabel(item)}{item.status === 'ARCHIVED' ? ' · Archived' : ''}</small>
       </span>
-    </NavLink>
+    </Link>
   )
 }
 
@@ -141,35 +154,28 @@ export function CreateClassModal({ onClose, onCreated }) {
   const { api, upsertClass } = useClasses()
   const [form, setForm] = useState({
     className: '',
+    program: '',
     section: '',
     semester: '',
     schoolYear: '',
-    courseId: '',
     schedule: '',
-    days: '',
     room: '',
   })
-  const [courses, setCourses] = useState([])
-  const [courseSearch, setCourseSearch] = useState('')
-  useEffect(() => {
-    const controller = new AbortController()
-    api.listCourses({ pageSize: 100, ...(courseSearch.trim() ? { search: courseSearch.trim() } : {}) }, { signal: controller.signal })
-      .then((response) => setCourses(response.data.items))
-      .catch((cause) => { if (cause?.name !== 'AbortError') setCourses([]) })
-    return () => controller.abort()
-  }, [api, courseSearch])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [classCodeError, setClassCodeError] = useState('')
   const [invitationEmail, setInvitationEmail] = useState('')
   const [invitationTargets, setInvitationTargets] = useState([])
   const [invitationLookup, setInvitationLookup] = useState({ status: 'idle', message: '' })
 
   const updateField = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }))
+    if (field === 'section') setClassCodeError('')
   }
 
   const submit = async (event) => {
     event.preventDefault()
+    if (!form.section.trim()) { setClassCodeError('Enter a Class Code.'); return }
     setSaving(true)
     setError(null)
     try {
@@ -213,38 +219,27 @@ export function CreateClassModal({ onClose, onCreated }) {
   }
 
   return (
-    <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="create-class-title">
-      <form className="instructor-action-modal" onSubmit={submit}>
-        <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close create class" />
-        <p>Create Class</p>
-        <h2 id="create-class-title">New teaching class</h2>
-        <div className="instructor-form-grid">
-          <label>
+    <AppDialog title="New Class" className="projex-dialog--class" onClose={onClose} busy={saving}>
+      <form className="class-create-form" onSubmit={submit} aria-busy={saving}>
+        <div className="class-create-body">
+        <div className="instructor-form-grid class-create-grid">
+          <label className="class-create-wide">
             Class Name
-            <input value={form.className} onChange={updateField('className')} maxLength={200} required />
-          </label>
-          <label>Find Course (optional)<input value={courseSearch} onChange={(event) => setCourseSearch(event.target.value)} placeholder="Search number or name" /></label>
-          <label>Course (optional)<select value={form.courseId} onChange={updateField('courseId')}><option value="">No catalog Course</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.courseNumber} — {course.courseName}</option>)}</select></label>
-          <label>
-            Section (optional)
-            <input value={form.section} onChange={updateField('section')} maxLength={100} />
+            <input value={form.className} onChange={updateField('className')} maxLength={200} required disabled={saving} />
           </label>
           <label>
-            Informal term label (optional)
-            <input value={form.semester} onChange={updateField('semester')} maxLength={100} placeholder="Practice term" />
+            Class Code
+            <input value={form.section} onChange={updateField('section')} maxLength={100} required disabled={saving} aria-invalid={Boolean(classCodeError)} aria-describedby={classCodeError ? 'new-class-code-error' : undefined} />
+            {classCodeError && <small id="new-class-code-error" className="class-form-error" role="alert">{classCodeError}</small>}
           </label>
-          <label>
-            School year (optional)
-            <input value={form.schoolYear} onChange={updateField('schoolYear')} maxLength={20} placeholder="2026-2027" />
-          </label>
-          <label>Schedule (optional)<input value={form.schedule} onChange={updateField('schedule')} maxLength={200} /></label>
-          <label>Days (optional)<input value={form.days} onChange={updateField('days')} maxLength={100} /></label>
-          <label>Room (optional)<input value={form.room} onChange={updateField('room')} maxLength={100} /></label>
+          <ProgramField value={form.program} onChange={value => setForm(old => ({ ...old, program: value }))} required disabled={saving} />
+          <AcademicFields semester={form.semester} schoolYear={form.schoolYear} onChange={(field, value) => setForm((current) => ({ ...current, [field]: value }))} disabled={saving} />
+          <label>Schedule Type (optional)<input value={form.schedule} onChange={updateField('schedule')} maxLength={200} disabled={saving} /></label>
+          <label>Room (optional)<input value={form.room} onChange={updateField('room')} maxLength={100} disabled={saving} /></label>
         </div>
-        <section className="class-create-invitations">
+        <details className="class-create-invitations"><summary>Invite Students (optional)</summary>
           <div>
-            <strong>Invite Students (optional)</strong>
-            <span>Only existing registered Projex Students can be invited.</span>
+            <span>Only existing registered Origin Students can be invited.</span>
             <span>If any listed Student is no longer eligible, the class and all invitations will not be created.</span>
           </div>
           <div className="class-invitation-create-row">
@@ -292,18 +287,27 @@ export function CreateClassModal({ onClose, onCreated }) {
               ))}
             </ul>
           )}
-        </section>
-        <p className="class-form-note">Projex creates the join code securely on the server. Manage it after the class is created.</p>
+        </details>
+
         {error && <p className="class-form-error" role="alert">{describeApiError(error)}</p>}
-        <div className="student-submit-modal-actions">
-          <button type="button" className="student-outline-action" onClick={onClose}>Cancel</button>
+        </div>
+        <footer className="class-create-footer">
+          <button type="button" className="student-outline-action" onClick={onClose} disabled={saving}>Cancel</button>
           <button type="submit" className="student-primary-action" disabled={saving}>
             {saving ? 'Creating…' : 'Create Class'}
           </button>
-        </div>
+        </footer>
       </form>
-    </div>
+    </AppDialog>
   )
+}
+
+function AcademicSidebarSignout() {
+  const auth = useAuth()
+  const navigate = useNavigate()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  return <div className="instructor-sidebar-signout academic-sidebar-signout"><button type="button" className="student-sidebar__link" title="Sign out" aria-label="Sign out" disabled={busy} onClick={async () => { setBusy(true); try { await auth.logout(); navigate('/', { replace: true }) } catch (cause) { setError(describeApiError(cause)) } finally { setBusy(false) } }}><ProjexIcon name="signout" /><span>{busy ? 'Signing out…' : 'Sign out'}</span></button>{error && <p role="alert">{error}</p>}</div>
 }
 
 function InstructorDashboardLayout() {
@@ -314,12 +318,12 @@ function InstructorDashboardLayout() {
   const { classes, requestedClassId, status, error, pagination, loadMore } = useClasses()
 
   return (
-    <div className={`${sidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'}${mobileNavigation.open ? ' is-mobile-menu-open' : ''}`}>
+    <div className={`${sidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'} projex-academic-shell${mobileNavigation.open ? ' is-mobile-menu-open' : ''}`}>
       <MobileShellNavigation role="Instructor" navigationId="instructor-navigation" {...mobileNavigation} />
       <aside id="instructor-navigation" className="student-sidebar">
         <SidebarBrand
           to="/instructor"
-          label="Projex instructor home"
+          label="Origin instructor home"
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((current) => !current)}
           onClose={mobileNavigation.close}
@@ -329,12 +333,12 @@ function InstructorDashboardLayout() {
           <StudentSidebarLink to="/instructor" end icon="home">
             Home
           </StudentSidebarLink>
-          <StudentSidebarLink to="/instructor/review-queues" icon="todo">
-            Review Queues
+          <StudentSidebarLink to="/instructor/review-queues" icon="review">
+            To Review
           </StudentSidebarLink>
 
           <div className="student-sidebar__group">
-            <p>MY CLASSES</p>
+            <p>My classes</p>
             <div className="student-class-list">
               {classes.map((item) => (
                 <SidebarClassLink
@@ -354,14 +358,15 @@ function InstructorDashboardLayout() {
 
           <div className="student-sidebar__lower">
             <button type="button" className="student-sidebar__link instructor-sidebar-button" onClick={() => { mobileNavigation.close(); setCreateClassOpen(true) }}>
-              <span className="student-sidebar__icon student-sidebar__icon--plus" aria-hidden="true" />
+              <ProjexIcon name="createClass" />
               <span>Create Class</span>
             </button>
           </div>
         </nav>
+        <AcademicSidebarSignout />
       </aside>
 
-      <main className="student-main">
+      <main id="origin-main" tabIndex={-1} className="student-main">
         <Outlet />
       </main>
 
@@ -391,12 +396,12 @@ function StudentDashboardLayout() {
   const { classes, requestedClassId, status, error, pagination, loadMore } = useClasses()
 
   return (
-    <div className={`${effectiveSidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'}${isCodingWorkspace ? ' is-coding-workspace' : ''}${mobileNavigation.open ? ' is-mobile-menu-open' : ''}`}>
+    <StudentInvitationProvider><div className={`${effectiveSidebarCollapsed ? 'student-app-shell is-sidebar-collapsed' : 'student-app-shell'} projex-academic-shell${isCodingWorkspace ? ' is-coding-workspace' : ''}${mobileNavigation.open ? ' is-mobile-menu-open' : ''}`}>
       <MobileShellNavigation role="Student" navigationId="student-navigation" {...mobileNavigation} />
       <aside id="student-navigation" className="student-sidebar">
         <SidebarBrand
           to="/student"
-          label="Projex student home"
+          label="Origin student home"
           collapsed={effectiveSidebarCollapsed}
           onToggle={() => setSidebarCollapsed((current) => !current)}
           onClose={mobileNavigation.close}
@@ -409,12 +414,9 @@ function StudentDashboardLayout() {
           <StudentSidebarLink to="/student/todo" icon="todo">
             To-do
           </StudentSidebarLink>
-          <StudentSidebarLink to="/student/submissions" icon="activity">
-            My Submissions
-          </StudentSidebarLink>
 
           <div className="student-sidebar__group">
-            <p>MY CLASSES</p>
+            <p>My classes</p>
             <div className="student-class-list">
               {classes.map((item) => (
                 <SidebarClassLink
@@ -433,20 +435,22 @@ function StudentDashboardLayout() {
           </div>
 
           <div className="student-sidebar__lower">
-            <StudentSidebarLink to="/student/repositories" icon="folder">My Repositories</StudentSidebarLink>
-            <StudentSidebarLink to="/student/join-class" icon="plus">Join Class</StudentSidebarLink>
+            <StudentSidebarLink to="/student/repositories" icon="repository">My Repositories</StudentSidebarLink>
           </div>
         </nav>
+        <AcademicSidebarSignout />
       </aside>
 
-      <main className="student-main">
+      <main id="origin-main" tabIndex={-1} className="student-main">
         <Outlet />
       </main>
-    </div>
+    </div></StudentInvitationProvider>
   )
 }
 
 function AdminDashboardLayout() {
+  const { pathname } = useLocation()
+  const academicActive = pathname === '/admin/academic' || ['/activities', '/submissions', '/project-tasks', '/repositories'].some((suffix) => pathname.startsWith(`/admin/academic${suffix}`))
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const navigate = useNavigate()
@@ -469,7 +473,7 @@ function AdminDashboardLayout() {
       <aside id="administrator-navigation" className="student-sidebar admin-sidebar">
         <SidebarBrand
           to="/admin"
-          label="Projex administrator home"
+          label="Origin administrator home"
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((current) => !current)}
           onClose={mobileNavigation.close}
@@ -477,15 +481,16 @@ function AdminDashboardLayout() {
         <nav className="student-sidebar__nav" aria-label="Administrator navigation" onClick={(event) => closeMobileNavigationOnLink(event, mobileNavigation.close)}>
           <StudentSidebarLink to="/admin" end icon="home">Overview</StudentSidebarLink>
           <StudentSidebarLink to="/admin/users" icon="people">Users</StudentSidebarLink>
+          <StudentSidebarLink to="/admin/academic/classes" icon="people">Classes</StudentSidebarLink>
+          <Link to="/admin/academic" className={`student-sidebar__link${academicActive ? ' active' : ''}`} aria-current={academicActive ? 'page' : undefined}><span className="student-sidebar__icon student-sidebar__icon--activity" aria-hidden="true" /><span>Academic Records</span></Link>
           <div className="student-sidebar__group">
-            <p>ACADEMIC ADMINISTRATION</p>
-            <StudentSidebarLink to="/admin/academic/classes" icon="people">Classes</StudentSidebarLink>
-            <StudentSidebarLink to="/admin/academic" icon="activity">Academic records</StudentSidebarLink>
+            <p>System</p>
+            <StudentSidebarLink to="/admin/operations" icon="folder">Operations</StudentSidebarLink>
+            <StudentSidebarLink to="/admin/audit-events" icon="todo">Audit Events</StudentSidebarLink>
           </div>
           <div className="student-sidebar__group">
-            <p>NEXT MILESTONE</p>
-            <StudentSidebarLink to="/admin/operations" icon="folder">Operations</StudentSidebarLink>
-            <StudentSidebarLink to="/admin/audit-events" icon="todo">Audit events</StudentSidebarLink>
+            <p>Tools</p>
+            <StudentSidebarLink to="/admin/academic/courses" icon="folder">Course Catalog</StudentSidebarLink>
           </div>
           <div className="student-sidebar__lower admin-sidebar__account">
             <div className="admin-sidebar-identity">
@@ -499,7 +504,7 @@ function AdminDashboardLayout() {
           </div>
         </nav>
       </aside>
-      <main className="student-main admin-main">
+      <main id="origin-main" tabIndex={-1} className="student-main admin-main">
         <Outlet />
       </main>
     </div>
@@ -539,7 +544,7 @@ function DashboardLayout({ role }) {
         <NavLink to="/" className="brand">
           <span className="brand__mark">PX</span>
           <span>
-            <strong>Projex</strong>
+            <strong>Origin</strong>
             <small>Saint Louis University</small>
           </span>
         </NavLink>

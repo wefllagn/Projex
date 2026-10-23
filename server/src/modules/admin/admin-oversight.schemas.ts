@@ -46,7 +46,7 @@ export const adminProjectTaskQuerySchema = z.object({
 export const adminRepositoryQuerySchema = z.object({
   ...pagination,
   search,
-  repositoryType: z.enum(['CLASS_PROJECT', 'PERSONAL', 'CLASS_WORKSPACE']).optional(),
+  repositoryType: z.enum(['CLASS_PROJECT', 'PERSONAL', 'CLASS_WORKSPACE', 'ACTIVITY_WORKSPACE']).optional(),
   status: z.enum(['ACTIVE', 'INACTIVE', 'ARCHIVED']).optional(),
   storageStatus: z.enum(['PENDING', 'PROVISIONING', 'READY', 'FAILED', 'QUARANTINED']).optional(),
   reviewStatus: z.enum(['WORKING', 'READY_FOR_REVIEW', 'CHANGES_REQUESTED', 'APPROVED']).optional(),
@@ -89,7 +89,7 @@ export const adminAuditEventQuerySchema = z.object({
   actorAdminId: uuid,
   targetId: uuid,
   action: z.enum([
-    'USER_STUDENT_PROVISIONED', 'USER_INSTRUCTOR_PROVISIONED', 'USER_SETUP_REISSUED',
+    'USER_STUDENT_PROVISIONED', 'USER_INSTRUCTOR_PROVISIONED', 'USER_SETUP_REISSUED', 'USER_PASSWORD_RECOVERY_ISSUED',
     'USER_STATUS_CHANGED', 'USER_SESSIONS_REVOKED', 'CLASS_CREATED', 'CLASS_UPDATED',
     'CLASS_ARCHIVED', 'CLASS_RESTORED', 'CLASS_JOIN_CODE_ROTATED',
     'CLASS_JOIN_CODE_REVOKED', 'CLASS_OFFICIAL_METADATA_CORRECTED', 'CLASS_MEMBER_REMOVED', 'CLASS_MEMBER_REACTIVATED',

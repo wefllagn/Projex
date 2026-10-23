@@ -1,4 +1,6 @@
 import type { PrismaClient, UserRole, UserStatus } from '@prisma/client'
+import { AppError } from '../../shared/errors/app-error.js'
+import { INVALID_LOGIN_MESSAGE } from './auth.constants.js'
 import type {
   AuthContext,
   AuthSession,
@@ -38,6 +40,7 @@ export interface CreateSessionInput extends SessionMetadata {
   csrfTokenHash: string
   expiresAt: Date
   updateLastLogin?: boolean
+  verifiedPasswordHash?: string
 }
 
 export interface RotateSessionInput extends CreateSessionInput {
@@ -121,10 +124,13 @@ export function createPrismaAuthRepository(prisma: PrismaClient): AuthRepository
     async createSession(input) {
       return prisma.$transaction(async (transaction) => {
         if (input.updateLastLogin) {
-          await transaction.user.update({
-            where: { id: input.userId },
+          // Compare the credential under the same row lock used by password
+          // recovery, so an in-flight old-password login cannot survive a reset.
+          const matched = await transaction.user.updateMany({
+            where: { id: input.userId, status: 'ACTIVE', ...(input.verifiedPasswordHash !== undefined ? { passwordHash: input.verifiedPasswordHash } : {}) },
             data: { lastLoginAt: new Date() },
           })
+          if (matched.count !== 1) throw new AppError({ statusCode: 401, code: 'INVALID_CREDENTIALS', message: INVALID_LOGIN_MESSAGE })
         }
 
         return transaction.refreshSession.create({

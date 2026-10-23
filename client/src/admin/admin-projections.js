@@ -1,5 +1,5 @@
 export class AdminProjectionError extends Error {
-  constructor(message = 'Projex returned an invalid administrative response.') {
+  constructor(message = 'Origin returned an invalid administrative response.') {
     super(message)
     this.name = 'AdminProjectionError'
   }
@@ -186,7 +186,7 @@ export function assertMatchingAdminAccount(directoryUser, account, expectedId) {
     directoryUser.role !== account.role ||
     directoryUser.status !== account.status
   ) {
-    throw new AdminProjectionError('Projex returned conflicting administrative account records.')
+    throw new AdminProjectionError('Origin returned conflicting administrative account records.')
   }
   return account
 }

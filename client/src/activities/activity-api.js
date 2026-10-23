@@ -13,6 +13,8 @@ function queryString(query = {}) {
 
 export function createActivityApi(client = apiClient) {
   return {
+    listTopics(classId, page = 1, options) { return client.get(`/classes/${classId}/topics?page=${page}`, options) },
+    changeTopic(classId, input, options) { return client.post(`/classes/${classId}/topics`, input, options) },
     listActivities(classId, query, options) {
       return client.get(`/classes/${classId}/activities${queryString(query)}`, options)
     },

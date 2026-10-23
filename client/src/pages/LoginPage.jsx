@@ -1,10 +1,11 @@
+import OriginLogin from "../origin/OriginLogin.jsx";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiError, describeApiError } from "../api/api-client.js";
 import { useAuth } from "../auth/auth-context.js";
 import { roleHome, roleMatchesPath } from "../auth/auth-routes.js";
 
-function useLoginController() {
+function useLoginController(role) {
   const auth = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -13,13 +14,20 @@ function useLoginController() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [roleMismatch, setRoleMismatch] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
+  const requestedRole = role.toUpperCase();
+  // Admin retains the existing shared Instructor sign-in entry.
+  const matchingRole = auth.user?.role === requestedRole ||
+    (requestedRole === "INSTRUCTOR" && auth.user?.role === "ADMIN");
+  const switchingAccount = auth.status === "authenticated" && !matchingRole;
+
   useEffect(() => {
-    if (auth.status === "authenticated") {
+    if (auth.status === "authenticated" && matchingRole) {
       navigate(roleHome(auth.user.role), { replace: true });
     }
-  }, [auth.status, auth.user, navigate]);
+  }, [auth.status, auth.user, matchingRole, navigate]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -29,6 +37,8 @@ function useLoginController() {
 
     try {
       const user = await auth.login(email, password);
+      const accepted = user.role === requestedRole || (requestedRole === "INSTRUCTOR" && user.role === "ADMIN");
+      if (!accepted) { setRoleMismatch(true); return; }
       const intended = typeof location.state?.from === "string" ? location.state.from : "";
       navigate(
         intended && roleMatchesPath(user.role, intended) ? intended : roleHome(user.role),
@@ -36,7 +46,7 @@ function useLoginController() {
       );
     } catch (error) {
       setFieldErrors(error instanceof ApiError ? error.fieldErrors : {});
-      setMessage(error instanceof ApiError && error.status === 401 ? error.message : describeApiError(error));
+      setMessage(error instanceof ApiError && error.status === 401 ? "Email or password is invalid." : describeApiError(error));
     } finally {
       setPassword("");
       setShowPassword(false);
@@ -44,7 +54,32 @@ function useLoginController() {
     }
   };
 
+  const switchAccount = async () => {
+    setSubmitting(true);
+    setMessage("");
+    try {
+      await auth.logout({ requireServerConfirmation: true });
+      setRoleMismatch(false);
+      setEmail("");
+      setPassword("");
+      setShowPassword(false);
+      navigate(location.pathname, { replace: true, state: location.state });
+    } catch (error) {
+      setMessage(describeApiError(error));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return {
+    roleMismatch,
+    authStatus: auth.status,
+    authError: auth.error,
+    retrySession: auth.bootstrap,
+    currentRole: auth.user?.role === "ADMIN" ? "Admin" : auth.user?.role === "INSTRUCTOR" ? "Instructor" : "Student",
+    continueAccount: () => navigate(roleHome(auth.user.role), { replace: true }),
+    switchingAccount,
+    switchAccount,
     email,
     fieldErrors,
     message,
@@ -211,8 +246,8 @@ export function RoleLandingPage() {
       <span className="role-landing-glow role-landing-glow--two" aria-hidden="true" />
       <div className="role-landing-shell">
         <header className="role-landing-brandbar">
-          <Link className="role-landing-brand" to="/" aria-label="Projex home">
-            <img src="/assets/brand/projex-landingpage-logo.png" alt="Projex" />
+          <Link className="role-landing-brand" to="/" aria-label="Origin home">
+            <img src="/assets/brand/projex-landingpage-logo.png" alt="Origin" />
           </Link>
           <div className="role-landing-school">
             <span>Saint Louis University</span>
@@ -255,7 +290,7 @@ export function RoleLandingPage() {
 
           <aside
             className="role-landing-preview"
-            aria-label="Projex product preview"
+            aria-label="Origin product preview"
           >
             <div className="role-landing-preview-card role-landing-preview-card--main">
               <div className="role-landing-preview-top">
@@ -367,7 +402,7 @@ export function RoleLandingPage() {
                 (activeBenefit === benefitCards.length - 1 ? " is-visible" : "")
               }
             >
-              &copy; 2026 Projex. All rights reserved.
+              &copy; 2026 Origin. All rights reserved.
             </footer>
           </div>
         </section>
@@ -377,256 +412,13 @@ export function RoleLandingPage() {
 }
 
 export function InstructorLoginPage() {
-  const login = useLoginController();
-
-  return (
-    <main className="student-login-page">
-      <section className="student-login-stage" aria-label="Instructor login">
-        <img
-          className="student-login-logo"
-          src="/assets/brand/projex-login-logo.png"
-          alt="Projex by Saint Louis University"
-        />
-
-        <form
-          className="student-login-card"
-          onSubmit={login.submit}
-        >
-          <div>
-            <h1>Welcome, instructor!</h1>
-            <p>Let's get started!</p>
-          </div>
-
-          <label className="student-login-field">
-            <span>Email</span>
-            <input
-              type="email"
-              autoComplete="email"
-              value={login.email}
-              onChange={(event) => login.setEmail(event.target.value)}
-              disabled={login.submitting}
-              required
-            />
-            {login.fieldErrors.email && <small className="auth-field-error">{login.fieldErrors.email}</small>}
-          </label>
-
-          <label className="student-login-field">
-            <span>Password</span>
-            <div className="student-password-control">
-              <input
-                type={login.showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                value={login.password}
-                onChange={(event) => login.setPassword(event.target.value)}
-                disabled={login.submitting}
-                required
-              />
-              <button
-                type="button"
-                className="student-eye-button"
-                aria-label={login.showPassword ? "Hide password" : "Show password"}
-                onClick={() => login.setShowPassword(!login.showPassword)}
-              />
-            </div>
-          </label>
-
-          {login.message && <p className="auth-form-message is-error" role="alert">{login.message}</p>}
-          <button type="submit" className="student-login-button" disabled={login.submitting}>
-            {login.submitting ? "Signing in…" : "Login"}
-          </button>
-        </form>
-
-        <aside
-          className="student-login-info"
-          aria-label="Projex instructor information"
-        >
-          <div className="student-login-info__copy">
-            <h2>Your Projex classroom, reviewed in minutes.</h2>
-            <p>
-              Submissions, code progress, and feedback without jumping between
-              tools.
-            </p>
-          </div>
-          <img
-            className="student-login-mascot"
-            src="/assets/brand/projex-login-mascot.png"
-            alt=""
-            aria-hidden="true"
-          />
-          <div className="student-login-feature-list">
-            <div className="student-login-feature">
-              <span
-                className="student-login-feature-icon student-login-feature-icon--activities"
-                aria-hidden="true"
-              />
-              <div>
-                <strong>Activity Monitoring</strong>
-                <p>
-                  Track deadlines, final submissions, checking results, and
-                  grading queues.
-                </p>
-              </div>
-            </div>
-            <div className="student-login-feature">
-              <span
-                className="student-login-feature-icon student-login-feature-icon--teams"
-                aria-hidden="true"
-              />
-              <div>
-                <strong>Repository Review</strong>
-                <p>
-                  Inspect team repositories, contribution signals, and project
-                  readiness.
-                </p>
-              </div>
-            </div>
-            <div className="student-login-feature">
-              <span
-                className="student-login-feature-icon student-login-feature-icon--progress"
-                aria-hidden="true"
-              />
-              <div>
-                <strong>Feedback & Analytics</strong>
-                <p>
-                  Prepare feedback, release grades, and watch class learning
-                  progress.
-                </p>
-              </div>
-            </div>
-          </div>
-          <p className="student-login-designed">
-            Designed for programming education at Saint Louis University.
-          </p>
-        </aside>
-
-      </section>
-    </main>
-  );
+  const login = useLoginController("instructor");
+  return <OriginLogin role="instructor" login={login} />;
 }
 
 function LoginPage() {
-  const login = useLoginController();
-
-  return (
-    <main className="student-login-page">
-      <section className="student-login-stage" aria-label="Student login">
-        <img
-          className="student-login-logo"
-          src="/assets/brand/projex-login-logo.png"
-          alt="Projex by Saint Louis University"
-        />
-
-        <form
-          className="student-login-card"
-          onSubmit={login.submit}
-        >
-          <div>
-            <h1>Welcome, student!</h1>
-            <p>Let's get started!</p>
-          </div>
-
-          <label className="student-login-field">
-            <span>Email</span>
-            <input
-              type="email"
-              autoComplete="email"
-              value={login.email}
-              onChange={(event) => login.setEmail(event.target.value)}
-              disabled={login.submitting}
-              required
-            />
-            {login.fieldErrors.email && <small className="auth-field-error">{login.fieldErrors.email}</small>}
-          </label>
-
-          <label className="student-login-field">
-            <span>Password</span>
-            <div className="student-password-control">
-              <input
-                type={login.showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                value={login.password}
-                onChange={(event) => login.setPassword(event.target.value)}
-                disabled={login.submitting}
-                required
-              />
-              <button
-                type="button"
-                className="student-eye-button"
-                aria-label={login.showPassword ? "Hide password" : "Show password"}
-                onClick={() => login.setShowPassword(!login.showPassword)}
-              />
-            </div>
-          </label>
-
-          {login.message && <p className="auth-form-message is-error" role="alert">{login.message}</p>}
-          <button type="submit" className="student-login-button" disabled={login.submitting}>
-            {login.submitting ? "Signing in…" : "Login"}
-          </button>
-        </form>
-
-        <aside className="student-login-info" aria-label="Projex information">
-          <div className="student-login-info__copy">
-            <h2>Welcome to Projex</h2>
-            <p>
-              Your all-in-one platform for programming education, collaboration,
-              and growth.
-            </p>
-          </div>
-          <img
-            className="student-login-mascot"
-            src="/assets/brand/projex-login-mascot.png"
-            alt=""
-            aria-hidden="true"
-          />
-          <div className="student-login-feature-list">
-            <div className="student-login-feature">
-              <span
-                className="student-login-feature-icon student-login-feature-icon--activities"
-                aria-hidden="true"
-              />
-              <div>
-                <strong>Class Activities & Submissions</strong>
-                <p>
-                  Access activities, submit your work, and track your
-                  submissions easily.
-                </p>
-              </div>
-            </div>
-            <div className="student-login-feature">
-              <span
-                className="student-login-feature-icon student-login-feature-icon--teams"
-                aria-hidden="true"
-              />
-              <div>
-                <strong>Team Repositories & Collaboration</strong>
-                <p>
-                  Work together on projects with team repositories and seamless
-                  collaboration tools.
-                </p>
-              </div>
-            </div>
-            <div className="student-login-feature">
-              <span
-                className="student-login-feature-icon student-login-feature-icon--progress"
-                aria-hidden="true"
-              />
-              <div>
-                <strong>Feedback & Progress Tracking</strong>
-                <p>
-                  Receive feedback from instructors and monitor your progress
-                  over time.
-                </p>
-              </div>
-            </div>
-          </div>
-          <p className="student-login-designed">
-            Designed for programming education at Saint Louis University.
-          </p>
-        </aside>
-
-      </section>
-    </main>
-  );
+  const login = useLoginController("student");
+  return <OriginLogin role="student" login={login} />;
 }
 
 export default LoginPage;

@@ -30,6 +30,7 @@ const accountSummarySelect = {
   passwordChangedAt: true,
   lastLoginAt: true,
   accountSetupTokens: {
+    where: { purpose: 'ACCOUNT_SETUP' },
     orderBy: { createdAt: 'desc' as const },
     take: 1,
     select: {
@@ -264,6 +265,7 @@ export function createPrismaAdminRepository(
                 storagePath: true,
                 team: { select: { status: true } },
                 class: { select: { status: true } },
+                activity: { select: { status: true, class: { select: { status: true } } } },
                 projectTask: {
                   select: {
                     status: true,
@@ -304,6 +306,8 @@ export function createPrismaAdminRepository(
         const repository = current.repository
         const classRepositoryAllowed =
           (repository.repositoryType === 'CLASS_WORKSPACE' && repository.class?.status === 'ACTIVE') ||
+          (repository.repositoryType === 'ACTIVITY_WORKSPACE' && repository.activity?.class.status === 'ACTIVE' &&
+            (repository.activity.status === 'PUBLISHED' || repository.activity.status === 'CLOSED')) ||
           repository.repositoryType === 'PERSONAL' ||
           (repository.repositoryType === 'CLASS_PROJECT' && repository.team?.status === 'ACTIVE' &&
             repository.projectTask?.class.status === 'ACTIVE' &&

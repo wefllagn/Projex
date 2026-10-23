@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ApiError, buildPublicApiUrl, createApiClient, describeApiError } from './api-client.js'
+import { ApiError, buildPublicApiUrl, createApiClient, describeApiError, isTemporaryApiError } from './api-client.js'
 
 function jsonResponse(status, body) {
   return new Response(JSON.stringify(body), {
@@ -200,17 +200,18 @@ describe('API client', () => {
     const client = createApiClient({ fetchImpl: vi.fn().mockRejectedValue(new Error('private transport detail')) })
     await expect(client.get('/health', { allowRefresh: false })).rejects.toMatchObject({
       code: 'NETWORK_ERROR',
-      message: 'Projex could not reach the server.',
+      message: 'Origin could not reach the server.',
     })
   })
 
   it.each([
     [401, 'Your session has expired. Please sign in again.'],
     [403, 'You do not have permission to perform this action.'],
-    [404, 'The requested Projex record was not found.'],
+    [404, 'The requested Origin record was not found.'],
     [409, 'This record changed while you were working. Refresh it before trying again.'],
-    [422, 'Lifecycle correction'],
-    [503, 'This Projex service is temporarily unavailable. Please try again later.'],
+    [422, 'Please check the highlighted fields and try again.'],
+    [429, 'Too many requests. Please wait and try again.'],
+    [503, 'This Origin service is temporarily unavailable. Please try again later.'],
   ])('provides a safe status message for HTTP %s', (status, expected) => {
     expect(describeApiError(new ApiError({ status, message: 'Lifecycle correction' }))).toBe(expected)
   })
@@ -220,5 +221,42 @@ describe('API client', () => {
     ['REPOSITORY_ARCHIVE_BLOCKED', 'The repository cannot be archived until review and invitation blockers are resolved.'],
   ])('preserves allowlisted %s lifecycle guidance without broadening generic errors', (code, message) => {
     expect(describeApiError(new ApiError({ status: 409, code, message }))).toBe(message)
+  })
+  it.each([400, 422, 500, 505, 0])('does not expose raw messages for status %s and retains diagnostics on the error', (status) => {
+    const error = new ApiError({ status, message: 'PrismaError internal endpoint secret', requestId: 'diagnostic-uuid', details: { trace: 'private' } })
+    expect(describeApiError(error)).not.toMatch(/PrismaError|endpoint|secret|diagnostic|private/)
+    expect(error.requestId).toBe('diagnostic-uuid')
+    expect(error.details.trace).toBe('private')
+  })
+
+  it.each([
+    ['SETUP_RESEND_COOLDOWN', 429, 'A setup link was sent recently. Try again later.'],
+    ['VALIDATION_FAILED', 400, 'Check the form details and try again.'],
+    ['VALIDATION_FAILED', 422, 'Check the form details and try again.'],
+    ['EMAIL_ALREADY_EXISTS', 409, 'An account with this email already exists. Use another email or manage the existing account.'],
+    ['CLASS_HAS_UNFINISHED_PROJECT_WORK', 409, 'The class cannot be archived while project collaboration work remains unfinished.'],
+    ['REPOSITORY_ARCHIVE_BLOCKED', 409, 'The repository cannot be archived until review and invitation blockers are resolved.'],
+  ])('retains combined Admin/Group guidance for %s without using server text', (code, status, expected) => {
+    const error = new ApiError({ code, status, message: 'private internal exception', requestId: 'diagnostic-only' })
+    expect(describeApiError(error)).toBe(expected)
+    expect(error.message).toBe('private internal exception')
+    expect(error.requestId).toBe('diagnostic-only')
+  })
+
+  it.each(['REQUEST_TIMEOUT', 'TIMEOUT', 'NETWORK_ERROR'])('keeps Group temporary-read recovery for %s', (code) => {
+    const error = new ApiError({ code, message: 'private transport detail' })
+    expect(isTemporaryApiError(error)).toBe(true)
+    expect(describeApiError(error)).toMatch(/try again/i)
+    expect(describeApiError(error)).not.toContain('private transport detail')
+  })
+
+  it.each([401, 403, 404, 409, 422, 429])('does not retain denied or rejected content as a temporary HTTP %s failure', (status) => {
+    expect(isTemporaryApiError(new ApiError({ status }))).toBe(false)
+  })
+
+  it('uses only own allowlisted business codes and never reflects an unknown server message', () => {
+    for (const code of ['UNREVIEWED_FAILURE', '__proto__', 'constructor']) {
+      expect(describeApiError(new ApiError({ code, status: 500, message: 'private internal exception' }))).not.toContain('private internal exception')
+    }
   })
 })

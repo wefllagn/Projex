@@ -1,8 +1,11 @@
-import type {
+import { rubricAllocationValid, type RubricCriterion } from './activity-grading.js'
+import { configuredAllocation, configuredTestPoints, type GradingConfiguration } from './weighted-grading.js'
+import { AppError } from '../../shared/errors/app-error.js'
+import {
   Prisma,
-  ActivityStatus,
-  PrismaClient,
-  UserRole,
+  type ActivityStatus,
+  type PrismaClient,
+  type UserRole,
 } from '@prisma/client'
 import type {
   ActivityListQuery,
@@ -22,6 +25,11 @@ export const activityRecordSelect = {
   starterCode: true,
   maxAttempts: true,
   creditPolicy: true,
+  gradingPeriod: true,
+  gradingConfiguration: true,
+  rubricCriteria: true,
+  gradingMode: true,
+  topicId: true,
   totalPoints: true,
   status: true,
   createdAt: true,
@@ -69,6 +77,8 @@ export type ActivityPublishFailureReason =
   | 'TEST_CASE_POINTS_REQUIRED'
   | 'TEST_CASE_POINTS_EXCEED_TOTAL'
   | 'STARTER_CODE_REQUIRED'
+  | 'RUBRIC_ALLOCATION_INVALID'
+  | 'GRADING_PERIOD_REQUIRED'
 
 export type PublishActivityResult =
   | { kind: 'updated'; activity: ActivityRecord }
@@ -84,7 +94,12 @@ export interface ActivityMutableFields {
   starterCode?: string
   maxAttempts?: number
   creditPolicy?: 'LATEST' | 'HIGHEST'
-  totalPoints?: number
+  gradingPeriod?: 'PRELIM' | 'MIDTERM' | 'FINAL' | null
+  gradingConfiguration?: GradingConfiguration | null
+  rubricCriteria?: RubricCriterion
+  gradingMode?: 'GRADED' | 'COMPLETION'
+  topicId?: string | null
+  totalPoints?: number | null
 }
 
 export interface ActivityRepository {
@@ -200,8 +215,18 @@ export function createPrismaActivityRepository(
   prisma: PrismaClient,
 ): ActivityRepository {
   return {
-    create(input) {
-      return prisma.$transaction(async (transaction) => {
+    async create(input) {
+      const replay = async () => {
+        if (!input.activity.creationRequestId) return null
+        const activity = await prisma.programmingActivity.findUnique({ where: { id: input.activity.creationRequestId }, select: activityRecordSelect })
+        if (!activity) return null
+        if (activity.classId !== input.classId || activity.createdById !== input.createdById) throw new AppError({ statusCode: 409, code: 'ACTIVITY_CREATION_CONFLICT', message: 'This draft request cannot be reused. Open your Activity list to continue.' })
+        if (activity.class.status === 'ARCHIVED') return { kind: 'class_archived' } as const
+        return { kind: 'created', activity } as const
+      }
+      const previous = await replay()
+      if (previous) return previous
+      try { return await prisma.$transaction(async (transaction) => {
         const classRecord = await transaction.class.findUnique({
           where: { id: input.classId },
           select: { status: true },
@@ -210,8 +235,11 @@ export function createPrismaActivityRepository(
         if (classRecord.status === 'ARCHIVED') {
           return { kind: 'class_archived' } as const
         }
+        if (input.activity.topicId && !await transaction.classTopic.findFirst({ where: { id: input.activity.topicId, classId: input.classId } })) throw new AppError({ statusCode: 404, code: 'TOPIC_NOT_FOUND', message: 'Topic not found.' })
+        const derived = input.activity.gradingConfiguration && input.activity.gradingMode !== 'COMPLETION' ? configuredAllocation(input.activity.totalPoints!, input.activity.gradingConfiguration) : null
         const activity = await transaction.programmingActivity.create({
           data: {
+            ...(input.activity.creationRequestId ? { id: input.activity.creationRequestId } : {}),
             classId: input.classId,
             createdById: input.createdById,
             title: input.activity.title,
@@ -222,6 +250,11 @@ export function createPrismaActivityRepository(
             starterCode: input.activity.starterCode,
             maxAttempts: input.activity.maxAttempts,
             creditPolicy: input.activity.creditPolicy,
+            gradingMode: input.activity.gradingMode,
+            gradingPeriod: input.activity.gradingPeriod,
+            gradingConfiguration: input.activity.gradingConfiguration ?? Prisma.DbNull,
+            rubricCriteria: input.activity.gradingMode === 'COMPLETION' ? Prisma.DbNull : derived?.rubricCriteria ?? input.activity.rubricCriteria ?? Prisma.DbNull,
+            topicId: input.activity.topicId,
             totalPoints: input.activity.totalPoints,
             status: 'DRAFT',
             createdAt: input.now,
@@ -230,7 +263,10 @@ export function createPrismaActivityRepository(
           select: activityRecordSelect,
         })
         return { kind: 'created', activity } as const
-      })
+      }) } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') { const recovered = await replay(); if (recovered) return recovered }
+        throw error
+      }
     },
     async list(input) {
       const studentStatuses: ActivityStatus[] = ['PUBLISHED', 'CLOSED']
@@ -249,6 +285,7 @@ export function createPrismaActivityRepository(
       const where: Prisma.ProgrammingActivityWhereInput = {
         classId: input.classId,
         ...statusScope,
+        ...(input.query.topicId ? { topicId: input.query.topicId === 'none' ? null : input.query.topicId } : {}),
         ...(input.studentView
           ? {
               class: {
@@ -280,7 +317,7 @@ export function createPrismaActivityRepository(
       const [activities, totalItems] = await prisma.$transaction([
         prisma.programmingActivity.findMany({
           where,
-          select: activityRecordSelect,
+          select: { ...activityRecordSelect, ...(input.studentView ? { submissions: { where: { studentId: input.callerId }, select: { id: true }, take: 1 } } : input.callerRole === 'INSTRUCTOR' ? { _count: { select: { submissions: true } } } : {}) },
           orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
           skip: (input.query.page - 1) * input.query.pageSize,
           take: input.query.pageSize,
@@ -319,7 +356,13 @@ export function createPrismaActivityRepository(
     update(input) {
       return prisma.$transaction(async (transaction) => {
         const versionTimestamp = nextUpdatedAt(input.expectedUpdatedAt, input.now)
-        if (input.fields.totalPoints !== undefined) {
+        const definition = await transaction.programmingActivity.findUnique({ where: { id: input.activityId }, select: { gradingMode: true, totalPoints: true, gradingConfiguration: true, testCases: { select: { id: true, importance: true }, orderBy: { testCaseOrder: 'asc' } } } })
+        const changingMode = input.fields.gradingMode !== undefined && input.fields.gradingMode !== definition?.gradingMode
+        if (input.fields.topicId) {
+          const activity = await transaction.programmingActivity.findUnique({ where: { id: input.activityId }, select: { classId: true } })
+          if (!activity || !await transaction.classTopic.findFirst({ where: { id: input.fields.topicId, classId: activity.classId } })) throw new AppError({ statusCode: 404, code: 'TOPIC_NOT_FOUND', message: 'Topic not found.' })
+        }
+        if (!definition?.gradingConfiguration && input.fields.totalPoints !== undefined && input.fields.totalPoints !== null) {
           const aggregate = await transaction.testCase.aggregate({
             where: { activityId: input.activityId },
             _sum: { points: true },
@@ -328,6 +371,13 @@ export function createPrismaActivityRepository(
             return { kind: 'test_case_points_exceed_total' } as const
           }
         }
+        const { gradingConfiguration: requestedConfiguration, ...metadataFields } = input.fields
+        const mode = input.fields.gradingMode ?? definition?.gradingMode
+        const configuration = input.fields.gradingConfiguration ?? definition?.gradingConfiguration
+        const regrade = Boolean(configuration) && input.currentStatus === 'DRAFT' && ['gradingConfiguration', 'totalPoints', 'gradingMode'].some(key => key in input.fields)
+        const total = Number(input.fields.totalPoints ?? definition?.totalPoints)
+        const derived = regrade && mode !== 'COMPLETION' ? configuredAllocation(total, configuration) : null
+        const testPoints = derived ? configuredTestPoints(total, configuration, definition?.testCases ?? []) : []
         const result = await transaction.programmingActivity.updateMany({
           where: {
             id: input.activityId,
@@ -335,7 +385,7 @@ export function createPrismaActivityRepository(
             updatedAt: input.expectedUpdatedAt,
             class: { status: 'ACTIVE' },
           },
-          data: { ...input.fields, updatedAt: versionTimestamp },
+          data: { ...metadataFields, ...(requestedConfiguration !== undefined ? { gradingConfiguration: requestedConfiguration ?? Prisma.DbNull } : {}), ...(mode === 'COMPLETION' ? { rubricCriteria: Prisma.DbNull } : derived ? { rubricCriteria: derived.rubricCriteria } : {}), updatedAt: versionTimestamp },
         })
         if (result.count === 0) {
           return diagnoseWriteFailure(
@@ -345,6 +395,9 @@ export function createPrismaActivityRepository(
             [input.currentStatus],
           )
         }
+        if (regrade) {
+          for (const [index, test] of (definition?.testCases ?? []).entries()) await transaction.testCase.update({ where: { id: test.id }, data: { points: mode === 'COMPLETION' ? null : testPoints[index], updatedAt: versionTimestamp } })
+        } else if (changingMode) await transaction.testCase.updateMany({ where: { activityId: input.activityId }, data: { points: input.fields.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(0) } })
         return {
           kind: 'updated',
           activity: await loadActivity(transaction, input.activityId),
@@ -393,21 +446,23 @@ export function createPrismaActivityRepository(
           } as const
         }
         const testCasePoints = current.testCases.reduce(
-          (total, testCase) => total + Number(testCase.points),
-          0,
-        )
-        if (testCasePoints <= 0) {
+          (total, testCase) => total.plus(testCase.points ?? 0),
+          new Prisma.Decimal(0),
+        ).toNumber()
+        if (current.gradingMode !== 'COMPLETION' && testCasePoints <= 0) {
           return {
             kind: 'not_publishable',
             reason: 'TEST_CASE_POINTS_REQUIRED',
           } as const
         }
-        if (testCasePoints > Number(current.totalPoints)) {
+        if (current.gradingMode !== 'COMPLETION' && testCasePoints > Number(current.totalPoints)) {
           return {
             kind: 'not_publishable',
             reason: 'TEST_CASE_POINTS_EXCEED_TOTAL',
           } as const
         }
+        if (current.gradingMode !== 'COMPLETION' && !rubricAllocationValid(current.rubricCriteria, Number(current.totalPoints) - testCasePoints)) return { kind: 'not_publishable', reason: 'RUBRIC_ALLOCATION_INVALID' } as const
+        if (current.gradingMode !== 'COMPLETION' && current.rubricCriteria != null && !current.gradingPeriod) return { kind: 'not_publishable', reason: 'GRADING_PERIOD_REQUIRED' } as const
         const result = await transaction.programmingActivity.updateMany({
           where: {
             id: input.activityId,

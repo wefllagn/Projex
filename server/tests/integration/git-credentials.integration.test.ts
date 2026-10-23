@@ -3,6 +3,7 @@ import type { PrismaClient } from '@prisma/client'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { createGitCredentialService } from '../../src/modules/git-transport/git-credential.service.js'
 import { createPrismaGitTransportRepository } from '../../src/modules/git-transport/git-transport.repository.js'
+import { createPrismaRepositoryRepository } from '../../src/modules/repositories/repository.repository.js'
 import {
   cleanIntegrationDatabase,
   createActiveClass,
@@ -46,6 +47,77 @@ async function readyPersonal(ownerId: string, suffix: string) {
     },
   })
   return repository
+}
+
+async function readyActivityWorkspace() {
+  const primary = await createActiveUser(prisma, 'INSTRUCTOR', 'Activity Primary Instructor')
+  const coInstructor = await createActiveUser(prisma, 'INSTRUCTOR', 'Activity Co-Instructor')
+  const unrelatedInstructor = await createActiveUser(prisma, 'INSTRUCTOR', 'Activity Unrelated Instructor')
+  const owner = await createActiveUser(prisma, 'STUDENT', 'Activity Workspace Owner')
+  const otherStudent = await createActiveUser(prisma, 'STUDENT', 'Activity Other Student')
+  const removedStudent = await createActiveUser(prisma, 'STUDENT', 'Activity Removed Student')
+  const admin = await createActiveUser(prisma, 'ADMIN', 'Activity Administrator')
+  const classRecord = await createActiveClass(prisma, primary.id, 'Activity Credential Class')
+  for (const student of [owner, otherStudent, removedStudent]) {
+    await createActiveMembership(prisma, classRecord.id, student.id)
+  }
+  await prisma.classMember.update({
+    where: { classId_studentId: { classId: classRecord.id, studentId: removedStudent.id } },
+    data: { status: 'REMOVED', removedAt: now },
+  })
+  await prisma.classTeachingStaff.create({
+    data: {
+      classId: classRecord.id,
+      instructorId: coInstructor.id,
+      invitedById: primary.id,
+      status: 'ACTIVE',
+      acceptedAt: now,
+    },
+  })
+  const activity = await prisma.programmingActivity.create({
+    data: {
+      classId: classRecord.id,
+      createdById: primary.id,
+      title: 'Activity Credential Laboratory',
+      instructions: 'Exercise Activity Workspace transport authorization.',
+      dueDate: new Date('2031-02-01T00:00:00.000Z'),
+      language: 'JAVA',
+      entryClassName: 'Main',
+      starterCode: 'class Main {}',
+      maxAttempts: 3,
+      totalPoints: 100,
+      status: 'PUBLISHED',
+      publishedAt: now,
+    },
+  })
+  const created = await createPrismaRepositoryRepository(prisma).createActivityWorkspace({
+    activityId: activity.id,
+    ownerId: owner.id,
+    now,
+  })
+  if (created.kind !== 'ok') throw new Error('ACTIVITY_WORKSPACE_FIXTURE_FAILED')
+  const repository = await prisma.repository.update({
+    where: { id: created.repository.id },
+    data: {
+      storageStatus: 'READY',
+      storagePath: `repositories/aa/bb/${created.repository.id}.git`,
+      provisionedAt: now,
+      storageVerifiedAt: now,
+      storageSizeBytes: 1n,
+    },
+  })
+  return {
+    primary,
+    coInstructor,
+    unrelatedInstructor,
+    owner,
+    otherStudent,
+    removedStudent,
+    admin,
+    classRecord,
+    activity,
+    repository,
+  }
 }
 
 beforeEach(async () => {
@@ -126,6 +198,105 @@ describe('repository-scoped Git credentials', () => {
     })
     await expect(service().authenticate({ authorization, repositoryId: repository.id, operation: 'READ' }))
       .rejects.toMatchObject({ code: 'GIT_AUTHENTICATION_FAILED' })
+  })
+
+  it('enforces the complete Activity Workspace credential and lifecycle matrix', async () => {
+    const fixture = await readyActivityWorkspace()
+    const credentials = service()
+
+    const ownerRead = await credentials.issue(fixture.owner, fixture.repository.id, ['READ'])
+    const ownerWrite = await credentials.issue(fixture.owner, fixture.repository.id, ['WRITE'])
+    await expect(credentials.issue(fixture.primary, fixture.repository.id, ['READ']))
+      .resolves.toMatchObject({ operations: ['READ'] })
+    await expect(credentials.issue(fixture.coInstructor, fixture.repository.id, ['READ']))
+      .resolves.toMatchObject({ operations: ['READ'] })
+    for (const instructor of [fixture.primary, fixture.coInstructor]) {
+      await expect(credentials.issue(instructor, fixture.repository.id, ['WRITE']))
+        .rejects.toMatchObject({ code: 'GIT_OPERATION_NOT_AUTHORIZED' })
+    }
+    for (const denied of [
+      fixture.otherStudent,
+      fixture.removedStudent,
+      fixture.unrelatedInstructor,
+      fixture.admin,
+    ]) {
+      await expect(credentials.issue(denied, fixture.repository.id, ['READ']))
+        .rejects.toMatchObject({ code: 'GIT_OPERATION_NOT_AUTHORIZED' })
+    }
+
+    const readAuthorization = `Basic ${Buffer.from(`${ownerRead.username}:${ownerRead.secret}`).toString('base64')}`
+    const writeAuthorization = `Basic ${Buffer.from(`${ownerWrite.username}:${ownerWrite.secret}`).toString('base64')}`
+    await expect(credentials.authenticate({
+      authorization: writeAuthorization,
+      repositoryId: fixture.repository.id,
+      operation: 'WRITE',
+    })).resolves.toMatchObject({ userId: fixture.owner.id, repositoryId: fixture.repository.id })
+    const otherRepository = await readyPersonal(fixture.owner.id, '44444444-4444-4444-8444-444444444444')
+    await expect(credentials.authenticate({
+      authorization: readAuthorization,
+      repositoryId: otherRepository.id,
+      operation: 'READ',
+    })).rejects.toMatchObject({ code: 'GIT_AUTHENTICATION_FAILED' })
+    const invalidAuthorization = `Basic ${Buffer.from(`${ownerRead.username}:${'x'.repeat(43)}`).toString('base64')}`
+    await expect(credentials.authenticate({
+      authorization: invalidAuthorization,
+      repositoryId: fixture.repository.id,
+      operation: 'READ',
+    })).rejects.toMatchObject({ code: 'GIT_AUTHENTICATION_FAILED' })
+    now = ownerRead.expiresAt
+    await expect(credentials.authenticate({
+      authorization: readAuthorization,
+      repositoryId: fixture.repository.id,
+      operation: 'READ',
+    })).rejects.toMatchObject({ code: 'GIT_AUTHENTICATION_FAILED' })
+    now = new Date('2031-01-01T00:00:00.000Z')
+
+    await prisma.repository.update({
+      where: { id: fixture.repository.id },
+      data: { storageStatus: 'PENDING', storagePath: null, provisionedAt: null, storageVerifiedAt: null, storageSizeBytes: null },
+    })
+    await expect(credentials.issue(fixture.owner, fixture.repository.id, ['READ']))
+      .rejects.toMatchObject({ code: 'GIT_OPERATION_NOT_AUTHORIZED' })
+    await prisma.repository.update({
+      where: { id: fixture.repository.id },
+      data: {
+        storageStatus: 'READY',
+        storagePath: fixture.repository.storagePath,
+        provisionedAt: now,
+        storageVerifiedAt: now,
+        storageSizeBytes: 1n,
+      },
+    })
+
+    await prisma.programmingActivity.update({
+      where: { id: fixture.activity.id },
+      data: { status: 'CLOSED', closedAt: now },
+    })
+    await expect(credentials.issue(fixture.owner, fixture.repository.id, ['READ']))
+      .resolves.toMatchObject({ operations: ['READ'] })
+    await expect(credentials.issue(fixture.owner, fixture.repository.id, ['WRITE']))
+      .rejects.toMatchObject({ code: 'GIT_OPERATION_NOT_AUTHORIZED' })
+    await expect(credentials.authenticate({
+      authorization: writeAuthorization,
+      repositoryId: fixture.repository.id,
+      operation: 'WRITE',
+    })).rejects.toMatchObject({ code: 'GIT_AUTHENTICATION_FAILED' })
+
+    await prisma.programmingActivity.update({
+      where: { id: fixture.activity.id },
+      data: { status: 'PUBLISHED', dueDate: now, closedAt: null },
+    })
+    await expect(credentials.issue(fixture.owner, fixture.repository.id, ['READ']))
+      .resolves.toMatchObject({ operations: ['READ'] })
+    await expect(credentials.issue(fixture.owner, fixture.repository.id, ['WRITE']))
+      .rejects.toMatchObject({ code: 'GIT_OPERATION_NOT_AUTHORIZED' })
+
+    await prisma.classMember.update({
+      where: { classId_studentId: { classId: fixture.classRecord.id, studentId: fixture.owner.id } },
+      data: { status: 'REMOVED', removedAt: now },
+    })
+    await expect(credentials.issue(fixture.owner, fixture.repository.id, ['READ']))
+      .rejects.toMatchObject({ code: 'GIT_OPERATION_NOT_AUTHORIZED' })
   })
 
   it('allows the owning instructor read-only source access and denies administrators', async () => {

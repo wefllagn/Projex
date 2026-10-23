@@ -11,6 +11,9 @@ function queryString(query = {}) {
 
 export function createRepositoryContentApi(client = apiClient, publicUrl = buildPublicApiUrl) {
   return {
+    getAccess(repositoryId, options) {
+      return client.get(`/repositories/${repositoryId}`, options)
+    },
     getSummary(repositoryId, options) {
       return client.get(`/repositories/${repositoryId}/source/summary`, options)
     },

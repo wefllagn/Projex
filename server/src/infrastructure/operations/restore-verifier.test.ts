@@ -36,6 +36,13 @@ describe('restore verification framework', () => {
     expect(plan.databaseRestore.args.join(' ')).not.toContain('secret')
     expect(plan.gitFsck(path.join(restoreRoot, 'repo.git')).args).toEqual(['--git-dir', path.join(restoreRoot, 'repo.git'), 'fsck', '--full'])
     expect(() => plan.gitFsck(path.join(root, 'outside.git'))).toThrowError('GIT_REPOSITORY_OUTSIDE_RESTORE_ROOT')
+    await expect(buildRestoreVerificationPlan({
+      projectRoot: project, backupSourceRoot: backup, restoreGitRoot: restoreRoot,
+      restoreDatabaseUrl: 'postgresql://restore:secret@database.example.edu/projex_restore_verify_run123',
+      pgRestoreExecutable: path.join(root, 'pg_restore'), gitExecutable: path.join(root, 'git'),
+      manifestRaw: serializeManifest(manifest),
+      manifestChecksumRaw: `${manifestChecksum(manifest)}  manifest.json\n`,
+    })).rejects.toThrowError('RESTORE_DATABASE_HOST_NOT_LOOPBACK')
   })
 
   it('requires an explicit restore database URL and exposes only allowlisted evidence', async () => {
@@ -44,6 +51,22 @@ describe('restore verification framework', () => {
       pgRestoreExecutable: path.resolve('pg_restore'), gitExecutable: path.resolve('git'), manifestRaw: '{}', manifestChecksumRaw: '',
     })).rejects.toThrowError('RESTORE_DATABASE_URL_REQUIRED')
     expect(sanitizeRestoreEvidence({ manifestValid: true, artifactsValid: true, migrationHistoryMatches: true, safeCountsMatch: true, relationshipsValid: true, markersValid: true, repositoryCorrespondenceValid: true, gitFsckPassed: true, orphanRepositories: 0, capabilityProfile: 'HOSTED_SAFE', healthStatus: 'ok', syntheticAuthentication: 'passed' })).not.toHaveProperty('databaseUrl')
+  })
+
+  it.each([
+    ['postgresql://restore:secret@database.example.edu/projex_restore_verify_run123', 'RESTORE_DATABASE_HOST_NOT_LOOPBACK'],
+    ['postgresql://restore:secret@localhost/projex', 'RESTORE_DATABASE_UNRECOGNIZED'],
+  ])('validates restore target %s before invalid filesystem and artifact inputs', async (restoreDatabaseUrl, expectedCode) => {
+    await expect(buildRestoreVerificationPlan({
+      projectRoot: 'relative-project',
+      backupSourceRoot: 'relative-backup',
+      restoreGitRoot: 'relative-restore',
+      restoreDatabaseUrl,
+      pgRestoreExecutable: path.resolve('pg_restore'),
+      gitExecutable: path.resolve('git'),
+      manifestRaw: 'not-json',
+      manifestChecksumRaw: 'not-a-checksum',
+    })).rejects.toThrowError(expectedCode)
   })
 
   it('compares only safe restored-state evidence against the manifest', () => {

@@ -11,7 +11,9 @@ describe('student invitation CSV', () => {
       confirmStudentInvitationCsv: vi.fn().mockResolvedValue({ data: { invited: 1, alreadyMember: 0, alreadyPending: 0 } }),
     }
     render(<CsvInvitationPanel api={api} classId="class-1" />)
-    expect(screen.getByText(/Invitations are not official enrollment/)).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Invite students from CSV' }))
+    expect(screen.getByRole('dialog')).toHaveAccessibleName('Invite students from CSV')
     expect(screen.queryByRole('button', { name: 'Confirm invitations' })).not.toBeInTheDocument()
     await user.upload(screen.getByLabelText('Student invitation CSV'), new File(['email\nstudent@slu.edu.ph'], 'students.csv', { type: 'text/csv' }))
     await user.click(screen.getByRole('button', { name: 'Preview invitations' }))

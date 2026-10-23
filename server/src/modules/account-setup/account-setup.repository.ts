@@ -19,6 +19,7 @@ export function createPrismaAccountSetupRepository(
           where: { tokenHash: input.tokenHash },
           select: {
             id: true,
+            purpose: true,
             userId: true,
             expiresAt: true,
             usedAt: true,
@@ -36,6 +37,7 @@ export function createPrismaAccountSetupRepository(
         })
         if (
           !token ||
+          token.purpose !== 'ACCOUNT_SETUP' ||
           token.usedAt ||
           token.invalidatedAt ||
           token.expiresAt <= input.completedAt ||

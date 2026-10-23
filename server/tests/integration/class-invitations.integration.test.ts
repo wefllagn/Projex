@@ -194,7 +194,7 @@ describe('registered-email class invitations', () => {
       generateCode: () => 'ABCDE23456',
       now: () => fixedNow,
     })
-    const created = await classService.create(owner, {
+    const created = await classService.create(owner, { program: 'INFORMATION_TECHNOLOGY',
       className: 'Invited Class',
       section: 'BSIT 4A',
       semester: 'First Semester',
@@ -212,7 +212,7 @@ describe('registered-email class invitations', () => {
       generateCode: () => 'FGHJK23456',
       now: () => fixedNow,
     })
-    const invalidCreation = invalidService.create(owner, {
+    const invalidCreation = invalidService.create(owner, { program: 'INFORMATION_TECHNOLOGY',
       className: 'Must Roll Back',
       section: 'BSIT 4B',
       semester: 'First Semester',
@@ -226,7 +226,7 @@ describe('registered-email class invitations', () => {
     expect(await prisma.class.count()).toBe(before)
     expect(await prisma.class.findFirst({ where: { className: 'Must Roll Back' } })).toBeNull()
 
-    const noInvites = await invalidService.create(owner, {
+    const noInvites = await invalidService.create(owner, { program: 'INFORMATION_TECHNOLOGY',
       className: 'No Invitations',
       section: 'BSIT 4C',
       semester: 'First Semester',

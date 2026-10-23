@@ -414,12 +414,20 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
       .send({ sourceCode: source })
       .expect(202)
     const practiceId = practiceResponse.body.data.id as string
+    // Make this projection test independent of database/client millisecond clock boundaries.
+    await prisma.executionJob.update({ where: { practiceExecutionId: practiceId }, data: { availableAt: new Date(0) } })
     const practiceJob = await queue.claimNext({
       workerId: 'phase6-practice-worker',
       now: new Date(),
       leaseMs: 60_000,
     })
     expect(practiceJob?.cases).toHaveLength(1)
+    // PostgreSQL's clock can be a few milliseconds ahead of Node on Windows.
+    // Keep the synthetic completion at or after the persisted creation time.
+    const practiceJobRecord = await prisma.executionJob.findUniqueOrThrow({
+      where: { practiceExecutionId: practiceId },
+      select: { createdAt: true },
+    })
     await queue.complete(
       practiceJob!,
       {
@@ -437,7 +445,7 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
           },
         ],
       },
-      new Date(),
+      new Date(Math.max(Date.now(), practiceJobRecord.createdAt.getTime())),
     )
     const practiceResult = await studentAgent
       .get(`/api/v1/visible-test-runs/${practiceId}`)
@@ -449,5 +457,58 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
       actualOutput: '4\n',
     })
     expect(JSON.stringify(practiceResult.body)).not.toContain('Hidden negative')
+
+    const submissionsBeforeCodeRun = await prisma.activitySubmission.count({ where: { activityId: activity.id, studentId: student.id } })
+    const checkpointsBeforeCodeRun = await prisma.repositoryCheckpointJob.count()
+    await request(app).post(`/api/v1/activities/${activity.id}/code-runs`).send({ sourceCode: source, stdin: '' }).expect(401)
+    await studentAgent.post(`/api/v1/activities/${activity.id}/code-runs`).send({ sourceCode: source, stdin: '' }).expect(403)
+    await jsonMutation(instructorAgent.post(`/api/v1/activities/${activity.id}/code-runs`), instructorCsrf).send({ sourceCode: source, stdin: '' }).expect(403)
+    await jsonMutation(studentAgent.post(`/api/v1/activities/${activity.id}/code-runs`), studentCsrf).send({ sourceCode: source, stdin: '', command: 'forbidden' }).expect(400)
+    await jsonMutation(studentAgent.post(`/api/v1/activities/${activity.id}/code-runs`), studentCsrf).send({ sourceCode: source, stdin: '\u0000' }).expect(400)
+    await jsonMutation(studentAgent.post(`/api/v1/activities/${activity.id}/code-runs`), studentCsrf).send({ sourceCode: source, stdin: '界'.repeat(7000) }).expect(413)
+    const codeSource = 'public class Main { public static void main(String[] args) { java.util.Scanner s = new java.util.Scanner(System.in); System.out.println("Hello " + s.nextLine()); } }'
+    const codeResponse = await jsonMutation(
+      studentAgent.post(`/api/v1/activities/${activity.id}/code-runs`),
+      studentCsrf,
+    )
+      .send({ sourceCode: codeSource, stdin: 'Julius\n23' })
+      .expect(202)
+    const codeRunId = codeResponse.body.data.id as string
+    const codeJob = await queue.claimNext({
+      workerId: 'phase6-code-worker',
+      now: new Date(),
+      leaseMs: 60_000,
+    })
+    expect(codeJob?.cases).toHaveLength(1)
+    expect(codeJob?.sourceCode).toBe(codeSource)
+    expect(codeJob?.submissionId).toBeNull()
+    expect(codeJob?.cases[0]).toMatchObject({ input: 'Julius\n23', compareOutput: false, captureStandardError: true })
+    expect(codeJob?.cases[0]?.expectedOutput).toBe('')
+    await queue.complete(codeJob!, {
+      compileStatus: 'SUCCESS', runtimeStatus: 'PASSED', compilerOutput: null,
+      cases: [{ id: codeJob!.cases[0]!.id, status: 'PASSED', actualOutput: 'Hello Julius\n', errorMessage: null, executionTimeMs: 4, automatedPoints: 0 }],
+    }, new Date())
+    const codeResult = await studentAgent.get(`/api/v1/code-runs/${codeRunId}`).expect(200)
+    expect(codeResult.body.data).toMatchObject({ status: 'succeeded', stdout: 'Hello Julius\n', stderr: null })
+    expect(codeResult.body.data).not.toHaveProperty('visibleTestOutcomes')
+    expect(JSON.stringify(codeResult.body)).not.toContain('Hidden negative')
+    expect(codeResult.body.data).not.toHaveProperty('score')
+    await studentAgent.get(`/api/v1/visible-test-runs/${codeRunId}`).expect(404)
+    await studentAgent.get(`/api/v1/code-runs/${practiceId}`).expect(404)
+    await instructorAgent.get(`/api/v1/code-runs/${codeRunId}`).expect(403)
+    await adminAgent.get(`/api/v1/code-runs/${codeRunId}`).expect(403)
+    expect(await prisma.activitySubmission.count({ where: { activityId: activity.id, studentId: student.id } })).toBe(submissionsBeforeCodeRun)
+    expect(await prisma.repositoryCheckpointJob.count()).toBe(checkpointsBeforeCodeRun)
+    expect((await studentAgent.get(`/api/v1/activities/${activity.id}/attempt-state`).expect(200)).body.data.countingAttemptsUsed).toBe(1)
+
+    const emptyInput = await jsonMutation(studentAgent.post(`/api/v1/activities/${activity.id}/code-runs`), studentCsrf).send({ sourceCode: codeSource, stdin: '' }).expect(202)
+    const emptyJob = await queue.claimNext({ workerId: 'empty-input-worker', now: new Date(), leaseMs: 60_000 })
+    expect(emptyJob?.cases[0]?.input).toBe('')
+    await queue.complete(emptyJob!, { compileStatus: 'STUDENT_ERROR', runtimeStatus: 'NOT_RUN', compilerOutput: 'Main.java:1: error', cases: [] }, new Date())
+    expect((await studentAgent.get(`/api/v1/code-runs/${emptyInput.body.data.id}`).expect(200)).body.data).toMatchObject({ compileStatus: 'student_error', compilerOutput: 'Main.java:1: error' })
+
+    await prisma.classMember.updateMany({ where: { classId: classRecord.id, studentId: student.id }, data: { status: 'REMOVED' } })
+    await studentAgent.get(`/api/v1/code-runs/${codeRunId}`).expect(404)
+    await jsonMutation(studentAgent.post(`/api/v1/activities/${activity.id}/code-runs`), studentCsrf).send({ sourceCode: source, stdin: '' }).expect(403)
   })
 })
