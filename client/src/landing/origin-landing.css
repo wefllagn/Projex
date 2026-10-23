@@ -1,0 +1,1910 @@
+.origin-landing {
+  --origin-blue: #3e91ff;
+  --origin-copy: #bac4d0;
+  --origin-edge: #263746;
+  --origin-ambient: 1;
+  --origin-graphite: #101820;
+  --origin-aluminum: #aebbc7;
+  --origin-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+  color: #f0f2f6;
+  background: #050c11;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  font-kerning: normal;
+  isolation: isolate;
+  overflow: clip;
+  color-scheme: dark;
+}
+.origin-landing--dimmed {
+  --origin-ambient: 0.35;
+}
+.origin-landing * {
+  box-sizing: border-box;
+}
+.origin-landing a {
+  color: inherit;
+  text-decoration: none;
+}
+.origin-landing button {
+  font-family: inherit;
+  cursor: pointer;
+}
+.origin-landing :is(a, button, [tabindex]):focus-visible {
+  outline: 2px solid #b4d8ff;
+  outline-offset: 5px;
+}
+.origin-landing :is(h1, h2, h3, p) {
+  margin: 0;
+}
+.origin-landing :is(h1, h2, h3) {
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+  color: #eff1f5;
+}
+.origin-landing section[id],
+.origin-landing a[id] {
+  scroll-margin-top: 32px;
+}
+.origin-landing .origin-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+.origin-container {
+  width: min(1240px, calc(100% - 120px));
+  margin-inline: auto;
+}
+.origin-skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+  padding: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  background: #fff;
+  color: #07111c !important;
+}
+.origin-skip-link:focus {
+  padding: 12px 20px;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+}
+.origin-hero-region {
+  position: relative;
+}
+.origin-hero-region::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: -1150px;
+  right: -1030px;
+  width: 1450px;
+  height: 1580px;
+  border-radius: 50%;
+  border: 2px solid #e5eeff;
+  background: #03080d;
+  box-shadow:
+    -20px 20px 45px #b0d6ff44,
+    -3px 8px 9px #fff9,
+    -12px 20px 50px #608bbb44,
+    inset 12px -10px 40px #7695ba42;
+  opacity: var(--origin-ambient);
+  pointer-events: none;
+}
+.origin-header {
+  height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 3;
+  gap: 32px;
+}
+.origin-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #f3f5f9;
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: -0.05em;
+}
+.origin-brand-mark {
+  width: 29px;
+  height: 29px;
+  display: inline-flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #7cb8ff, #2476f7 65%, #204baf);
+  box-shadow: inset 0 0 0 1px #a4d0ff55;
+  transform: rotate(-7deg);
+}
+.origin-brand-mark span {
+  width: 4px;
+  background: white;
+  border-radius: 1px;
+  height: 12px;
+}
+.origin-brand-mark span:nth-child(2) {
+  height: 17px;
+}
+.origin-brand-mark span:nth-child(3) {
+  height: 8px;
+  align-self: center;
+}
+.origin-header nav,
+.origin-footer nav {
+  display: flex;
+  gap: 36px;
+  font-size: 18px;
+  color: #b5bfcb;
+}
+.origin-header nav a,
+.origin-footer nav a {
+  transition: color 0.2s;
+}
+.origin-header nav a:hover,
+.origin-footer nav a:hover {
+  color: white;
+}
+.origin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  font-size: 12px;
+}
+.origin-sign-in {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #ffffff06;
+  border: 1px solid #ffffff09;
+}
+.origin-landing .origin-atmosphere {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  padding: 3px;
+  width: 58px;
+  min-width: 58px;
+  min-height: 34px;
+  border: 1px solid #8aadc31c;
+  background: #26303a80;
+  border-radius: 24px;
+  color: #a7b9cb;
+}
+.origin-atmosphere > .origin-icon {
+  position: relative;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  padding: 5px;
+  flex-shrink: 0;
+  transition: color 240ms ease;
+}
+.origin-atmosphere > .origin-icon.is-active {
+  color: #40536d;
+}
+.origin-atmosphere > .origin-theme-thumb {
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  background: #e4eaf5;
+  box-shadow:
+    0 1px 4px #0002,
+    0 0 12px #dce7ff26;
+  transform: translate(26px, -50%);
+  transition: transform 260ms cubic-bezier(0.22, 0.75, 0.25, 1);
+}
+.origin-atmosphere[aria-pressed='true'] > .origin-theme-thumb {
+  transform: translate(0, -50%);
+}
+.origin-landing .origin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 13px 23px;
+  min-height: 46px;
+  background:
+    url('/assets/origin/metal-grain.svg'),
+    linear-gradient(180deg, #fcfdfe, #dbe2e9);
+  color: #10161d;
+  border: 1px solid #cbd4e0;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -1px 0 #a9b8c56b,
+    0 2px 9px #0002;
+  transition: transform 180ms var(--origin-ease);
+}
+.origin-landing .origin-button:hover {
+  transform: translateY(-1px);
+}
+.origin-button .origin-icon {
+  width: 17px;
+  height: 17px;
+  transition: transform 220ms var(--origin-ease);
+}
+.origin-landing .origin-button--small {
+  min-height: 36px;
+  padding: 9px 14px;
+  gap: 12px;
+  font-size: 11px;
+  border-radius: 7px;
+}
+.origin-hero {
+  position: relative;
+  min-height: 425px;
+  display: grid;
+  grid-template-columns: 1fr 1.12fr;
+  align-items: center;
+  padding-top: 30px;
+  padding-bottom: 40px;
+}
+.origin-hero::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  height: 130px;
+  left: -20%;
+  right: -20%;
+  bottom: -35px;
+  border-top: 1px solid #669ac479;
+  border-radius: 50%;
+  transform: rotate(4deg);
+  box-shadow:
+    0 -9px 26px -17px #e6f2ff,
+    0 -19px 40px -25px #3393ff;
+  opacity: var(--origin-ambient);
+}
+.origin-hero-copy {
+  position: relative;
+  z-index: 2;
+  padding-bottom: 2px;
+}
+.origin-landing .origin-eyebrow {
+  color: #afbfce;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 15px;
+}
+.origin-hero h1 {
+  font-size: clamp(42px, 4.7vw, 66px);
+  letter-spacing: -0.055em;
+  line-height: 0.99;
+  margin-bottom: 18px;
+}
+.origin-landing .origin-hero-description {
+  color: var(--origin-copy);
+  font-size: 18px;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  margin-bottom: 24px;
+}
+.origin-hero-actions {
+  display: flex;
+  gap: 26px;
+  align-items: center;
+}
+.origin-landing .origin-overview-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: #d7dde5;
+  padding: 8px 0;
+  font-size: 12px;
+}
+.origin-overview-button > span {
+  width: 31px;
+  height: 31px;
+  border: 1px solid #bccbd8;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.origin-overview-button .origin-icon {
+  width: 14px;
+  height: 14px;
+}
+.origin-overview-button:hover {
+  color: #91c7ff;
+}
+.origin-classroom-note {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 29px;
+}
+.origin-avatar-cluster {
+  display: flex;
+  padding-left: 4px;
+}
+.origin-avatar-cluster span {
+  width: 41px;
+  height: 44px;
+  border: 2px solid #778d9b;
+  margin-left: -4px;
+  background: linear-gradient(135deg, #b8b1a7, #30495b);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: #fff;
+}
+.origin-avatar-cluster span:nth-child(2n) {
+  background: linear-gradient(130deg, #96aebe, #1f3447);
+}
+.origin-classroom-note p {
+  font-size: 15px;
+  line-height: 1.4;
+  color: #dbe1e9;
+}
+.origin-classroom-note small {
+  display: block;
+  font-size: 13px;
+  color: #8e9caa;
+}
+.origin-branch-scene {
+  height: 370px;
+  position: relative;
+  min-width: 0;
+  margin-left: -10px;
+}
+.origin-branch-scene::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse, #376cb727, transparent 70%);
+  opacity: var(--origin-ambient);
+  animation: origin-ambient-drift 18s ease-in-out infinite alternate;
+}
+.origin-orbit-grid {
+  position: absolute;
+  inset: 15px 10px 10px 30px;
+  border-radius: 50%;
+  border: 1px solid #5e809519;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 83px,
+    #5d99bf19 84px 85px,
+    transparent 86px 88px
+  );
+  transform: rotate(-8deg);
+  mask-image: linear-gradient(transparent, black 30%, black 70%, transparent);
+}
+.origin-branch-lines {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  overflow: visible;
+}
+.origin-line-halo {
+  stroke: #4997ff;
+  stroke-width: 7;
+  filter: url(#origin-line-glow);
+  opacity: var(--origin-ambient);
+}
+.origin-node-halo {
+  fill: #5394ef77;
+  filter: drop-shadow(0 0 6px #81bcff);
+}
+.origin-git-chip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border: 1px solid #a6c6e038;
+  background:
+    url('/assets/origin/metal-grain.svg'),
+    linear-gradient(135deg, #b9c8d52e, #192733d9 34%, #121f2bc7);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 1px 2px #d9f0ff25,
+    0 10px 35px #0005;
+  padding: 16px 18px;
+  font-size: 13px;
+  color: #e5eef8;
+  white-space: nowrap;
+}
+.origin-git-chip small {
+  font-size: 10px;
+  color: #a0b1c3;
+  margin-left: 4px;
+}
+.origin-git-chip .origin-icon {
+  width: 23px;
+  height: 23px;
+  filter: drop-shadow(0 0 6px #97c6fa50);
+}
+.origin-git-chip--root {
+  top: 47%;
+  left: 1%;
+  transform: rotate(9deg);
+  font-size: 18px;
+  padding: 19px;
+}
+.origin-git-chip--commit {
+  top: 7%;
+  left: 42%;
+  transform: rotate(-7deg);
+}
+.origin-git-chip--branch {
+  top: 28%;
+  right: -1%;
+  transform: rotate(-6deg);
+}
+.origin-git-chip--merge {
+  top: 58%;
+  left: 50%;
+  transform: rotate(-6deg);
+}
+.origin-git-chip--submit {
+  top: 82%;
+  right: -1%;
+  transform: rotate(1deg);
+  min-width: 175px;
+}
+.origin-landing .origin-check {
+  border-radius: 50%;
+  background: #64c5aa;
+  color: #153e35;
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  margin-left: auto;
+}
+.origin-check .origin-icon {
+  width: 13px;
+  height: 13px;
+}
+.origin-workspace {
+  position: relative;
+  padding: 66px 40px 0;
+  height: 675px;
+  border-block: 1px solid #6386a51e;
+  background:
+    radial-gradient(ellipse at -8% 65%, #e3e2dc55, transparent 26%),
+    radial-gradient(ellipse at 70% 80%, #155f9b1c, transparent 70%), #071016;
+  overflow: hidden;
+}
+.origin-workspace::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: -280px;
+  left: -230px;
+  width: 1700px;
+  height: 580px;
+  border-radius: 50%;
+  border: 2px solid #91c9fc88;
+  box-shadow: 0 6px 25px #53aaff6b;
+  transform: rotate(-14deg);
+  pointer-events: none;
+  opacity: var(--origin-ambient);
+}
+.origin-section-heading {
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+.origin-landing .origin-section-heading .origin-eyebrow {
+  margin-bottom: 13px;
+}
+.origin-section-heading h2 {
+  font-size: clamp(30px, 3.5vw, 45px);
+  margin-bottom: 15px;
+}
+.origin-section-heading > p:last-child {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: #bcc8d5;
+}
+.origin-workspace-tabs {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: min(800px, 100%);
+  margin: 30px auto 40px;
+  border: 1px solid #667c9349;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #17222acc, #09121beb);
+  box-shadow:
+    inset 0 1px 0 #c8d6e51c,
+    0 4px 12px #0004;
+  padding: 3px;
+}
+.origin-landing .origin-workspace-tabs button {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex: 1;
+  padding: 13px 8px;
+  border: 0;
+  border-radius: 7px;
+  color: #c7d0dc;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 500;
+  transition:
+    color 180ms ease,
+    transform 150ms var(--origin-ease);
+}
+.origin-workspace-tabs button[aria-selected='true'] {
+  color: #0c1620;
+}
+.origin-brand--compact {
+  font-size: 21px;
+  margin-bottom: 25px;
+  margin-top: 4px;
+  gap: 7px;
+}
+.origin-brand--compact .origin-brand-mark {
+  width: 22px;
+  height: 22px;
+}
+.origin-brand--compact .origin-brand-mark span {
+  width: 3px;
+  height: 9px;
+}
+.origin-brand--compact .origin-brand-mark span:nth-child(2) {
+  height: 13px;
+}
+.origin-demo-avatar {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid #ccd9e0;
+  background: linear-gradient(125deg, #a4bdcc, #32516b);
+  color: #fff;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.origin-progress {
+  position: relative;
+  min-height: 675px;
+  border-bottom: 1px solid #577b973b;
+  background:
+    linear-gradient(#040b1055, #040b1000 60%),
+    url('/assets/origin/lunar-horizon.webp') center bottom / cover no-repeat,
+    #071018;
+}
+.origin-progress::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #030a10a8, #030a1033 60%, transparent 75%);
+  pointer-events: none;
+}
+.origin-progress-inner {
+  min-height: inherit;
+  display: grid;
+  grid-template-columns: 0.8fr 1.25fr;
+  gap: 20px;
+  align-items: center;
+  position: relative;
+  padding-bottom: 75px;
+}
+.origin-progress-copy {
+  z-index: 2;
+  padding-top: 20px;
+}
+.origin-progress-copy h2 {
+  font-size: clamp(38px, 4.3vw, 58px);
+  line-height: 1.02;
+  margin-bottom: 19px;
+}
+.origin-progress-copy > p:not(.origin-eyebrow) {
+  color: #c2cbd5;
+  font-size: 20px;
+  line-height: 1.35;
+  max-width: 370px;
+  margin-bottom: 24px;
+  letter-spacing: -0.02em;
+}
+.origin-landing .origin-button--glass {
+  background: #0c1720a1;
+  border-color: #6c7c8b66;
+  color: #f2f5f8;
+  font-weight: 450;
+  padding-inline: 22px;
+}
+.origin-landing .origin-button--glass:hover {
+  background: #1a3044;
+}
+.origin-progress-art {
+  position: relative;
+  height: 460px;
+  margin-left: -50px;
+  margin-right: -18px;
+}
+.origin-progress-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 4px #76b2ff);
+}
+.origin-commit-stack {
+  position: absolute;
+  left: 19%;
+  right: 0;
+  top: 55px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transform: perspective(850px) rotateY(-15deg) rotateZ(7deg);
+  transform-style: preserve-3d;
+}
+.origin-commit-card {
+  text-align: left;
+  color: #e4edf4;
+  transition: translate 220ms var(--origin-ease);
+  min-height: 84px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border: 1px solid #b6c7d19c;
+  border-radius: 11px;
+  background:
+    url('/assets/origin/metal-grain.svg'),
+    linear-gradient(110deg, #b6c0c347, #25313ddc 25%, #24323dc4);
+  box-shadow:
+    -10px 8px 2px #c6ced235,
+    -20px 13px 1px #0b171dbf,
+    -22px 13px 1px #acb6bb89,
+    inset 0 1px 4px #eef3f642;
+  position: relative;
+}
+.origin-commit-card--active {
+  border-color: #69a9ff;
+  background: linear-gradient(110deg, #5797e649, #092341ee 24%, #123754b0);
+  box-shadow:
+    0 0 9px #4b9bff,
+    inset 0 0 12px #56a3ff55,
+    -11px 8px 1px #3974b880,
+    -22px 13px 1px #172c40,
+    -24px 13px 1px #72a0ccaa;
+  z-index: 2;
+}
+.origin-commit-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  background: #d1dfe017;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.origin-commit-card--active .origin-commit-icon {
+  background: #1369c645;
+}
+.origin-commit-card strong {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+.origin-commit-card p {
+  color: #bfcbd7;
+  font-size: 13px;
+  margin-top: 2px;
+}
+.origin-commit-card code {
+  margin-left: auto;
+  color: #bbc8d8;
+  font-size: 10px;
+  align-self: flex-start;
+  margin-top: 5px;
+}
+.origin-commit-person {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  position: absolute;
+  right: 18px;
+  bottom: 12px;
+}
+.origin-commit-person .origin-demo-avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 9px;
+}
+.origin-commit-person small {
+  color: #c4d1df;
+  font-size: 9px;
+}
+.origin-builders {
+  padding-top: 77px;
+  padding-bottom: 40px;
+  position: relative;
+}
+.origin-builders::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: -650px;
+  width: 900px;
+  height: 240px;
+  border-top: 2px solid #6bb5ff9c;
+  box-shadow: 0 -6px 35px -6px #4598e784;
+  border-radius: 50%;
+  transform: rotate(-23deg);
+  pointer-events: none;
+  opacity: var(--origin-ambient);
+}
+.origin-builders .origin-section-heading h2 {
+  font-size: clamp(30px, 3.2vw, 43px);
+}
+.origin-role-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  margin-top: 35px;
+}
+.origin-role-card {
+  display: block;
+  min-height: 300px;
+  border: 1px solid #46607855;
+  border-radius: 15px;
+  padding: 43px 35px;
+  position: relative;
+  overflow: hidden;
+  background:
+    url('/assets/origin/metal-grain.svg'),
+    linear-gradient(125deg, #17222bb0, #080f16 65%);
+  transition: transform 240ms var(--origin-ease);
+}
+.origin-role-card:hover {
+  transform: translateY(-2px);
+}
+.origin-role-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, #07101744, #07101700 80%),
+    linear-gradient(0deg, #050c11e6, transparent 90%);
+  pointer-events: none;
+}
+.origin-role-icon {
+  width: 62px;
+  height: 62px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid #6b839845;
+  background: #96abc614;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 21px;
+}
+.origin-role-icon .origin-icon {
+  width: 33px;
+  height: 33px;
+  fill: #dce6ed;
+  stroke: #071017;
+}
+.origin-role-card:nth-child(2) .origin-role-icon {
+  background: #1f69bb25;
+}
+.origin-role-card:nth-child(2) .origin-role-icon .origin-icon {
+  fill: #d1e5fc;
+}
+.origin-role-card h3 {
+  position: relative;
+  z-index: 1;
+  font-size: 25px;
+  margin-bottom: 11px;
+  letter-spacing: -0.04em;
+}
+.origin-role-card > p {
+  position: relative;
+  z-index: 1;
+  font-size: 16px;
+  line-height: 1.4;
+  max-width: 340px;
+  color: #c1cedc;
+  letter-spacing: -0.02em;
+  padding-right: 25px;
+}
+.origin-role-arrow {
+  position: absolute;
+  z-index: 2;
+  right: 30px;
+  bottom: 45px;
+  width: 49px;
+  height: 49px;
+  border-radius: 50%;
+  border: 1px solid #6b839845;
+  display: grid;
+  place-items: center;
+  background: #32455626;
+  transition: background 0.25s;
+}
+.origin-role-card:hover .origin-role-arrow {
+  background: #2d74bc66;
+}
+.origin-role-art {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--origin-ambient);
+}
+.origin-role-art--student {
+  background: url('/assets/origin/student-craft.webp') 60% center / cover
+    no-repeat;
+  mask-image: linear-gradient(90deg, transparent, #000 35%);
+}
+.origin-role-art--instructor {
+  left: auto;
+  right: 0;
+  top: 24px;
+  bottom: auto;
+  width: 260px;
+  height: 300px;
+  transform: perspective(500px) rotateY(-30deg) rotateZ(-8deg);
+}
+.origin-role-sheet {
+  position: absolute;
+  top: 0;
+  right: 30px;
+  width: 185px;
+  height: 260px;
+  border-radius: 12px;
+  border: 1px solid #7cb6ea8c;
+  background: linear-gradient(125deg, #48678066, #05101e 40%, #133350);
+  box-shadow: 5px 0 10px #55a5ff40;
+  padding: 35px 18px;
+}
+.origin-role-sheet:nth-child(2) {
+  transform: translate(31px, 32px);
+  opacity: 0.7;
+}
+.origin-role-sheet:nth-child(3) {
+  transform: translate(60px, 60px);
+  opacity: 0.4;
+}
+.origin-role-sheet span {
+  display: block;
+  height: 30px;
+  margin-bottom: 14px;
+  background: linear-gradient(90deg, #7296b243, #2b70a563);
+  border: 1px solid #4d779440;
+  border-radius: 4px;
+}
+.origin-role-sheet i {
+  position: absolute;
+  width: 4px;
+  height: 60px;
+  right: -2px;
+  top: 30px;
+  background: #c0e3ff;
+  box-shadow: 0 0 20px 7px #3a8dff;
+  border-radius: 4px;
+}
+.origin-footer {
+  border-top: 1px solid #3752694a;
+  position: relative;
+  background: #050c11;
+}
+.origin-footer > div {
+  min-height: 142px;
+  display: flex;
+  align-items: center;
+  gap: 35px;
+}
+.origin-footer .origin-brand {
+  font-size: 25px;
+}
+.origin-footer p {
+  font-size: 12px;
+  color: #c0c7ce;
+  flex: 1;
+}
+.origin-footer nav {
+  margin-left: auto;
+  font-size: 16px;
+  gap: 30px;
+}
+.origin-landing .origin-overview-dialog {
+  width: min(620px, calc(100% - 32px));
+  max-height: calc(100dvh - 40px);
+  padding: 42px;
+  border: 1px solid #607f9c;
+  border-radius: 20px;
+  background: #09131e;
+  color: #c2cddd;
+  box-shadow: 0 30px 100px #0009;
+}
+.origin-overview-dialog::backdrop {
+  background: #01060bc9;
+  backdrop-filter: blur(8px);
+}
+.origin-overview-dialog .origin-brand {
+  margin-bottom: 35px;
+}
+.origin-overview-dialog h2 {
+  font-size: 35px;
+  margin-bottom: 14px;
+}
+.origin-overview-dialog ol {
+  list-style: none;
+  padding: 0;
+  margin: 30px 0;
+  display: grid;
+  gap: 25px;
+}
+.origin-overview-dialog li {
+  display: flex;
+  gap: 18px;
+}
+.origin-overview-dialog li > .origin-icon {
+  color: #87bbff;
+  margin-top: 3px;
+}
+.origin-overview-dialog h3 {
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+.origin-overview-dialog li p {
+  font-size: 14px;
+}
+.origin-landing .origin-dialog-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: #26394b;
+  border: 1px solid #4b657d;
+  color: white;
+  border-radius: 50%;
+  width: 33px;
+  height: 33px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.origin-tab-indicator {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / 3);
+  border: 1px solid #eff5fc;
+  border-radius: 7px;
+  background:
+    url('/assets/origin/metal-grain.svg'), linear-gradient(#fafcfe, #d4dee7);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -1px 0 #a3b2c155,
+    0 1px 6px #0005;
+  transition: transform 280ms var(--origin-ease);
+  pointer-events: none;
+}
+.origin-showcase-content {
+  animation: origin-showcase-enter 280ms var(--origin-ease) both;
+}
+.origin-touch-surface {
+  isolation: isolate;
+}
+.origin-surface-light {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(
+    circle,
+    #b3d8ff2e,
+    #5c9fe112 35%,
+    transparent 68%
+  );
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  z-index: 1;
+}
+.origin-touch-surface[data-highlighted='true'] > .origin-surface-light {
+  opacity: var(--origin-ambient);
+  will-change: transform;
+}
+.origin-landing[data-motion-paused='true'] .origin-branch-scene::before {
+  animation-play-state: paused;
+}
+.origin-button:is(:hover, :focus-visible) .origin-icon {
+  transform: translateX(2px);
+}
+.origin-landing .origin-button:active {
+  transform: translateY(0) scale(0.98);
+}
+.origin-landing .origin-workspace-tabs button:active {
+  transform: scale(0.98);
+}
+.origin-role-arrow .origin-icon {
+  transition: transform 220ms var(--origin-ease);
+}
+.origin-role-card:is(:hover, :focus-visible) .origin-role-arrow .origin-icon {
+  transform: translateX(2px);
+}
+.origin-overview-button > span {
+  transition: transform 180ms var(--origin-ease);
+}
+.origin-overview-button:active > span {
+  transform: scale(0.93);
+}
+.origin-overview-dialog[open] {
+  animation: origin-overview-enter 220ms var(--origin-ease) both;
+}
+@keyframes origin-ambient-drift {
+  from {
+    transform: translate3d(-14px, 8px, 0) scale(0.94);
+    opacity: calc(var(--origin-ambient) * 0.6);
+  }
+  to {
+    transform: translate3d(14px, -8px, 0) scale(1.03);
+    opacity: var(--origin-ambient);
+  }
+}
+@keyframes origin-showcase-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes origin-overview-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  .origin-surface-light {
+    display: none;
+  }
+  .origin-role-card:hover,
+  .origin-landing .origin-button:hover {
+    transform: none;
+  }
+}
+.origin-git-chip[aria-pressed='true'] {
+  border-color: #98bee1a6;
+}
+.origin-git-chip:is(:hover, :focus-visible) {
+  filter: brightness(1.12);
+}
+.origin-git-chip {
+  transition: translate 200ms var(--origin-ease);
+}
+.origin-branch-detail {
+  position: absolute;
+  bottom: -28px;
+  left: 30%;
+  right: 0;
+  color: #8fa5b9;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.origin-commit-card:is(:hover, :focus-visible) {
+  filter: brightness(1.12);
+}
+.origin-progress-caption {
+  position: absolute;
+  left: 20%;
+  right: 0;
+  bottom: -48px;
+  color: #afc4d5;
+  font-size: 11px;
+  line-height: 1.6;
+  max-width: 430px;
+}
+.origin-progress-caption > span {
+  display: block;
+  color: #829bad;
+  font-size: 9px;
+  margin-bottom: 4px;
+}
+@media (max-width: 800px) {
+  .origin-commit-stack {
+    right: 6%;
+  }
+  .origin-progress-caption {
+    right: 5%;
+    font-size: 10px;
+    bottom: -56px;
+  }
+}
+@media (max-width: 600px) {
+  .origin-branch-detail {
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 9px;
+    bottom: -21px;
+  }
+  .origin-progress-caption {
+    bottom: -48px;
+    font-size: 9px;
+  }
+}
+@media (min-width: 1500px) {
+  .origin-hero {
+    min-height: 470px;
+  }
+  .origin-hero-region::before {
+    right: calc(50% - 1750px);
+  }
+}
+@media (max-width: 1100px) {
+  .origin-container {
+    width: calc(100% - 72px);
+  }
+  .origin-header {
+    gap: 20px;
+  }
+  .origin-header nav {
+    gap: 22px;
+  }
+  .origin-header-actions {
+    gap: 10px;
+  }
+  .origin-hero {
+    min-height: 410px;
+  }
+  .origin-hero h1 {
+    font-size: 48px;
+  }
+  .origin-branch-scene {
+    margin-right: -15px;
+  }
+  .origin-git-chip {
+    padding: 13px;
+    gap: 8px;
+    font-size: 11px;
+  }
+  .origin-git-chip small {
+    font-size: 8px;
+  }
+  .origin-git-chip--root {
+    font-size: 15px;
+  }
+  .origin-git-chip--submit {
+    min-width: 150px;
+  }
+  .origin-progress {
+    min-height: 600px;
+  }
+  .origin-progress-inner {
+    grid-template-columns: 0.8fr 1.15fr;
+  }
+  .origin-progress-copy h2 {
+    font-size: 46px;
+  }
+  .origin-progress-copy > p:not(.origin-eyebrow) {
+    font-size: 17px;
+    max-width: 310px;
+  }
+  .origin-commit-card {
+    padding: 17px 15px;
+    gap: 10px;
+  }
+  .origin-commit-card strong {
+    font-size: 16px;
+  }
+  .origin-commit-card p {
+    font-size: 11px;
+  }
+  .origin-commit-card code {
+    font-size: 9px;
+  }
+  .origin-commit-icon {
+    width: 35px;
+    height: 35px;
+  }
+  .origin-role-card {
+    padding: 35px 25px;
+    min-height: 285px;
+  }
+  .origin-role-card > p {
+    font-size: 15px;
+    max-width: 290px;
+  }
+  .origin-role-arrow {
+    right: 20px;
+    width: 42px;
+    height: 42px;
+  }
+  .origin-footer > div {
+    gap: 22px;
+  }
+  .origin-footer nav {
+    gap: 20px;
+  }
+  .origin-footer p {
+    max-width: 220px;
+    font-size: 11px;
+  }
+}
+@media (max-width: 800px) {
+  .origin-container {
+    width: calc(100% - 48px);
+  }
+  .origin-header {
+    height: 75px;
+  }
+  .origin-header nav {
+    gap: 17px;
+    font-size: 16px;
+  }
+  .origin-brand {
+    font-size: 22px;
+  }
+  .origin-brand-mark {
+    width: 26px;
+    height: 26px;
+  }
+  .origin-header-actions {
+    gap: 7px;
+  }
+  .origin-header-actions .origin-atmosphere {
+    display: none;
+  }
+  .origin-sign-in {
+    font-size: 10px;
+    padding: 9px;
+  }
+  .origin-landing .origin-button--small {
+    font-size: 10px;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .origin-hero {
+    min-height: 380px;
+    grid-template-columns: 1.03fr 1fr;
+    padding-top: 15px;
+    padding-bottom: 35px;
+  }
+  .origin-hero h1 {
+    font-size: 39px;
+  }
+  .origin-landing .origin-hero-description {
+    font-size: 15px;
+  }
+  .origin-landing .origin-eyebrow {
+    font-size: 8px;
+  }
+  .origin-hero-actions {
+    gap: 15px;
+  }
+  .origin-landing .origin-button {
+    padding: 11px 16px;
+    font-size: 11px;
+    gap: 14px;
+    min-height: 42px;
+  }
+  .origin-overview-button {
+    font-size: 10px !important;
+    gap: 7px !important;
+  }
+  .origin-overview-button > span {
+    width: 25px;
+    height: 25px;
+  }
+  .origin-branch-scene {
+    height: 285px;
+    margin-left: -20px;
+  }
+  .origin-git-chip {
+    padding: 12px 9px;
+    font-size: 9px;
+    gap: 6px;
+    border-radius: 7px;
+  }
+  .origin-git-chip .origin-icon {
+    width: 17px;
+    height: 17px;
+  }
+  .origin-git-chip--root {
+    font-size: 13px;
+  }
+  .origin-git-chip small {
+    font-size: 6px;
+  }
+  .origin-git-chip--submit {
+    min-width: 120px;
+  }
+  .origin-landing .origin-check {
+    width: 16px;
+    height: 16px;
+  }
+  .origin-classroom-note {
+    gap: 10px;
+    margin-top: 23px;
+  }
+  .origin-classroom-note p {
+    font-size: 13px;
+  }
+  .origin-classroom-note small {
+    font-size: 11px;
+  }
+  .origin-avatar-cluster span {
+    width: 33px;
+    height: 36px;
+    font-size: 11px;
+  }
+  .origin-section-heading h2 {
+    font-size: 31px;
+  }
+  .origin-section-heading > p:last-child {
+    font-size: 14px;
+  }
+  .origin-workspace-tabs {
+    width: 80%;
+    margin: 25px auto 33px;
+  }
+  .origin-landing .origin-workspace-tabs button {
+    padding: 10px 5px;
+    gap: 10px;
+    font-size: 12px;
+  }
+  .origin-workspace-tabs .origin-icon {
+    width: 18px;
+    height: 18px;
+  }
+  .origin-brand--compact {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+  .origin-progress {
+    min-height: 530px;
+  }
+  .origin-progress-inner {
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: 0;
+    padding-bottom: 60px;
+  }
+  .origin-progress-copy h2 {
+    font-size: 38px;
+  }
+  .origin-progress-copy > p:not(.origin-eyebrow) {
+    font-size: 15px;
+    max-width: 240px;
+  }
+  .origin-progress-art {
+    height: 380px;
+    margin-left: -34px;
+    margin-right: -10px;
+  }
+  .origin-commit-stack {
+    top: 40px;
+    gap: 8px;
+    left: 20%;
+  }
+  .origin-commit-card {
+    min-height: 72px;
+    padding: 13px 10px;
+    gap: 9px;
+    border-radius: 8px;
+  }
+  .origin-commit-card strong {
+    font-size: 13px;
+  }
+  .origin-commit-card p {
+    font-size: 9px;
+  }
+  .origin-commit-card code {
+    font-size: 7px;
+    position: absolute;
+    right: 10px;
+    top: 5px;
+  }
+  .origin-commit-icon {
+    width: 29px;
+    height: 29px;
+  }
+  .origin-commit-icon .origin-icon {
+    width: 19px;
+    height: 19px;
+  }
+  .origin-commit-person {
+    bottom: 8px;
+    right: 10px;
+    gap: 5px;
+  }
+  .origin-commit-person .origin-demo-avatar {
+    width: 18px;
+    height: 18px;
+    font-size: 7px;
+  }
+  .origin-commit-person small {
+    font-size: 7px;
+  }
+  .origin-builders {
+    padding-top: 60px;
+    padding-bottom: 33px;
+  }
+  .origin-builders .origin-section-heading h2 {
+    font-size: 30px;
+  }
+  .origin-role-grid {
+    gap: 22px;
+    margin-top: 30px;
+  }
+  .origin-role-card {
+    min-height: 245px;
+    padding: 29px 22px;
+  }
+  .origin-role-icon {
+    width: 47px;
+    height: 47px;
+    margin-bottom: 17px;
+  }
+  .origin-role-icon .origin-icon {
+    width: 27px;
+    height: 27px;
+  }
+  .origin-role-card h3 {
+    font-size: 21px;
+  }
+  .origin-role-card > p {
+    font-size: 12px;
+    padding-right: 20px;
+  }
+  .origin-role-arrow {
+    width: 36px;
+    height: 36px;
+    right: 18px;
+    bottom: 30px;
+  }
+  .origin-role-art--instructor {
+    transform: perspective(500px) rotateY(-30deg) rotateZ(-8deg) scale(0.8);
+    transform-origin: top right;
+  }
+  .origin-footer > div {
+    min-height: 115px;
+    gap: 19px;
+    flex-wrap: wrap;
+  }
+  .origin-footer .origin-brand {
+    font-size: 22px;
+  }
+  .origin-footer p {
+    font-size: 9px;
+    max-width: 180px;
+  }
+  .origin-footer nav {
+    font-size: 14px;
+    gap: 16px;
+  }
+  .origin-footer .origin-atmosphere {
+    width: 58px;
+  }
+}
+@media (max-width: 600px) {
+  .origin-container {
+    width: calc(100% - 40px);
+  }
+  .origin-header {
+    height: 72px;
+    flex-wrap: wrap;
+    padding-top: 14px;
+    padding-bottom: 10px;
+    gap: 8px 20px;
+  }
+  .origin-header > a {
+    margin-right: auto;
+  }
+  .origin-header nav {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: center;
+    font-size: 15px;
+    gap: clamp(8px, 3vw, 18px);
+  }
+  .origin-header-actions {
+    gap: 10px;
+  }
+  .origin-header .origin-brand {
+    font-size: 21px;
+  }
+  .origin-sign-in {
+    background: transparent;
+    border: 0;
+  }
+  .origin-landing .origin-button--small {
+    min-height: 31px;
+    font-size: 10px;
+    padding: 6px 10px;
+  }
+  .origin-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding-top: 46px;
+    padding-bottom: 0;
+    min-height: 0;
+  }
+  .origin-hero-copy {
+    padding-bottom: 0;
+  }
+  .origin-hero h1 {
+    font-size: clamp(36px, 9vw, 54px);
+    max-width: 460px;
+  }
+  .origin-landing .origin-eyebrow {
+    font-size: 9px;
+  }
+  .origin-landing .origin-hero-description {
+    font-size: 17px;
+  }
+  .origin-hero-actions {
+    gap: 24px;
+  }
+  .origin-landing .origin-button {
+    font-size: 12px;
+    padding: 12px 18px;
+  }
+  .origin-overview-button {
+    font-size: 12px !important;
+  }
+  .origin-classroom-note p {
+    font-size: 14px;
+  }
+  .origin-classroom-note small {
+    font-size: 12px;
+  }
+  .origin-avatar-cluster span {
+    width: 36px;
+    height: 38px;
+  }
+  .origin-branch-scene {
+    height: 265px;
+    width: 100%;
+    max-width: 450px;
+    align-self: center;
+    margin: 5px -2px 25px 0;
+  }
+  .origin-git-chip {
+    font-size: 11px;
+    padding: 13px;
+  }
+  .origin-git-chip small {
+    font-size: 8px;
+  }
+  .origin-git-chip--root {
+    font-size: 15px;
+  }
+  .origin-git-chip--submit {
+    min-width: 143px;
+  }
+  .origin-git-chip--branch {
+    right: 0;
+  }
+  .origin-git-chip--commit {
+    left: 41%;
+  }
+  .origin-git-chip--merge {
+    left: 48%;
+  }
+  .origin-hero-region::before {
+    right: -1245px;
+    top: -1030px;
+    opacity: calc(var(--origin-ambient) * 0.65);
+  }
+  .origin-section-heading h2 {
+    font-size: 30px;
+    line-height: 1.12;
+    max-width: 360px;
+    margin: 0 auto 14px;
+  }
+  .origin-section-heading > p:last-child {
+    font-size: 14px;
+    line-height: 1.5;
+    max-width: 380px;
+    margin-inline: auto;
+  }
+  .origin-workspace-tabs {
+    width: 100%;
+    margin-top: 25px;
+    margin-bottom: 35px;
+  }
+  .origin-landing .origin-workspace-tabs button {
+    font-size: 10px;
+    gap: 6px;
+    padding: 12px 4px;
+  }
+  .origin-workspace-tabs .origin-icon {
+    width: 16px;
+    height: 16px;
+  }
+  .origin-brand--compact {
+    font-size: 13px;
+    gap: 4px;
+    margin-bottom: 20px;
+  }
+  .origin-brand--compact .origin-brand-mark {
+    width: 17px;
+    height: 17px;
+    gap: 1px;
+  }
+  .origin-brand--compact .origin-brand-mark span {
+    width: 2px;
+    height: 7px;
+  }
+  .origin-brand--compact .origin-brand-mark span:nth-child(2) {
+    height: 10px;
+  }
+  .origin-progress {
+    min-height: 680px;
+    background-position: 55% bottom;
+    background-size: auto 100%;
+  }
+  .origin-progress-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding-top: 47px;
+    padding-bottom: 85px;
+  }
+  .origin-progress-copy {
+    padding-top: 0;
+  }
+  .origin-progress-copy h2 {
+    font-size: 41px;
+    margin-bottom: 17px;
+  }
+  .origin-progress-copy > p:not(.origin-eyebrow) {
+    font-size: 16px;
+    max-width: 310px;
+  }
+  .origin-progress-copy .origin-eyebrow {
+    margin-bottom: 12px;
+  }
+  .origin-progress-art {
+    height: 330px;
+    margin: 0 -5px -20px -20px;
+  }
+  .origin-commit-stack {
+    left: 20%;
+    right: 4%;
+    top: 22px;
+    gap: 8px;
+  }
+  .origin-commit-card {
+    min-height: 62px;
+    padding: 10px 12px;
+  }
+  .origin-commit-card strong {
+    font-size: 14px;
+  }
+  .origin-commit-card p {
+    font-size: 9px;
+  }
+  .origin-commit-card code {
+    font-size: 7px;
+  }
+  .origin-commit-icon {
+    width: 30px;
+    height: 30px;
+  }
+  .origin-progress-lines {
+    height: 340px;
+  }
+  .origin-builders {
+    padding-top: 50px;
+    padding-bottom: 30px;
+  }
+  .origin-builders .origin-section-heading h2 {
+    font-size: 29px;
+    max-width: 320px;
+  }
+  .origin-role-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-top: 28px;
+  }
+  .origin-role-card {
+    min-height: 240px;
+    padding: 28px;
+  }
+  .origin-role-icon {
+    width: 47px;
+    height: 47px;
+    margin-bottom: 18px;
+  }
+  .origin-role-card h3 {
+    font-size: 23px;
+  }
+  .origin-role-card > p {
+    font-size: 14px;
+    max-width: 310px;
+    padding-right: 26px;
+  }
+  .origin-role-arrow {
+    right: 24px;
+    bottom: 30px;
+  }
+  .origin-role-art--instructor {
+    transform: perspective(500px) rotateY(-30deg) rotateZ(-8deg) scale(0.85);
+  }
+  .origin-footer > div {
+    padding-block: 28px;
+    gap: 20px 15px;
+    min-height: 160px;
+  }
+  .origin-footer p {
+    max-width: none;
+    font-size: 10px;
+  }
+  .origin-footer nav {
+    order: 3;
+    flex: 1 1 auto;
+    font-size: 15px;
+    gap: 20px;
+  }
+  .origin-footer .origin-atmosphere {
+    order: 4;
+  }
+  .origin-overview-dialog {
+    padding: 30px 24px !important;
+  }
+  .origin-overview-dialog h2 {
+    font-size: 30px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .origin-surface-light {
+    display: none;
+  }
+  .origin-role-card:hover,
+  .origin-landing .origin-button:hover {
+    transform: none;
+  }
+  .origin-landing *,
+  .origin-landing *::before,
+  .origin-landing *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.origin-connection-port {
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.origin-connection-port--right {
+  left: auto;
+  right: -1px;
+}
+.origin-connection-port--bottom {
+  left: 35%;
+  top: auto;
+  bottom: -1px;
+}
+.origin-connections {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  stroke-linecap: round;
+}
+.origin-connection-lines {
+  stroke: #83b7e8;
+  stroke-width: 1.6;
+}
+.origin-connection-glow {
+  stroke: #397fcb;
+  stroke-width: 5;
+  opacity: 0.28;
+  filter: blur(3px);
+}
+.origin-connection-node {
+  fill: #b3dcff;
+  stroke: #71a9d9;
+  stroke-width: 1;
+}
+.origin-connection-signals path {
+  stroke: #d6edff;
+  stroke-width: 2;
+  stroke-dasharray: 0.09 0.91;
+  animation: origin-connection-travel 8s linear infinite;
+}
+.origin-connections[data-flow-paused='true'] .origin-connection-signals path {
+  animation-play-state: paused;
+}
+@keyframes origin-connection-travel {
+  0% {
+    stroke-dashoffset: 0.1;
+    opacity: 0;
+  }
+  12% {
+    opacity: var(--origin-flow-opacity, 0.7);
+  }
+  44% {
+    opacity: var(--origin-flow-opacity, 0.7);
+  }
+  55%,
+  100% {
+    stroke-dashoffset: -1;
+    opacity: 0;
+  }
+}
+.origin-landing[data-theme='light'] .origin-connection-lines {
+  stroke: #507da8;
+}
+.origin-landing[data-theme='light'] .origin-connection-node {
+  fill: #e8f4ff;
+  stroke: #4d7da8;
+}
+.origin-landing[data-theme='light'] .origin-connection-signals path {
+  --origin-flow-opacity: 1;
+  stroke: #ffffff;
+  stroke-width: 2.6;
+  filter: drop-shadow(0 0 2px #e4f5ff);
+}
+@media (prefers-reduced-motion: reduce) {
+  .origin-connection-signals {
+    display: none;
+  }
+}
+
+.origin-progress-title-line {
+  display: inline-block;
+}
+
+.origin-hero-region .origin-eyebrow {
+  font-size: clamp(14px, 1.2vw, 16px);
+}
+.origin-avatar-cluster {
+  flex-shrink: 0;
+}
+
+.origin-hero-region .origin-hero-copy > .origin-eyebrow {
+  font-size: clamp(12px, 1.1vw, 14px);
+}

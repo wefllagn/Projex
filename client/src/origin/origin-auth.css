@@ -1,0 +1,472 @@
+.origin-auth {
+  min-height: 100svh;
+  position: relative;
+  background:
+    radial-gradient(ellipse at 10% 55%, #17385936, transparent 55%), #070e14;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.origin-auth-header {
+  width: min(1280px, calc(100% - 100px));
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 100px;
+  position: relative;
+  z-index: 2;
+}
+.origin-auth-header > div {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+.origin-auth-back {
+  font-size: 12px;
+  color: #a6b6c5 !important;
+}
+.origin-auth-stage {
+  width: min(1120px, calc(100% - 100px));
+  margin: auto;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  align-items: center;
+  gap: 90px;
+  padding: 55px 0 70px;
+  position: relative;
+}
+.origin-auth-story {
+  position: relative;
+  min-width: 0;
+}
+.origin-auth-story h1 {
+  font-size: clamp(40px, 4.5vw, 65px);
+  line-height: 1.03;
+  letter-spacing: -0.055em;
+  margin-bottom: 22px;
+}
+.origin-auth-story > p:not(.origin-eyebrow) {
+  font-size: 17px;
+  line-height: 1.65;
+  color: #9fb1c1;
+  max-width: 410px;
+  letter-spacing: -0.015em;
+}
+.origin-auth .origin-eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+}
+.origin-auth-object {
+  height: 270px;
+  position: relative;
+  max-width: 360px;
+  margin: 25px 0 15px;
+}
+.origin-auth-orbit {
+  position: absolute;
+  left: -50px;
+  top: 40px;
+  width: 440px;
+  height: 155px;
+  border: 1px solid #709fca26;
+  border-radius: 50%;
+  transform: rotate(-25deg);
+  background: radial-gradient(ellipse, #3b6d9a10, transparent 65%);
+}
+.origin-auth-tile {
+  position: absolute;
+  width: 200px;
+  height: 180px;
+  border: 1px solid #a2b6c87a;
+  border-radius: 20px;
+  background:
+    url('/assets/origin/metal-grain.svg'),
+    linear-gradient(135deg, #556675, #192b3b 28%, #0d1925 72%, #3a5063);
+  box-shadow:
+    inset 0 1px 1px #d2e4ed59,
+    0 20px 40px #0004,
+    -4px 5px 0 #56657255;
+  transform: perspective(700px) rotateY(-20deg) rotateX(12deg) rotateZ(-14deg);
+}
+.origin-auth-tile--back {
+  left: 36px;
+  top: 34px;
+  opacity: 0.55;
+  display: grid;
+  place-items: center;
+}
+.origin-auth-tile--back .origin-icon {
+  width: 50px;
+  height: 50px;
+  color: #87baf146;
+}
+.origin-auth-tile--front {
+  left: 110px;
+  top: 60px;
+  padding: 35px 28px;
+}
+.origin-auth-tile--front > .origin-icon {
+  width: 38px;
+  height: 38px;
+  color: #c5dcf0;
+}
+.origin-auth-tile-edge {
+  position: absolute;
+  top: 22px;
+  left: -2px;
+  width: 3px;
+  height: 68px;
+  border-radius: 2px;
+  background: #b2d7ff;
+  box-shadow: 0 0 15px 3px #3a8fe780;
+}
+.origin-auth-object-caption {
+  display: block;
+  margin-top: 16px;
+  font-size: 12px;
+  letter-spacing: -0.02em;
+  color: #b3c9dc;
+}
+.origin-auth-tile i {
+  display: inline-block;
+  width: 27px;
+  height: 3px;
+  margin: 18px 5px 0 0;
+  background: #718da53d;
+  border-radius: 2px;
+}
+.origin-auth-object-node {
+  width: 5px;
+  height: 5px;
+  background: #b4d8ff;
+  position: absolute;
+  left: 30px;
+  top: 166px;
+  border-radius: 50%;
+  box-shadow: 0 0 12px #539cff;
+}
+.origin-auth-story-note {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+.origin-auth-note-line {
+  height: 36px;
+  width: 1px;
+  background: linear-gradient(transparent, #7092ae, transparent);
+}
+.origin-auth-story-note p {
+  color: #b3c1ce;
+  font-size: 12px;
+}
+.origin-auth-story-note small {
+  display: block;
+  color: #8193a4;
+  font-size: 10px;
+  margin-top: 5px;
+}
+.origin-auth-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #7d92a54a;
+  border-radius: 22px;
+  padding: 38px;
+  background:
+    url('/assets/origin/metal-grain.svg'),
+    linear-gradient(135deg, #27323d75, #111c27 30%, #0b141e);
+  box-shadow:
+    inset 0 1px 0 #ccdce727,
+    0 25px 65px #0004;
+}
+.origin-auth-panel > :not(.origin-surface-light) {
+  position: relative;
+  z-index: 2;
+}
+.origin-auth-role-symbol {
+  display: grid;
+  place-items: center;
+  width: 47px;
+  height: 47px;
+  background: linear-gradient(140deg, #354f67, #172b40);
+  border: 1px solid #5b80a144;
+  border-radius: 13px;
+  color: #c6dff4;
+  box-shadow: inset 0 1px 0 #d5e9f91f;
+  margin-bottom: 25px;
+}
+.origin-auth-role-symbol .origin-icon {
+  width: 24px;
+  height: 24px;
+}
+.origin-auth-panel-heading > p {
+  color: #99aebf;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+.origin-auth-panel-heading h2 {
+  font-size: 34px;
+  letter-spacing: -0.045em;
+  margin-bottom: 10px;
+}
+.origin-auth-panel-heading > span:last-child {
+  font-size: 13px;
+  color: #9cadbd;
+}
+.origin-auth-role-switch {
+  display: flex;
+  margin-top: 26px;
+  border: 1px solid #566b7d52;
+  border-radius: 8px;
+  padding: 3px;
+  background: #050c1359;
+  gap: 3px;
+}
+.origin-auth-role-switch a {
+  display: block;
+  width: 50%;
+  padding: 9px;
+  text-align: center;
+  font-size: 11px;
+  color: #8da1b3;
+  min-height: 35px;
+  border-radius: 5px;
+}
+.origin-auth-role-switch a[aria-current='page'] {
+  background: linear-gradient(#354351, #243341);
+  box-shadow: inset 0 1px 0 #e8f3ff20;
+  color: #eef4fa;
+}
+.origin-auth-form {
+  margin-top: 26px;
+}
+.origin-auth-form .origin-auth-field {
+  display: block;
+  font-size: 12px;
+  font-weight: 450;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #c3cfdb;
+  margin-bottom: 9px;
+}
+.origin-auth .origin-auth-input {
+  width: 100%;
+  min-height: 47px;
+  border: 1px solid #52697d70;
+  border-radius: 8px;
+  padding: 12px 13px;
+  background: #07101a9c;
+  color: #e6eef6;
+  font-size: 13px;
+  transition: border-color 160ms ease;
+}
+.origin-auth .origin-auth-input::placeholder {
+  color: #657d91;
+}
+.origin-auth .origin-auth-input:focus-visible {
+  outline: 2px solid #7ab2ed66;
+  outline-offset: 2px;
+  border-color: #8cbef5b3;
+}
+.origin-auth-form > .origin-auth-field:not(:first-child) {
+  margin-top: 22px;
+}
+.origin-auth-password {
+  position: relative;
+}
+.origin-auth .origin-auth-password input {
+  padding-right: 65px;
+}
+.origin-auth-password button {
+  position: absolute;
+  right: 8px;
+  top: 7px;
+  bottom: 7px;
+  background: transparent;
+  border: 0;
+  padding: 0 9px;
+  color: #9db1c3;
+  font-size: 10px;
+  border-radius: 4px;
+}
+.origin-auth .origin-auth-submit {
+  margin-top: 27px;
+  width: 100%;
+  justify-content: space-between;
+  font-size: 13px;
+  min-height: 46px;
+}
+.origin-auth-submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+  transform: none !important;
+}
+.origin-auth-message {
+  margin-top: 17px !important;
+  padding: 12px 14px;
+  border-radius: 7px;
+  border: 1px solid #b7866b5c;
+  background: #9c5f3e14;
+  color: #e8bfa5;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.origin-auth-field-error {
+  display: block;
+  color: #e8bfa5;
+  font-size: 11px;
+  margin-top: 7px;
+}
+.origin-auth .origin-auth-input[aria-invalid='true'] {
+  border-color: #c18c6b99;
+}
+.origin-auth-account-note {
+  margin-top: 22px !important;
+  font-size: 11px;
+  font-style: italic;
+  color: #8b9fb0;
+  line-height: 1.65;
+  text-align: center;
+  max-width: none;
+  white-space: nowrap;
+  margin-inline: auto !important;
+}
+.origin-auth-footer {
+  width: min(1280px, calc(100% - 100px));
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 75px;
+  border-top: 1px solid #52687b30;
+  color: #7e94a7;
+  font-size: 10px;
+  position: relative;
+  z-index: 1;
+}
+.origin-auth-footer span:last-child {
+  text-align: right;
+}
+@media (max-width: 1000px) {
+  .origin-auth-stage {
+    gap: 45px;
+    width: calc(100% - 80px);
+    grid-template-columns: 1fr 1fr;
+    padding-top: 40px;
+  }
+  .origin-auth-panel {
+    padding: 30px;
+  }
+  .origin-auth-story h1 {
+    font-size: 47px;
+  }
+  .origin-auth-story > p:not(.origin-eyebrow) {
+    font-size: 15px;
+  }
+  .origin-auth-object {
+    transform: scale(0.85);
+    transform-origin: left center;
+    margin-top: 0;
+    max-width: 300px;
+  }
+  .origin-auth-story-note p {
+    font-size: 11px;
+  }
+  .origin-auth-story-note small {
+    font-size: 9px;
+  }
+  .origin-auth-panel-heading h2 {
+    font-size: 30px;
+  }
+}
+@media (max-width: 700px) {
+  .origin-auth-header {
+    width: calc(100% - 40px);
+    min-height: 80px;
+  }
+  .origin-auth-header > div {
+    gap: 18px;
+  }
+  .origin-auth-back {
+    font-size: 10px;
+  }
+  .origin-auth-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    width: min(440px, calc(100% - 40px));
+    padding: 28px 0 45px;
+  }
+  .origin-auth-story {
+    width: 100%;
+    text-align: center;
+  }
+  .origin-auth-story .origin-eyebrow {
+    font-size: 8px;
+    margin-bottom: 12px;
+  }
+  .origin-auth-story h1 {
+    font-size: clamp(32px, 8.8vw, 39px);
+    line-height: 1.03;
+    margin-bottom: 15px;
+  }
+  .origin-auth-story h1 br {
+    display: initial;
+  }
+  .origin-auth-story > p:not(.origin-eyebrow) {
+    font-size: 13px;
+    line-height: 1.65;
+    max-width: 345px;
+    margin-inline: auto;
+  }
+  .origin-auth-object,
+  .origin-auth-story-note {
+    display: none;
+  }
+  .origin-auth-panel {
+    width: 100%;
+    padding: 29px 25px;
+    border-radius: 17px;
+  }
+  .origin-auth-role-symbol {
+    display: none;
+  }
+  .origin-auth-panel-heading h2 {
+    font-size: 29px;
+  }
+  .origin-auth-panel-heading > span:last-child {
+    font-size: 12px;
+  }
+  .origin-auth-role-switch {
+    margin-top: 22px;
+  }
+  .origin-auth-form {
+    margin-top: 22px;
+  }
+  .origin-auth .origin-auth-input {
+    font-size: 16px;
+    min-height: 47px;
+  }
+  .origin-auth-account-note {
+    font-size: clamp(9.5px, calc(2vw + 2px), 11px);
+  }
+  .origin-auth-footer {
+    width: calc(100% - 40px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    min-height: 72px;
+    padding: 20px 0;
+    text-align: left;
+    font-size: 9px;
+    line-height: 1.8;
+  }
+  .origin-auth-footer span {
+    display: block;
+  }
+  .origin-auth .origin-auth-header .origin-brand {
+    font-size: 23px;
+  }
+}
