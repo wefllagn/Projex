@@ -212,8 +212,8 @@ export default function OriginLogin({ role, login }) {
         </section>
       </main>
       <footer className="origin-auth-footer">
-        <span>Origin for Saint Louis University</span>
-        <span>Computing &amp; Information Technology</span>
+        <span>Partnered With Saint Louis University</span>
+        <span>Computing &amp; Information Technology Department</span>
       </footer>
     </div>
   )

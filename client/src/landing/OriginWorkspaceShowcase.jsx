@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Brand, Icon } from '../origin/OriginPrimitives.jsx'
 import './origin-showcase.css'
 
@@ -483,6 +483,8 @@ function AssessmentDemo({ assessment, setAssessment, onManual }) {
 
 export default function OriginWorkspaceShowcase({ activeTab, setActiveTab }) {
   const tabRefs = useRef([])
+  const playbackRef = useRef(null)
+  const explored = useRef(new Set())
   const [program, setProgram] = useState({
     name: 'Origin',
     status: 'idle',
@@ -501,7 +503,65 @@ export default function OriginWorkspaceShowcase({ activeTab, setActiveTab }) {
     saved: false,
     reviewed: ['jordan'],
   })
-  const [playing, setPlaying] = useState(false)
+  const [playback, setPlayback] = useState(null)
+  const playing = playback?.tab === activeTab
+
+  const stopWalkthrough = useCallback(() => {
+    explored.current.add(activeTab)
+    setPlayback(null)
+  }, [activeTab])
+
+  const startWalkthrough = useCallback(() => {
+    explored.current.add(activeTab)
+    if (activeTab === 'programming') {
+      setProgram((current) => ({ ...current, status: 'idle', output: '' }))
+    } else if (activeTab === 'repositories') {
+      setRepo((current) => ({
+        ...current,
+        view: 'files',
+        file: 'Main.java',
+        branch: 'feature/arrays',
+      }))
+    } else {
+      setAssessment((current) => ({
+        ...current,
+        view: 'results',
+        saved: false,
+      }))
+    }
+    setPlayback({ tab: activeTab, step: 0 })
+  }, [activeTab])
+
+  useEffect(() => {
+    if (!window.IntersectionObserver) return
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          setPlayback(null)
+        } else if (
+          entry.intersectionRatio >= 0.99 &&
+          !document.hidden &&
+          !reducedMotion.matches &&
+          !explored.current.has(activeTab)
+        ) {
+          startWalkthrough()
+        }
+      },
+      { threshold: 1 },
+    )
+    observer.observe(playbackRef.current)
+    function stopWhenHidden() {
+      if (document.hidden || reducedMotion.matches) setPlayback(null)
+    }
+    document.addEventListener('visibilitychange', stopWhenHidden)
+    reducedMotion.addEventListener('change', stopWhenHidden)
+    return () => {
+      observer.disconnect()
+      document.removeEventListener('visibilitychange', stopWhenHidden)
+      reducedMotion.removeEventListener('change', stopWhenHidden)
+    }
+  }, [activeTab, startWalkthrough])
 
   useEffect(() => {
     if (program.status !== 'running') return
@@ -511,27 +571,44 @@ export default function OriginWorkspaceShowcase({ activeTab, setActiveTab }) {
         status: 'complete',
         output: `Hello, ${current.name}!`,
       }))
-      setPlaying(false)
     }, 650)
     return () => clearTimeout(timer)
   }, [program.status])
 
   useEffect(() => {
-    if (!playing || program.status !== 'idle') return
-    const timer = setTimeout(
-      () =>
+    if (!playing) return
+    const timer = setTimeout(() => {
+      const step = playback.step
+      if (activeTab === 'programming' && step === 0) {
         setProgram((current) => ({
           ...current,
           status: 'running',
           output: '',
-        })),
-      900,
-    )
+        }))
+      } else if (activeTab === 'repositories') {
+        setRepo((current) =>
+          step === 0
+            ? { ...current, file: 'src/ArraysDemo.java' }
+            : { ...current, view: 'history', commit: 'e4f59a6' },
+        )
+      } else if (activeTab === 'assessment') {
+        setAssessment((current) =>
+          step === 0
+            ? { ...current, view: 'feedback' }
+            : {
+                ...current,
+                saved: true,
+                reviewed: [...new Set([...current.reviewed, current.student])],
+              },
+        )
+      }
+      setPlayback(step < 1 ? { tab: activeTab, step: step + 1 } : null)
+    }, 1600)
     return () => clearTimeout(timer)
-  }, [playing, program.status])
+  }, [playing, playback, activeTab])
 
   function selectTab(id) {
-    setPlaying(false)
+    stopWalkthrough()
     setActiveTab(id)
   }
   function handleTabKey(event, index) {
@@ -552,13 +629,8 @@ export default function OriginWorkspaceShowcase({ activeTab, setActiveTab }) {
     }
   }
   function walkthrough() {
-    if (playing) {
-      setPlaying(false)
-      return
-    }
-    setActiveTab('programming')
-    setProgram((current) => ({ ...current, status: 'idle', output: '' }))
-    setPlaying(true)
+    if (playing) stopWalkthrough()
+    else startWalkthrough()
   }
 
   return (
@@ -571,8 +643,8 @@ export default function OriginWorkspaceShowcase({ activeTab, setActiveTab }) {
         <p className="origin-eyebrow">The workspace</p>
         <h2 id="origin-workspace-title">Everything you need, in one place.</h2>
         <p>
-          Write code, manage repositories, and get assessed — all in a clean,
-          focused workspace.
+          Write code, manage repositories, and get assessed in one focused
+          workspace.
         </p>
       </div>
       <div
@@ -643,7 +715,7 @@ export default function OriginWorkspaceShowcase({ activeTab, setActiveTab }) {
             </div>
           </aside>
           <div className="origin-showcase-main">
-            <div className="origin-showcase-toolbar">
+            <div className="origin-showcase-toolbar" ref={playbackRef}>
               <div>
                 <span className="origin-showcase-course">
                   Programming fundamentals
@@ -668,45 +740,46 @@ export default function OriginWorkspaceShowcase({ activeTab, setActiveTab }) {
               id={`origin-panel-${activeTab}`}
               aria-labelledby={`origin-tab-${activeTab}`}
               tabIndex={0}
+              onFocusCapture={stopWalkthrough}
             >
               {activeTab === 'programming' ? (
                 <ProgrammingDemo
                   program={program}
                   setProgram={setProgram}
-                  onManual={() => setPlaying(false)}
+                  onManual={stopWalkthrough}
                 />
               ) : activeTab === 'repositories' ? (
                 <RepositoryDemo
                   repo={repo}
                   setRepo={setRepo}
-                  onManual={() => setPlaying(false)}
+                  onManual={stopWalkthrough}
                 />
               ) : (
                 <AssessmentDemo
                   assessment={assessment}
                   setAssessment={setAssessment}
-                  onManual={() => setPlaying(false)}
+                  onManual={stopWalkthrough}
                 />
               )}
             </div>
             <div className="origin-showcase-statusbar">
               <span>
                 <i />
-                {program.status === 'running'
+                {activeTab === 'programming' && program.status === 'running'
                   ? 'Running demonstration'
                   : 'A place to focus'}
               </span>
               <span>
-                Write <b>→</b> Run <b>→</b> Results
+                {activeTab === 'programming'
+                  ? 'Write → Run → Results'
+                  : activeTab === 'repositories'
+                    ? 'Files → Changes → History'
+                    : 'Results → Feedback → Review'}
               </span>
             </div>
           </div>
         </div>
       </div>
-      <p className="origin-showcase-disclosure">
-        Try it for yourself. Fictional demonstration data, running locally in
-        your browser.
-      </p>
     </section>
   )
 }

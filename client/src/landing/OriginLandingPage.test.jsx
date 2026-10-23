@@ -4,7 +4,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import OriginLandingPage from './OriginLandingPage.jsx'
 
-afterEach(() => localStorage.removeItem('origin-public-theme'))
+afterEach(() => {
+  localStorage.removeItem('origin-public-theme')
+  vi.unstubAllGlobals()
+})
 
 function renderLanding() {
   return render(
@@ -160,4 +163,143 @@ describe('Origin public landing page', () => {
       vi.useRealTimers()
     }
   })
+  it('defaults to dark and links the overview directly to the workspace', () => {
+    const { container } = renderLanding()
+    expect(container.querySelector('.origin-landing')).toHaveAttribute(
+      'data-theme',
+      'dark',
+    )
+    expect(screen.getByRole('link', { name: 'View overview' })).toHaveAttribute(
+      'href',
+      '#features',
+    )
+  })
+
+  it.each(['Repositories', 'Assessment'])(
+    'plays the %s walkthrough without returning to Programming',
+    (name) => {
+      vi.useFakeTimers()
+      try {
+        renderLanding()
+        fireEvent.click(screen.getByRole('tab', { name }))
+        fireEvent.click(
+          screen.getByRole('button', { name: 'Play walkthrough' }),
+        )
+        act(() => vi.advanceTimersByTime(1600))
+        const panel = within(screen.getByRole('tabpanel', { name }))
+        if (name === 'Repositories') {
+          expect(
+            panel.getByRole('button', { name: 'src/ArraysDemo.java' }),
+          ).toHaveAttribute('aria-pressed', 'true')
+        } else {
+          expect(
+            panel.getByLabelText('Instructor feedback'),
+          ).toBeInTheDocument()
+        }
+        act(() => vi.advanceTimersByTime(1600))
+        expect(screen.getByRole('tab', { name })).toHaveAttribute(
+          'aria-selected',
+          'true',
+        )
+        expect(
+          screen.getByRole('button', { name: 'Play walkthrough' }),
+        ).toBeInTheDocument()
+        if (name === 'Repositories') {
+          expect(
+            panel.getByRole('heading', {
+              name: 'Add array implementation',
+            }),
+          ).toBeInTheDocument()
+        } else {
+          expect(panel.getByRole('status')).toHaveTextContent(
+            'Feedback saved in this demo.',
+          )
+        }
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it('cancels remaining walkthrough steps when a visitor edits feedback', () => {
+    vi.useFakeTimers()
+    try {
+      renderLanding()
+      fireEvent.click(screen.getByRole('tab', { name: 'Assessment' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Play walkthrough' }))
+      act(() => vi.advanceTimersByTime(1600))
+      fireEvent.change(screen.getByLabelText('Instructor feedback'), {
+        target: { value: 'My review in progress.' },
+      })
+      act(() => vi.advanceTimersByTime(5000))
+      expect(screen.getByLabelText('Instructor feedback')).toHaveValue(
+        'My review in progress.',
+      )
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Changes stay in this demonstration.',
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it.each([false, true])(
+    'autoplays once on visibility unless reduced motion is %s',
+    (reduced) => {
+      const observers = []
+      vi.stubGlobal('matchMedia', () => ({
+        matches: reduced,
+        addEventListener() {},
+        removeEventListener() {},
+      }))
+      vi.stubGlobal(
+        'IntersectionObserver',
+        class {
+          constructor(callback) {
+            this.callback = callback
+            observers.push(this)
+          }
+          observe(target) {
+            this.target = target
+          }
+          disconnect() {}
+        },
+      )
+      vi.useFakeTimers()
+      try {
+        renderLanding()
+        const observer = observers.find((item) =>
+          item.target.classList.contains('origin-showcase-toolbar'),
+        )
+        act(() =>
+          observer.callback([{ isIntersecting: true, intersectionRatio: 1 }]),
+        )
+        if (reduced) {
+          expect(
+            screen.getByRole('button', { name: 'Play walkthrough' }),
+          ).toBeInTheDocument()
+        } else {
+          expect(
+            screen.getByRole('button', { name: 'Stop walkthrough' }),
+          ).toBeInTheDocument()
+          act(() => vi.advanceTimersByTime(1600))
+          act(() => vi.advanceTimersByTime(1600))
+          expect(screen.getByText('Hello, Origin!')).toBeInTheDocument()
+          act(() =>
+            observer.callback([
+              { isIntersecting: false, intersectionRatio: 0 },
+            ]),
+          )
+          act(() =>
+            observer.callback([{ isIntersecting: true, intersectionRatio: 1 }]),
+          )
+          expect(
+            screen.getByRole('button', { name: 'Play walkthrough' }),
+          ).toBeInTheDocument()
+        }
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
 })

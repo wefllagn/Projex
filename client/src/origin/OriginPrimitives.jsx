@@ -86,7 +86,7 @@ export function Brand({ compact = false }) {
         <span />
         <span />
       </span>
-      <span>origin</span>
+      <span>Origin</span>
     </span>
   )
 }
@@ -101,10 +101,9 @@ export function ThemeControl({ theme, onToggle }) {
       aria-pressed={theme === 'light'}
       title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} appearance`}
     >
-      <Icon name="sun" />
-      <span>
-        <Icon name={theme === 'light' ? 'sun' : 'moon'} />
-      </span>
+      <span className="origin-theme-thumb" aria-hidden="true" />
+      <Icon name="sun" className={theme === 'light' ? 'is-active' : ''} />
+      <Icon name="moon" className={theme === 'dark' ? 'is-active' : ''} />
     </button>
   )
 }
