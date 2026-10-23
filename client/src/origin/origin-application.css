@@ -65,9 +65,7 @@
 .origin-app-bar { position: fixed; z-index: 90; top: 0; inset-inline: 0; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px; background: var(--origin-ground); color: var(--origin-muted); font-size: 12px; }
 .origin-app-context, .origin-app-utilities { display: flex; align-items: center; gap: 16px; }
 .origin-app-context strong { font-weight: 500; color: var(--origin-ink); }
-.origin-app-context svg, .origin-app-theme svg { width: 16px; height: 16px; }
-.origin-app-theme { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 4px 10px; color: var(--origin-ink); background: transparent; border: 1px solid var(--origin-control); border-radius: 6px; cursor: pointer; font-size: 12px; }
-.origin-app-theme:hover { background: var(--origin-surface); }
+.origin-app-context svg { width: 16px; height: 16px; }
 .origin-app-skip { position: fixed; z-index: 300; top: -80px; left: 16px; padding: 12px 20px; color: var(--origin-ink); background: var(--origin-surface); }
 .origin-app-skip:focus { top: 8px; }
 .origin-application .student-app-shell { min-height: calc(100dvh - 48px); grid-template-columns: 232px minmax(0, 1fr); background: var(--origin-ground); }
@@ -195,7 +193,6 @@
   .origin-app-bar { padding-inline: 16px; }
   .origin-app-context { gap: 8px; font-size: 11px; }
   .origin-app-context > svg { display: none; }
-  .origin-app-theme { min-height: 36px; }
   .origin-application .student-main { margin: 0; border-radius: 0; border-inline: 0; }
   .origin-application :is(.student-global-title h1,.student-course-title h1,.student-home-hero h1,.admin-page-header h1) { font-size: 23px; }
   .origin-application :is(.student-primary-action,.student-outline-action,.student-assignment-action,.student-sidebar__link) { min-height: 44px; }

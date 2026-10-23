@@ -10,6 +10,24 @@ Status: **ORIGIN FUNCTIONAL RELEASE CANDIDATE — VERIFIED**
 
 This is a functional release candidate for deployment security review. Azure deployment, production security approval and branch integration have not been performed.
 
+## Phase 2 preview parity correction — 2026-10-24
+
+The approved commit above did not contain seven later working-tree polish files
+served by `phase2.localhost:5202`. The initial release candidate therefore missed
+the workspace theme slider, login illustration hover/ambient effects, reduced
+cursor highlight and readable dark account-switch action. Following Product
+Owner review, the exact seven-file Phase 2 delta was applied to this release
+branch, preserving its Activity icon refinement and functional additions.
+The Phase 2 checkout, branch, runtime and data were left unchanged. Six files
+match the Phase 2 preview byte for byte; `origin-polish.css` additionally retains
+only the release candidate's approved Activity icon rules.
+
+Verification: 25 focused landing, interaction, session recovery and Gradebook
+tests passed; frontend lint, production build and diff whitespace checks passed.
+Browser inspection confirmed the restored workspace theme slider. All 293
+protected presentation file hashes and the seven Phase 2 source hashes were
+unchanged; all three protected demonstrations remained healthy on 28 migrations.
+
 ## Delivered scope
 
 | Requirement | Result | Evidence |

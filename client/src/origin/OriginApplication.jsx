@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Icon } from './OriginPrimitives.jsx'
+import { Icon, ThemeControl } from './OriginPrimitives.jsx'
 import { useOriginTheme } from './use-origin-theme.js'
 import { useOriginDocument } from './use-origin-document.js'
 
@@ -19,7 +19,7 @@ export default function OriginApplication({ role, children }) {
     <a className="origin-app-skip" href="#origin-main">Skip to workspace</a>
     <header className="origin-app-bar">
       <div className="origin-app-context"><Icon name={role.id === 'admin' ? 'chart' : 'branch'} /><span>{scope}</span><span aria-hidden="true">/</span><strong>{role.label.replace(' View', '')}</strong></div>
-      <div className="origin-app-utilities"><span>Saint Louis University</span><button className="origin-app-theme" type="button" aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} appearance`} onClick={toggleTheme}><Icon name={theme === 'dark' ? 'sun' : 'moon'} /><span>{theme === 'dark' ? 'Light' : 'Dark'}</span></button></div>
+      <div className="origin-app-utilities"><span>Saint Louis University</span><ThemeControl theme={theme} onToggle={toggleTheme} /></div>
     </header>
     {children}
   </div>

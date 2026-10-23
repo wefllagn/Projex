@@ -63,6 +63,18 @@
   max-width: 360px;
   margin: 25px 0 15px;
 }
+.origin-auth-object::before {
+  content: '';
+  position: absolute;
+  inset: 12px -55px 0 -45px;
+  background: radial-gradient(ellipse, #4b96d638, transparent 68%);
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 240ms ease;
+}
+.origin-auth[data-theme='light'] .origin-auth-object::before {
+  opacity: 0.32;
+}
 .origin-auth-orbit {
   position: absolute;
   left: -50px;
@@ -88,6 +100,18 @@
     0 20px 40px #0004,
     -4px 5px 0 #56657255;
   transform: perspective(700px) rotateY(-20deg) rotateX(12deg) rotateZ(-14deg);
+  transition: transform 280ms cubic-bezier(0.2, 0.75, 0.2, 1), opacity 240ms ease;
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .origin-auth-object:hover::before { opacity: 0.8; }
+  .origin-auth[data-theme='light'] .origin-auth-object:hover::before { opacity: 0.5; }
+  .origin-auth-object:hover .origin-auth-tile--front {
+    transform: perspective(700px) translateY(-5px) rotateY(-16deg) rotateX(10deg) rotateZ(-12deg);
+  }
+  .origin-auth-object:hover .origin-auth-tile--back {
+    transform: perspective(700px) translateY(-2px) rotateY(-22deg) rotateX(12deg) rotateZ(-16deg);
+    opacity: 0.68;
+  }
 }
 .origin-auth-tile--back {
   left: 36px;

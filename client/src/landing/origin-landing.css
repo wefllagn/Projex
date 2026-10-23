@@ -172,7 +172,7 @@
   background: #ffffff06;
   border: 1px solid #ffffff09;
 }
-.origin-landing .origin-atmosphere {
+.origin-atmosphere {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -186,6 +186,15 @@
   background: #26303a80;
   border-radius: 24px;
   color: #a7b9cb;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+.origin-atmosphere:is(:hover, :focus-visible) {
+  border-color: #8aadc380;
+}
+.origin-atmosphere:active > .origin-theme-thumb {
+  scale: 0.94;
 }
 .origin-atmosphere > .origin-icon {
   position: relative;
@@ -211,7 +220,7 @@
     0 1px 4px #0002,
     0 0 12px #dce7ff26;
   transform: translate(26px, -50%);
-  transition: transform 260ms cubic-bezier(0.22, 0.75, 0.25, 1);
+  transition: transform 260ms cubic-bezier(0.22, 0.75, 0.25, 1), scale 150ms ease;
 }
 .origin-atmosphere[aria-pressed='true'] > .origin-theme-thumb {
   transform: translate(0, -50%);
@@ -1037,7 +1046,7 @@
   z-index: 1;
 }
 .origin-touch-surface[data-highlighted='true'] > .origin-surface-light {
-  opacity: var(--origin-ambient);
+  opacity: calc(var(--origin-ambient) * 0.82);
   will-change: transform;
 }
 .origin-landing[data-motion-paused='true'] .origin-branch-scene::before {

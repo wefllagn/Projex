@@ -21,6 +21,7 @@
 .origin-auth-switch-actions { display: grid; gap: 10px; margin-top: 8px; }
 .origin-auth-switch-actions .origin-button { width: 100%; justify-content: center; }
 .origin-auth-switch-actions .origin-auth-switch-secondary { background: transparent; box-shadow: none; }
+.origin-auth[data-theme='dark'] .origin-auth-switch-actions .origin-auth-switch-secondary { color: #fff; }
 .origin-auth-switch-actions .origin-auth-switch-secondary:hover { background: #8ba9c814; }
 .origin-auth-role-switch a { transition: color 150ms ease,background-color 150ms ease,box-shadow 150ms ease; }
 .origin-recovery-shell { min-height: 100dvh; color: var(--origin-ink); background: radial-gradient(ellipse at 50% 20%,var(--origin-raised),var(--origin-ground) 70%); }

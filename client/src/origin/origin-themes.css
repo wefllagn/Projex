@@ -45,12 +45,12 @@
   border-color: #8ea0b333;
   background: #ffffff66;
 }
-.origin-landing[data-theme='light'] .origin-atmosphere {
+:is(.origin-landing, .origin-application)[data-theme='light'] .origin-atmosphere {
   background: #c8d2dc70;
   border-color: #aebdcc55;
   color: #596f83;
 }
-.origin-landing[data-theme='light'] .origin-atmosphere > span {
+:is(.origin-landing, .origin-application)[data-theme='light'] .origin-atmosphere > span {
   background: #fff;
   color: #49739a;
 }
@@ -433,7 +433,7 @@
   color: #965e40;
 }
 @media (max-width: 600px) {
-  .origin-landing .origin-atmosphere {
+  :is(.origin-landing, .origin-application) .origin-atmosphere {
     min-height: 40px;
   }
   .origin-landing .origin-header-actions .origin-button--small {
