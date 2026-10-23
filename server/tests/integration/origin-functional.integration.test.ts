@@ -16,6 +16,7 @@ import { createTokenService } from '../../src/modules/auth/auth.tokens.js'
 import { createPasswordService } from '../../src/modules/auth/auth.password.js'
 import { createPrismaAccountSetupRepository } from '../../src/modules/account-setup/account-setup.repository.js'
 import { createPrismaAuthRepository } from '../../src/modules/auth/auth.repository.js'
+import { createAuthService } from '../../src/modules/auth/auth.service.js'
 import { createAuthenticationMiddleware } from '../../src/modules/auth/auth.middleware.js'
 import { ACCESS_COOKIE_NAME } from '../../src/modules/auth/auth.constants.js'
 import { createErrorHandler } from '../../src/middleware/error-handler.js'
@@ -39,6 +40,48 @@ beforeEach(async () => { await cleanIntegrationDatabase(prisma); now = new Date(
 afterAll(async () => { await cleanIntegrationDatabase(prisma); await prisma.$disconnect() })
 
 describe('Origin functional release contracts', () => {
+  it('rejects an old-password login already being verified when recovery resets the account', async () => {
+    const admin = await createActiveUser(prisma, 'ADMIN'), student = await createActiveUser(prisma, 'STUDENT')
+    await prisma.user.update({ where: { id: student.id }, data: { passwordHash: await passwords.hash('OldPassword1!') } })
+    const recovery = createPasswordRecoveryService(recoveryDependencies()), issued = await recovery.issue(admin, student.id, randomUUID())
+    const repository = createPrismaAuthRepository(prisma)
+    const delayedPasswords = { ...passwords, verify: async (hash: string, password: string) => {
+      const valid = await passwords.verify(hash, password)
+      await recovery.complete(raw(issued.setupLink), 'NewPassword1!')
+      return valid
+    } }
+    const dependencies = { repository, passwordService: delayedPasswords, tokenService: tokens, logger, config: { refreshTokenTtlDays: 7 }, now: () => now }
+    await expect(createAuthService(dependencies).login(student.email, 'OldPassword1!', {})).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS' })
+    expect(await prisma.refreshSession.count({ where: { userId: student.id, revokedAt: null } })).toBe(0)
+    await expect(createAuthService({ ...dependencies, passwordService: passwords }).login(student.email, 'NewPassword1!', {})).resolves.toMatchObject({ profile: { id: student.id } })
+  })
+
+  it('clears numeric rubric configuration when a draft becomes completion-based and preserves feedback-only release', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR'), student = await createActiveUser(prisma, 'STUDENT')
+    const cls = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, cls.id, student.id)
+    const activities = createActivityService({ repository: createPrismaActivityRepository(prisma), classRepository: createPrismaClassRepository(prisma), logger, now: () => now })
+    let activity = await activities.create(instructor, cls.id, { title: 'Changed to completion', instructions: 'Complete the exercise.', starterCode: 'class Main {}', entryClassName: 'Main', language: 'JAVA', maxAttempts: 1, creditPolicy: 'LATEST', gradingMode: 'GRADED', gradingPeriod: 'PRELIM', rubricCriteria: criteria, totalPoints: 100, dueDate: new Date('2031-02-01') })
+    activity = await activities.update(instructor, activity.id, { gradingMode: 'COMPLETION', totalPoints: null, expectedUpdatedAt: activity.updatedAt })
+    expect(activity.rubricCriteria).toBeNull()
+    const tests = await createPrismaTestCaseRepository(prisma).replace({ activityId: activity.id, expectedUpdatedAt: activity.updatedAt, now, testCases: [{ name: 'Visible', inputData: null, expectedOutput: '', isHidden: false, points: null }] })
+    expect(tests.kind).toBe('updated')
+    activity = await activities.get(instructor, activity.id) as typeof activity
+    activity = await activities.publish(instructor, activity.id, { expectedUpdatedAt: activity.updatedAt })
+    const service = submissionService(), created = await service.create(student, activity.id, 'class Main {}', 'rc-completion-switch-one')
+    const id = (created.submission as { id: string }).id
+    let record = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
+    expect(record.rubricSnapshot).toBeNull()
+    const queue = createPostgresExecutionQueue(prisma), job = await queue.claimNext({ workerId: 'rc-completion', now, leaseMs: 60000 })
+    await queue.complete(job!, { compileStatus: 'SUCCESS', runtimeStatus: 'PASSED', compilerOutput: null, cases: [{ id: job!.cases[0]!.id, status: 'PASSED', actualOutput: '', errorMessage: null, executionTimeMs: 1, automatedPoints: 0 }] }, now)
+    record = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
+    await service.review(instructor, id, { feedbackText: 'Completed and reviewed.', expectedUpdatedAt: record.updatedAt })
+    record = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
+    await service.release(instructor, id, { expectedUpdatedAt: record.updatedAt })
+    expect(await service.get(student, id)).toMatchObject({ gradingMode: 'COMPLETION', feedback: 'Completed and reviewed.' })
+    expect((await readGradebook(prisma, student, cls.id, 'PRELIM', now)).rows[0]).toMatchObject({ earned: 0, possible: 0, percentage: null, scores: [{ status: 'UNGRADED' }] })
+  })
+
   it('validates rubric allocation, freezes rules, snapshots criteria, persists corrections and individual review scores, then locks release', async () => {
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR'), student = await createActiveUser(prisma, 'STUDENT')
     const cls = await createActiveClass(prisma, instructor.id); await createActiveMembership(prisma, cls.id, student.id)

@@ -19,7 +19,7 @@ export default function Gradebook({ client = apiClient }) {
   }, [classId, period, revision, client])
   const current = state.classId === classId && state.period === period ? state : { status: 'loading' }
   return <section className="student-assignment-panel academic-class-frame">
-    <div className="instructor-section-title"><h2>Gradebook</h2><label>Grading period<select value={period} onChange={event => setPeriod(event.target.value)}><option value="PRELIM">Prelim</option><option value="MIDTERM">Midterm</option><option value="FINAL">Final</option><option value="UNASSIGNED">Unassigned · legacy Activities</option></select></label></div>
+    <div className="instructor-section-title"><h2>Gradebook</h2><label>Grading period<select value={period} onChange={event => setPeriod(event.target.value)}><option value="PRELIM">Prelim</option><option value="MIDTERM">Midterm</option><option value="FINAL">Final</option><option value="UNASSIGNED">Unassigned</option></select></label></div>
     <p className="academic-inline-help">Activity score summary. Only credited released graded results contribute to totals. Missing, pending, unreleased and ungraded work is not counted as zero. This is not an official course grade.</p>
     {current.status === 'loading' && <RequestState kind="loading" />}
     {current.status === 'error' && <RequestState kind="unavailable" error={current.error} action={<button className="student-outline-action" type="button" onClick={() => setRevision(value => value + 1)}>Try again</button>} />}

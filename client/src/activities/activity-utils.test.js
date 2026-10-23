@@ -20,8 +20,16 @@ const form = {
 }
 
 describe('activity form contracts', () => {
+  it('drops hidden rubric values when changing a draft to Ungraded', () => {
+    const ungraded = { ...form, gradingMode: 'COMPLETION', totalPoints: '', rubricCriteria: [{ id: 'draft', name: '', maximumPoints: '' }] }
+    expect(validateActivityForm(ungraded)).toEqual({})
+    expect(activityPayload(ungraded)).toMatchObject({ gradingMode: 'COMPLETION', totalPoints: null, rubricCriteria: [] })
+  })
+
   it('validates backend bounds and creates the supported draft payload', () => {
     expect(validateActivityForm(form)).toEqual({})
+    expect(validateActivityForm({ ...form, totalPoints: '1.1' })).toEqual({})
+    expect(validateTestCases([{ name: 'Fractional case', inputData: '', expectedOutput: '', points: '0.29' }], 1.1)).toEqual([])
     expect(activityPayload(form, 'DRAFT')).toEqual(expect.objectContaining({
       title: 'Loops', language: 'JAVA', entryClassName: 'Main', maxAttempts: 2, creditPolicy: 'LATEST', totalPoints: 100,
     }))

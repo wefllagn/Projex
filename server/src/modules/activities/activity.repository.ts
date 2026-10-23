@@ -237,7 +237,7 @@ export function createPrismaActivityRepository(
             creditPolicy: input.activity.creditPolicy,
             gradingMode: input.activity.gradingMode,
             gradingPeriod: input.activity.gradingPeriod,
-            rubricCriteria: input.activity.rubricCriteria ?? Prisma.DbNull,
+            rubricCriteria: input.activity.gradingMode === 'COMPLETION' ? Prisma.DbNull : input.activity.rubricCriteria ?? Prisma.DbNull,
             topicId: input.activity.topicId,
             totalPoints: input.activity.totalPoints,
             status: 'DRAFT',
@@ -359,7 +359,7 @@ export function createPrismaActivityRepository(
             updatedAt: input.expectedUpdatedAt,
             class: { status: 'ACTIVE' },
           },
-          data: { ...input.fields, updatedAt: versionTimestamp },
+          data: { ...input.fields, ...((input.fields.gradingMode ?? definition?.gradingMode) === 'COMPLETION' ? { rubricCriteria: Prisma.DbNull } : {}), updatedAt: versionTimestamp },
         })
         if (result.count === 0) {
           return diagnoseWriteFailure(

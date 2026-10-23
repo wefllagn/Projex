@@ -38,10 +38,10 @@ export function validateActivityForm(form) {
   if (!starterCode.trim() || starterCode.length > 100_000) errors.starterCode = 'Enter starter source of no more than 100,000 characters.'
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 3) errors.maxAttempts = 'Choose between one and three attempts.'
   if (!['LATEST', 'HIGHEST'].includes(form.creditPolicy)) errors.creditPolicy = 'Choose how the credited result is selected.'
-  if (form.gradingMode !== 'COMPLETION' && (!Number.isFinite(totalPoints) || totalPoints <= 0 || totalPoints > 1_000 || Math.round(totalPoints * 100) !== totalPoints * 100)) errors.totalPoints = 'Enter 0.01 to 1,000 points with at most two decimals.'
+  if (form.gradingMode !== 'COMPLETION' && (!Number.isFinite(totalPoints) || totalPoints <= 0 || totalPoints > 1_000 || Math.abs(totalPoints * 100 - Math.round(totalPoints * 100)) > 1e-8)) errors.totalPoints = 'Enter 0.01 to 1,000 points with at most two decimals.'
   if (!form.dueDate || Number.isNaN(dueDate.getTime())) errors.dueDate = 'Choose a valid deadline.'
 
-  if (form.rubricCriteria?.some(row => !row.name.trim() || !Number.isFinite(Number(row.maximumPoints)) || Number(row.maximumPoints) <= 0)) errors.rubricCriteria = 'Give each rubric criterion a name and positive maximum points.'
+  if (form.gradingMode !== 'COMPLETION' && form.rubricCriteria?.some(row => !row.name.trim() || !Number.isFinite(Number(row.maximumPoints)) || Number(row.maximumPoints) <= 0)) errors.rubricCriteria = 'Give each rubric criterion a name and positive maximum points.'
   return errors
 }
 
@@ -57,7 +57,7 @@ export function activityPayload(form, status = 'DRAFT') {
   return {
     ...common,
     ...(form.gradingPeriod !== undefined ? { gradingPeriod: form.gradingPeriod || null } : {}),
-    ...(form.rubricCriteria != null ? { rubricCriteria: form.rubricCriteria.map(row => ({ ...row, name: row.name.trim(), maximumPoints: Number(row.maximumPoints) })) } : {}),
+    ...(form.gradingMode === 'COMPLETION' ? { rubricCriteria: [] } : form.rubricCriteria != null ? { rubricCriteria: form.rubricCriteria.map(row => ({ ...row, name: row.name.trim(), maximumPoints: Number(row.maximumPoints) })) } : {}),
     creditPolicy: form.creditPolicy,
     language: 'JAVA',
     entryClassName: form.entryClassName.trim(),
@@ -89,7 +89,7 @@ export function validateTestCases(testCases, activityTotalPoints, gradingMode = 
     if (!testCase.name.trim() || testCase.name.trim().length > 200) errors.push(`${label} needs a name of no more than 200 characters.`)
     if (testCase.inputData.length > 32_000) errors.push(`${label} input exceeds 32,000 characters.`)
     if (testCase.expectedOutput.length > 32_000) errors.push(`${label} expected output exceeds 32,000 characters.`)
-    if (gradingMode !== 'COMPLETION' && (!Number.isFinite(points) || points < 0 || points > 1_000 || Math.round(points * 100) !== points * 100)) errors.push(`${label} points must be 0 to 1,000 with at most two decimals.`)
+    if (gradingMode !== 'COMPLETION' && (!Number.isFinite(points) || points < 0 || points > 1_000 || Math.abs(points * 100 - Math.round(points * 100)) > 1e-8)) errors.push(`${label} points must be 0 to 1,000 with at most two decimals.`)
   })
   const points = testCases.reduce((sum, testCase) => sum + (Number(testCase.points) || 0), 0)
   if (gradingMode !== 'COMPLETION' && points > Number(activityTotalPoints)) errors.push('Test-case points cannot exceed the activity total.')

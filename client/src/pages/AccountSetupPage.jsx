@@ -82,7 +82,7 @@ export default function AccountSetupPage({ recovery = false }) {
 
   return (
     <main className="student-login-page">
-      <section className="student-login-stage" aria-label="Origin account setup">
+      <section className="student-login-stage" aria-label={recovery ? 'Origin password recovery' : 'Origin account setup'}>
         <img className="student-login-logo" src="/assets/brand/projex-login-logo.png" alt="Origin by Saint Louis University" />
         <form className="student-login-card account-setup-card" onSubmit={submit}>
           <div>
@@ -134,7 +134,7 @@ export default function AccountSetupPage({ recovery = false }) {
         <aside className="student-login-info" aria-label="Account security information">
           <div className="student-login-info__copy">
             <h2>Your Origin account, secured.</h2>
-            <p>The setup link is removed from your browser address as soon as this page opens.</p>
+            <p>The {recovery ? 'recovery' : 'setup'} link is removed from your browser address as soon as this page opens.</p>
           </div>
           <img className="student-login-mascot" src="/assets/brand/projex-login-mascot.png" alt="" aria-hidden="true" />
         </aside>
