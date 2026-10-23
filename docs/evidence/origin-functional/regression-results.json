@@ -1,0 +1,41 @@
+{
+  "frontend": {
+    "files": 89,
+    "tests": 700,
+    "result": "passed"
+  },
+  "backendUnit": {
+    "files": 52,
+    "tests": 424,
+    "result": "passed"
+  },
+  "databaseIntegration": {
+    "files": 26,
+    "tests": 134,
+    "result": "passed"
+  },
+  "git": {
+    "files": 4,
+    "tests": 48,
+    "result": "passed"
+  },
+  "smartHttp": {
+    "files": 1,
+    "tests": 12,
+    "result": "passed"
+  },
+  "java": {
+    "files": 4,
+    "tests": 36,
+    "result": "passed"
+  },
+  "totalTests": 1354,
+  "lint": "frontend and backend passed",
+  "typeChecks": "server source and integration passed; frontend is JavaScript",
+  "productionBuilds": "frontend and backend passed",
+  "prismaValidation": "passed",
+  "verifiedDate": "2026-10-24",
+  "regressionRunDates": "2026-10-23 through 2026-10-24 Asia/Manila",
+  "implementationCommit": "5c1dda68d1f60d4332281d3b3b2cc790b894649e",
+  "migrationSha256": "6df386d3aa4a7b901c48d8e5262d0939db4a24428b79fe9fd7716a329fc4e411"
+}

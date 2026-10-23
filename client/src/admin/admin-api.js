@@ -31,6 +31,7 @@ export function createAdminApi(client = apiClient) {
     provisionInstructor(input, options) {
       return client.post('/users/instructors', input, options)
     },
+    issuePasswordRecovery(userId, options) { return client.post(`/users/${userId}/password-recovery`, {}, options) },
     resendSetup(userId, options) {
       return client.post(`/users/${userId}/resend-setup`, {}, options)
     },

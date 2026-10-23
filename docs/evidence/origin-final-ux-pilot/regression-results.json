@@ -1,0 +1,45 @@
+{
+  "frontend": {
+    "files": 92,
+    "tests": 721,
+    "result": "PASS"
+  },
+  "backendUnit": {
+    "files": 56,
+    "tests": 453,
+    "result": "PASS"
+  },
+  "databaseIntegration": {
+    "files": 28,
+    "tests": 141,
+    "result": "PASS"
+  },
+  "realJava": {
+    "files": 4,
+    "tests": 37,
+    "result": "PASS"
+  },
+  "realGit": {
+    "files": 4,
+    "tests": 48,
+    "result": "PASS"
+  },
+  "smartHttp": {
+    "files": 1,
+    "tests": 12,
+    "result": "PASS"
+  },
+  "deploymentGuardTests": {
+    "tests": 7,
+    "result": "PASS"
+  },
+  "lintTypePrismaBuild": "PASS",
+  "isolatedPreview": "http://ux.localhost:5208/",
+  "sourceParent": "819a84b90a5ff83b2b0a349e6f5936436fcd8d9f",
+  "schemaChangesInThisPass": false,
+  "remoteDeploymentPerformed": false,
+  "linuxContainerAcceptance": "PENDING_ON_VM",
+  "ubuntuEndToEndDeployment": "PENDING_ON_VM",
+  "verifiedAt": "2026-10-23T20:27:57.416775+00:00",
+  "totalPassingTests": 1419
+}

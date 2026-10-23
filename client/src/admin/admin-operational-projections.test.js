@@ -74,6 +74,12 @@ describe('admin operational projection allowlists', () => {
     expect(JSON.stringify(event)).not.toMatch(/storagePath|token/i)
   })
 
+  it('shows only expiry metadata for a recovery audit event', () => {
+    const event = projectAuditEvent({ id: 'event-2', action: 'USER_PASSWORD_RECOVERY_ISSUED', targetType: 'USER', actorAdmin: { id: 'admin-1', fullName: 'Admin User' }, metadata: { expiresAt: timestamps.availableAt, token: 'private-token' } })
+    expect(event.metadata).toEqual({ expiresAt: timestamps.availableAt })
+    expect(JSON.stringify(event)).not.toContain('private-token')
+  })
+
   it('fails closed on invalid identity, health, storage, and version values', () => {
     expect(() => projectExecutionJob({ id: '', ...timestamps })).toThrow(AdminProjectionError)
     expect(() => projectOperationalHealth({ api: { status: 'available' } })).toThrow(AdminProjectionError)

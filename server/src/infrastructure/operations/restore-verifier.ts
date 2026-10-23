@@ -4,7 +4,7 @@ import path from 'node:path'
 import { parseManifest, verifyArtifact, verifyManifestChecksum, type BackupManifest } from './backup-manifest.js'
 import { OperationsSafetyError } from './operations-error.js'
 import { validateRestorePaths } from './path-guards.js'
-import { buildPgRestorePlan } from './postgres-tools.js'
+import { buildPgRestorePlan, validateRestoreDatabaseUrl } from './postgres-tools.js'
 import type { CommandPlan } from './process-runner.js'
 import {
   ManagedRepositoryLocatorError,
@@ -142,6 +142,7 @@ export async function buildRestoreVerificationPlan(input: {
   gitFsck(repositoryPath: string): CommandPlan
 }> {
   if (!input.restoreDatabaseUrl) throw new OperationsSafetyError('RESTORE_DATABASE_URL_REQUIRED')
+  validateRestoreDatabaseUrl(input.restoreDatabaseUrl)
   if (!path.isAbsolute(input.gitExecutable)) throw new OperationsSafetyError('GIT_EXECUTABLE_NOT_ABSOLUTE')
   const safePaths = await validateRestorePaths(input)
   const manifest = parseManifest(input.manifestRaw)

@@ -1,0 +1,48 @@
+{
+  "sourceCheckpoint": "589da229df0419e049c922233282ee1ad2d2b1be",
+  "verificationDate": "2026-10-24 Asia/Manila",
+  "suites": {
+    "Frontend": {
+      "files": 90,
+      "passed": 709,
+      "logSha256": "89130da82657a289730573f84223257dbdad46c9c4cc563678d38d1588fb2a33"
+    },
+    "Backend unit": {
+      "files": 54,
+      "passed": 447,
+      "logSha256": "a65716681e7ee1a491c56d67b56c73f0c0a76cb2228679054b612f20b86e641f"
+    },
+    "PostgreSQL integration": {
+      "files": 27,
+      "passed": 138,
+      "logSha256": "7b32ad657820831d6af6c2afbcd43c78ec114f34b6ae76dd4e76de340b28cd95"
+    },
+    "Git": {
+      "files": 4,
+      "passed": 48,
+      "logSha256": "fec1dcb0414840e532cb037957c0567e473bff63f126ac2ae2d3707b5c0180af"
+    },
+    "Smart HTTP": {
+      "files": 1,
+      "passed": 12,
+      "logSha256": "682953657919c0c720bf45763502878cdf34ad0d26c3c83f86e2f2927027dc3f"
+    },
+    "Java": {
+      "files": 4,
+      "passed": 36,
+      "logSha256": "15b7e77ae69b148a1c5a9d997328ee11a11c0f4f8930e4a9792ec5dcfbc8b3c0"
+    }
+  },
+  "totalPassed": 1390,
+  "checksPassed": [
+    "Frontend lint",
+    "Backend lint",
+    "Backend type-check",
+    "Integration type-check",
+    "Prisma validate",
+    "Frontend production build",
+    "Backend production build",
+    "Local runtime deployment preflight"
+  ],
+  "warning": "Existing frontend chunk larger than 500 kB; production isolation and Azure configuration not approved by local tests."
+}

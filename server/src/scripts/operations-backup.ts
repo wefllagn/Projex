@@ -5,6 +5,7 @@ import { createPrismaClient } from '../infrastructure/database/prisma.js'
 import { createArtifact, BACKUP_MANIFEST_VERSION, type BackupManifest } from '../infrastructure/operations/backup-manifest.js'
 import { BACKUP_CONFIRMATION, buildPairedBackupPlan, executePairedBackupPlan, inspectGitStorageTree } from '../infrastructure/operations/backup.js'
 import { OperationsSafetyError } from '../infrastructure/operations/operations-error.js'
+import { runAfterConnectedBackupSourceAttestation, validateBackupSourceDatabaseUrl } from '../infrastructure/operations/postgres-tools.js'
 import { runCommand } from '../infrastructure/operations/process-runner.js'
 import { readQuiescenceSnapshot } from '../infrastructure/operations/quiescence.js'
 
@@ -18,9 +19,19 @@ async function main(): Promise<void> {
   if (!process.argv.includes('--execute')) throw new OperationsSafetyError('BACKUP_EXECUTE_FLAG_REQUIRED')
   const projectRoot = path.resolve(process.cwd(), '..')
   const databaseUrl = required('DATABASE_URL')
+  const expectedSource = validateBackupSourceDatabaseUrl(databaseUrl)
   const gitStorageRoot = required('GIT_STORAGE_ROOT')
   const prisma = createPrismaClient(databaseUrl)
   try {
+    const quiescence = await runAfterConnectedBackupSourceAttestation({
+      expectedDatabaseName: expectedSource.databaseName,
+      readIdentity: () => prisma.$queryRaw<Array<{ database_name: string; server_address: string | null }>>`
+        SELECT
+          current_database() AS database_name,
+          inet_server_addr()::text AS server_address
+      `,
+      runAfterAttestation: () => readQuiescenceSnapshot(prisma, gitStorageRoot),
+    })
     const plan = await buildPairedBackupPlan({
       confirmation: required('OPERATIONS_BACKUP_CONFIRM'),
       backupId: required('OPERATIONS_BACKUP_ID'),
@@ -31,7 +42,7 @@ async function main(): Promise<void> {
       databaseUrl,
       pgDumpExecutable: required('PG_DUMP_EXECUTABLE'),
       tarExecutable: required('TAR_EXECUTABLE'),
-      quiescence: await readQuiescenceSnapshot(prisma, gitStorageRoot),
+      quiescence,
     })
     const storageInventory = await inspectGitStorageTree(gitStorageRoot)
     await executePairedBackupPlan(plan, {

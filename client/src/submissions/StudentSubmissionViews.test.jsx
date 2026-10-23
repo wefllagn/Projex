@@ -1,8 +1,9 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { RouterProvider, createMemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
+import { AuthContext } from '../auth/auth-context.js'
 import { ClassContext } from '../classes/class-context.js'
 import {
   LegacySubmissionRoute,
@@ -15,6 +16,8 @@ const classId = '00000000-0000-4000-8000-000000000001'
 const activityId = '00000000-0000-4000-8000-000000000010'
 const submissionId = '00000000-0000-4000-8000-000000000020'
 const runId = '00000000-0000-4000-8000-000000000030'
+const repositoryId = '00000000-0000-4000-8000-000000000040'
+const commitId = 'a'.repeat(40)
 const starterCode = 'public class Main {\n    public static void main(String[] args) {}\n}'
 const changedCode = 'public class Main { public static void main(String[] args) { System.out.println("changed"); } }'
 
@@ -138,9 +141,27 @@ function submissionTransport(overrides = {}) {
     listSubmissions: vi.fn().mockResolvedValue({ data: [], pagination: { ...pagination, totalItems: 0, totalPages: 0 } }),
     createVisibleTestRun: vi.fn(),
     getVisibleTestRun: vi.fn(),
+    createCodeRun: vi.fn(),
+    getCodeRun: vi.fn(),
     createSubmission: vi.fn(),
     getSubmission: vi.fn().mockResolvedValue({ data: submissionRecord() }),
     ...overrides,
+  }
+}
+
+function gitDependencies({ repositoryOverrides = {}, contentOverrides = {} } = {}) {
+  return {
+    repositories: {
+      getActivityWorkspace: vi.fn().mockResolvedValue({ data: { id: repositoryId, repositoryType: 'ACTIVITY_WORKSPACE', activityId, storageStatus: 'READY' } }),
+      createActivityCheckpoint: vi.fn(),
+      getActivityCheckpoint: vi.fn(),
+      ...repositoryOverrides,
+    },
+    repositoryContent: {
+      getSummary: vi.fn().mockResolvedValue({ data: { repositoryId, empty: true, defaultBranch: 'main', latestCommit: null } }),
+      getFile: vi.fn(),
+      ...contentOverrides,
+    },
   }
 }
 
@@ -149,10 +170,10 @@ function renderWithClass(element, {
   path = '/student/activity/:activityId/workspace',
   destination = false,
   legacyDestination = false,
+  initialEntries = [entry],
 } = {}) {
-  return render(
-    <MemoryRouter initialEntries={[entry]}>
-      <ClassContext.Provider value={{
+  const router = createMemoryRouter([{ path: '*', element:
+      <AuthContext.Provider value={{ user: { id: 'student-1', role: 'STUDENT', status: 'ACTIVE' } }}><ClassContext.Provider value={{
         selectedClass,
         requestedClassId: classId,
         selectionStatus: 'ready',
@@ -160,12 +181,13 @@ function renderWithClass(element, {
       }}>
         <Routes>
           <Route path={path} element={element} />
+          <Route path="/student/activity/:activityId" element={<p>Activity detail destination</p>} />
           {destination && <Route path="/student/activity/:activityId/submissions/:submissionId" element={<p>Canonical submission destination</p>} />}
           {legacyDestination && <Route path="/student/activity/:activityId/submissions" element={<LocationProbe />} />}
         </Routes>
-      </ClassContext.Provider>
-    </MemoryRouter>,
-  )
+      </ClassContext.Provider></AuthContext.Provider>
+  }], { initialEntries })
+  return { ...render(<RouterProvider router={router} />), router }
 }
 
 function LocationProbe() {
@@ -174,6 +196,201 @@ function LocationProbe() {
 }
 
 describe('student programming workspace', () => {
+  it('preserves unsaved source when cancelling link and history navigation, including Escape and focus', async () => {
+    const user = userEvent.setup()
+    const { router } = renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissionTransport()} {...gitDependencies()} />, {
+      initialEntries: [`/student/activity/${activityId}?classId=${classId}`, `/student/activity/${activityId}/workspace?classId=${classId}`],
+    })
+    const editor = await screen.findByRole('textbox', { name: 'Java source code' })
+    fireEvent.change(editor, { target: { value: changedCode } })
+    await user.click(screen.getByRole('link', { name: 'Back to Activity' }))
+    expect(await screen.findByRole('dialog', { name: 'Leave unsaved code?' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Keep editing' })).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(editor).toHaveValue(changedCode)
+    expect(screen.getByRole('link', { name: 'Back to Activity' })).toHaveFocus()
+    await act(async () => { await router.navigate(-1) })
+    await user.click(await screen.findByRole('button', { name: 'Keep editing' }))
+    expect(editor).toHaveValue(changedCode)
+    await user.click(screen.getByRole('link', { name: 'Back to Activity' }))
+    await user.click(await screen.findByRole('button', { name: 'Leave without saving' }))
+    expect(await screen.findByText('Activity detail destination')).toBeInTheDocument()
+  })
+
+  it('saves the current browser source as a Git checkpoint without creating a submission', async () => {
+    const repositories = gitDependencies({
+      repositoryOverrides: {
+        createActivityCheckpoint: vi.fn().mockResolvedValue({ data: {
+          checkpointId: '00000000-0000-4000-8000-000000000050',
+          repositoryId,
+          activityId,
+          status: 'PENDING',
+          resultingCommitHash: null,
+        } }),
+        getActivityCheckpoint: vi.fn().mockResolvedValue({ data: {
+          checkpointId: '00000000-0000-4000-8000-000000000050',
+          repositoryId,
+          activityId,
+          status: 'SUCCEEDED',
+          resultingCommitHash: commitId,
+        } }),
+      },
+    })
+    const submissions = submissionTransport()
+    renderWithClass(
+      <StudentProgrammingWorkspace
+        {...repositories}
+        api={activityTransport()}
+        submissions={submissions}
+        pollingOptions={{ initialDelayMs: 1, maximumDelayMs: 1, maximumDurationMs: 1000 }}
+      />,
+    )
+
+    const editor = await screen.findByLabelText('Java source code')
+    fireEvent.change(editor, { target: { value: changedCode } })
+    await userEvent.click(await screen.findByRole('button', { name: 'Save to Git' }))
+
+    await waitFor(() => expect(repositories.repositories.createActivityCheckpoint).toHaveBeenCalledOnce())
+    expect(repositories.repositories.createActivityCheckpoint).toHaveBeenCalledWith(
+      activityId,
+      { sourceCode: changedCode, expectedHeadCommitHash: null },
+      expect.stringMatching(/^checkpoint:[A-Za-z0-9-]{16,}$/),
+    )
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
+    expect(await screen.findByText(/Saved at commit aaaaaaaa/)).toBeInTheDocument()
+    expect(submissions.createSubmission).not.toHaveBeenCalled()
+    expect(submissions.getAttemptState).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps newer browser edits dirty when an earlier queued checkpoint succeeds', async () => {
+    const checkpointId = '00000000-0000-4000-8000-000000000050'
+    const queuedSource = changedCode
+    const newerSource = 'public class Main { public static void main(String[] args) { System.out.println("newer"); } }'
+    let latestCommit = null
+    let completeCheckpoint
+    const checkpointResult = new Promise((resolve) => { completeCheckpoint = resolve })
+    const git = gitDependencies({
+      repositoryOverrides: {
+        createActivityCheckpoint: vi.fn().mockResolvedValue({ data: {
+          checkpointId,
+          repositoryId,
+          activityId,
+          status: 'PENDING',
+          resultingCommitHash: null,
+        } }),
+        getActivityCheckpoint: vi.fn(() => checkpointResult),
+      },
+      contentOverrides: {
+        getSummary: vi.fn(() => Promise.resolve({ data: {
+          repositoryId,
+          empty: latestCommit === null,
+          defaultBranch: 'main',
+          latestCommit,
+        } })),
+        getFile: vi.fn().mockResolvedValue({ data: {
+          commitId,
+          path: 'Main.java',
+          content: queuedSource,
+          sizeBytes: queuedSource.length,
+          encoding: 'utf-8',
+        } }),
+      },
+    })
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    renderWithClass(
+      <StudentProgrammingWorkspace
+        {...git}
+        api={activityTransport()}
+        submissions={submissionTransport()}
+        pollingOptions={{ initialDelayMs: 1, maximumDelayMs: 1, maximumDurationMs: 1000 }}
+      />,
+    )
+
+    const editor = await screen.findByLabelText('Java source code')
+    fireEvent.change(editor, { target: { value: queuedSource } })
+    await userEvent.click(await screen.findByRole('button', { name: 'Save to Git' }))
+    await waitFor(() => expect(git.repositories.getActivityCheckpoint).toHaveBeenCalledOnce())
+
+    fireEvent.change(editor, { target: { value: newerSource } })
+    latestCommit = { commitId }
+    await act(async () => completeCheckpoint({ data: {
+      checkpointId,
+      repositoryId,
+      activityId,
+      status: 'SUCCEEDED',
+      resultingCommitHash: commitId,
+    } }))
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
+    expect(await screen.findByText(/Saved at commit aaaaaaaa/)).toBeInTheDocument()
+    expect(screen.queryByText('Browser source ready')).not.toBeInTheDocument()
+    expect(editor).toHaveValue(newerSource)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Load latest from Git' }))
+    expect(await screen.findByRole('dialog', { name: 'Load latest from Git?' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }))
+    expect(editor).toHaveValue(newerSource)
+  })
+
+  it('loads the latest pushed Main.java into the editor but still requires explicit Submit', async () => {
+    const pushedSource = 'public class Main { public static void main(String[] args) { System.out.println("home"); } }'
+    const git = gitDependencies({ contentOverrides: {
+      getSummary: vi.fn().mockResolvedValue({ data: { repositoryId, empty: false, defaultBranch: 'main', latestCommit: { commitId } } }),
+      getFile: vi.fn().mockResolvedValue({ data: { commitId, path: 'Main.java', content: pushedSource, sizeBytes: pushedSource.length, encoding: 'utf-8' } }),
+    } })
+    const submissions = submissionTransport()
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissions} />)
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'Git' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Load latest from Git' }))
+    expect(await screen.findByLabelText('Java source code')).toHaveValue(pushedSource)
+    expect(screen.getByText(/Loaded Main.java from commit aaaaaaaa/)).toBeInTheDocument()
+    expect(git.repositoryContent.getFile).toHaveBeenCalledWith(repositoryId, { commitId, path: 'Main.java' })
+    expect(submissions.createSubmission).not.toHaveBeenCalled()
+  })
+
+  it('refuses to checkpoint stale browser source when a newer push is detected', async () => {
+    const newerCommit = 'b'.repeat(40)
+    const git = gitDependencies({ contentOverrides: {
+      getSummary: vi.fn()
+        .mockResolvedValueOnce({ data: { repositoryId, empty: false, defaultBranch: 'main', latestCommit: { commitId } } })
+        .mockResolvedValueOnce({ data: { repositoryId, empty: false, defaultBranch: 'main', latestCommit: { commitId: newerCommit } } }),
+    } })
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissionTransport()} />)
+    fireEvent.change(await screen.findByLabelText('Java source code'), { target: { value: changedCode } })
+    await userEvent.click(await screen.findByRole('button', { name: 'Save to Git' }))
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
+    expect(await screen.findByText('This record changed while you were working. Refresh it before trying again.')).toBeInTheDocument()
+    expect(git.repositories.createActivityCheckpoint).not.toHaveBeenCalled()
+  })
+
+  it('retries an ambiguous checkpoint with the exact source snapshot and idempotency key', async () => {
+    const checkpointRecord = {
+      checkpointId: '00000000-0000-4000-8000-000000000050', repositoryId, activityId,
+      status: 'SUCCEEDED', resultingCommitHash: commitId,
+    }
+    const git = gitDependencies({ repositoryOverrides: {
+      createActivityCheckpoint: vi.fn()
+        .mockRejectedValueOnce(new ApiError({ code: 'NETWORK_ERROR', message: 'offline' }))
+        .mockResolvedValueOnce({ data: checkpointRecord }),
+    } })
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissionTransport()} />)
+    const editor = await screen.findByLabelText('Java source code')
+    fireEvent.change(editor, { target: { value: changedCode } })
+    await userEvent.click(await screen.findByRole('button', { name: 'Save to Git' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
+    expect(await screen.findByText(/save result is uncertain/i)).toBeInTheDocument()
+
+    fireEvent.change(editor, { target: { value: starterCode } })
+    await userEvent.click(screen.getByRole('button', { name: 'Retry Save to Git' }))
+    await screen.findByText(/Saved at commit aaaaaaaa/)
+
+    expect(git.repositories.createActivityCheckpoint).toHaveBeenCalledTimes(2)
+    expect(git.repositories.createActivityCheckpoint.mock.calls[1]).toEqual(git.repositories.createActivityCheckpoint.mock.calls[0])
+    expect(git.repositories.createActivityCheckpoint.mock.calls[1][1].sourceCode).toBe(changedCode)
+  })
+
   it('keeps imported source local until deliberate Run/Submit and navigates current compiler lines', async () => {
     const imported = 'public class Main {\n    invalid\n}'
     const submissions = submissionTransport({
@@ -182,43 +399,83 @@ describe('student programming workspace', () => {
     })
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     const user = userEvent.setup()
-    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />, { destination: true })
+    renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissions} />, { destination: true })
     const editor = await screen.findByLabelText('Java source code')
     fireEvent.change(screen.getByLabelText('Import Java file'), { target: { files: [{ name: 'Main.java', size: imported.length, arrayBuffer: async () => new TextEncoder().encode(imported).buffer }] } })
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm', exact: true }))
     await waitFor(() => expect(editor).toHaveValue(imported))
     expect(submissions.createVisibleTestRun).not.toHaveBeenCalled()
     expect(submissions.createSubmission).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Run Visible Tests' }))
     expect(submissions.createVisibleTestRun).toHaveBeenCalledWith(activityId, imported)
+    await user.click(screen.getByRole('tab', { name: 'Output' }))
     await user.click(await screen.findByRole('button', { name: 'Go to line 2' }))
     expect(editor).toHaveFocus()
     expect(editor.value.slice(editor.selectionStart, editor.selectionEnd)).toBe('    invalid')
     fireEvent.change(editor, { target: { value: imported + '\n' } })
     expect(screen.queryByRole('button', { name: 'Go to line 2' })).not.toBeInTheDocument()
-    expect(screen.getByText(/Source changed since this run/)).toBeInTheDocument()
+    expect(screen.getByText(/Source changed since this visible-test run/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Submit' }))
     await user.click(screen.getByRole('button', { name: 'Submit source' }))
     await waitFor(() => expect(submissions.createSubmission).toHaveBeenCalledWith(activityId, imported + '\n', expect.any(String)))
   })
 
   it('initializes real starter source in memory without fake autosave or custom input', async () => {
-    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissionTransport()} />)
+    renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissionTransport()} />)
 
     const editor = await screen.findByLabelText('Java source code')
+    expect(screen.getByRole('link', { name: 'Back to Activity' })).toHaveAttribute('href', `/student/activity/${activityId}?classId=${classId}`)
     expect(editor).toHaveValue(starterCode)
     fireEvent.change(editor, { target: { value: changedCode } })
     expect(editor).toHaveValue(changedCode)
-    expect(screen.getByText('Not automatically saved')).toBeInTheDocument()
+    expect(screen.queryByText('Browser source ready')).not.toBeInTheDocument()
     expect(screen.queryByText(/Auto-save/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Custom Input/i)).not.toBeInTheDocument()
     expect(screen.getByText('Visible sample')).toBeInTheDocument()
+  })
+
+  it('refetches Git on focus, reports a newer external commit, and never overwrites browser source', async () => {
+    const newerCommit = 'b'.repeat(40)
+    const getSummary = vi.fn()
+      .mockResolvedValueOnce({ data: { repositoryId, empty: false, defaultBranch: 'main', latestCommit: { commitId } } })
+      .mockResolvedValue({ data: { repositoryId, empty: false, defaultBranch: 'main', latestCommit: { commitId: newerCommit } } })
+    const git = gitDependencies({ contentOverrides: { getSummary } })
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissionTransport()} />)
+
+    const editor = await screen.findByLabelText('Java source code')
+    await waitFor(() => expect(getSummary).toHaveBeenCalledTimes(1))
+    fireEvent.change(editor, { target: { value: changedCode } })
+    act(() => window.dispatchEvent(new Event('focus')))
+    await waitFor(() => expect(getSummary.mock.calls.length).toBeGreaterThanOrEqual(2))
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
+
+    expect(await screen.findByText('Newer Git changes are available.')).toBeInTheDocument()
+    expect(screen.getByText('Your browser source was not changed.')).toBeInTheDocument()
+    expect(editor).toHaveValue(changedCode)
+  })
+
+  it('shows only the real read-only repository tree and navigates returned folders', async () => {
+    const getTree = vi.fn()
+      .mockResolvedValueOnce({ data: { commitId, path: '', entries: [{ name: 'src', path: 'src', entryType: 'tree' }] } })
+      .mockResolvedValueOnce({ data: { commitId, path: 'src', entries: [{ name: 'Main.java', path: 'src/Main.java', entryType: 'blob' }] } })
+    const git = gitDependencies({ contentOverrides: {
+      getSummary: vi.fn().mockResolvedValue({ data: { repositoryId, empty: false, defaultBranch: 'main', latestCommit: { commitId } } }),
+      getTree,
+    } })
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissionTransport()} />)
+
+    expect(await screen.findByText('read-only tree')).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: /src/ }))
+    expect(await screen.findByText('Main.java', { selector: '.student-editor-explorer em:not(.is-active)' })).toBeInTheDocument()
+    expect(getTree).toHaveBeenLastCalledWith(repositoryId, { commitId, path: 'src' })
+    expect(screen.queryByText('README.md')).not.toBeInTheDocument()
   })
 
   it('resizes desktop panes with pointer input while preserving editor and activity state', async () => {
     mockWorkspaceViewport(true)
     const submissions = submissionTransport()
     const { container } = renderWithClass(
-      <StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />,
+      <StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissions} />,
     )
 
     const editor = await screen.findByLabelText('Java source code')
@@ -247,7 +504,7 @@ describe('student programming workspace', () => {
     expect(editor).toHaveValue(changedCode)
     expect(screen.getByRole('button', { name: 'Run Visible Tests' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Submit' })).toBeInTheDocument()
-    expect(screen.getByText(/Run visible tests to check the current source/)).toBeInTheDocument()
+    expect(screen.getByText('No visible-test outcomes are available yet.')).toBeInTheDocument()
     expect(submissions.createVisibleTestRun).not.toHaveBeenCalled()
     expect(submissions.createSubmission).not.toHaveBeenCalled()
   })
@@ -255,7 +512,7 @@ describe('student programming workspace', () => {
   it('supports focused keyboard resizing and enforces desktop pane boundaries', async () => {
     mockWorkspaceViewport(true)
     const { container } = renderWithClass(
-      <StudentProgrammingWorkspace api={activityTransport()} submissions={submissionTransport()} />,
+      <StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissionTransport()} />,
     )
     await screen.findByLabelText('Java source code')
     const shell = container.querySelector('.student-coding-shell')
@@ -275,7 +532,7 @@ describe('student programming workspace', () => {
   it('removes desktop sizing and separators when the workspace becomes narrow', async () => {
     const viewport = mockWorkspaceViewport(true)
     const { container } = renderWithClass(
-      <StudentProgrammingWorkspace api={activityTransport()} submissions={submissionTransport()} />,
+      <StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissionTransport()} />,
     )
     await screen.findByLabelText('Java source code')
     expect(screen.getAllByRole('separator')).toHaveLength(2)
@@ -313,7 +570,7 @@ describe('student programming workspace', () => {
           score: 9876,
         } }),
     })
-    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 1, maximumDelayMs: 1, maximumDurationMs: 1000 }} />)
+    renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 1, maximumDelayMs: 1, maximumDurationMs: 1000 }} />)
 
     await userEvent.click(await screen.findByRole('button', { name: 'Run Visible Tests' }))
     expect(submissions.createVisibleTestRun).toHaveBeenCalledWith(activityId, starterCode)
@@ -322,6 +579,39 @@ describe('student programming workspace', () => {
     expect(screen.queryByText('17')).not.toBeInTheDocument()
     expect(screen.queryByText('9876')).not.toBeInTheDocument()
     expect(submissions.getVisibleTestRun).toHaveBeenCalledTimes(2)
+  })
+
+  it('runs unsaved Scanner code with live stdin without submission or Git side effects', async () => {
+    mockWorkspaceViewport(false)
+    const scannerSource = 'import java.util.Scanner; public class Main { public static void main(String[] args) { Scanner scanner = new Scanner(System.in); System.out.println("Hello " + scanner.nextLine()); } }'
+    const submissions = submissionTransport({
+      createInteractiveCodeRun: vi.fn().mockResolvedValue({ data: {
+        id: runId, activityId, phase: 'RUNNING', transcript: 'Enter your name: ', inputClosed: false, nextSequence: 1,
+      } }),
+      sendInteractiveInput: vi.fn().mockResolvedValue({ data: { id: runId, activityId, phase: 'COMPLETED', transcript: 'Enter your name: Julius\nHello Julius\n', exitCode: 0 } }),
+      getInteractiveCodeRun: vi.fn().mockResolvedValue({ data: {
+        id: runId, activityId, phase: 'COMPLETED', transcript: 'Enter your name: Julius\nHello Julius\n', exitCode: 0,
+        hiddenTestResults: ['HIDDEN'], score: 100,
+      } }),
+    })
+    const git = gitDependencies()
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 1, maximumDelayMs: 1, maximumDurationMs: 1000 }} />)
+
+    fireEvent.change(await screen.findByLabelText('Java source code'), { target: { value: scannerSource } })
+    const revealOutput = vi.fn()
+    screen.getByRole('tablist', { name: 'Workspace results' }).parentElement.scrollIntoView = revealOutput
+    await userEvent.click(screen.getByRole('button', { name: 'Run Code' }))
+    expect(screen.getByRole('tab', { name: 'Output' })).toHaveAttribute('aria-selected', 'true')
+    expect(revealOutput).toHaveBeenCalledWith({ block: 'start' })
+    fireEvent.change(await screen.findByLabelText('Program input'), { target: { value: 'Julius' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    expect(submissions.createInteractiveCodeRun).toHaveBeenCalledWith(activityId, scannerSource, expect.any(String))
+    expect(submissions.sendInteractiveInput).toHaveBeenCalledWith(runId, { sequence: 1, text: 'Julius', eof: false })
+    expect(await screen.findByText(/Hello Julius/)).toBeInTheDocument()
+    expect(screen.queryByText('HIDDEN')).not.toBeInTheDocument()
+    expect(submissions.createSubmission).not.toHaveBeenCalled()
+    expect(git.repositories.createActivityCheckpoint).not.toHaveBeenCalled()
   })
 
   it('explains whitespace differences for failed visible tests without rendering hidden evidence', async () => {
@@ -353,7 +643,7 @@ describe('student programming workspace', () => {
         }],
       } }),
     })
-    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 1, maximumDelayMs: 1, maximumDurationMs: 1000 }} />)
+    renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 1, maximumDelayMs: 1, maximumDurationMs: 1000 }} />)
 
     await userEvent.click(await screen.findByRole('button', { name: 'Run Visible Tests' }))
     const comparison = await screen.findByLabelText('Visible sample output comparison')
@@ -372,13 +662,13 @@ describe('student programming workspace', () => {
     const submissions = submissionTransport({
       createSubmission: vi.fn(() => new Promise((resolve) => { accept = resolve })),
     })
-    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />, { destination: true })
+    renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissions} />, { destination: true })
 
     fireEvent.change(await screen.findByLabelText('Java source code'), { target: { value: changedCode } })
     await userEvent.click(screen.getByRole('button', { name: 'Submit' }))
     await userEvent.click(screen.getByRole('button', { name: 'Submit source' }))
-    expect(screen.getAllByRole('button', { name: 'Submitting...' })).toHaveLength(2)
-    screen.getAllByRole('button', { name: 'Submitting...' }).forEach((button) => expect(button).toBeDisabled())
+    expect(screen.getAllByRole('button', { name: 'Submitting…' })).toHaveLength(2)
+    screen.getAllByRole('button', { name: 'Submitting…' }).forEach((button) => expect(button).toBeDisabled())
     expect(submissions.createSubmission).toHaveBeenCalledTimes(1)
     const [calledActivity, calledSource, key] = submissions.createSubmission.mock.calls[0]
     expect(calledActivity).toBe(activityId)
@@ -395,7 +685,7 @@ describe('student programming workspace', () => {
         .mockRejectedValueOnce(new ApiError({ code: 'NETWORK_ERROR', message: 'offline' }))
         .mockResolvedValueOnce({ data: submissionRecord(), meta: { idempotentReplay: true } }),
     })
-    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />, { destination: true })
+    renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissions} />, { destination: true })
 
     await screen.findByLabelText('Java source code')
     await userEvent.click(screen.getByRole('button', { name: 'Submit' }))
@@ -417,7 +707,7 @@ describe('student programming workspace', () => {
     const submissions = submissionTransport({
       createVisibleTestRun: vi.fn().mockRejectedValue(new ApiError({ status: 503, code: 'EXECUTION_UNAVAILABLE' })),
     })
-    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />)
+    renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissions} />)
 
     await userEvent.click(await screen.findByRole('button', { name: 'Run Visible Tests' }))
     expect(await screen.findByText('Java execution is disabled in this environment. No result was simulated.')).toBeInTheDocument()
@@ -439,7 +729,7 @@ describe('student programming workspace', () => {
         nextAllowedSubmissionKind: 'REPLACEMENT',
       }) }),
     })
-    renderWithClass(<StudentProgrammingWorkspace api={activityTransport({ getActivity: vi.fn().mockResolvedValue({ data: closedActivity }) })} submissions={submissions} />)
+    renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport({ getActivity: vi.fn().mockResolvedValue({ data: closedActivity }) })} submissions={submissions} />)
 
     expect(await screen.findByRole('button', { name: 'Submit replacement' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Run Visible Tests' })).toBeDisabled()
@@ -459,7 +749,7 @@ describe('student programming workspace', () => {
       getAttemptState: vi.fn().mockRejectedValue(new ApiError({ status: 503, code: 'SERVICE_UNAVAILABLE' })),
       listSubmissions: vi.fn().mockResolvedValue({ data: [historyReplacement], pagination }),
     })
-    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />)
+    renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissions} />)
 
     expect(await screen.findByText('Attempt availability could not be loaded. Submission remains disabled.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled()
@@ -476,7 +766,7 @@ describe('student programming workspace', () => {
         submissionBlockedReason: 'ATTEMPT_LIMIT_REACHED',
       }) }),
     })
-    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />)
+    renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissions} />)
 
     expect(await screen.findByText('Another submission is not currently available.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled()
@@ -499,7 +789,7 @@ describe('student programming workspace', () => {
         message: 'Attempt limit reached.',
       })),
     })
-    renderWithClass(<StudentProgrammingWorkspace api={activityTransport()} submissions={submissions} />)
+    renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissions} />)
 
     const submit = await screen.findByRole('button', { name: 'Submit' })
     await waitFor(() => expect(submit).toBeEnabled())
@@ -546,7 +836,7 @@ describe('student submission records', () => {
 
     expect(await screen.findByText('Replacement attempt for Attempt 2')).toBeInTheDocument()
     expect(screen.queryByText(/Attempt 3 of 2/)).not.toBeInTheDocument()
-    expect(screen.getByText('Accepted after the ordinary deadline')).toBeInTheDocument()
+    expect(screen.getByText('Accepted late')).toBeInTheDocument()
     expect(screen.getByText('90 / 100 points')).toBeInTheDocument()
     expect(screen.getByText('Credited result')).toBeInTheDocument()
     expect(submissions.listSubmissions).toHaveBeenCalledWith(activityId, { page: 1, pageSize: 20, status: '' }, expect.objectContaining({ signal: expect.any(AbortSignal) }))
@@ -624,7 +914,47 @@ describe('student submission records', () => {
       path: '/student/activity/:activityId/submissions/:submissionId',
     })
 
-    expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(await screen.findByText('The requested Origin record was not found.')).toBeInTheDocument()
     expect(screen.queryByText('CROSS-CLASS-SOURCE')).not.toBeInTheDocument()
   })
+})
+
+describe('Ungraded Student submission records', () => {
+  it.each(['assessed', 'released'])('shows completion for %s without any academic score and gates comments by deliberate release', async status => {
+    const secret = 'Unreleased instructor comment'
+    const submissions = submissionTransport({ getSubmission: vi.fn().mockResolvedValue({ data: submissionRecord({ gradingMode: 'COMPLETION', completionState: 'COMPLETE', status, gradeStatus: 'ungraded', feedback: secret, finalScore: 0, totalPoints: 0 }) }) })
+    renderWithClass(<StudentSubmissionDetail api={activityTransport()} submissions={submissions} />, { entry: `/student/activity/${activityId}/submissions/${submissionId}?classId=${classId}`, path: '/student/activity/:activityId/submissions/:submissionId' })
+    expect(await screen.findByRole('heading', { name: 'Complete · Ungraded' })).toBeInTheDocument()
+    expect(screen.queryByText(/0 \/ 0|0%|Numeric scores/)).not.toBeInTheDocument()
+    if (status === 'released') expect(screen.getByText(secret)).toBeInTheDocument()
+    else { expect(screen.queryByText(secret)).not.toBeInTheDocument(); expect(screen.getByText('Feedback not released')).toBeInTheDocument() }
+  })
+})
+
+
+it('keeps embedded attempt history concise and hides unreleased results', async () => {
+  const record = submissionRecord({ status: 'assessed', gradeStatus: 'pending', finalScore: 91, feedback: 'UNRELEASED-HISTORY-FEEDBACK' })
+  const submissions = submissionTransport({ listSubmissions: vi.fn().mockResolvedValue({ data: [record], pagination }) })
+  renderWithClass(<StudentSubmissionHistory compact api={activityTransport()} submissions={submissions} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
+  expect(await screen.findByText('Attempt 1')).toBeInTheDocument()
+  expect(screen.queryByText(/UNRELEASED-HISTORY-FEEDBACK|91/)).not.toBeInTheDocument()
+  expect(screen.queryByText('Attempts are immutable records. Practice runs do not appear here.')).not.toBeInTheDocument()
+  expect(screen.getByRole('link', { name: /Attempt 1/ })).toHaveAttribute('href', `/student/activity/${activityId}/submissions/${record.id}?classId=${classId}`)
+})
+
+
+it('puts the returned grade and feedback first and opens saved code and visible tests without extra requests', async () => {
+  const submissions = submissionTransport({ getSubmission: vi.fn().mockResolvedValue({ data: submissionRecord({ status: 'released', gradeStatus: 'released', finalScore: 92, totalPoints: 100, feedback: 'Returned sample feedback.', isCreditedResult: true }) }) })
+  renderWithClass(<StudentSubmissionDetail api={activityTransport()} submissions={submissions} />, { entry: `/student/activity/${activityId}/submissions/${submissionId}?classId=${classId}`, path: '/student/activity/:activityId/submissions/:submissionId' })
+  expect(await screen.findByText('92 / 100 points')).toBeVisible()
+  expect(screen.getByText('Returned sample feedback.')).toBeVisible()
+  expect(screen.getByRole('tab', { name: 'Result & feedback' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByText('Submitted source')).not.toBeVisible()
+  await userEvent.click(screen.getByRole('tab', { name: 'Submitted code' }))
+  expect(screen.getByText('Submitted source')).toBeVisible()
+  await userEvent.click(screen.getByRole('tab', { name: 'Test results' }))
+  expect(screen.getByText('Visible-test outcomes')).toBeVisible()
+  await userEvent.click(screen.getByRole('tab', { name: 'Result & feedback' }))
+  expect(screen.getByText('Returned sample feedback.')).toBeVisible()
+  expect(submissions.getSubmission).toHaveBeenCalledTimes(1)
 })

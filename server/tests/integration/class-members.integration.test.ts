@@ -34,7 +34,7 @@ describe('PostgreSQL class membership lifecycle', () => {
       logger,
       now: () => currentTime,
     })
-    const createdClass = await classService.create(instructor, {
+    const createdClass = await classService.create(instructor, { program: 'INFORMATION_TECHNOLOGY',
       className: 'IT 121',
       section: 'BSIT 3A',
       semester: 'First Semester',
@@ -126,7 +126,7 @@ describe('PostgreSQL class membership lifecycle', () => {
       classRepository,
       logger,
     })
-    const createdClass = await classService.create(instructor, {
+    const createdClass = await classService.create(instructor, { program: 'INFORMATION_TECHNOLOGY',
       className: 'IT 122',
       section: 'BSIT 3B',
       semester: 'First Semester',
@@ -167,7 +167,7 @@ describe('PostgreSQL class membership lifecycle', () => {
       classRepository,
       logger,
     })
-    const createdClass = await classService.create(instructor, {
+    const createdClass = await classService.create(instructor, { program: 'INFORMATION_TECHNOLOGY',
       className: 'IT 123',
       section: 'BSIT 3C',
       semester: 'First Semester',
@@ -221,7 +221,7 @@ describe('PostgreSQL class membership lifecycle', () => {
       classRepository,
       logger,
     })
-    const createdClass = await classService.create(instructor, {
+    const createdClass = await classService.create(instructor, { program: 'INFORMATION_TECHNOLOGY',
       className: 'IT 124',
       section: 'BSIT 3D',
       semester: 'First Semester',
@@ -299,7 +299,7 @@ describe('PostgreSQL class membership lifecycle', () => {
     const classRepository = createPrismaClassRepository(prisma)
     const classService = createClassService({ repository: classRepository, logger, generateCode: () => 'FGHJK23456' })
     const memberService = createClassMemberService({ repository: createPrismaClassMemberRepository(prisma), classRepository, logger })
-    const createdClass = await classService.create(instructor, { className: 'IT 125', section: 'BSIT 3E', semester: 'First Semester', schoolYear: '2026-2027' })
+    const createdClass = await classService.create(instructor, { program: 'INFORMATION_TECHNOLOGY', className: 'IT 125', section: 'BSIT 3E', semester: 'First Semester', schoolYear: '2026-2027' })
     const joined = await memberService.join(student, 'FGHJK23456')
     const roster = await memberService.list(admin, createdClass.id, { page: 1, pageSize: 50 })
     const projected = roster.members.find((item) => 'memberId' in item && item.memberId === joined.membershipId)

@@ -1,5 +1,79 @@
 # Project and Repository Collaboration
 
+## Approved Group Repository MVP extension (2026-10-18)
+
+Product Owner clarification (2026-10-19): native Git clone/commit/push is
+sufficient for Group MVP. Browser .java/.md editing is deferred; the retained
+GROUP_REPOSITORY_BROWSER_EDITING_PROPOSAL.md is not an approved schema/job/write
+contract. Source retention, job expiry and ambiguous commit recovery remain
+unresolved future decisions. Current file navigation uses bounded filename search
+separately from explicit exact-path fallback; unsupported Add File is hidden.
+Demo database restoration/reconstruction is separately deferred; see
+../DEMO_DATABASE_RECOVERY_ISSUE.md. Existing Git storage must remain untouched.
+
+`docs/GROUP_REPOSITORY_MVP_DECISIONS.md` locks Student-led Team formation,
+Maintainer (LEAD/OWNER), Developer (MEMBER), native local merge and read-only
+Primary/active Co-Instructor Git oversight. Instructor assignment remains deferred.
+These current details supersede historical exact-owner-only staff wording below.
+
+`GET /repositories/:repositoryId/group-context` returns only academic identity,
+current teaching-staff display names, active member count, current product role,
+and effective source/member/review capabilities. Git capabilities reuse
+`evaluateGitPermission`; action endpoints still authorize independently. Source
+capabilities require READY storage; membership/review capabilities are distinct.
+No storage locator, credential/verifier, email, join code or raw Git access record
+is projected. Class-visible nonmembers receive metadata-only capabilities.
+
+Student catalog `groupScope=MINE` selects active repository memberships within
+current Class eligibility; `CLASS_METADATA` selects eligible same-Class metadata
+without repository membership. Removed repository members are excluded from both
+catalog and detail. Former Class members lose group metadata/activity authority,
+including owner shortcuts; current teaching staff retain academic oversight.
+Other repository types retain their existing policies.
+
+Group UI is Code-first with academic header, five tabs and automatic-scope Code
+menu. README is bounded escaped plain text, not executable HTML/Markdown. Recorded
+accepted pushes are authenticated account signals, never verified authored commits
+or grades. Existing review freeze and local Git/ref protections remain unchanged.
+
+The approved compact UX work order retains that backend contract: one Group
+route with Code, Commits, Branches, Members and Activity tabs; commit-pinned
+folder/breadcrumb and bounded inline file inspection; escaped root README;
+compact Members with an accessible Class-roster invitation dialog; header
+ready/resubmit confirmation and existing Instructor review in a dialog.
+Invitation eligibility and pending reservations remain server-authorized.
+New Group Project forms default to eight members including the Maintainer, with
+the existing 2–8 selector. Existing project limits and the database default of
+four are unchanged; this presentation change requires no migration. Product
+Owner visual acceptance of the implemented redesign remains pending.
+
+The subsequent approved UX refinement keeps the same contracts: Project Detail's
+Collaboration rail owns member/invited/unassigned/restricted entry states; Group
+history groups by date, diffs retain escaped unified text with semantic color,
+and branch/event lists remain truthful. Group event-driven revalidation uses a
+15-second freshness window on tab/focus/visibility return, cancellation and
+in-flight deduplication, with no background polling or credential issuance.
+Dirty review/creation and open invitation/confirmation interactions defer
+revalidation. Production backend authority and review-freeze policy are unchanged.
+Design System v1 is documented under docs/design; broader adoption is not implied.
+
+The final GitHub-familiar Group UI work order moves the sole Code menu and
+existing exact-path file opener into the file toolbar. Selected-branch commit
+totals come from history pagination.totalItems, not the all-head summary count;
+inconsistent/moving-tip reads omit the number instead of guessing. Tab and branch
+are URL-backed. Group commit details render only after selection, push activity
+stays concise and truthful, and unfinished file-path input defers background
+refresh. No general Group Add File API, schema, transport, review or authorization
+change is implied. Product Owner visual acceptance remains pending.
+
+The subsequent approved interaction refinement permits a truthful Add file
+preview dialog without implementing browser file writes. The exact branch count
+moves to the latest-commit row; real author/message/hash links open selected
+commit details using URL state. Group copy feedback is transient and contains no
+copied values. Group error views provide safe 404/5xx recovery and an exit;
+authorization denials are never relabelled as work in progress. Credential
+issuance, expiry, scope and secret lifetime remain governed by the same contract.
+
 ## Scope
 
 This document is the authoritative Phase 7 backend contract for instructor-created project tasks, student-created repository metadata, teams, synchronized collaborators, invitations, textual project feedback, review lifecycle, monitoring, and archive protection.
@@ -201,7 +275,7 @@ Class archive enforces the same Phase 7 blockers in addition to prior activity/s
 
 ## Verification strategy
 
-The isolated suite remains `npm test`. Real PostgreSQL behavior runs serially through `npm run test:integration`; the runner accepts only an explicitly recognized `projex_test`, deploys committed migrations, never falls back to `DATABASE_URL`, and performs dependency-ordered fixture cleanup while preserving Prisma migration history.
+The isolated suite remains `npm test`. Real PostgreSQL behavior runs serially through `npm run test:integration`; the runner accepts only an explicitly recognized `projex_test`, deploys committed migrations, never falls back to `DATABASE_URL`, and performs dependency-ordered fixture cleanup while preserving Prisma migration history. WARNING: that cleanup deletes application records across the target database. A recognized database name is not sufficient isolation; do not run mutable suites while any live demo shares that target. Verify disposable database/storage separation before any future run. Demo recovery remains deferred under the separate issue above.
 
 Phase 7 database-backed coverage includes:
 
@@ -225,3 +299,37 @@ The committed migration is verified against `projex_test` before explicit approv
 - Post-deadline revision windows: separately approved server-controlled workflow.
 - Numeric project grades, rubrics, and final-grade calculation: later grading scope.
 - Durable administrative audit-event table and notifications: later hardening/features. Structured security/operational logs remain required now.
+
+
+## Isolated candidate: minimal Group browser editor (2026-10-23)
+
+The approved candidate adds a full-page Student editor for `CLASS_PROJECT` repositories. It reuses the Activity source surface (line numbers, indentation guides, indentation/Tab escape) without Activity identity, assessment, submission, compiler or checkpoint semantics. The baseline has no syntax-highlighting engine to reuse; no new engine or dependency is introduced. Official Activity evidence and native Git authorization remain unchanged.
+
+A commit changes exactly one supported UTF-8 text file, at most 65,536 bytes, using an ASCII relative path of at most 240 characters and a one-line explicit commit message of at most 300 characters. Supported extensions: java, md, txt, json, js, ts, jsx, tsx, css, html, xml, yaml, yml, sql, py, c, h, cpp. Files can be created under existing/new directories. No deletion, rename, upload, binary, symlink, submodule, executable-mode change, hidden/Git internals, traversal or Windows device paths. Existing executable text files retain their mode. Case-insensitive path collisions are rejected.
+
+Students select an existing branch or explicitly create one from an exact source revision through the durable New Branch action. Only an authorized Maintainer may create the first file/commit on an empty `main`. Developers may create and update authorized feature branches; only existing protected-main authority permits updating main. Merge Branch supports confirmed fast-forward updates only. Source is read at an exact commit; typing is only an in-memory draft, not autosave or a Git commit. Navigation/replacement requires deliberate discard. Failed/conflicted operations retain the draft. A stale HEAD requires comparing the current file and explicitly adopting a new base; there is no automatic overwrite, merge or rebase. Reloading/closing the tab can discard in-memory drafts after the browser warning.
+
+`POST /api/v1/repositories/:repositoryId/browser-commits` requires active authenticated Student, CSRF, JSON, a bounded `Idempotency-Key`, and current Git write authority for the requested branch. `GET .../browser-commits/:commitJobId` returns only the requesting actor's safe job projection under current read access. Payload and key hashes bind retries to one request; only one active request per actor/repository is allowed. Read-authorized replays can retrieve a previously accepted request after the repository becomes frozen; they cannot create a new write. The backend remains final authority.
+
+Migration `20261023000000_group_browser_commits` adds the separate `GroupBrowserCommitJob` table. It references Repository and User directly and reuses only the existing generic job-state enum, never Activity checkpoint records. The API queues the payload without executing Git. The existing separate Git worker claims pending/expired-lease jobs with SKIP LOCKED, fences the final transaction by worker/claim/lease, locks policy-owning rows, and reevaluates the existing native Git permission function immediately before publication. Group jobs cannot starve the provisioning/checkpoint queues.
+
+The worker prepares immutable Git objects using a private temporary index, without checking out repository paths. Author/committer identity is server-bound to the authenticated Student UUID. One `update-ref --stdin` transaction atomically compare-and-swaps the exact expected branch HEAD and creates `refs/projex/browser-commits/<job UUID>` as a durable publication receipt. Native pushes that win the race cause a conflict. The private namespace is hidden by Smart HTTP and cannot be pushed through its protected-ref hook. Receipt recovery confirms an already-published commit even after later permission changes and creates exactly one database activity, without a second commit. A successful job means both the Git receipt and completed database outcome were confirmed.
+
+Known pre-publication refusals fail safely; HEAD mismatches are CONFLICTED. Unknown outcomes after publication begins remain retryable every 30 seconds, retaining payload/receipt recovery until confirmed. The UI stops automatic polling after a minute and offers explicit status recovery; it never claims an unconfirmed result succeeded. Persistent infrastructure failure requires operator inspection of that owned job/storage, not manual force-update or deletion. Terminal jobs clear their payload content; normal Git history and private receipts are retained. Repository size checks include a small publication reserve. Unreachable prepared objects can remain after refusal; ordinary storage limits still apply.
+
+Candidate runtime: PostgreSQL with this migration, existing supported Git, configured managed storage, and the separate `git-worker`. Local-process Git remains loopback development/defense only. No Java runtime is needed for the Group editor. Integration, migration of preserved/demo databases, merge and deployment remain separate owner gates. See `docs/GROUP_BROWSER_EDITOR_OWNER_REVIEW.md` for candidate verification and demonstration evidence.
+
+
+### Owner editor UX refinement
+
+The local-development recommendation now appears in the focused Code in Projex welcome/help dialog. The guide appears whenever the editor opens unless the user selects Do not show this again. Only that opt-in boolean preference is saved in local browser storage; no draft, source or credential is stored there. The question-mark Editor help button always reopens the guide, where the user can also clear the preference. Closing or acknowledging the guide without selecting the checkbox does not suppress future welcomes. The Activity-style workbench keeps branch selection, commit message and explicit Commit changes above the source surface, with New file in the explorer.
+
+Existing supported README/source files open as UPDATE snapshots. New file checks the requested path at the selected immutable HEAD and rejects existing files with an Open existing file action. This is a usability preflight; the worker's exact-HEAD CAS and path/permission validation remain authoritative. Server file collisions preserve the draft and require deliberate comparison/base adoption before retrying. No backend authorization, job, migration, native Git or Activity assessment contract changes accompany this refinement.
+
+### Approved three core Group Git actions
+
+The isolated Group editor extension now supports explicit New Branch and fast-forward Merge Branch alongside the existing Commit Changes path. New branches are created from an exact existing source HEAD and switch in place while retaining source/message drafts. The bounded merge review binds exact source and target revisions; main is offered as a target only under existing Maintainer authority. Divergence requires native Git/local IDE resolution.
+
+GroupBrowserRefJob is a separate durable ref-operation record (migration 20261023010000_group_browser_refs), not an Activity or duplicate file-commit system. The Git worker repeats policy/ref checks under locked policy rows, serializes browser ref publication per repository, and atomically verifies source, creates/CAS-updates target and writes a hidden receipt. Stale source/target refuses publication; receipt recovery confirms already-applied updates without overwriting subsequent native changes. Existing private-namespace transport restrictions remain in force.
+
+The new browser-refs POST/status/preview API is Student/auth/CSRF scoped as appropriate. Generation of Git credentials is not involved in browser branch/commit/merge actions. New migrations were validated only in newly created disposable QA databases; preserved databases were not migrated. See THREE_CORE_GROUP_GIT_ACTIONS_REVIEW.md for exact contracts, isolation, limits and actual verification.

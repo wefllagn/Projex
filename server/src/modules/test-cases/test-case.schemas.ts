@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { testImportanceSchema } from '../activities/weighted-grading.js'
 
 const timestampSchema = z.iso.datetime({ offset: true }).transform((value) => new Date(value))
 const testCasePointsSchema = z
@@ -30,7 +31,8 @@ export const replaceTestCasesSchema = z
             inputData: z.string().max(32_000).nullable().optional().default(null),
             expectedOutput: z.string().max(32_000),
             isHidden: z.boolean(),
-            points: testCasePointsSchema,
+            importance: testImportanceSchema.optional(),
+            points: testCasePointsSchema.nullable().optional(),
           })
           .strict(),
       )

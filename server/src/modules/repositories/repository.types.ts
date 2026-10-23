@@ -1,6 +1,7 @@
 import type {
   ClassMemberStatus,
   ClassStatus,
+  ActivityStatus,
   ProjectTaskStatus,
   RepositoryFeedbackStatus,
   RepositoryInvitationStatus,
@@ -16,9 +17,11 @@ import type {
 } from '@prisma/client'
 
 export interface RepositoryRecord {
+  groupRelationship?: 'MY_GROUP' | 'CLASS_METADATA'
   id: string
   projectTaskId: string | null
   classId: string | null
+  activityId: string | null
   teamId: string | null
   ownerId: string
   repositoryType: RepositoryType
@@ -39,11 +42,19 @@ export interface RepositoryRecord {
   projectTask: {
     id: string
     classId: string
+    title?: string
     dueDate: Date
     status: ProjectTaskStatus
-    class: { id: string; instructorId: string | null; status: ClassStatus; teachingStaff?: { instructorId: string; status: string }[] }
+    class: { id: string; className?: string; instructorId: string | null; status: ClassStatus; teachingStaff?: { instructorId: string; status: string }[] }
   } | null
-  class: { id: string; instructorId: string | null; status: ClassStatus; teachingStaff?: { instructorId: string; status: string }[] } | null
+  class: { id: string; className?: string; instructorId: string | null; status: ClassStatus; teachingStaff?: { instructorId: string; status: string }[] } | null
+  activity: {
+    id: string
+    title?: string
+    dueDate: Date
+    status: ActivityStatus
+    class: { id: string; className?: string; instructorId: string | null; status: ClassStatus; teachingStaff?: { instructorId: string; status: string }[] }
+  } | null
   team: { id: string; leadStudentId: string } | null
 }
 
@@ -58,9 +69,16 @@ export interface RepositoryAccessRecord {
 }
 
 export interface RepositoryProjection {
+  gitPermissions?: { read: boolean; write: boolean; canUpdateMain: boolean }
+  className: string | null
+  contextClassId: string | null
+  activityTitle: string | null
+  projectTitle: string | null
+  groupRelationship?: 'MY_GROUP' | 'CLASS_METADATA'
   id: string
   projectTaskId: string | null
   classId: string | null
+  activityId: string | null
   teamId: string | null
   repositoryType: RepositoryType
   repositoryName: string
@@ -135,9 +153,15 @@ export interface RepositoryFeedbackProjection {
 export function toRepositoryProjection(record: RepositoryRecord): RepositoryProjection {
   if (record.visibility === 'PUBLIC') throw new Error('PUBLIC repositories are unavailable.')
   return {
+    ...(record.groupRelationship ? { groupRelationship: record.groupRelationship } : {}),
     id: record.id,
+    contextClassId: record.class?.id ?? record.activity?.class.id ?? record.projectTask?.class.id ?? null,
+    className: record.class?.className ?? record.activity?.class.className ?? record.projectTask?.class.className ?? null,
+    activityTitle: record.activity?.title ?? null,
+    projectTitle: record.projectTask?.title ?? null,
     projectTaskId: record.projectTaskId,
     classId: record.classId,
+    activityId: record.activityId,
     teamId: record.teamId,
     repositoryType: record.repositoryType,
     repositoryName: record.repositoryName,

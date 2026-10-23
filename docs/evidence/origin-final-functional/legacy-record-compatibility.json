@@ -1,0 +1,39 @@
+{
+  "isolatedPort": 55498,
+  "legacyActivityConfigurationsStillNull": 9,
+  "originalAcademicRecordsUnchanged": {
+    "programming_activities": {
+      "originalRowsUnchanged": 9,
+      "originalColumns": 22
+    },
+    "test_cases": {
+      "originalRowsUnchanged": 18,
+      "originalColumns": 10
+    },
+    "activity_submissions": {
+      "originalRowsUnchanged": 4,
+      "originalColumns": 24
+    },
+    "submission_feedback": {
+      "originalRowsUnchanged": 3,
+      "originalColumns": 8
+    },
+    "submission_score_corrections": {
+      "originalRowsUnchanged": 1,
+      "originalColumns": 9
+    },
+    "submission_executions": {
+      "originalRowsUnchanged": 4,
+      "originalColumns": 8
+    },
+    "test_case_results": {
+      "originalRowsUnchanged": 4,
+      "originalColumns": 14
+    },
+    "submission_failure_resolutions": {
+      "originalRowsUnchanged": 0,
+      "originalColumns": 9
+    }
+  },
+  "weightedReleasedEquation": "70 original \u2192 65 effective + 26 manual = 91 released"
+}

@@ -25,6 +25,8 @@ export interface AppDependencies {
   now?: () => Date
   featureRouters?: {
     auth: Router
+    passwordRecovery?: Router
+    gradebook?: Router
     accountSetup: Router
     admin?: Router
     users: Router
@@ -35,11 +37,15 @@ export interface AppDependencies {
     classInvitationImport?: Router
     classInvitations?: Router
     activities: Router
+    interactiveConsole?: Router
     submissions: Router
     projectTasks?: Router
     repositories?: Router
     gitTransport?: Router
     repositoryContent?: Router
+    groupBrowserRefs?: Router
+    groupBrowserCommits?: Router
+    activityWorkspaceCheckpoints?: Router
     capabilities?: Router
     workHub?: Router
   }
@@ -83,6 +89,9 @@ export function createApp({
   app.use('/api/v1/health', createHealthRouter(healthService))
   if (featureRouters?.capabilities) app.use('/api/v1/capabilities', featureRouters.capabilities)
   if (featureRouters) {
+    if (featureRouters.interactiveConsole) app.use('/api/v1', featureRouters.interactiveConsole)
+    if (featureRouters.passwordRecovery) app.use('/api/v1', featureRouters.passwordRecovery)
+    if (featureRouters.gradebook) app.use('/api/v1', featureRouters.gradebook)
     app.use('/api/v1/auth', featureRouters.auth)
     app.use('/api/v1/account-setup', featureRouters.accountSetup)
     if (featureRouters.admin) {
@@ -110,6 +119,11 @@ export function createApp({
     }
     if (featureRouters.repositoryContent) {
       app.use('/api/v1', featureRouters.repositoryContent)
+    }
+    if (featureRouters.groupBrowserRefs) app.use('/api/v1', featureRouters.groupBrowserRefs)
+    if (featureRouters.groupBrowserCommits) app.use('/api/v1', featureRouters.groupBrowserCommits)
+    if (featureRouters.activityWorkspaceCheckpoints) {
+      app.use('/api/v1', featureRouters.activityWorkspaceCheckpoints)
     }
     if (featureRouters.workHub) app.use('/api/v1/work-hub', featureRouters.workHub)
   }

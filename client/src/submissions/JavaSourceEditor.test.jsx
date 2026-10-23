@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import JavaSourceEditor from './JavaSourceEditor.jsx'
@@ -13,14 +13,15 @@ const fakeFile = (source) => ({ name: 'Main.java', size: source.length, arrayBuf
 
 describe('Java editor interactions', () => {
   it('preserves source on cancellation and imports only after confirmation', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     render(<Harness />)
     const input = screen.getByLabelText('Import Java file')
     const imported = 'public class Main { // imported\n}'
     fireEvent.change(input, { target: { files: [fakeFile(imported)] } })
-    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    expect(await screen.findByRole('dialog', { name: 'Replace Java source?' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }))
     expect(screen.getByRole('textbox')).toHaveValue('public class Main {}')
     fireEvent.change(input, { target: { files: [fakeFile(imported)] } })
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm', exact: true }))
     await screen.findByText(/Java file imported/)
     expect(screen.getByRole('textbox')).toHaveValue(imported)
     expect(input.value).toBe('')

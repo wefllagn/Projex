@@ -2,15 +2,22 @@ import { CSRF_HEADER_NAME, readCsrfToken } from './csrf.js'
 
 const DEFAULT_API_BASE_URL = '/api/v1'
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
-const SAFE_BUSINESS_MESSAGE_CODES = new Set([
-  'CLASS_ARCHIVED',
-  'CLASS_CODE_INVALID',
-  'CLASS_HAS_UNFINISHED_PROJECT_WORK',
-  'CLASS_HAS_UNFINISHED_SUBMISSION_WORK',
-  'CLASS_MEMBERSHIP_PENDING',
-  'CLASS_MEMBERSHIP_REMOVED',
-  'REPOSITORY_ARCHIVE_BLOCKED',
-])
+// UI-owned copy only. Keep the original error, details and requestId intact for
+// diagnostics; never pass arbitrary server/transport messages into the UI.
+const BUSINESS_MESSAGES = {
+  SETUP_RESEND_COOLDOWN: 'A setup link was sent recently. Try again later.',
+  VALIDATION_FAILED: 'Check the form details and try again.',
+  EMAIL_ALREADY_EXISTS: 'An account with this email already exists. Use another email or manage the existing account.',
+  CLASS_ARCHIVED: 'This class is archived and read-only.',
+  CLASS_CODE_INVALID: 'This class code is not valid. Check it and try again.',
+  CLASS_HAS_UNFINISHED_PROJECT_WORK: 'The class cannot be archived while project collaboration work remains unfinished.',
+  CLASS_HAS_UNFINISHED_SUBMISSION_WORK: 'The class cannot be archived while submission work remains unfinished.',
+  CLASS_MEMBERSHIP_PENDING: 'Your class membership is awaiting approval.',
+  CLASS_MEMBERSHIP_REMOVED: 'Your class membership has been removed.',
+  REPOSITORY_CREATION_UNAVAILABLE: 'A repository can be prepared only while this Activity is open and Git provisioning is available.',
+  REPOSITORY_UNAVAILABLE: 'Repository storage is unavailable. Try again later.',
+  REPOSITORY_ARCHIVE_BLOCKED: 'The repository cannot be archived until review and invitation blockers are resolved.',
+}
 
 function normalizeBaseUrl(value) {
   const baseUrl = String(value || DEFAULT_API_BASE_URL).trim()
@@ -79,16 +86,22 @@ export function describeApiError(error) {
   }
 
   if (error.code === 'NETWORK_ERROR') {
-    return 'Projex could not reach the server. Check the connection and try again.'
+    return 'Origin could not reach the server. Check the connection and try again.'
   }
-  if (SAFE_BUSINESS_MESSAGE_CODES.has(error.code)) return error.message
+  if (error.code === 'REQUEST_TIMEOUT' || error.code === 'TIMEOUT') return 'This is taking longer than expected. Please try again.'
+  if (BUSINESS_MESSAGES[error.code] && Object.hasOwn(BUSINESS_MESSAGES, error.code)) return BUSINESS_MESSAGES[error.code]
   if (error.status === 401) return 'Your session has expired. Please sign in again.'
   if (error.status === 403) return 'You do not have permission to perform this action.'
-  if (error.status === 404) return 'The requested Projex record was not found.'
+  if (error.status === 404) return 'The requested Origin record was not found.'
   if (error.status === 409) return 'This record changed while you were working. Refresh it before trying again.'
-  if (error.status === 422) return error.message
-  if (error.status === 503) return 'This Projex service is temporarily unavailable. Please try again later.'
-  return error.message
+  if (error.status === 400 || error.status === 422) return 'Please check the highlighted fields and try again.'
+  if (error.status === 503) return 'This Origin service is temporarily unavailable. Please try again later.'
+  if (error.status === 429) return 'Too many requests. Please wait and try again.'
+  return 'We couldn’t complete this right now. Please try again.'
+}
+
+export function isTemporaryApiError(error) {
+  return error?.status >= 500 || ['NETWORK_ERROR', 'REQUEST_TIMEOUT', 'TIMEOUT'].includes(error?.code)
 }
 
 export function createApiClient({
@@ -100,6 +113,8 @@ export function createApiClient({
 
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl)
   const authenticationFailureListeners = new Set()
+  const authorizationFailureListeners = new Set()
+  let generation = 0
   let refreshPromise = null
 
   function notifyAuthenticationFailure(error) {
@@ -139,7 +154,7 @@ export function createApiClient({
       if (error?.name === 'AbortError') throw error
       throw new ApiError({
         code: 'NETWORK_ERROR',
-        message: 'Projex could not reach the server.',
+        message: 'Origin could not reach the server.',
         cause: error,
       })
     }
@@ -163,7 +178,7 @@ export function createApiClient({
         throw new ApiError({
           status: response.status,
           code: 'INVALID_API_RESPONSE',
-          message: 'Projex returned an invalid response.',
+          message: 'Origin returned an invalid response.',
         })
       }
       return { data: null, meta: { requestId: null } }
@@ -172,14 +187,14 @@ export function createApiClient({
       throw new ApiError({
         status: response.status,
         code: 'INVALID_API_RESPONSE',
-        message: 'Projex returned an invalid response.',
+        message: 'Origin returned an invalid response.',
       })
     }
     if (acceptedDataStatus && payload.data === null) {
       throw new ApiError({
         status: response.status,
         code: 'INVALID_API_RESPONSE',
-        message: 'Projex returned an invalid response.',
+        message: 'Origin returned an invalid response.',
       })
     }
 
@@ -210,15 +225,31 @@ export function createApiClient({
   }
 
   async function request(path, options = {}) {
+    const ticket = generation
+    const ensureCurrent = () => { if (ticket !== generation) throw new DOMException('Session changed', 'AbortError') }
+    const notifyDenied = error => {
+      if (error instanceof ApiError && error.status === 403) {
+        for (const listener of authorizationFailureListeners) listener(error, { path, method: String(options.method || 'GET').toUpperCase() })
+      }
+    }
     const allowRefresh = options.allowRefresh !== false
     try {
-      return await send(path, options)
+      const response = await send(path, options)
+      ensureCurrent()
+      return response
     } catch (error) {
+      ensureCurrent()
+      notifyDenied(error)
       if (!(error instanceof ApiError) || error.status !== 401 || !allowRefresh) throw error
       await refreshSession()
+      ensureCurrent()
       try {
-        return await send(path, { ...options, allowRefresh: false })
+        const response = await send(path, { ...options, allowRefresh: false })
+        ensureCurrent()
+        return response
       } catch (retryError) {
+        ensureCurrent()
+        notifyDenied(retryError)
         if (retryError instanceof ApiError && retryError.status === 401) {
           notifyAuthenticationFailure(retryError)
         }
@@ -230,6 +261,11 @@ export function createApiClient({
   return {
     request,
     refreshSession,
+    invalidateRequests() { generation += 1 },
+    subscribeAuthorizationFailure(listener) {
+      authorizationFailureListeners.add(listener)
+      return () => authorizationFailureListeners.delete(listener)
+    },
     subscribeAuthenticationFailure(listener) {
       authenticationFailureListeners.add(listener)
       return () => authenticationFailureListeners.delete(listener)

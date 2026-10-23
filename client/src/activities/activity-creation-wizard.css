@@ -1,0 +1,28 @@
+.projex-academic-shell .student-class-content .academic-class-frame.activity-creation-wizard { display: flex; flex-direction: column; gap: 0; overflow: hidden; }
+.activity-creation-wizard > :not(.activity-wizard-content) { flex-shrink: 0; }
+.activity-creation-wizard .activity-wizard-progress { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0 0 18px; padding: 0; }
+.activity-wizard-progress button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 1px solid var(--origin-border); border-radius: 12px; background: transparent; color: var(--origin-ink); text-align: left; font: inherit; cursor: pointer; }
+.activity-creation-wizard .activity-wizard-progress button:disabled { cursor: default; opacity: 1; color: var(--origin-ink); }
+.activity-wizard-progress button > span:first-child { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border: 1px solid var(--origin-control); border-radius: 50%; }
+.activity-wizard-progress small { display: block; margin-top: 3px; color: var(--origin-muted); font-size: 11px; }
+.activity-wizard-progress [aria-current='step'] button { border-color: var(--origin-accent); background: var(--origin-hover); }
+.activity-wizard-progress [aria-current='step'] button > span:first-child { color: var(--origin-accent); border-color: currentColor; }
+.activity-creation-wizard .activity-wizard-content { flex: 1; min-height: 0; overflow: auto; scrollbar-gutter: stable; padding: 2px 8px 8px 2px; }
+.activity-wizard-content > h3 { margin: 0 0 14px; }
+.projex-academic-shell .activity-creation-wizard .activity-wizard-content > h3:focus { outline: none; box-shadow: none; }
+.activity-creation-wizard .activity-authoring-section { margin-bottom: 14px; }
+.activity-creation-wizard .activity-wizard-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--origin-border); }
+.activity-wizard-actions > div { display: flex; gap: 10px; }
+.activity-wizard-actions > span { margin: 0; }
+.activity-wizard-summary { display: grid; gap: 14px; margin: 18px 0; }
+.activity-wizard-summary > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; }
+.activity-wizard-summary dt { color: var(--origin-muted); }
+.activity-wizard-summary dd { margin: 0; }
+@media (max-width: 700px) {
+  .activity-creation-wizard .activity-wizard-progress { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .projex-academic-shell .student-class-content .academic-class-frame.activity-creation-wizard { overflow: visible; height: auto; }
+  .activity-creation-wizard .activity-wizard-content { flex: none; overflow: visible; padding-right: 0; }
+  .activity-creation-wizard .activity-wizard-actions { flex-wrap: wrap; }
+  .activity-wizard-actions > span { order: 3; width: 100%; }
+  .activity-wizard-summary > div { grid-template-columns: 1fr; gap: 4px; }
+}

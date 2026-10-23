@@ -2,10 +2,10 @@
 
 ## Tracker identity
 
-- Revision: **I2-C10**
-- Updated: **2026-10-04**
+- Revision: **I2-C11**
+- Updated: **2026-10-17**
 - Deadline target: **2026-10-30**
-- Scope authority: `docs/team/ITERATION_2_ROADMAP.md` revision I2-R7
+- Scope authority: `docs/team/ITERATION_2_ROADMAP.md` revision I2-R8
 - Evidence authority: current Git/source/Prisma/test output, then the active `docs/team/milestones/I2.X.md` report
 
 This file is the status and execution tracker. It does not redefine roadmap scope. Update it only when repository evidence changes or an explicit approval changes a gate. Do not mark a feature complete because a screen exists.
@@ -22,17 +22,19 @@ This file is the status and execution tracker. It does not redefine roadmap scop
 
 | Item | Status | Evidence / next gate |
 | --- | --- | --- |
-| Active branch | IN PROGRESS | `iteration-2/freiser-work-01`, continued from Julius handoff `90d8c4a3864d2d9b8bc41ca9b1570c1f52d5b096`; protected-branch integration pending |
+| Active branch | IN PROGRESS | `iteration-2/aaron-work-01` at accepted V1-D commit `d98a7f382606d096cf4ecb115c31f6acf54fd942`; protected-branch integration pending |
 | I2.1 core commit | VERIFIED ON TASK BRANCH | `448dc5843865ee669f60473bcdb0f543875f084d`; 16-file slice committed/pushed, integration pending |
 | I2.1 automated evidence | COMPLETED for current slice | Client 46/293, server 36/224, Java 3/24, PostgreSQL integration 18/86; lint/type-check/build recorded passing in `I2.1.md` |
 | I2.1 authenticated walkthrough | COMPLETED for selected deterministic demo | Student/Instructor activity, practice, submit, review, release and narrow layout recorded passing |
 | Instructor fresh rerun | COMPLETED — ACCEPTED FOR FREISER CHECKPOINT | Checker accepted the scoped rerun. Guarded `projex_test` integration 19/90, client 46/296, Java 3/24; server isolated 221/224 with three inherited Windows storage/restore failures tracked separately. Approved local migrations and authenticated 1280 px/390 px walkthrough passed. Julius set Iteration 2 diagnostic retention without automatic cleanup; protected integration remains pending. See `milestones/INSTRUCTOR_REVIEW_RERUN.md`. |
 | I2.3 existing repository workflow/activity slice | ACCEPTED FOR FREISER CHECKPOINT | Authenticated provisioning and accepted-push feed, per-user accepted-push counts, final guarded 19/91 integration and full client 47/299, plus controlled localhost Student/Instructor/Admin validation are recorded in `milestones/I2.3.md`. Invitation acceptance lacks a second controlled walkthrough account; automated coverage passed. |
 | I2.3 Student class-workspace foundation | ACCEPTED FOR FREISER CHECKPOINT — 2026-10-04 | Checker accepted the bounded one-Student/Class workspace. Two additive migrations applied only to `projex_test`; guarded integration 21/103, final post-correction standalone client 51/318, focused repository frontend 3/40, Smart HTTP 1/11 and real-Git 2/10 passed; isolated server 222/225 with the same three inherited Windows storage/restore failures. Normal `projex` was not migrated. See `milestones/I2.3.md`. |
+| I2.3 Activity Workspace V1-A/V1-B/V1-C | ACCEPTED ON AARON TASK BRANCH | The database/API foundation, loopback Smart HTTP enablement, and Student-facing Git Workspace UI are committed through `56a7d3352e8c265d9b31d4b739d8166de13fc63a`. Protected integration remains separate. |
+| I2.3 Activity Workspace V1-D | ACCEPTED ON AARON TASK BRANCH — 2026-10-17 | Browser/Git checkpoint continuity is committed as `d98a7f382606d096cf4ecb115c31f6acf54fd942`. The completed loopback `projex_test` walkthrough proved browser checkpoint Save/Load, dirty-editor protection, native Git/IntelliJ continuity, and separation from academic attempts/submissions. Normal `projex` has not received the three V1-D migrations. See `milestones/I2.3.md`. |
 | Course/Class Offering foundation | COMPLETED — ACCEPTED FOR FREISER CHECKPOINT | Checker accepted the bounded foundation after targeted CSV and Primary/Co boundary corrections. Split migrations applied only to disposable `projex_test`; final guarded integration 20/99, client 49/301, lint/type/build and controlled authenticated walkthrough passed. Normal `projex` migration remains separately gated. See `milestones/ACADEMIC_FOUNDATION.md`. |
 | Personalized Exercise 1 checking | PROPOSED / AWAITING APPROVAL | Nonempty-output comparator/grading contract unresolved |
 | I2.2 | ACCEPTED FOR FREISER CHECKPOINT | Final guarded integration 21/102 and full client 51/311 passed; client/server lint, server type/build and client build passed. The isolated server suite remains 221/224 with three separately tracked unchanged Windows storage/restore failures. Freiser's detailed desktop walkthrough and final 390 × 844 Student and Instructor re-check passed; Checker accepted the corrected responsive shell and Class layout. Loading/error/retry were not separately reported as manually passed. See `milestones/I2.2.md`. |
-| I2.4–I2.9 | PENDING | Both the bounded existing-scope I2.3 slice and the separate class-workspace foundation are accepted for Freiser's checkpoint. Later Submit/provenance and network Git remain separate gates. |
+| I2.4–I2.9 | PENDING | Earlier I2.3 foundations and Activity Workspace V1-A/V1-B/V1-C/V1-D are accepted on their task branches. Submit provenance and I2.8 network Git remain separate gates. |
 | Normal database migration for Iteration 2 | PARTIAL — APPROVED RERUN SLICE ONLY | The two committed Instructor Rerun migrations were applied to Freiser's local `projex`; other proposed Iteration 2 schema work remains unapproved. |
 | Network Git | PENDING | Smart HTTP remains loopback-only; browser Home-LAN testing is not Git transport evidence |
 

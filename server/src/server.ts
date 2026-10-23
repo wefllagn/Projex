@@ -1,3 +1,12 @@
+import { assertHostedGitService } from './infrastructure/preflight/hosted-service.js'
+import { createPasswordRecoveryRouter } from './modules/password-recovery/password-recovery.js'
+import { createGradebookRouter } from './modules/gradebook/gradebook.js'
+import { createConsoleRouter } from './modules/interactive-console/console.routes.js'
+import { createGroupBrowserRefService } from './modules/group-browser-refs/group-browser-ref.service.js'
+import { createGroupBrowserRefRouter } from './modules/group-browser-refs/group-browser-ref.routes.js'
+import { createGroupBrowserCommitService } from './modules/group-browser-commits/group-browser-commit.service.js'
+import { createGroupBrowserCommitRouter } from './modules/group-browser-commits/group-browser-commit.routes.js'
+import { createTopicService } from './modules/activities/topic.service.js'
 import 'dotenv/config'
 import { createServer, type Server } from 'node:http'
 import { fileURLToPath } from 'node:url'
@@ -70,9 +79,13 @@ import { createPrismaAdminOversightRepository } from './modules/admin/admin-over
 import { createAdminOversightService } from './modules/admin/admin-oversight.service.js'
 import { createCapabilitiesRouter } from './modules/capabilities/capabilities.routes.js'
 import { createCapabilitiesService } from './modules/capabilities/capabilities.service.js'
+import { createPrismaActivityWorkspaceCheckpointRepository } from './modules/activity-workspace-checkpoints/activity-workspace-checkpoint.repository.js'
+import { createActivityWorkspaceCheckpointService } from './modules/activity-workspace-checkpoints/activity-workspace-checkpoint.service.js'
+import { createActivityWorkspaceCheckpointRouter } from './modules/activity-workspace-checkpoints/activity-workspace-checkpoint.routes.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
+  if (env.gitExecutionMode === 'service_isolated') await assertHostedGitService(env.gitStorageRoot)
   const logger = createLogger(env.logLevel)
   const prisma = createPrismaClient(env.databaseUrl)
   const passwordService = createPasswordService()
@@ -139,7 +152,7 @@ async function bootstrap(): Promise<void> {
   const adminService = createAdminService({
     repository: createPrismaAdminRepository(prisma),
     logger,
-    gitProvisioningRetryEnabled: env.gitExecutionMode === 'local_process',
+    gitProvisioningRetryEnabled: env.gitExecutionMode !== 'disabled',
   })
   const adminOversightService = createAdminOversightService({
     repository: createPrismaAdminOversightRepository(prisma),
@@ -187,14 +200,15 @@ async function bootstrap(): Promise<void> {
     classRepository,
     logger,
   })
+  const gitTransportRepository = createPrismaGitTransportRepository(prisma)
   const repositoryService = createRepositoryService({
+    accessRepository: gitTransportRepository,
     repository: createPrismaRepositoryRepository(prisma, {
       provisioningMaxAttempts: env.gitProvisioningMaxAttempts,
     }),
     logger,
-    provisioningEnabled: env.gitExecutionMode === 'local_process',
+    provisioningEnabled: env.gitExecutionMode !== 'disabled',
   })
-  const gitTransportRepository = createPrismaGitTransportRepository(prisma)
   const gitCredentialService = createGitCredentialService({
     issuanceEnabled: env.gitSmartHttpEnabled,
     repository: gitTransportRepository,
@@ -205,11 +219,7 @@ async function bootstrap(): Promise<void> {
     root: env.gitStorageRoot || process.cwd(),
     repositorySizeLimitBytes: env.gitRepositorySizeLimitBytes,
   })
-  const repositoryContentService = createRepositoryContentService({
-    enabled: env.gitExecutionMode === 'local_process',
-    accessRepository: gitTransportRepository,
-    storage: gitStorage,
-    reader: createGitRepositoryReader({
+  const groupGitReader = createGitRepositoryReader({
       executable: env.gitExecutable || process.execPath,
       timeoutMs: env.gitCommandTimeoutMs,
       commandOutputLimitBytes: env.gitOutputLimitBytes,
@@ -218,7 +228,19 @@ async function bootstrap(): Promise<void> {
       maxChangedFiles: env.gitInspectionMaxChangedFiles,
       maxBranches: env.gitMaxBranches,
       maxConcurrent: env.gitHttpMaxConcurrent,
-    }),
+    })
+  const repositoryContentService = createRepositoryContentService({
+    enabled: env.gitExecutionMode !== 'disabled',
+    accessRepository: gitTransportRepository,
+    storage: gitStorage,
+    reader: groupGitReader,
+    logger,
+  })
+  const activityWorkspaceCheckpointService = createActivityWorkspaceCheckpointService({
+    enabled: env.gitExecutionMode !== 'disabled',
+    sourceLimitBytes: env.javaSourceLimitBytes,
+    repository: createPrismaActivityWorkspaceCheckpointRepository(prisma),
+    accessRepository: gitTransportRepository,
     logger,
   })
   const gitSmartHttpBackend = createGitSmartHttpBackend({
@@ -259,10 +281,10 @@ async function bootstrap(): Promise<void> {
       workHub: createWorkHubRouter({ prisma, requireAuthentication }),
       capabilities: createCapabilitiesRouter(createCapabilitiesService({
         profile: env.nodeEnv === 'production' ? 'HOSTED_SAFE' : 'LOCAL_FULL',
-        java: { execution: env.javaExecutionMode === 'local_process' },
+        java: { execution: env.javaExecutionMode !== 'disabled' },
         git: {
-          provisioning: env.gitExecutionMode === 'local_process',
-          inspection: env.gitExecutionMode === 'local_process',
+          provisioning: env.gitExecutionMode !== 'disabled',
+          inspection: env.gitExecutionMode !== 'disabled',
           smartHttp: env.gitSmartHttpEnabled,
         },
       })),
@@ -273,6 +295,8 @@ async function bootstrap(): Promise<void> {
         requireLogoutAuthentication,
         requireCsrf,
       }),
+      passwordRecovery: createPasswordRecoveryRouter({ prisma, tokenService, passwordService, logger, frontendOrigin: env.frontendOrigin, requireAuthentication, requireCsrf }),
+      gradebook: createGradebookRouter({ prisma, requireAuthentication }),
       accountSetup: createAccountSetupRouter(accountSetupService),
       admin: createAdminRouter({
         service: adminService,
@@ -287,6 +311,7 @@ async function bootstrap(): Promise<void> {
         requireCsrf,
       }),
       classes: createClassesRouter({
+        topicService: createTopicService(prisma),
         classService,
         classMemberService,
         activityService,
@@ -309,6 +334,11 @@ async function bootstrap(): Promise<void> {
         requireAuthentication,
         requireCsrf,
       }),
+      interactiveConsole: createConsoleRouter({ prisma, requireAuthentication, requireCsrf, config: {
+        mode: env.javaExecutionMode, sourceLimitBytes: env.javaSourceLimitBytes,
+        practiceRunTtlHours: env.practiceRunTtlHours, practiceRunsPerMinute: env.practiceRunsPerMinute,
+        practiceMaxActivePerActivity: env.practiceMaxActivePerActivity,
+      } }),
       submissions: createSubmissionRouter({
         service: submissionService,
         requireAuthentication,
@@ -333,6 +363,13 @@ async function bootstrap(): Promise<void> {
       repositoryContent: createRepositoryContentRouter({
         service: repositoryContentService,
         requireAuthentication,
+      }),
+      groupBrowserRefs: createGroupBrowserRefRouter({service:createGroupBrowserRefService({prisma,accessRepository:gitTransportRepository,enabled:env.gitExecutionMode!=='disabled',reader:groupGitReader,storage:gitStorage}),requireAuthentication,requireCsrf}),
+      groupBrowserCommits: createGroupBrowserCommitRouter({ service: createGroupBrowserCommitService({ prisma, accessRepository: gitTransportRepository, enabled: env.gitExecutionMode !== 'disabled' }), requireAuthentication, requireCsrf }),
+      activityWorkspaceCheckpoints: createActivityWorkspaceCheckpointRouter({
+        service: activityWorkspaceCheckpointService,
+        requireAuthentication,
+        requireCsrf,
       }),
     },
   })

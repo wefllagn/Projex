@@ -53,13 +53,13 @@ function sameCanonicalPath(left: string, right: string): boolean {
     : left === right
 }
 
-async function assertPlainFile(file: string, code: string): Promise<void> {
+async function assertPlainFile(file: string, code: string, requiredAccess = constants.X_OK): Promise<void> {
   if (!path.isAbsolute(file)) throw transportError(503, code, 'Git Smart HTTP is unavailable.')
   const metadata = await lstat(file).catch(() => null)
   if (!metadata?.isFile() || metadata.isSymbolicLink()) {
     throw transportError(503, code, 'Git Smart HTTP is unavailable.')
   }
-  await access(file, constants.X_OK).catch(() => {
+  await access(file, requiredAccess).catch(() => {
     throw transportError(503, code, 'Git Smart HTTP is unavailable.')
   })
 }
@@ -118,7 +118,8 @@ export function createGitSmartHttpBackend(options: {
       await Promise.all([
         assertPlainFile(executable, 'GIT_HTTP_BACKEND_UNAVAILABLE'),
         assertPlainFile(gitExecutable, 'GIT_EXECUTABLE_UNAVAILABLE'),
-        assertPlainFile(hookScript, 'GIT_HOOK_RUNTIME_UNAVAILABLE'),
+        // Node reads the compiled script; Git executes the generated wrappers.
+        assertPlainFile(hookScript, 'GIT_HOOK_RUNTIME_UNAVAILABLE', constants.R_OK),
       ])
       await git.detectVersion()
       let createdTransportRoot = false
@@ -159,13 +160,16 @@ export function createGitSmartHttpBackend(options: {
         const expectedHook = `#!/bin/sh\nexec "${node}" "${script}" ${hook}\n`
         const existing = await readFile(hookPath, 'utf8').catch(() => null)
         if (existing === null) {
-          await writeFile(hookPath, expectedHook, { encoding: 'utf8', flag: 'wx' })
+          await writeFile(hookPath, expectedHook, { encoding: 'utf8', flag: 'wx', mode: 0o700 })
         } else {
           const metadata = await lstat(hookPath)
           if (!metadata.isFile() || metadata.isSymbolicLink() || existing !== expectedHook) {
             throw transportError(503, 'GIT_TRANSPORT_HOOK_INVALID', 'Git Smart HTTP is unavailable.')
           }
         }
+        await access(hookPath, constants.X_OK).catch(() => {
+          throw transportError(503, 'GIT_TRANSPORT_HOOK_INVALID', 'Git Smart HTTP is unavailable.')
+        })
       }
     })()
     return initialized
@@ -301,13 +305,15 @@ export function createGitSmartHttpBackend(options: {
         SERVER_PROTOCOL: `HTTP/${input.request.httpVersion}`,
         SERVER_NAME: '127.0.0.1',
         SERVER_PORT: String(input.request.socket.localPort ?? ''),
-        GIT_CONFIG_COUNT: '3',
+        GIT_CONFIG_COUNT: '4',
         GIT_CONFIG_KEY_0: 'core.hooksPath',
         GIT_CONFIG_VALUE_0: hookRoot,
         GIT_CONFIG_KEY_1: 'http.receivepack',
         GIT_CONFIG_VALUE_1: 'true',
         GIT_CONFIG_KEY_2: 'http.uploadpack',
         GIT_CONFIG_VALUE_2: 'true',
+        GIT_CONFIG_KEY_3: 'transfer.hideRefs',
+        GIT_CONFIG_VALUE_3: 'refs/projex/',
         PROJEX_GIT_EXECUTABLE: gitExecutable,
         PROJEX_PUSH_POLICY: policy,
         PROJEX_PUSH_RECEIPT_PATH: receiptPath,

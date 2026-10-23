@@ -68,8 +68,14 @@ describe('AuthProvider', () => {
     expect(await screen.findByText('Synthetic Student')).toBeInTheDocument()
     expect(api.post).toHaveBeenCalledWith('/auth/login', expect.any(Object), expect.objectContaining({ csrf: false }))
 
+    sessionStorage.setItem('origin.activity-draft:user-1:class-1:new', '{"private":"draft"}')
+    sessionStorage.setItem('origin-ux-unrelated', 'retained')
+
     await user.click(screen.getByRole('button', { name: 'Logout' }))
     expect(await screen.findByText('anonymous')).toBeInTheDocument()
+    expect(sessionStorage.getItem('origin.activity-draft:user-1:class-1:new')).toBeNull()
+    expect(sessionStorage.getItem('origin-ux-unrelated')).toBe('retained')
+    sessionStorage.removeItem('origin-ux-unrelated')
   })
 
   it('clears protected content even when backend logout fails', async () => {
@@ -93,7 +99,11 @@ describe('AuthProvider', () => {
     await act(() => auth.login('synthetic@example.edu', 'Synthetic1!'))
     await act(() => auth.logout())
 
-    expect(localSpy).not.toHaveBeenCalled()
+    expect(localSpy).toHaveBeenCalled()
+    for (const [key, value] of localSpy.mock.calls) {
+      expect(key).toBe('origin-session-change')
+      expect(value).not.toMatch(/Synthetic|synthetic|user-1|token|password/)
+    }
   })
 
   it('clears authenticated state when the API client reports exhausted session recovery', async () => {
@@ -109,7 +119,9 @@ describe('AuthProvider', () => {
 
     await user.click(screen.getByRole('button', { name: 'Login' }))
     expect(await screen.findByText('Synthetic Student')).toBeInTheDocument()
+    api.get.mockRejectedValue(new ApiError({ status: 401 }))
     act(() => reportAuthenticationFailure(new ApiError({ status: 401 })))
-    expect(await screen.findByText('anonymous')).toBeInTheDocument()
+    expect(await screen.findByText('interrupted')).toBeInTheDocument()
+    expect(screen.queryByText('Synthetic Student')).not.toBeInTheDocument()
   })
 })

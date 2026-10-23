@@ -1,3 +1,6 @@
+import { verifyJavaContainerBoundaries } from './infrastructure/java/java-isolation-verifier.js'
+import { verifyJavaContainerHost } from './infrastructure/java/java-container.js'
+import { executeConsoleJob } from './modules/interactive-console/console.worker.js'
 import 'dotenv/config'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -6,13 +9,14 @@ import { createPrismaClient } from './infrastructure/database/prisma.js'
 import { createPostgresExecutionQueue } from './infrastructure/job-queue/execution-queue.js'
 import {
   createJavaRunner,
+  cleanupAbandonedConsoleDirectories,
   JavaInfrastructureError,
 } from './infrastructure/java/java-runner.js'
 import { createLogger } from './infrastructure/logging/logger.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
-  if (env.javaExecutionMode !== 'local_process') {
+  if (env.javaExecutionMode === 'disabled') {
     process.stderr.write('Java worker is disabled.\n')
     process.exitCode = 1
     return
@@ -20,7 +24,10 @@ async function bootstrap(): Promise<void> {
   const logger = createLogger(env.logLevel)
   const prisma = createPrismaClient(env.databaseUrl)
   const queue = createPostgresExecutionQueue(prisma)
+  const container = env.javaExecutionMode === 'container' ? { executable: env.javaDockerExecutable, image: env.javaDockerImage } : undefined
+  if (container) await verifyJavaContainerHost(container)
   const runner = createJavaRunner({
+    container,
     javaExecutable: env.javaExecutable,
     javacExecutable: env.javacExecutable,
     release: env.javaRelease,
@@ -30,6 +37,7 @@ async function bootstrap(): Promise<void> {
     outputLimitBytes: env.javaOutputLimitBytes,
     memoryLimitMb: env.javaMemoryLimitMb,
   })
+  if (container) await verifyJavaContainerBoundaries(runner)
   const workerId = randomUUID()
   let stopping = false
   let iteration = 0
@@ -43,6 +51,7 @@ async function bootstrap(): Promise<void> {
     while (!stopping) {
       const now = new Date()
       if (iteration % 60 === 0) {
+        await cleanupAbandonedConsoleDirectories(env.javaJobRoot)
         const deleted = await queue.cleanupExpiredPractice(now)
         if (deleted > 0) {
           logger.info(
@@ -71,6 +80,11 @@ async function bootstrap(): Promise<void> {
         'execution job claimed',
       )
       try {
+        const console = job.practiceExecutionId && await prisma.interactiveConsole.findUnique({ where: { id: job.practiceExecutionId } })
+        if (console) {
+          await executeConsoleJob(prisma, runner, job, { leaseMs: env.executionJobLeaseMs, stopping: () => stopping })
+          continue
+        }
         const result = await runner.execute({
           sourceCode: job.sourceCode,
           entryClassName: job.entryClassName,

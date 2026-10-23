@@ -26,6 +26,7 @@ export const classRecordSelect = {
   classCode: true,
   classCodeActive: true,
   classCodeChangedAt: true,
+  program: true,
   section: true,
   semester: true,
   schoolYear: true,
@@ -69,6 +70,7 @@ export interface ClassRepository {
   create(input: {
     instructorId: string | null
     className: string
+    program?: 'INFORMATION_TECHNOLOGY' | 'COMPUTER_SCIENCE'
     section?: string
     semester?: string
     schoolYear?: string
@@ -152,6 +154,7 @@ export function createPrismaClassRepository(
             data: {
               instructorId: input.instructorId,
               className: input.className,
+              program: input.program,
               section: input.section ?? null,
               semester: input.semester ?? null,
               schoolYear: input.schoolYear ?? null,

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
 import { CapabilityContext } from '../capabilities/capability-context.js'
-import { RepositoryGitPanel } from './RepositoryGitViews.jsx'
+import { HistoryView, BranchesView, RepositoryGitPanel } from './RepositoryGitViews.jsx'
 
 const commitA = 'a'.repeat(40)
 const commitB = 'b'.repeat(40)
@@ -18,13 +18,14 @@ const summary = {
 
 function apiMock(overrides = {}) {
   return {
+    getAccess: vi.fn().mockResolvedValue({ data: { id: 'repo-1', gitPermissions: { read: true, write: false, canUpdateMain: false } } }),
     getSummary: vi.fn().mockResolvedValue({ data: summary }),
     listBranches: vi.fn().mockResolvedValue({ data: [{ ...summary.latestCommit, branchName: 'main', isDefault: true }] }),
     getTree: vi.fn().mockResolvedValue({ data: { commitId: commitB, path: '', entries: [{ name: 'README.md', path: 'README.md', entryType: 'blob', objectId: commitA, sizeBytes: 12 }] } }),
-    getFile: vi.fn().mockResolvedValue({ data: { commitId: commitB, path: 'README.md', sizeBytes: 12, encoding: 'utf-8', content: '# Projex' } }),
+    getFile: vi.fn().mockResolvedValue({ data: { commitId: commitB, path: 'README.md', sizeBytes: 12, encoding: 'utf-8', content: '# Origin' } }),
     listCommits: vi.fn().mockResolvedValue({ data: [summary.latestCommit], pagination: { page: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false } }),
     getCommit: vi.fn().mockResolvedValue({ data: { ...summary.latestCommit, parentCommitIds: [commitA], files: [{ status: 'M', path: 'README.md' }] } }),
-    getDiff: vi.fn().mockResolvedValue({ data: { baseCommitId: commitA, targetCommitId: commitB, path: null, patch: '+Projex' } }),
+    getDiff: vi.fn().mockResolvedValue({ data: { baseCommitId: commitA, targetCommitId: commitB, path: null, patch: '+Origin' } }),
     getTransportUrl: vi.fn().mockReturnValue('http://localhost:3000/api/v1/git/repositories/repo-1'),
     listCredentials: vi.fn().mockResolvedValue({ data: [] }),
     issueCredential: vi.fn().mockResolvedValue({ data: { credentialId: 'credential-1', repositoryId: 'repo-1', operations: ['READ'], createdAt: '2026-08-01T00:00:00.000Z', expiresAt: '2099-08-01T00:15:00.000Z', lastUsedAt: null, revokedAt: null, username: 'credential-1', secret: 'synthetic-one-time-secret' } }),
@@ -46,20 +47,84 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+async function openGitAccess() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Code' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Get Git access' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Generate credentials' })).toBeEnabled())
+}
 describe('repository Git panel', () => {
+  it('groups Group commits by local date and retains copy, selection and parent comparisons', async () => {
+    const commitC = 'c'.repeat(40)
+    const patch = 'diff --git a/a b/a\n--- a/a\n+++ b/a\n@@ -1 +1 @@\n-old\n+new\n'
+    const api = apiMock({
+      listCommits: vi.fn().mockResolvedValue({ data: [summary.latestCommit, { ...summary.latestCommit, commitId: commitA, authoredAt: '2026-07-20T00:00:00Z', subject: 'Earlier' }], pagination: { page: 1, totalPages: 2, hasNextPage: true } }),
+      getCommit: vi.fn().mockResolvedValue({ data: { ...summary.latestCommit, parentCommitIds: [commitA, commitC], files: [{ status: 'M', path: 'a' }] } }),
+      getDiff: vi.fn((_id, query) => Promise.resolve({ data: { ...query, patch } })),
+    })
+    const copy = vi.fn().mockResolvedValue()
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: copy } })
+    render(<HistoryView group api={api} repositoryId={repository.id} summary={summary} branches={[]} selectedBranch="main" onSelectBranch={vi.fn()} />)
+    await screen.findByText('Earlier')
+    expect(screen.getAllByRole('heading', { name: /Commits on/ })).toHaveLength(2)
+    expect(document.querySelector('.repository-git-commit-detail')).toBeNull()
+    expect(screen.queryByText('About Git authors')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Copy commit hash bbbbbbbb' }))
+    await screen.findByText('Copied!')
+    expect(screen.queryByText('Commit hash copied.')).not.toBeInTheDocument()
+    expect(document.querySelector('.group-copy-feedback')).toHaveAttribute('role', 'status')
+    expect(copy).toHaveBeenCalledWith(commitB)
+    fireEvent.click(screen.getByRole('button', { name: 'View commit bbbbbbbb' }))
+    expect(screen.getByRole('button', { name: 'View commit bbbbbbbb' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByLabelText('Commit diff')).toHaveTextContent('new')
+    fireEvent.change(screen.getByLabelText('Compare with parent'), { target: { value: commitC } })
+    await waitFor(() => expect(api.getDiff).toHaveBeenLastCalledWith(repository.id, { baseCommitId: commitC, targetCommitId: commitB }, expect.any(Object)))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(api.listCommits).toHaveBeenLastCalledWith(repository.id, expect.objectContaining({ page: 2 }), expect.any(Object)))
+  })
+
+  it('presents Group branches as compact rows with main protection and no invented actions', () => {
+    render(<BranchesView group summary={summary} branches={[{ ...summary.latestCommit, branchName: 'main', isDefault: true }]} />)
+    expect(screen.getByText('Protected')).toBeInTheDocument()
+    expect(screen.getByText('Default')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Merge|Pull Request/ })).not.toBeInTheDocument()
+  })
+
   it('loads real tree and text content without mock fallback', async () => {
     const api = apiMock()
     render(<RepositoryGitPanel repository={repository} api={api} />)
     fireEvent.click(await screen.findByRole('button', { name: /README.md/i }))
-    expect(await screen.findByText('# Projex')).toBeInTheDocument()
+    expect(await screen.findByText('# Origin')).toBeInTheDocument()
     expect(api.getTree).toHaveBeenCalledWith('repo-1', { branchName: 'main', path: '' }, expect.any(Object))
     expect(api.getFile).toHaveBeenCalledWith('repo-1', { branchName: 'main', path: 'README.md' }, expect.any(Object))
     expect(screen.queryByText(/campus navigation/i)).not.toBeInTheDocument()
   })
 
+  it('reuses Group file browsing for Activity repositories and pins reads to the selected commit', async () => {
+    const api = apiMock()
+    render(<RepositoryGitPanel repository={{ ...repository, repositoryType: 'ACTIVITY_WORKSPACE', activityId: 'activity-1' }} api={api} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'File README.md' }))
+    expect(await screen.findByText('# Origin')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Search files' })).toBeInTheDocument()
+    expect(api.getTree).toHaveBeenCalledWith(repository.id, { commitId: commitB, path: '' }, expect.any(Object))
+    expect(api.getFile).toHaveBeenCalledWith(repository.id, { commitId: commitB, path: 'README.md' }, expect.any(Object))
+    fireEvent.click(screen.getByRole('button', { name: `View commit ${commitB.slice(0,8)}` }))
+    expect(await screen.findByLabelText('Commit diff')).toHaveTextContent('Origin')
+    expect(api.getCommit).toHaveBeenCalledWith(repository.id, commitB, expect.any(Object))
+  })
+
+  it('acknowledges browser checkpoints for an empty writable Activity repository', async () => {
+    const api = apiMock({ getSummary: vi.fn().mockResolvedValue({ data: { ...summary, empty: true, branchCount: 0, commitCount: 0, latestCommit: null } }) })
+    render(<RepositoryGitPanel owner repository={{ ...repository, repositoryType: 'ACTIVITY_WORKSPACE', activityId: 'a' }} activity={{ id: 'a', status: 'PUBLISHED', dueState: 'OPEN' }} api={api} />)
+    expect(await screen.findByRole('heading', { name: 'No commits yet' })).toBeInTheDocument()
+    expect(screen.getByText(/Save your first commit from the coding workspace with Save to Git/)).toBeInTheDocument()
+    expect(screen.queryByText(/does not edit or commit files in the browser/)).not.toBeInTheDocument()
+    expect(api.issueCredential).not.toHaveBeenCalled()
+  })
+
   it('guides a Personal repository owner into the native Git initial-main workflow', async () => {
     const emptySummary = { ...summary, empty: true, branchCount: 0, commitCount: 0, latestCommit: null }
     const api = apiMock({
+      getAccess: vi.fn().mockResolvedValue({ data: { id: 'repo-1', gitPermissions: { read: true, write: true, canUpdateMain: true } } }),
       getSummary: vi.fn().mockResolvedValue({ data: emptySummary }),
       issueCredential: vi.fn().mockResolvedValue({ data: {
         credentialId: 'credential-write', repositoryId: 'repo-1', operations: ['READ', 'WRITE'],
@@ -74,10 +139,13 @@ describe('repository Git panel', () => {
     expect(api.listBranches).not.toHaveBeenCalled()
     expect(api.getTree).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Open Local Git' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Issue Read + Write Credential' }))
-    expect(await screen.findByRole('heading', { name: 'Initialize main from your computer' })).toBeInTheDocument()
+    await openGitAccess()
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate credentials' }))
+    expect(await screen.findByText('synthetic-write-secret')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'How to use Git' }))
+    fireEvent.click(screen.getByText('First commit in an empty repository'))
     expect(screen.getByText(/git checkout -b main/)).toBeInTheDocument()
-    expect(screen.getByText(/Projex never creates this commit for you/i)).toBeInTheDocument()
+    await waitFor(() => expect(api.issueCredential).toHaveBeenCalledWith('repo-1', ['READ', 'WRITE']))
   })
 
   it('identifies a Class Project owner as the team lead responsible for initial main', async () => {
@@ -97,7 +165,7 @@ describe('repository Git panel', () => {
     expect(screen.queryByRole('button', { name: 'Open Local Git' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: 'Local Git' }))
     expect(await screen.findByText(/team lead must establish main first/i)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Issue Read + Write Credential' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Generate write access' })).not.toBeInTheDocument()
   })
 
   it('explains an empty repository without offering Local Git when Smart HTTP is disabled', async () => {
@@ -116,7 +184,7 @@ describe('repository Git panel', () => {
     expect(screen.queryByRole('button', { name: 'Open Local Git' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: 'Local Git' }))
     expect(await screen.findByText(/lifecycle rules do not allow the initial push/i)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Issue Read + Write Credential' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Generate write access' })).not.toBeInTheDocument()
   })
 
   it('refreshes an empty repository into current Files, History, Branches, and summary state', async () => {
@@ -176,7 +244,7 @@ describe('repository Git panel', () => {
     render(<RepositoryGitPanel repository={repository} api={api} />)
     fireEvent.click(screen.getByRole('tab', { name: 'History' }))
     fireEvent.click(await screen.findByRole('button', { name: /Latest/i }))
-    expect(await screen.findByText('+Projex')).toBeInTheDocument()
+    expect(await screen.findByText('+Origin')).toBeInTheDocument()
     expect(screen.getAllByText(/self-asserted Git author/i).length).toBeGreaterThan(0)
     expect(api.getDiff).toHaveBeenCalledWith('repo-1', { baseCommitId: commitA, targetCommitId: commitB }, expect.any(Object))
   })
@@ -216,7 +284,7 @@ describe('repository Git panel', () => {
     render(<RepositoryGitPanel repository={repository} api={api} />)
     fireEvent.click(await screen.findByRole('button', { name: /README.md/i }))
     expect(await screen.findByText(/binary and cannot be previewed/i)).toBeInTheDocument()
-    expect(screen.queryByText('# Projex')).not.toBeInTheDocument()
+    expect(screen.queryByText('# Origin')).not.toBeInTheDocument()
   })
 
   it('renders safe size-limit failures without attempting client-side reconstruction', async () => {
@@ -230,12 +298,13 @@ describe('repository Git panel', () => {
     const api = apiMock()
     render(<RepositoryGitPanel repository={repository} api={api} />)
     fireEvent.click(screen.getByRole('tab', { name: 'Local Git' }))
-    expect(await screen.findByText('No credentials have been issued for this repository.')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Issue Read Credential' }))
+    await openGitAccess()
+    expect(api.listCredentials).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Generate credentials' }))
     expect(await screen.findByText('synthetic-one-time-secret')).toBeInTheDocument()
-    expect(screen.getByText(/git clone/).textContent).not.toContain('synthetic-one-time-secret')
+    expect(api.getTransportUrl.mock.results[0].value).not.toContain('synthetic-one-time-secret')
     expect(api.issueCredential).toHaveBeenCalledWith('repo-1', ['READ'])
-    fireEvent.click(screen.getByRole('button', { name: 'Close credential result' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close Git access' }))
     expect(screen.queryByText('synthetic-one-time-secret')).not.toBeInTheDocument()
   })
 
@@ -243,26 +312,59 @@ describe('repository Git panel', () => {
     const api = apiMock({ issueCredential: vi.fn().mockRejectedValue(new ApiError({ status: 404, code: 'GIT_SMART_HTTP_UNAVAILABLE', message: 'Internal' })) })
     render(<RepositoryGitPanel repository={repository} role="instructor" api={api} />)
     fireEvent.click(screen.getByRole('tab', { name: 'Local Git' }))
-    expect(await screen.findByRole('button', { name: 'Issue Read Credential' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Issue Read + Write Credential' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Issue Read Credential' }))
-    expect(await screen.findByText(/credential issuance is disabled/i)).toBeInTheDocument()
+    await openGitAccess()
+    expect(screen.getByRole('button', { name: 'Generate credentials' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Generate write access' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Generate credentials' }))
+    expect(await screen.findByText(/Git access is unavailable/i)).toBeInTheDocument()
   })
 
   it('requests combined read/write scope for eligible students and revokes real metadata', async () => {
     const activeCredential = { credentialId: 'credential-2', repositoryId: 'repo-1', operations: ['READ', 'WRITE'], createdAt: '2026-08-01T00:00:00.000Z', expiresAt: '2099-08-01T00:15:00.000Z', lastUsedAt: null, revokedAt: null }
     const api = apiMock({
       listCredentials: vi.fn().mockResolvedValue({ data: [activeCredential] }),
+      getAccess: vi.fn().mockResolvedValue({ data: { id: 'repo-1', gitPermissions: { read: true, write: true, canUpdateMain: true } } }),
       issueCredential: vi.fn().mockResolvedValue({ data: { ...activeCredential, credentialId: 'credential-3', username: 'credential-3', secret: 'fixture-value' } }),
       revokeCredential: vi.fn().mockResolvedValue({ data: { ...activeCredential, revokedAt: '2026-08-01T00:05:00.000Z' } }),
     })
     render(<RepositoryGitPanel repository={repository} api={api} />)
     fireEvent.click(screen.getByRole('tab', { name: 'Local Git' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Revoke' }))
+    await openGitAccess()
+    fireEvent.click(screen.getByRole('button', { name: 'Manage access' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Revoke', exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke access', exact: true }))
     await waitFor(() => expect(api.revokeCredential).toHaveBeenCalledWith('credential-2'))
-    expect(await screen.findByText('Revoked')).toBeInTheDocument()
-    fireEvent.click(await screen.findByRole('button', { name: 'Issue Read + Write Credential' }))
-    expect(api.issueCredential).toHaveBeenCalledWith('repo-1', ['READ', 'WRITE'])
+    expect(await screen.findByText('Access revoked.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Git access' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate credentials' }))
+    await waitFor(() => expect(api.issueCredential).toHaveBeenCalledWith('repo-1', ['READ', 'WRITE']))
+  })
+
+  it('offers Activity Workspace read/write only while its validated linked Activity is open', async () => {
+    const activityRepository = { ...repository, repositoryType: 'ACTIVITY_WORKSPACE', activityId: 'activity-1' }
+    const api = apiMock()
+    const { rerender } = render(<RepositoryGitPanel repository={activityRepository} activity={{ id: 'activity-1', status: 'PUBLISHED', dueState: 'OPEN' }} initialTab="local" api={api} />)
+
+    await openGitAccess()
+    expect(screen.getByRole('button', { name: 'Generate credentials' })).toBeInTheDocument()
+    expect(screen.getByText('Git push saves your work. It does not submit the Activity.')).toBeInTheDocument()
+    rerender(<RepositoryGitPanel repository={activityRepository} activity={{ id: 'activity-1', status: 'CLOSED', dueState: 'CLOSED' }} initialTab="local" api={api} />)
+    expect(await screen.findByText('Activity closed — repository is read-only.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Generate credentials' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Generate write access' })).not.toBeInTheDocument()
+  })
+
+  it('keeps existing Personal and Class Workspace Local Git write behavior', async () => {
+    const personalApi = apiMock()
+    const { unmount } = render(<RepositoryGitPanel repository={repository} initialTab="local" api={personalApi} />)
+    await openGitAccess()
+    expect(screen.getByRole('button', { name: 'Generate credentials' })).toBeInTheDocument()
+    unmount()
+
+    const workspaceApi = apiMock()
+    render(<RepositoryGitPanel repository={{ ...repository, repositoryType: 'CLASS_WORKSPACE', classId: 'class-1' }} initialTab="local" api={workspaceApi} />)
+    await openGitAccess()
+    expect(screen.getByRole('button', { name: 'Generate credentials' })).toBeInTheDocument()
   })
 
   it('keeps an archived READY repository read-only while allowing authorized inspection', async () => {
@@ -270,8 +372,9 @@ describe('repository Git panel', () => {
     render(<RepositoryGitPanel repository={{ ...repository, status: 'ARCHIVED' }} api={api} />)
     expect(await screen.findByRole('button', { name: /README.md/i })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: 'Local Git' }))
-    expect(await screen.findByRole('button', { name: 'Issue Read Credential' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Issue Read + Write Credential' })).not.toBeInTheDocument()
+    await openGitAccess()
+    expect(screen.getByRole('button', { name: 'Generate credentials' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Generate write access' })).not.toBeInTheDocument()
   })
 
   it('does not inspect repositories before storage is ready', () => {

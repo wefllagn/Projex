@@ -4,7 +4,27 @@
 
 Phase 8A adds the controlled-local Git foundation and durable bare-repository provisioning. Phase 8B builds authenticated loopback-only Smart HTTP on this foundation as documented in `GIT_SMART_HTTP_TRANSPORT.md`. Phase 8C adds the read-only browsing, history, tree, bounded text-file, and diff boundary documented in `GIT_REPOSITORY_INSPECTION.md`; merge, server-created history, contribution attribution, and frontend behavior remain deferred.
 
-The tested Windows toolchain is Git for Windows `2.55.0.windows.3`. The worker accepts supported Git for Windows versions at or above `2.55.0`, records the detected version, and always invokes the validated absolute `GIT_EXECUTABLE`. PATH ordering is never authoritative.
+The controlled-local Git minimum is `2.55.0` on both supported platforms. Version
+detection invokes the validated absolute `GIT_EXECUTABLE`; PATH ordering is never
+authoritative. The platform policy is:
+
+| Host | Accepted version output | Verification boundary |
+| --- | --- | --- |
+| Windows | `git version X.Y.Z.windows.N`, at least `2.55.0` | Existing Git for Windows format/minimum retained; tested Windows baseline `2.55.0.windows.3` is historical |
+| macOS | `git version X.Y.Z`, at least `2.55.0` | Actual Homebrew `2.55.0` detection and temporary empty-bare verification passed on arm64 macOS |
+
+Version components must be safe nonnegative integers. Older releases, release
+candidates, unknown vendor suffixes (including unverified Apple Git formats),
+malformed output and unsupported host platforms are rejected. A Windows suffix
+is required on Windows and rejected on macOS. Version text is not a binary
+authenticity attestation: operators must still select the intended installed
+executable and resolve its canonical identity. No version is spoofed.
+
+For macOS Homebrew, resolve executable symlinks before process-local configuration,
+especially `GIT_EXECUTABLE` and `GIT_HTTP_BACKEND_EXECUTABLE`: Smart HTTP's existing
+plain-file checks reject symbolic links. Obtain candidates from the installed
+toolchain (`command -v git`, `git --exec-path`) and verify their canonical files;
+do not copy Windows paths or assume an Apple wrapper has the verified version.
 
 ## Safety boundary
 
@@ -14,6 +34,19 @@ The tested Windows toolchain is Git for Windows `2.55.0.windows.3`. The worker a
 - Core Git behavior uses no GitHub or GitLab API.
 - The runner uses fixed typed operations, argument arrays, `shell: false`, bounded output, a timeout, hidden windows, non-interactive configuration, and a sanitized Git environment.
 - Absolute paths, Git arguments, storage keys, and Git output are omitted from logs and API responses.
+
+Gate B Windows compatibility: Git processes use a fixed, sanitized process-local
+`core.longpaths=true` setting. Newly initialized Windows bare repositories also
+store this flag locally because receive-pack clears caller config before its
+unpacker runs. Bare verification and read-only inspection use the validated
+repository as the working directory with `--git-dir .`, avoiding Git's separate
+absolute GIT_DIR limit. This does not relax UUID/ownership/containment checks,
+change global Git configuration, or rewrite any pre-existing repository.
+On macOS, no `core.longpaths` override is added. On both platforms, inherited
+`GIT_CONFIG_PARAMETERS`, indexed `GIT_CONFIG_*` entries, repository/object-path
+overrides, credentials and `NODE_OPTIONS` are excluded by the existing allowlist;
+only the fixed Windows long-path value is reintroduced. Platform dispatch changes
+neither this sanitization nor storage ownership/containment and authorization.
 
 ## Storage layout
 
@@ -71,9 +104,26 @@ This admin API does not resolve a storage path, inspect or create a directory, e
 
 ## Empty repository rule
 
-A successfully provisioned repository is an empty bare Git repository whose symbolic `HEAD` is `refs/heads/main`. It has no commits, branch refs, tags, README, starter content, or synthetic activity. The first branch and commit are created only by an authenticated Phase 8B push; provisioning itself continues to create no history.
+A successfully provisioned repository is an empty bare Git repository whose symbolic `HEAD` is `refs/heads/main`. It has no commits, branch refs, tags, README, starter content, or synthetic activity. Provisioning itself continues to create no history. The isolated approved Group browser editor candidate additionally permits its authorized Maintainer to initialize `CLASS_PROJECT` main through a separate durable job (see `PROJECT_REPOSITORY_COLLABORATION.md`). The first branch and commit may otherwise be created by an authenticated Phase 8B push or, only for an owning Student's open `ACTIVITY_WORKSPACE`, by the durable I2.3 browser-checkpoint worker. The checkpoint path uses the same verified managed storage and never runs Git in the API process.
 
 ## Test isolation
+
+The default server unit Vitest configuration resolves the existing OS temporary
+directory with `realpathSync` and supplies `TMPDIR`, `TMP` and `TEMP` only to its
+test workers. macOS `/var` and `/tmp` aliases otherwise trigger the intentional
+symlink guards in operations fixtures. No directory is created by configuration,
+no persistent environment is edited, and application path guards are unchanged.
+Explicit linked-path rejection tests continue to run. Future database/Git/Java
+launchers must separately use their approved canonical temporary roots; this
+unit configuration does not authorize or configure those suites.
+
+In the restricted Codex sandbox even loopback listeners fail with `EPERM`.
+The macOS compatibility unit run used an approved outside-sandbox process and a
+review-only loopback socket preload outside the repository. Supertest otherwise
+creates anonymous wildcard listeners with `app.listen(0)`. The preload confines
+them to `127.0.0.1` and preserves Supertest's synchronous address discovery; it
+does not replace requests, responses, authentication or authorization assertions.
+Report this adaptation separately from an ordinary unadapted `npm test` run.
 
 Real-Git tests require both `TEST_DATABASE_URL` naming exactly `projex_test` and an explicit absolute `TEST_GIT_STORAGE_ROOT` whose final directory name is `projex_git_test`.
 

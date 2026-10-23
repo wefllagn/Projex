@@ -1,0 +1,41 @@
+[Unit]
+Description=Origin verify-java pilot service
+After=network-online.target postgresql.service docker.service
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+User=origin-java
+Group=origin-java
+SupplementaryGroups=docker
+WorkingDirectory=/opt/origin/current/server
+EnvironmentFile=/etc/origin/pilot.env
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStartPre=/usr/local/bin/node dist/scripts/deployment-preflight.js --scope=java
+ExecStart=/usr/local/bin/node dist/scripts/verify-java-isolation.js
+TimeoutStopSec=3600
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+ReadWritePaths=/var/lib/origin-java/jobs
+MemoryMax=384M
+TasksMax=256
+LimitNOFILE=1024
+
+[Install]
+WantedBy=multi-user.target

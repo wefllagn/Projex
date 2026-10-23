@@ -1,0 +1,14 @@
+{
+  "verifiedAt": "2026-10-23T20:15:37.401279+00:00",
+  "sourceDatabase": "origin_ux_review",
+  "restoreDatabase": "origin_ux_restore_20261023201530",
+  "clusterPort": 55500,
+  "matchedTables": 41,
+  "matchedGitFiles": 117,
+  "repositoriesFsckPassed": 4,
+  "migrations": 30,
+  "migrateDeployPreservedAllRows": true,
+  "freshTargetRecovery": true,
+  "noProtectedDataWritten": true,
+  "ubuntuOperatorExecution": "PENDING_ON_VM"
+}

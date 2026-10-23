@@ -20,6 +20,7 @@ interface AuditBase {
 }
 
 export type AdminAuditInput =
+  | (AuditBase & { action: 'USER_PASSWORD_RECOVERY_ISSUED'; targetType: 'USER'; metadata: { expiresAt: string } })
   | (AuditBase & {
       action: 'USER_STUDENT_PROVISIONED' | 'USER_INSTRUCTOR_PROVISIONED'
       targetType: 'USER'

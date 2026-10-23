@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { rubricScoresSchema } from '../activities/activity-grading.js'
 
 const uuid = z.uuid()
 const expectedUpdatedAt = z.iso.datetime({ offset: true }).transform((value) => new Date(value))
@@ -20,6 +21,13 @@ export const createSubmissionSchema = z
   .strict()
 
 export const createPracticeRunSchema = createSubmissionSchema
+
+export const createCodeRunSchema = z
+  .object({
+    sourceCode: z.string().min(1).max(100_000),
+    stdin: z.string().max(20_000),
+  })
+  .strict()
 
 export const submissionListQuerySchema = z
   .object({
@@ -49,7 +57,8 @@ export const scoreCorrectionSchema = z
 
 export const reviewSubmissionSchema = z
   .object({
-    instructorPoints: z.number().finite().min(0).max(1000),
+    rubricScores: rubricScoresSchema.optional(),
+    instructorPoints: z.number().finite().min(0).max(1000).optional(),
     feedbackText: z.string().trim().max(20_000).optional(),
     expectedUpdatedAt,
   })

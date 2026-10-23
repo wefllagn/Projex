@@ -38,7 +38,9 @@ const envSchema = z
     SMTP_SECURE: booleanString.default(false),
     SMTP_USER: z.string().default(''),
     SMTP_PASSWORD: z.string().default(''),
-    JAVA_EXECUTION_MODE: z.enum(['disabled', 'local_process']).default('disabled'),
+    JAVA_EXECUTION_MODE: z.enum(['disabled', 'local_process', 'container']).default('disabled'),
+    JAVA_DOCKER_EXECUTABLE: z.string().default('/usr/bin/docker'),
+    JAVA_DOCKER_IMAGE: z.string().default(''),
     JAVA_EXECUTABLE: z.string().min(1).default('java'),
     JAVAC_EXECUTABLE: z.string().min(1).default('javac'),
     JAVA_RELEASE: z.coerce.number().int().min(17).max(17).default(17),
@@ -53,7 +55,7 @@ const envSchema = z
     PRACTICE_RUN_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(24),
     PRACTICE_RUNS_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(5),
     PRACTICE_MAX_ACTIVE_PER_ACTIVITY: z.coerce.number().int().min(1).max(5).default(1),
-    GIT_EXECUTION_MODE: z.enum(['disabled', 'local_process']).default('disabled'),
+    GIT_EXECUTION_MODE: z.enum(['disabled', 'local_process', 'service_isolated']).default('disabled'),
     GIT_EXECUTABLE: z.string().default(''),
     GIT_STORAGE_ROOT: z.string().default(''),
     GIT_COMMAND_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(30_000),
@@ -90,6 +92,10 @@ const envSchema = z
       context.addIssue({ code: 'custom', path: ['AUTH_COOKIE_SECURE'], message: 'Secure authentication cookies are required in production' })
     }
 
+    if (value.NODE_ENV === 'production' && (!URL.canParse(value.FRONTEND_ORIGIN) || new URL(value.FRONTEND_ORIGIN).protocol !== 'https:')) {
+      context.addIssue({ code: 'custom', path: ['FRONTEND_ORIGIN'], message: 'Production requires an HTTPS frontend origin' })
+    }
+
     if (value.NODE_ENV === 'production' && value.TRUST_PROXY_HOPS !== 1) {
       context.addIssue({ code: 'custom', path: ['TRUST_PROXY_HOPS'], message: 'Hosted production requires exactly one trusted reverse-proxy hop' })
     }
@@ -121,6 +127,8 @@ const envSchema = z
       })
     }
 
+    if (value.JAVA_EXECUTION_MODE === 'container' && (!path.isAbsolute(value.JAVA_DOCKER_EXECUTABLE) || !/^(?:[a-z0-9][a-z0-9./:_-]*@)?sha256:[a-f0-9]{64}$/.test(value.JAVA_DOCKER_IMAGE))) context.addIssue({ code: 'custom', path: ['JAVA_DOCKER_IMAGE'], message: 'Container execution requires an absolute Docker executable and immutable image digest.' })
+
     if (value.NODE_ENV === 'production' && value.GIT_EXECUTION_MODE === 'local_process') {
       context.addIssue({
         code: 'custom',
@@ -129,7 +137,7 @@ const envSchema = z
       })
     }
 
-    if (value.GIT_EXECUTION_MODE === 'local_process') {
+    if (value.GIT_EXECUTION_MODE !== 'disabled') {
       for (const key of ['GIT_EXECUTABLE', 'GIT_STORAGE_ROOT'] as const) {
         if (!value[key] || !path.isAbsolute(value[key])) {
           context.addIssue({
@@ -140,6 +148,8 @@ const envSchema = z
         }
       }
     }
+
+    if (value.GIT_EXECUTION_MODE === 'service_isolated' && (!['127.0.0.1', '::1', 'localhost'].includes(value.HOST.toLowerCase()) || value.GIT_SMART_HTTP_ENABLED)) context.addIssue({ code: 'custom', path: ['GIT_EXECUTION_MODE'], message: 'Hosted browser Git requires a loopback API and disabled native Smart HTTP.' })
 
     if (value.GIT_SMART_HTTP_ENABLED) {
       if (value.GIT_EXECUTION_MODE !== 'local_process') {
@@ -204,6 +214,8 @@ export interface AppEnv {
   smtpUser: string
   smtpPassword: string
   javaExecutionMode: z.infer<typeof envSchema>['JAVA_EXECUTION_MODE']
+  javaDockerExecutable: string
+  javaDockerImage: string
   javaExecutable: string
   javacExecutable: string
   javaRelease: number
@@ -287,6 +299,8 @@ export function loadEnv(input: NodeJS.ProcessEnv = process.env): AppEnv {
     smtpUser: result.data.SMTP_USER,
     smtpPassword: result.data.SMTP_PASSWORD,
     javaExecutionMode: result.data.JAVA_EXECUTION_MODE,
+    javaDockerExecutable: result.data.JAVA_DOCKER_EXECUTABLE,
+    javaDockerImage: result.data.JAVA_DOCKER_IMAGE,
     javaExecutable: result.data.JAVA_EXECUTABLE,
     javacExecutable: result.data.JAVAC_EXECUTABLE,
     javaRelease: result.data.JAVA_RELEASE,

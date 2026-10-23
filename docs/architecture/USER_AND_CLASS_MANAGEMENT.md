@@ -1,5 +1,32 @@
 # User and Class Management
 
+## Approved Class provisioning MVP clarification (2026-10-19)
+
+The Product Owner's current normal workflow is Instructor self-service Class
+creation, a server-generated join code, Student joining, then existing Activities
+and Group Projects. No Admin approval or mandatory Course catalog. Admin may
+create a Class exceptionally for an ACTIVE Instructor. See
+../ADMIN_CLASS_PROVISIONING_MVP_DECISIONS.md for the approved scope.
+
+Creation requires Class name, one of First Semester / Second Semester / Short
+Term, and a consecutive academic year (YYYY-YYYY). Normal Classes use the existing
+semester text and schoolYear columns; Short Term does not require an enum change.
+The older Admin official-catalog request may supply its existing academicPeriod
+instead of semester. Its Course/official-code constraint remains unchanged.
+Changed term/year metadata is validated; saved legacy values remain readable and
+unrelated edits do not rewrite them. No schema or migration change is introduced.
+
+Instructor and Admin creation forms have no Formal/Informal labels. Existing
+Course-backed records, PREPARED recovery/assignment, audited official correction,
+Primary/Co-Instructor authority and academic UUID/history compatibility remain.
+The historical classifications below describe internal compatibility, not UI or
+new prerequisites. No curriculum/assignment approval subsystem is authorized.
+
+Mutable test suites must use verified disposable cluster/database/storage
+separation from all demos. Recognizing the projex_test name alone is insufficient.
+The shared demo database incident/recovery remains deferred; this milestone's
+tests use a fresh isolated cluster and do not reconstruct missing records.
+
 ## Iteration 2 Course and Class Offering extension (unaccepted WIP)
 
 The approved foundation extends the historical Phase 4/10/11 contract below. `Course` is an Admin-managed reusable catalog entry containing Course Number and Course Name only. A `Class` remains the offering and all existing academic relationships continue to use its UUID. The nullable Course relationship, Course Number/Name snapshots, Official Class Code, Academic Period (`FIRST_SEMESTER` or `SECOND_SEMESTER`), School Year, Schedule, Days and Room are offering attributes. The generated, revocable `Class.classCode` remains the private Projex **join code**. There is no global uniqueness constraint on Official Class Code and no Course semester restriction. Legacy Classes remain valid without structured official fields.
@@ -18,7 +45,7 @@ Out of scope for the class-invitation addition are public registration, pre-regi
 
 ## Frontend integration status
 
-The original Phase 4 delivery was backend-only. Phase 10A.2 connects the protected student and instructor class catalogs, explicit URL-based class selection, class metadata/lifecycle actions, student class-code join, role-specific rosters, membership transitions, and server-owned join-code controls. Phase 10D.2 connects administrator class governance and the bounded Phase 9 academic oversight projections. Phase 11 stabilization connects registered-email invitation creation during instructor class creation and from the selected-class People area, plus the student Home preview and dedicated invitation view. Stream/comment, schedule/room, instructor-reassignment, and class-rule concepts remain deferred and are not simulated as successful local behavior.
+The original Phase 4 delivery was backend-only. Phase 10A.2 connects the protected student and instructor class catalogs, explicit URL-based class selection, class metadata/lifecycle actions, student class-code join, role-specific rosters, membership transitions, and server-owned join-code controls. Phase 10D.2 connects administrator class governance and the bounded Phase 9 academic oversight projections. Phase 11 stabilization connects registered-email invitation creation during instructor class creation and from the selected-class People area, plus the Student invitation view. The Product Owner's 21 October 2026 UI follow-up moves pending invitations from the Home feed into the Student notification-bell overlay while retaining the dedicated route for compatibility. The badge represents the server-authorized pending total, not an unread-message history. Home now owns the Join Class button and code-join overlay; class-code and invitation acceptance contracts remain unchanged. Stream/comment, schedule/room, instructor-reassignment, and class-rule concepts remain deferred and are not simulated as successful local behavior.
 
 ## User directory
 
@@ -144,3 +171,27 @@ The database-backed suite covers user persistence, filters, pagination, and safe
 The completed Phase 4 verification runs three integration files with ten tests against exactly `projex_test`. Suite-level cleanup leaves all integration fixture application tables empty while preserving all Prisma migration-history rows. A private recognized test database remains an explicit execution prerequisite for future runs.
 
 Live verification against the normal development API completed the approved administrator, instructor, and student workflows. It confirmed safe user-directory projections, single-use setup, class and membership lifecycle behavior, join-code invalidation and secrecy, archived-class read-only access, structured security events, and log redaction. The retained verification fixtures consist of three users, one ACTIVE class with an active rotated code, and one ACTIVE membership; no credential, session value, setup link, join code, database URL, or private environment value is recorded in this document.
+
+
+## Program and Instructor form cleanup (October 20)
+
+New Class requests require an explicit `program`: `INFORMATION_TECHNOLOGY` or
+`COMPUTER_SCIENCE`. The nullable database field deliberately leaves historical
+Classes unset. Primary/Admin metadata updates may set it without guessing a
+historical value. Existing ownership/official catalog guards remain in place.
+The October 21 Product Owner correction labels the former Section/Block field
+**Class Code**. It uses the existing `section` persistence/API field to preserve
+saved values and requires a nonblank value when creating a normal Class.
+Instructor Class Info uses the same label and required form field; Admin normal
+creation also requires it. Historical null values are not backfilled, and
+unrelated legacy updates remain valid. This display Class Code is distinct from
+the server-generated private join code (`classCode`) and the guarded Admin
+official catalog identity (`officialClassCode`); neither control is weakened.
+Instructor forms retain Schedule Type and omit Days from both visible fields
+and normal update payloads; stored Days survive.
+Saved legacy term/year values are preserved during unrelated edits.
+
+Student invitations use the same exact-email lookup and existing privacy/rate
+controls, now debounced and protected against stale UI responses. CSV import
+remains .csv-only with an email header, bounded upload, preview/fingerprint and
+explicit confirmation. A JSON transport body is not JSON file support.

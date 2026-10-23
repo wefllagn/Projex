@@ -6,6 +6,34 @@ Projex is a UI-first academic programming platform for Saint Louis University th
 
 ## Current Boundary
 
+2026-10-20 Instructor overhaul: the Product Owner superseded the planning hold
+and authorized the complete Instructor UI/UX, Class Topics, Program and
+completion-based Ungraded implementation, associated Student/Admin projections,
+source/schema/migration preparation and regression checks on this branch.
+The exact migration `20261020000000_instructor_classwork_completion`, SHA-256
+`bcedd2fd5c6701db6953d8203cf7c071d463dc0ef8250792062da8865e9b2588`,
+was separately approved **only** for disposable `projex_test` at
+`127.0.0.1:55483`, followed by guarded serial regressions/fixture cleanup.
+The preserved `projex_mvp_review` database remains on its original 24 migrations.
+Applying this migration there, restarting its services to activate new contracts,
+checkpoint staging/commit, push, merge and deployment require separate approval.
+Preserve all earlier uncommitted Gate B fixes and the original Mac checkout,
+database, review accounts, repositories, official submissions and manual fixtures.
+See `docs/INSTRUCTOR_UI_UX_IMPLEMENTATION_REVIEW.md` for the current review handoff.
+
+The following paragraph records the earlier Gate B approval boundary:
+
+2026-10-20: the Product Owner approved full macOS Gate B execution on
+`codex/mvp-gate-b-macos`, checkpoint `a6ef2427a7e27183977c9b66ff6ce14b988bf6f7`.
+Only the exact isolated resources in `docs/MVP_INTEGRATION_GATE_B_PLAN.md`, the
+24 existing migrations, sequential real suites, fictional review fixtures,
+three-role browser verification and bounded integration fixes are authorized.
+Follow `docs/CODEX_HANDOFF.md` for current evidence. Staging, committing, push,
+merge, new schema/features, original Mac checkout/database/storage changes,
+deployment and whole-root/cluster teardown remain excluded. Preserve the new
+review environment. Gate A and Iteration 2 text below is historical context,
+not broader authority.
+
 Phase 0 through the accepted pre-tunnel Phase 11 baseline are historical. Iteration 2 is current on `iteration-2/julius-i2-1-academic-workspace`: the I2.1 core is verified and committed on that task branch, branch integration remains separate, and bounded Instructor rerun implementation is authorized but stops at pre-commit review. I2.2 has not started. `docs/team/ITERATION_2_ROADMAP.md` owns current scope and dependency order; `docs/team/ITERATION_2_CHECKLIST.md` owns current execution status. Recovery proof, Java isolation, laboratory Git networking, deployment, public exposure, and branch integration remain separate approval boundaries.
 
 ## Live-State Authority
@@ -101,6 +129,7 @@ Begin with this file, actual Git state, the target source files and nearest test
 
 ## Implementation Expectations
 
+- Every feature must follow `docs/design/PROJEX_ERROR_AND_RECOVERY_STANDARD.md`: present safe contextual errors without technical diagnostics, recover at the nearest useful screen, and preserve unsaved input and navigation. Keep backend structured errors/correlation/logging intact; test actual retry/back actions and failure-state preservation.
 - Prefer existing project patterns and keep changes scoped.
 - Use the feature-based backend structure, Zod validation, Prisma migrations, service-level authorization, transactions, and database constraints where applicable.
 - Never use `prisma db push` or `prisma migrate reset`; stop on drift or a reset request.

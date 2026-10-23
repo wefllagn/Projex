@@ -167,7 +167,9 @@ function instructorProjection(
 function isRetryableTransactionFailure(error: unknown): boolean {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError &&
-    (error.code === 'P2002' || error.code === 'P2034')
+    (error.code === 'P2002' || error.code === 'P2034' ||
+      // PostgreSQL row-lock serialization failures from $queryRaw use P2010.
+      (error.code === 'P2010' && error.meta?.code === '40001'))
   )
 }
 

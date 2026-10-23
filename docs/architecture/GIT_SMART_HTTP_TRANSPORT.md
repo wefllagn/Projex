@@ -77,6 +77,12 @@ The post-receive hook writes a request-scoped receipt only after acceptance. The
 
 Git and hook processes inherit only required OS and Git quarantine variables. Database URLs, cookies, credential material, mail secrets, authorization headers, and unrelated environment values are absent. Execution uses exact paths, argument arrays, `shell: false`, Projex-owned hooks, bounded output, and no global `safe.directory` exception.
 
+On POSIX hosts, the compiled hook JavaScript must be a plain readable file:
+Node reads that script. The Git and backend binaries remain plain executable
+files. Generated shell hook wrappers use owner-only executable mode `0700`;
+existing wrappers must retain exact content, plain-file identity and executable
+access. Initialization fails closed for linked/missing scripts or invalid wrappers.
+
 Phase 9C permits an ACTIVE administrator to revoke an existing credential defensively, including one that is expired or belongs to an inactive user/repository. Revocation is a monotonic database compare-and-set and returns no secret/verifier. Smart HTTP resolves the credential and current authority on every request, so a credential revoked through the admin API is rejected immediately without changing repository membership or granting the administrator transport/source access.
 
 ## Test isolation

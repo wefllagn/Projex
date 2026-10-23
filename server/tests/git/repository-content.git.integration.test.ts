@@ -123,7 +123,8 @@ async function createHistory(repositoryPath: string) {
   expect((await runGit(['add', '--all'], work)).code).toBe(0)
   expect((await runGit(['commit', '-m', 'Initial project files'], work)).code).toBe(0)
   const firstCommit = (await runGit(['rev-parse', 'HEAD'], work)).stdout.trim()
-  expect((await runGit(['push', 'origin', 'main'], work)).code).toBe(0)
+  const pushed = await runGit(['push', 'origin', 'main'], work)
+  expect(pushed.code, pushed.stderr).toBe(0)
   expect((await runGit(['checkout', '-b', 'feature/demo'], work)).code).toBe(0)
   await writeFile(path.join(work, 'src', 'Main.java'), 'class Main { public static void main(String[] args) {} }\n', 'utf8')
   await writeFile(path.join(work, 'NOTES.md'), 'Feature notes\n', 'utf8')
@@ -276,7 +277,7 @@ describe('Phase 8C repository inspection', () => {
           reviewStatus: 'WORKING',
           storageStatus: 'PENDING',
           members: { create: { studentId: owner.id, memberRole: 'OWNER', status: 'ACTIVE' } },
-          provisioningJob: { create: { maxClaimAttempts: 3 } },
+          provisioningJob: { create: { maxClaimAttempts: 3, availableAt: new Date(0) } },
         },
       })
       return record

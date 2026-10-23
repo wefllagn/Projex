@@ -46,7 +46,7 @@ function activityInput(title = 'Loop Patterns') {
     entryClassName: 'Main',
     starterCode: 'public class Main { public static void main(String[] args) {} }',
     maxAttempts: 1,
-    creditPolicy: 'LATEST' as const,
+    gradingMode: 'GRADED' as const, creditPolicy: 'LATEST' as const,
     totalPoints: 100,
   }
 }

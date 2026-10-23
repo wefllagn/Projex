@@ -19,12 +19,16 @@ describe('submission API adapter', () => {
     await api.getSubmission('submission-1')
     await api.createVisibleTestRun('activity-1', 'class Main {}')
     await api.getVisibleTestRun('run-1')
+    await api.createCodeRun('activity-1', 'class Main {}', 'Julius\n23')
+    await api.getCodeRun('code-run-1')
 
     expect(client.get).toHaveBeenNthCalledWith(1, '/activities/activity-1/submissions?page=2&pageSize=20&status=RELEASED', undefined)
     expect(client.get).toHaveBeenNthCalledWith(2, '/activities/activity-1/attempt-state', undefined)
     expect(client.get).toHaveBeenNthCalledWith(3, '/submissions/submission-1', undefined)
     expect(client.post).toHaveBeenCalledWith('/activities/activity-1/visible-test-runs', { sourceCode: 'class Main {}' }, undefined)
     expect(client.get).toHaveBeenNthCalledWith(4, '/visible-test-runs/run-1', undefined)
+    expect(client.post).toHaveBeenCalledWith('/activities/activity-1/code-runs', { sourceCode: 'class Main {}', stdin: 'Julius\n23' }, undefined)
+    expect(client.get).toHaveBeenNthCalledWith(5, '/code-runs/code-run-1', undefined)
   })
 
   it('places the idempotency key only in the required header', async () => {

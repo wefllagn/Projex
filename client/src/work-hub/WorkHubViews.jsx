@@ -1,3 +1,5 @@
+import InstructorReviewView from './InstructorReviewView.jsx'
+import StudentTodoView from './StudentTodoView.jsx'
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { apiClient, describeApiError } from '../api/api-client.js'
@@ -20,12 +22,14 @@ function recordLink(view, item) {
 }
 
 function rowSummary(view, item) {
+  if (view === 'todo' && item.gradingMode === 'COMPLETION') return `Ungraded · ${item.completionState === 'COMPLETE' ? 'Complete' : 'Not submitted'} · Due ${formatDate(item.dueDate)}`
+  if (view === 'submissions' && item.gradingMode === 'COMPLETION') return `Complete · ${item.status === 'released' ? 'Feedback released' : 'Feedback not released'} · Submitted ${formatDate(item.submittedAt)}`
   if (view === 'todo') return `${item.kind === 'activity' ? 'Programming activity' : 'Project task'} · ${item.dueState} · Due ${formatDate(item.dueDate)}${item.kind === 'activity' && item.hasSubmission ? ' · Attempt submitted' : ''}${item.kind === 'project' && item.hasTeam ? ' · On a team' : ''}`
   if (view === 'submissions') return `Attempt ${item.attemptNumber} · ${item.status.replaceAll('_', ' ')} · Submitted ${formatDate(item.submittedAt)}${item.status === 'released' ? ` · Released score ${item.finalScore}/${item.totalPoints}` : ' · Result pending release'}`
   return `${item.kind === 'submission' ? `Student: ${item.student.fullName}` : 'Project repository'} · ${item.action}`
 }
 
-export function WorkHubList({ view }) {
+function AcademicWorkList({ view }) {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [submittedSearch, setSubmittedSearch] = useState('')
@@ -75,4 +79,24 @@ export function WorkHubList({ view }) {
       {current.status === 'ready' && current.pagination && <nav className="work-hub-pages" aria-label="Work list pages"><button type="button" disabled={!current.pagination.hasPreviousPage} onClick={() => setPage((value) => value - 1)}>Previous</button><span>Page {current.pagination.page} of {Math.max(1, current.pagination.totalPages)} · {current.pagination.totalItems} records</span><button type="button" disabled={!current.pagination.hasNextPage} onClick={() => setPage((value) => value + 1)}>Next</button></nav>}
     </section>
   )
+}
+
+export function ReviewPreview() {
+  const [state, setState] = useState({ status: 'loading', rows: [] })
+  const [revision, setRevision] = useState(0)
+  useEffect(() => {
+    const controller = new AbortController()
+    apiClient.get('/work-hub/instructor/review-queue?page=1&pageSize=4', { signal: controller.signal })
+      .then(result => { if (!controller.signal.aborted) setState({ status: 'ready', rows: result.data }) })
+      .catch(error => { if (error.name !== 'AbortError') setState({ status: 'error', error, rows: [] }) })
+    return () => controller.abort()
+  }, [revision])
+  if (state.status === 'loading') return <p role="status">Loading reviews…</p>
+  if (state.status === 'error') return <div role="alert"><p>{describeApiError(state.error)}</p><button type="button" onClick={() => setRevision(n => n + 1)}>Try again</button></div>
+  if (!state.rows.length) return <p>You're all caught up.</p>
+  return <ul className="review-preview-list">{state.rows.map(item => <li key={`${item.kind}-${item.id}`}><NavLink to={recordLink('review', item)}><strong>{item.title || item.activityTitle}</strong><span>{item.class.className}</span><small>{rowSummary('review', item)}</small></NavLink></li>)}</ul>
+}
+
+export function WorkHubList({ view, classes = [], moreClasses = false, onMoreClasses }) {
+  return view === 'todo' ? <StudentTodoView classes={classes} moreClasses={moreClasses} onMoreClasses={onMoreClasses} /> : view === 'review' ? <InstructorReviewView classes={classes} moreClasses={moreClasses} onMoreClasses={onMoreClasses} /> : <AcademicWorkList view={view} />
 }

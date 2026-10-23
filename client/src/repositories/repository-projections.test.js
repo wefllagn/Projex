@@ -31,6 +31,22 @@ describe('repository projections', () => {
     expect(projected).not.toHaveProperty('teamId')
   })
 
+  it('recognizes an Activity Workspace, preserves its safe activity link, and drops unsafe fields', () => {
+    const projected = repositoryProjection({
+      ...raw,
+      projectTaskId: null,
+      activityId: 'activity-1',
+      repositoryType: 'ACTIVITY_WORKSPACE',
+      storagePath: 'C:/private/activity.git',
+      provisioningError: 'private worker detail',
+    })
+    expect(projected).toMatchObject({ repositoryType: 'ACTIVITY_WORKSPACE', activityId: 'activity-1' })
+    expect(projected.repositoryType).not.toBe('PERSONAL')
+    expect(projected).not.toHaveProperty('storagePath')
+    expect(projected).not.toHaveProperty('provisioningError')
+    expect(repositoryCatalogProjection(projected)).toMatchObject({ repositoryType: 'ACTIVITY_WORKSPACE', activityId: 'activity-1' })
+  })
+
   it('keeps student membership projections separate from instructor details', () => {
     const member = { memberId: 'member-1', userId: 'student-2', fullName: 'Safe Student', memberRole: 'MEMBER', teamRole: 'MEMBER', membershipStatus: 'ACTIVE', updatedAt: '2026-08-02T00:00:00.000Z', userStatus: 'SUSPENDED', joinedAt: '2026-08-01T00:00:00.000Z', removedAt: null, lastActivatedAt: '2026-08-01T00:00:00.000Z', email: 'private@example.test' }
     const student = studentRepositoryMemberProjection(member)

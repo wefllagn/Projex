@@ -3,6 +3,7 @@ import {
   activityPayload,
   activityUpdatePayload,
   publicationRequirements,
+  sumTestCasePoints,
   testCasePayload,
   validateActivityForm,
   validateTestCases,
@@ -20,8 +21,29 @@ const form = {
 }
 
 describe('activity form contracts', () => {
+  it('uses automatic allocation publication rules without legacy manual point instructions', () => {
+    const activity = { status: 'DRAFT', dueDate: '2099-01-01', totalPoints: 100, gradingMode: 'GRADED', gradingPeriod: 'PRELIM', rubricCriteria: [], gradingConfiguration: { version: 1, percentages: { correctness: 70, readability: 15, organization: 10, documentation: 5 } } }
+    expect(publicationRequirements(activity, [])).toEqual(['Add at least one test case.', 'Add at least one visible test case.'])
+    expect(publicationRequirements(activity, [{ isHidden: false, importance: 'HIGH' }])).toEqual([])
+  })
+
+  it('sums decimal test weights without rejecting an exact allocation', () => {
+    const cases = [0.1, 0.2].map((points, i) => ({ name: `Case ${i}`, inputData: '', expectedOutput: '', points: String(points), isHidden: false }))
+    expect(sumTestCasePoints(cases)).toBe(0.3)
+    expect(validateTestCases(cases, 0.3)).toEqual([])
+    expect(publicationRequirements({ status: 'DRAFT', dueDate: '2099-01-01', totalPoints: 0.3, gradingPeriod: 'PRELIM', rubricCriteria: [] }, cases)).toEqual([])
+  })
+
+  it('drops hidden rubric values when changing a draft to Ungraded', () => {
+    const ungraded = { ...form, gradingMode: 'COMPLETION', totalPoints: '', rubricCriteria: [{ id: 'draft', name: '', maximumPoints: '' }] }
+    expect(validateActivityForm(ungraded)).toEqual({})
+    expect(activityPayload(ungraded)).toMatchObject({ gradingMode: 'COMPLETION', totalPoints: null, rubricCriteria: [] })
+  })
+
   it('validates backend bounds and creates the supported draft payload', () => {
     expect(validateActivityForm(form)).toEqual({})
+    expect(validateActivityForm({ ...form, totalPoints: '1.1' })).toEqual({})
+    expect(validateTestCases([{ name: 'Fractional case', inputData: '', expectedOutput: '', points: '0.29' }], 1.1)).toEqual([])
     expect(activityPayload(form, 'DRAFT')).toEqual(expect.objectContaining({
       title: 'Loops', language: 'JAVA', entryClassName: 'Main', maxAttempts: 2, creditPolicy: 'LATEST', totalPoints: 100,
     }))

@@ -1,4 +1,7 @@
 import type { Logger } from 'pino'
+import type { GitTransportRepository } from '../git-transport/git-transport.repository.js'
+import { evaluateGitPermission } from '../git-transport/git-authorization.js'
+import type { GroupContextProjection } from './group-context.types.js'
 import { AppError } from '../../shared/errors/app-error.js'
 import type { PaginationMeta } from '../../shared/http/response.js'
 import type { SafeUserProfile } from '../auth/auth.types.js'
@@ -47,7 +50,10 @@ export type AdminRepositoryFeedbackProjection = Omit<
 >
 
 export interface RepositoryService {
+  groupContext(caller: SafeUserProfile, repositoryId: string): Promise<GroupContextProjection>
   createClassWorkspace(caller: SafeUserProfile, classId: string): Promise<RepositoryProjection>
+  createActivityWorkspace(caller: SafeUserProfile, activityId: string): Promise<RepositoryProjection>
+  getActivityWorkspace(caller: SafeUserProfile, activityId: string): Promise<RepositoryProjection>
   createClassProject(caller: SafeUserProfile, projectTaskId: string, input: CreateClassProjectRepositoryInput): Promise<RepositoryProjection>
   createPersonal(caller: SafeUserProfile, input: CreatePersonalRepositoryInput): Promise<RepositoryProjection>
   list(caller: SafeUserProfile, query: RepositoryListQuery): Promise<RepositoryListResult>
@@ -101,8 +107,13 @@ function requireActive(caller: SafeUserProfile): void {
 }
 
 function instructorOwns(access: RepositoryAccessRecord, caller: SafeUserProfile): boolean {
-  const classRecord = access.repository.repositoryType === 'CLASS_WORKSPACE' ? access.repository.class : access.repository.projectTask?.class
-  return caller.role === 'INSTRUCTOR' && Boolean(classRecord && (access.repository.repositoryType !== 'CLASS_WORKSPACE' || classRecord.status === 'ACTIVE') && (classRecord.instructorId === caller.id || classRecord.teachingStaff?.some((staff) => staff.instructorId === caller.id && staff.status === 'ACTIVE')))
+  const classRecord = access.repository.repositoryType === 'CLASS_WORKSPACE'
+    ? access.repository.class
+    : access.repository.repositoryType === 'ACTIVITY_WORKSPACE'
+      ? access.repository.activity?.class
+      : access.repository.projectTask?.class
+  const requiresActiveClass = access.repository.repositoryType === 'CLASS_WORKSPACE' || access.repository.repositoryType === 'ACTIVITY_WORKSPACE'
+  return caller.role === 'INSTRUCTOR' && Boolean(classRecord && (!requiresActiveClass || classRecord.status === 'ACTIVE') && (classRecord.instructorId === caller.id || classRecord.teachingStaff?.some((staff) => staff.instructorId === caller.id && staff.status === 'ACTIVE')))
 }
 
 function isOwner(access: RepositoryAccessRecord, caller: SafeUserProfile): boolean {
@@ -110,8 +121,16 @@ function isOwner(access: RepositoryAccessRecord, caller: SafeUserProfile): boole
 }
 
 function canView(access: RepositoryAccessRecord, caller: SafeUserProfile): boolean {
+  if (access.repository.repositoryType === 'CLASS_PROJECT') {
+    if (caller.role === 'ADMIN' || instructorOwns(access, caller)) return true
+    return caller.role === 'STUDENT' && access.classMembership?.status === 'ACTIVE'
+      && access.repositoryMembership?.status !== 'REMOVED' && access.repository.visibility === 'CLASS_ONLY'
+  }
   if (access.repository.repositoryType === 'CLASS_WORKSPACE') {
     return instructorOwns(access, caller) || (caller.role === 'STUDENT' && isOwner(access, caller) && access.repository.class?.status === 'ACTIVE' && access.classMembership?.status === 'ACTIVE')
+  }
+  if (access.repository.repositoryType === 'ACTIVITY_WORKSPACE') {
+    return instructorOwns(access, caller) || (caller.role === 'STUDENT' && isOwner(access, caller) && access.repository.activity?.class.status === 'ACTIVE' && access.classMembership?.status === 'ACTIVE') || caller.role === 'ADMIN'
   }
   if (caller.role === 'ADMIN' || instructorOwns(access, caller) || isOwner(access, caller)) return true
   if (access.repositoryMembership?.status === 'REMOVED') return false
@@ -136,6 +155,8 @@ function mapFailure(result: CollaborationFailure, resource: 'repository' | 'invi
     class_archived: new AppError({ statusCode: 409, code: 'CLASS_ARCHIVED', message: 'Archived classes are read-only.' }),
     task_not_open: new AppError({ statusCode: 409, code: 'PROJECT_TASK_NOT_OPEN', message: 'The project task is not accepting this action.' }),
     deadline_passed: new AppError({ statusCode: 409, code: 'PROJECT_TASK_DEADLINE_PASSED', message: 'The project-task deadline has passed.' }),
+    activity_not_open: new AppError({ statusCode: 409, code: 'ACTIVITY_NOT_OPEN', message: 'The programming activity is not accepting workspace creation.' }),
+    activity_deadline_passed: new AppError({ statusCode: 409, code: 'ACTIVITY_DEADLINE_PASSED', message: 'The programming-activity deadline has passed.' }),
     stale: new AppError({ statusCode: 409, code: 'STALE_REPOSITORY_VERSION', message: 'The record changed. Reload it before trying again.' }),
     conflict: new AppError({ statusCode: 409, code: 'REPOSITORY_CONFLICT', message: 'The repository, team, or invitation conflicts with an existing record.' }),
     student_ineligible: new AppError({ statusCode: 409, code: 'COLLABORATOR_NOT_ELIGIBLE', message: 'The selected student is not eligible for this project team.' }),
@@ -176,6 +197,7 @@ function unwrapFeedback(result: FeedbackWriteResult): RepositoryFeedbackProjecti
 
 export function createRepositoryService(dependencies: {
   repository: RepositoryRepository
+  accessRepository?: Pick<GitTransportRepository, 'findAccess'>
   logger: Logger
   now?: () => Date
   provisioningEnabled?: boolean
@@ -207,6 +229,39 @@ export function createRepositoryService(dependencies: {
   }
 
   return {
+    async groupContext(caller, repositoryId) {
+      const access = await loadAccess(caller, repositoryId)
+      if (access.repository.repositoryType !== 'CLASS_PROJECT') throw notFound()
+      const record = await repository.findGroupContext(repositoryId, caller.id)
+      if (!record) throw notFound()
+      const { gitAccess, ...context } = record
+      if (gitAccess.user.status !== 'ACTIVE') throw notFound()
+      const current = now()
+      const permission = evaluateGitPermission(gitAccess, current)
+      const instructor = instructorOwns(access, caller)
+      const participant = caller.role === 'STUDENT' && gitAccess.user.status === 'ACTIVE'
+        && gitAccess.repositoryMember?.status === 'ACTIVE' && gitAccess.teamMember?.status === 'ACTIVE'
+        && gitAccess.projectTask?.class.membership?.status === 'ACTIVE'
+      const maintainer = participant && access.repository.ownerId === caller.id && gitAccess.teamLeadStudentId === caller.id
+      const active = record.class.status === 'ACTIVE' && access.repository.status === 'ACTIVE'
+      const open = active && !isCutoff(access, current)
+      const corrective = active && isCutoff(access, current) && ['PUBLISHED', 'CLOSED'].includes(record.project.status)
+      return { ...context,
+        currentRole: instructor ? 'INSTRUCTOR' : maintainer ? 'MAINTAINER' : participant ? 'DEVELOPER' : 'METADATA_ONLY',
+        permissions: {
+          canRead: permission.read, canWrite: permission.write, canUpdateMain: permission.canUpdateMain,
+          canManageMembers: Boolean((maintainer && open) || (instructor && corrective)),
+          canInviteMembers: Boolean(maintainer && open),
+          canReview: Boolean(instructor && active && record.project.status !== 'ARCHIVED' && access.repository.reviewStatus === 'READY_FOR_REVIEW'),
+          canRequestChanges: Boolean(instructor && open && access.repository.reviewStatus === 'READY_FOR_REVIEW'),
+          canSubmitForReview: Boolean(maintainer && open && ['WORKING', 'CHANGES_REQUESTED'].includes(access.repository.reviewStatus)),
+          canViewActivity: Boolean(participant || instructor || caller.role === 'ADMIN'),
+          canEditFeedback: Boolean(instructor && active && record.project.status !== 'ARCHIVED'),
+          canArchive: Boolean(instructor && access.repository.status === 'ACTIVE' && access.repository.reviewStatus === 'APPROVED'),
+          canRestore: Boolean(instructor && access.repository.status === 'ARCHIVED' && record.class.status === 'ACTIVE' && record.project.status !== 'ARCHIVED'),
+        },
+      }
+    },
     async createClassWorkspace(caller, classId) {
       requireActive(caller)
       if (caller.role !== 'STUDENT') throw forbidden()
@@ -214,6 +269,22 @@ export function createRepositoryService(dependencies: {
       const projection = unwrapRepository(await repository.createClassWorkspace({ classId, ownerId: caller.id, now: now() }))
       logger.info({ event: 'repository.class_workspace_created', actorId: caller.id, repositoryId: projection.id, classId }, 'student class workspace created')
       return projection
+    },
+    async createActivityWorkspace(caller, activityId) {
+      requireActive(caller)
+      if (caller.role !== 'STUDENT') throw forbidden()
+      requireProvisioning()
+      const projection = unwrapRepository(await repository.createActivityWorkspace({ activityId, ownerId: caller.id, now: now() }))
+      logger.info({ event: 'repository.activity_workspace_created', actorId: caller.id, repositoryId: projection.id, activityId }, 'student activity workspace created')
+      return projection
+    },
+    async getActivityWorkspace(caller, activityId) {
+      requireActive(caller)
+      if (caller.role !== 'STUDENT') throw forbidden()
+      const repositoryId = await repository.findActivityWorkspaceId(activityId, caller.id)
+      if (!repositoryId) throw notFound()
+      const access = await loadAccess(caller, repositoryId)
+      return toRepositoryProjection(access.repository)
     },
     async createClassProject(caller, projectTaskId, input) {
       requireActive(caller)
@@ -246,7 +317,11 @@ export function createRepositoryService(dependencies: {
     },
     async get(caller, repositoryId) {
       const access = await loadAccess(caller, repositoryId)
-      return toRepositoryProjection(access.repository)
+      const gitAccess = await dependencies.accessRepository?.findAccess(repositoryId, caller.id)
+      return {
+        ...toRepositoryProjection(access.repository),
+        gitPermissions: gitAccess ? evaluateGitPermission(gitAccess, now()) : { read: false, write: false, canUpdateMain: false },
+      }
     },
     async listRecordedActivity(caller, repositoryId, query) {
       const access = await loadAccess(caller, repositoryId)
@@ -331,6 +406,7 @@ export function createRepositoryService(dependencies: {
       if (access.repository.repositoryType !== 'CLASS_PROJECT') throw notFound()
       const currentTime = now()
       const cutoff = isCutoff(access, currentTime)
+      if (access.repository.projectTask?.class.status !== 'ACTIVE') mapFailure({ kind: 'class_archived' })
       if (cutoff) {
         if (!instructorOwns(access, caller)) throw notFound()
         if (!input.reason?.trim()) mapFailure({ kind: 'reason_required' })

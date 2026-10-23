@@ -1,0 +1,84 @@
+/* Approved public Origin materials applied to the existing application.
+   Class cards retain their original grid, structure, sizing and controls. */
+.origin-application {
+  background: radial-gradient(ellipse at 65% 0, #518bb516, transparent 55%), var(--origin-ground);
+}
+.origin-application .origin-app-bar {
+  background: url('/assets/origin/metal-grain.svg'), linear-gradient(90deg, var(--origin-raised), var(--origin-ground));
+  border-bottom: 1px solid var(--origin-border);
+  box-shadow: inset 0 1px 0 var(--origin-edge-light);
+}
+.origin-application .student-app-shell { background: transparent; grid-template-columns: 240px minmax(0,1fr); }
+.origin-application .student-sidebar {
+  padding: 24px 16px 16px; gap: 30px;
+  background: url('/assets/origin/metal-grain.svg'), linear-gradient(110deg, var(--origin-raised), var(--origin-ground) 90%);
+  border-right: 1px solid var(--origin-border); box-shadow: inset 1px 0 0 var(--origin-edge-light);
+}
+.origin-application .student-sidebar-brand-row { gap: 10px; margin-bottom: 8px; }
+.origin-application .origin-brand { font-size: 25px; font-weight: 650; gap: 10px; letter-spacing: -.05em; }
+.origin-application .origin-brand-mark {
+  width: 29px; height: 29px; display: inline-flex; align-items: center; justify-content: center; gap: 2px;
+  border-radius: 50%; background: linear-gradient(145deg,#7cb8ff,#2476f7 65%,#204baf);
+  box-shadow: inset 0 0 0 1px #a4d0ff55; transform: rotate(-7deg); border: 0;
+}
+.origin-application .origin-brand-mark span { position: static; width: 4px; height: 12px; border-radius: 1px; background: white; }
+.origin-application .origin-brand-mark span:nth-child(2) { height: 17px; }
+.origin-application .origin-brand-mark span:nth-child(3) { height: 8px; align-self: center; }
+.origin-application .student-sidebar__link, .origin-application .student-class-link {
+  min-height: 44px; border: 1px solid transparent; border-radius: 8px; padding: 10px 12px;
+}
+.origin-application .student-sidebar__link:is(.active,:hover), .origin-application .student-class-link:is(.is-active,:hover) {
+  color: var(--origin-ink); background: var(--origin-metal); border-color: var(--origin-border);
+  box-shadow: inset 0 1px 0 var(--origin-edge-light), 0 3px 8px var(--origin-shadow);
+}
+.origin-application .student-sidebar__group > p { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; }
+.origin-application .student-class-dot { background: var(--origin-metal); box-shadow: inset 0 1px 0 var(--origin-edge-light); border-color: var(--origin-control); }
+.origin-application .student-main { margin: 0; border: 0; border-radius: 0; background: transparent; }
+.origin-application .student-home-page { background: transparent; min-height: calc(100dvh - 48px); }
+.origin-application .student-home-topbar { background: transparent; min-height: 80px; border-bottom: 1px solid var(--origin-border); padding-inline: 42px; justify-content: space-between; }
+.origin-application :is(.student-primary-action,.student-submit-code,.student-assignment-action,.activity-code-button) {
+  background: url('/assets/origin/metal-grain.svg'), linear-gradient(#fff,#d6e0e9); color: #152737;
+  border: 1px solid #b0c0ce; box-shadow: inset 0 1px 0 #fff, 0 3px 10px var(--origin-shadow); border-radius: 8px;
+}
+:root[data-origin-appearance='dark'] .origin-application :is(.student-primary-action,.student-submit-code,.student-assignment-action,.activity-code-button) {
+  background: url('/assets/origin/metal-grain.svg'), linear-gradient(#f9fbfe,#cbd7e2); color: #102333; border-color: #cad7e3;
+}
+.origin-application .student-outline-action { background: var(--origin-metal); box-shadow: inset 0 1px 0 var(--origin-edge-light); border-color: var(--origin-border); }
+:root[data-origin-appearance] .origin-application :is(.student-primary-action,.student-submit-code,.student-assignment-action,.activity-code-button) .projex-icon { filter: grayscale(1) brightness(.28); }
+:root[data-origin-appearance='light'] .origin-application button:disabled { opacity: .75; }
+
+/* Reshade only. Layout and responsive card sizing remain in academic-refinement.css. */
+.origin-application .academic-classroom-card {
+  border-color: var(--origin-control);
+  background: url('/assets/origin/metal-grain.svg'), var(--origin-surface);
+  box-shadow: inset 0 1px 0 var(--origin-edge-light), 0 8px 24px var(--origin-shadow);
+}
+.origin-application .academic-classroom-card:hover {
+  border-color: var(--origin-horizon);
+  box-shadow: inset 0 1px 0 var(--origin-edge-light), 0 12px 28px var(--origin-shadow);
+}
+.origin-application .academic-classroom-cover {
+  color: var(--origin-ink);
+  background: url('/assets/origin/metal-grain.svg'), var(--origin-metal);
+  box-shadow: inset 0 1px 0 var(--origin-edge-light);
+  border-bottom: 1px solid var(--origin-border);
+}
+.origin-application .academic-classroom-cover::after { border-color: var(--origin-border); }
+.origin-application .academic-classroom-cover h2 { color: var(--origin-ink); }
+.origin-application .academic-classroom-cover :is(span,small) { color: var(--origin-muted); }
+.origin-application .academic-classroom-avatar {
+  color: var(--origin-ink); border-color: var(--origin-surface);
+  background: var(--origin-metal); box-shadow: 0 3px 10px var(--origin-shadow);
+}
+.origin-application .academic-classroom-card footer { border-color: var(--origin-border); }
+.origin-application .academic-classroom-card footer a { color: var(--origin-muted); }
+.origin-application .academic-classroom-card footer a:hover { background: var(--origin-raised); color: var(--origin-ink); }
+@media (max-width: 900px) {
+  .origin-application .student-app-shell { grid-template-columns: minmax(0,1fr); }
+  .origin-application .student-mobile-header { background: url('/assets/origin/metal-grain.svg'),var(--origin-metal); border-bottom: 1px solid var(--origin-border); }
+  .origin-application .student-mobile-header__brand .origin-brand-mark { transform: rotate(-7deg) scale(.85); width: 29px; }
+  .origin-application .student-main { margin: 0; }
+}
+@media (max-width: 600px) {
+  .origin-application .student-coding-actions { position: static; }
+}

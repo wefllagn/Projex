@@ -58,6 +58,8 @@ export function projectInstructorSubmissionSummary(value = {}) {
   return {
     id: string(value.id),
     activityId: string(value.activityId),
+    gradingMode: value.gradingMode === 'COMPLETION' ? 'COMPLETION' : 'GRADED',
+    completionState: value.gradingMode === 'COMPLETION' ? 'COMPLETE' : null,
     activityTitle: string(value.activityTitle, 'Programming activity'),
     attemptLabel: string(value.attemptLabel, 'Submission attempt'),
     replacementForAttemptNumber: number(value.replacementForAttemptNumber),
@@ -104,7 +106,7 @@ export function projectInstructorSubmission(value = {}) {
             : [],
         }
       : null,
-    scores: {
+    scores: value.gradingMode === 'COMPLETION' ? null : {
       originalAutomatedScore: number(scores.originalAutomatedScore),
       effectiveAutomatedScore: number(scores.effectiveAutomatedScore),
       automatedMaximum: number(scores.automatedMaximum) ?? 0,
@@ -113,6 +115,9 @@ export function projectInstructorSubmission(value = {}) {
       finalScore: number(scores.finalScore),
       totalPoints: number(scores.totalPoints) ?? 0,
     },
+    gradingConfiguration: value.gradingConfiguration ?? null,
+    rubricCriteria: Array.isArray(value.rubricCriteria) ? value.rubricCriteria.map(row => ({ id: string(row.id), name: string(row.name, 'Criterion'), maximumPoints: number(row.maximumPoints) ?? 0 })) : [],
+    rubricScores: Array.isArray(value.rubricScores) ? value.rubricScores.map(row => ({ criterionId: string(row.criterionId), points: number(row.points) ?? 0 })) : [],
     corrections: Array.isArray(value.corrections)
       ? value.corrections.map(correction)
       : [],
@@ -160,7 +165,7 @@ export function isInstructorSubmissionPending(record) {
 }
 
 export function canCorrectOrReview(record) {
-  return REVIEWABLE_STATUSES.has(record?.status)
+  return REVIEWABLE_STATUSES.has(record?.status) || (record?.gradingMode === 'COMPLETION' && ['failed_resolved'].includes(record?.status))
 }
 
 export function canRelease(record) {

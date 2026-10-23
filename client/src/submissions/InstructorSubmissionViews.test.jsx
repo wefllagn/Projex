@@ -107,11 +107,15 @@ describe('instructor submission queue', () => {
     })
 
     expect(await screen.findByText('Synthetic Student')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Review' })).toHaveAttribute('href', `/instructor/activity/${activityId}/submissions/${submissionId}?classId=${classId}`)
+    expect(screen.getByRole('link', { name: /Synthetic Student/ })).toHaveAttribute('href', `/instructor/activity/${activityId}/submissions/${submissionId}?classId=${classId}`)
     expect(screen.queryByText(/Missing student/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Similarity/i)).not.toBeInTheDocument()
 
-    await userEvent.selectOptions(screen.getByLabelText('Status'), 'REVIEWED')
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Activity settings' })).toHaveAttribute('href', `/instructor/activity/${activityId}/settings?classId=${classId}`)
+    expect(screen.getByRole('link', { name: 'Back to activities' })).toHaveAttribute('href', `/instructor/activity?classId=${classId}`)
+    await userEvent.click(screen.getByRole('combobox', { name: 'Status' }))
+    await userEvent.click(screen.getByRole('option', { name: 'Reviewed' }))
     await waitFor(() => expect(submissions.listSubmissions).toHaveBeenLastCalledWith(activityId, { page: 1, pageSize: 20, status: 'REVIEWED' }, expect.any(Object)))
   })
 
@@ -120,7 +124,7 @@ describe('instructor submission queue', () => {
       entry: `/instructor/activity/${activityId}/submissions?classId=${classId}`,
       path: '/instructor/activity/:activityId/submissions',
     })
-    expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(await screen.findByText('The requested Origin record was not found.')).toBeInTheDocument()
   })
 
   it('redirects the legacy monitor route to the canonical queue without inventing totals', async () => {
@@ -134,6 +138,22 @@ describe('instructor submission queue', () => {
 })
 
 describe('instructor submission review', () => {
+  it('saves each rubric criterion with the version and blocks release of unsaved criterion changes', async () => {
+    const criteria = [{ id: 'readability', name: 'Readability', maximumPoints: 10 }, { id: 'organization', name: 'Organization', maximumPoints: 10 }]
+    const saved = record({ status: 'reviewed', rubricCriteria: criteria, rubricScores: criteria.map(row => ({ criterionId: row.id, points: 0 })) })
+    const submissions = submissionTransport({ getSubmission: vi.fn().mockResolvedValue({ data: saved }), saveReview: vi.fn().mockResolvedValue({ data: { ...saved, scores: { ...saved.scores, instructorPoints: 17 }, rubricScores: [{ criterionId: 'readability', points: 8 }, { criterionId: 'organization', points: 9 }], updatedAt: '2026-08-10T02:00:00.000Z' } }) })
+    renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
+    const first = await screen.findByRole('spinbutton', { name: 'Readability / 10' })
+    fireEvent.change(first, { target: { value: '8' } })
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Organization / 10' }), { target: { value: '9' } })
+    expect(screen.getByText('Instructor total: 17 / 20')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Release final result' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Save review draft' }))
+    expect(submissions.saveReview).toHaveBeenCalledWith(submissionId, { expectedUpdatedAt: saved.updatedAt, instructorPoints: 17, feedbackText: '', rubricScores: [{ criterionId: 'readability', points: 8 }, { criterionId: 'organization', points: 9 }] })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Release final result' })).toBeEnabled())
+    expect(screen.getByText('57 / 100 points')).toBeInTheDocument()
+  })
+
   it('shows immutable source and authorized hidden evidence without per-test edits', async () => {
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissionTransport()} />)
 
@@ -144,7 +164,7 @@ describe('instructor submission review', () => {
     expect(screen.queryByRole('button', { name: 'Run Tests' })).not.toBeInTheDocument()
     expect(screen.queryByText(/similarity/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/Hidden boundary points/i)).not.toBeInTheDocument()
-    expect(screen.getByText('Projected final score')).toBeInTheDocument()
+    expect(screen.getByText('Saved grade preview')).toBeInTheDocument()
   })
 
   it('reruns the submitted source separately without changing the original review or score', async () => {
@@ -160,7 +180,9 @@ describe('instructor submission review', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 10, maximumDurationMs: 500 }} />)
     await screen.findByText('Immutable submitted source')
+    await userEvent.click(screen.getByRole('tab', { name: 'Tools & history' }))
     await userEvent.click(screen.getByRole('button', { name: 'Rerun submitted source' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm', exact: true }))
     expect(submissions.createReviewRun).toHaveBeenCalledWith(submissionId)
     expect(await screen.findByText('Hidden rerun')).toBeInTheDocument()
     expect(screen.getByText('Fresh actual output')).toBeInTheDocument()
@@ -181,7 +203,9 @@ describe('instructor submission review', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 10, maximumDelayMs: 10, maximumDurationMs: 30 }} />)
     await screen.findByText('Immutable submitted source')
+    await userEvent.click(screen.getByRole('tab', { name: 'Tools & history' }))
     await userEvent.click(screen.getByRole('button', { name: 'Rerun submitted source' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm', exact: true }))
     await screen.findByRole('button', { name: 'Refresh rerun' })
 
     submissions.getReviewRun.mockClear()
@@ -206,7 +230,9 @@ describe('instructor submission review', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 10, maximumDelayMs: 10, maximumDurationMs: 30 }} />)
     await screen.findByText('Immutable submitted source')
+    await userEvent.click(screen.getByRole('tab', { name: 'Tools & history' }))
     await userEvent.click(screen.getByRole('button', { name: 'Rerun submitted source' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm', exact: true }))
     await screen.findByRole('button', { name: 'Refresh rerun' })
 
     submissions.getReviewRun.mockResolvedValue({ data: { ...queued, status: 'succeeded', compileStatus: 'success', runtimeStatus: 'passed' } })
@@ -230,16 +256,20 @@ describe('instructor submission review', () => {
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
 
     await screen.findByText('Immutable submitted source')
+    await userEvent.click(screen.getByRole('tab', { name: 'Tools & history' }))
     await userEvent.type(screen.getByLabelText('New effective automated score'), '38')
     await userEvent.type(screen.getByLabelText('Correction reason'), 'Correction supported by evidence.')
     await userEvent.click(screen.getByRole('button', { name: 'Record correction' }))
     await screen.findByText('Automated-score correction recorded. Original assessment evidence remains unchanged.')
 
+    await userEvent.click(screen.getByRole('tab', { name: 'Review' }))
     fireEvent.change(screen.getByLabelText('Instructor points'), { target: { value: '12' } })
     await userEvent.type(screen.getByLabelText(/^Private feedback draft/), 'Private draft feedback.')
     await userEvent.click(screen.getByRole('button', { name: 'Save review draft' }))
     await screen.findByText('Review and private feedback draft saved.')
     await userEvent.click(screen.getByRole('button', { name: 'Release final result' }))
+    expect(submissions.releaseSubmission).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm release' }))
     expect(await screen.findByText('Final score and feedback released.')).toBeInTheDocument()
 
     expect(submissions.correctAutomatedScore).toHaveBeenCalledWith(submissionId, expect.objectContaining({ expectedUpdatedAt: versionA, newEffectiveScore: 38 }))
@@ -260,11 +290,14 @@ describe('instructor submission review', () => {
     })
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
     await screen.findByText('Immutable submitted source')
+    await userEvent.click(screen.getByRole('tab', { name: 'Tools & history' }))
 
     await userEvent.type(screen.getByLabelText('New effective automated score'), '39')
     await userEvent.type(screen.getByLabelText('Correction reason'), 'Preserve this correction reason.')
+    await userEvent.click(screen.getByRole('tab', { name: 'Review' }))
     fireEvent.change(screen.getByLabelText('Instructor points'), { target: { value: '11' } })
     await userEvent.type(screen.getByLabelText(/^Private feedback draft/), 'Preserved review draft.')
+    await userEvent.click(screen.getByRole('tab', { name: 'Tools & history' }))
     await userEvent.click(screen.getByRole('button', { name: 'Record correction' }))
 
     expect(await screen.findByText('Latest version loaded')).toBeInTheDocument()
@@ -282,11 +315,12 @@ describe('instructor submission review', () => {
     })
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
     await screen.findByText('Immutable submitted source')
+    await userEvent.click(screen.getByRole('tab', { name: 'Tools & history' }))
     fireEvent.change(screen.getByLabelText('New effective automated score'), { target: { value: '39' } })
     await userEvent.type(screen.getByLabelText('Correction reason'), 'Reject mismatched response identity.')
     await userEvent.click(screen.getByRole('button', { name: 'Record correction' }))
 
-    expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(await screen.findByText('The requested Origin record was not found.')).toBeInTheDocument()
     expect(screen.getByText('Assessed')).toBeInTheDocument()
   })
 
@@ -308,6 +342,7 @@ describe('instructor submission review', () => {
     const submissions = submissionTransport()
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
     await screen.findByText('Immutable submitted source')
+    await userEvent.click(screen.getByRole('tab', { name: 'Tools & history' }))
 
     fireEvent.change(screen.getByLabelText('New effective automated score'), { target: { value: '81' } })
     await userEvent.type(screen.getByLabelText('Correction reason'), 'A sufficiently detailed correction reason.')
@@ -318,6 +353,7 @@ describe('instructor submission review', () => {
     await userEvent.type(screen.getByLabelText('Correction reason'), 'short')
     expect(screen.getByRole('button', { name: 'Record correction' })).toBeDisabled()
 
+    await userEvent.click(screen.getByRole('tab', { name: 'Review' }))
     fireEvent.change(screen.getByLabelText('Instructor points'), { target: { value: '21' } })
     expect(screen.getByRole('button', { name: 'Save review draft' })).toBeDisabled()
     expect(submissions.correctAutomatedScore).not.toHaveBeenCalled()
@@ -334,6 +370,7 @@ describe('instructor submission review', () => {
     })
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} pollingOptions={{ initialDelayMs: 1, maximumDelayMs: 1, maximumDurationMs: 100 }} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Retry same assessment' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm', exact: true }))
     expect(submissions.retryAssessment).toHaveBeenCalledWith(submissionId, { expectedUpdatedAt: failed.updatedAt })
     await waitFor(() => expect(submissions.getSubmission).toHaveBeenCalledTimes(2))
     expect(await screen.findByText('Assessed')).toBeInTheDocument()
@@ -380,7 +417,7 @@ describe('instructor submission review', () => {
   it('fails closed on mismatched submission identity and keeps released records immutable', async () => {
     const mismatch = submissionTransport({ getSubmission: vi.fn().mockResolvedValue({ data: record({ activityId: '00000000-0000-4000-8000-000000000099' }) }) })
     const first = renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={mismatch} />)
-    expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(await screen.findByText('The requested Origin record was not found.')).toBeInTheDocument()
     first.unmount()
 
     const released = record({ status: 'released', scores: { ...record().scores, finalScore: 40 }, feedback: { text: 'Released feedback', instructorId: 'instructor-1', updatedAt: '2026-08-10T01:00:00.000Z', releasedAt: '2026-08-10T02:00:00.000Z' } })
@@ -393,7 +430,9 @@ describe('instructor submission review', () => {
   it('keeps closed-activity review available but makes archived records read-only', async () => {
     const closedApi = activityTransport({ getActivity: vi.fn().mockResolvedValue({ data: { ...activity, status: 'CLOSED' } }) })
     const first = renderInstructor(<InstructorSubmissionReview api={closedApi} submissions={submissionTransport()} />)
+    await userEvent.click(await screen.findByRole('tab', { name: 'Tools & history' }))
     expect(await screen.findByRole('button', { name: 'Record correction' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Review' }))
     expect(screen.getByRole('button', { name: 'Save review draft' })).toBeInTheDocument()
     first.unmount()
 
@@ -403,4 +442,91 @@ describe('instructor submission review', () => {
     expect(screen.queryByRole('button', { name: 'Record correction' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save review draft' })).not.toBeInTheDocument()
   })
+})
+
+describe('Ungraded Instructor feedback', () => {
+  it('reviews and deliberately releases comments without numeric controls or artificial scores', async () => {
+    const ungraded = record({ gradingMode: 'COMPLETION', completionState: 'COMPLETE', scores: null })
+    const submissions = submissionTransport({ getSubmission: vi.fn().mockResolvedValue({ data: ungraded }), saveReview: vi.fn().mockResolvedValue({ data: { ...ungraded, status: 'reviewed', updatedAt: '2026-10-20T01:00:00Z', feedback: { text: 'Keep practicing', updatedAt: '2026-10-20T01:00:00Z' } } }), releaseSubmission: vi.fn().mockResolvedValue({ data: { ...ungraded, status: 'released', feedback: { text: 'Keep practicing', releasedAt: '2026-10-20T02:00:00Z' } } }) })
+    const user = userEvent.setup()
+    renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
+    expect(await screen.findByText('Complete · Ungraded')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Instructor points')).not.toBeInTheDocument()
+    expect(screen.queryByText('Score components')).not.toBeInTheDocument()
+    expect(screen.queryByText(/0 \/ 0/)).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('Private feedback draft'), 'Keep practicing')
+    await user.click(screen.getByRole('button', { name: 'Save review draft' }))
+    await waitFor(() => expect(submissions.saveReview).toHaveBeenCalled())
+    expect(submissions.saveReview.mock.calls[0][1]).not.toHaveProperty('instructorPoints')
+    await user.click(await screen.findByRole('button', { name: 'Release feedback' }))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(submissions.releaseSubmission).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Release feedback' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm release' }))
+    expect(await screen.findByText('Feedback released · Complete')).toBeInTheDocument()
+    expect(submissions.releaseSubmission).toHaveBeenCalledOnce()
+  })
+})
+
+
+it('starts with the released result and keeps source and diagnostic controls in their own sections', async () => {
+  const released = record({ status: 'released', scores: { ...record().scores, finalScore: 92 }, feedback: { text: 'Released guidance.', releasedAt: '2026-10-23T01:00:00Z' } })
+  const submissions = submissionTransport({ getSubmission: vi.fn().mockResolvedValue({ data: released }) })
+  renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
+  expect(await screen.findByText('92 / 100 points')).toBeVisible()
+  expect(screen.getByText('Released guidance.')).toBeVisible()
+  expect(screen.getByText('Immutable submitted source')).not.toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Rerun submitted source' })).not.toBeInTheDocument()
+  const tab = screen.getByRole('tab', { name: 'Review' })
+  tab.focus()
+  await userEvent.keyboard('{ArrowRight}')
+  expect(screen.getByText('Immutable submitted source')).toBeVisible()
+  expect(screen.getByRole('tab', { name: 'Submitted code' })).toHaveFocus()
+  await userEvent.click(screen.getByRole('tab', { name: 'Test results' }))
+  expect(screen.getByText('Hidden boundary')).toBeVisible()
+  expect(submissions.getSubmission).toHaveBeenCalledTimes(1)
+  expect(submissions.createReviewRun).not.toHaveBeenCalled()
+})
+
+it('explains the automated-score limit and correction-reason requirement, then enables valid input', async () => {
+  const submissions=submissionTransport()
+  renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
+  await screen.findByText('Immutable submitted source')
+  await userEvent.click(screen.getByRole('tab',{name:'Tools & history'}))
+  const button=screen.getByRole('button',{name:'Record correction'})
+  expect(button).toBeDisabled()
+  expect(button).toHaveAccessibleDescription('Enter an automated score between 0 and 80.')
+  await userEvent.type(screen.getByLabelText('New effective automated score'),'100')
+  await userEvent.type(screen.getByLabelText('Correction reason'),'Reason retained while fixing this score.')
+  expect(button).toBeDisabled()
+  expect(button).toHaveAccessibleDescription(/between 0 and 80; Instructor points are separate/)
+  await userEvent.clear(screen.getByLabelText('New effective automated score'))
+  await userEvent.type(screen.getByLabelText('New effective automated score'),'70')
+  expect(button).toBeEnabled()
+  expect(screen.getByLabelText('Correction reason')).toHaveValue('Reason retained while fixing this score.')
+  expect(submissions.correctAutomatedScore).not.toHaveBeenCalled()
+})
+
+it('shows persisted points and blocks release until grading and feedback edits are saved', async () => {
+  const saved = record({ status: 'reviewed' })
+  const submissions = submissionTransport({
+    getSubmission: vi.fn().mockResolvedValue({ data: saved }),
+    saveReview: vi.fn().mockResolvedValue({ data: record({ status: 'reviewed', scores: { ...saved.scores, instructorPoints: 5 }, feedback: { text: 'Saved feedback.', releasedAt: null } }) }),
+  })
+  renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
+  await screen.findByText('Immutable submitted source')
+  const release = screen.getByRole('button', { name: 'Release final result' })
+  expect(release).toBeEnabled()
+  fireEvent.change(screen.getByLabelText('Instructor points'), { target: { value: '5' } })
+  await userEvent.type(screen.getByLabelText(/^Private feedback draft/), 'Saved feedback.')
+  expect(release).toBeDisabled()
+  expect(screen.getByText('Saved grade preview').parentElement).toHaveTextContent('40 / 100')
+  await userEvent.click(screen.getByRole('button', { name: 'Save review draft' }))
+  await screen.findByText('Review and private feedback draft saved.')
+  expect(screen.getByText('Saved grade preview').parentElement).toHaveTextContent('45 / 100')
+  expect(release).toBeEnabled()
+  await userEvent.click(screen.getByRole('tab', { name: 'Tools & history' }))
+  await userEvent.type(screen.getByLabelText('Correction reason'), 'Unrecorded correction.')
+  expect(release).toBeDisabled()
+  expect(submissions.releaseSubmission).not.toHaveBeenCalled()
 })

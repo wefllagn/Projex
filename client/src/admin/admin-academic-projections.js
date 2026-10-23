@@ -48,6 +48,7 @@ function safeClass(value, expectedId) {
   return {
     classId: identity(source.id ?? source.classId, expectedId),
     className: text(source.className),
+    program: nullableText(source.program),
     section: text(source.section),
     semester: text(source.semester),
     schoolYear: text(source.schoolYear),
@@ -128,7 +129,8 @@ export function projectAcademicActivity(value) {
     status: text(source.status, 'UNKNOWN'),
     language: text(source.language, 'UNKNOWN'),
     dueDate: nullableText(source.dueDate),
-    totalPoints: decimal(source.totalPoints),
+    gradingMode: source.gradingMode === 'COMPLETION' ? 'COMPLETION' : 'GRADED',
+    totalPoints: source.gradingMode === 'COMPLETION' ? null : decimal(source.totalPoints),
     maxAttempts: count(source.maxAttempts),
     testCaseCount: count(source.testCaseCount),
     testCasePointTotal: decimal(source.testCasePointTotal),
@@ -150,6 +152,7 @@ export function projectAcademicSubmission(value) {
   const status = text(source.submissionStatus, 'UNKNOWN')
   return {
     submissionId: identity(source.id),
+    gradingMode: source.gradingMode === 'COMPLETION' ? 'COMPLETION' : 'GRADED',
     attemptNumber: count(source.attemptNumber),
     submissionStatus: status,
     isLate: source.isLate === true,

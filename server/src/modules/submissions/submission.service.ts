@@ -18,6 +18,7 @@ import type {
   SubmissionRecord,
   SubmissionRepository,
 } from './submission.repository.js'
+import { codeRunSourceHash, isCodeRunRecord } from '../../shared/code-run.js'
 import {
   selectCreditedReleasedAttempt,
   submissionAttemptLabel,
@@ -25,7 +26,7 @@ import {
 import { isOrdinarySubmissionOpen } from '../activities/activity.types.js'
 
 export interface ExecutionFeatureConfig {
-  mode: 'disabled' | 'local_process'
+  mode: 'disabled' | 'local_process' | 'container'
   sourceLimitBytes: number
   practiceRunTtlHours: number
   practiceRunsPerMinute: number
@@ -80,6 +81,13 @@ export interface SubmissionService {
     sourceCode: string,
   ): Promise<unknown>
   getPracticeRun(caller: SafeUserProfile, runId: string): Promise<unknown>
+  createCodeRun(
+    caller: SafeUserProfile,
+    activityId: string,
+    sourceCode: string,
+    stdin: string,
+  ): Promise<unknown>
+  getCodeRun(caller: SafeUserProfile, runId: string): Promise<unknown>
   createReviewRun(caller: SafeUserProfile, submissionId: string): Promise<unknown>
   getReviewRun(caller: SafeUserProfile, submissionId: string, runId: string): Promise<unknown>
 }
@@ -98,6 +106,15 @@ function validateSource(sourceCode: string, limit: number): void {
   }
   if (sourceCode.includes('\0')) {
     throw error(400, 'SOURCE_CODE_INVALID', 'The source code contains unsupported characters.')
+  }
+}
+
+function validateStdin(stdin: string): void {
+  if (Buffer.byteLength(stdin, 'utf8') > 20_000) {
+    throw error(413, 'PROGRAM_INPUT_TOO_LARGE', 'Program input exceeds the allowed size.')
+  }
+  if (stdin.includes('\0')) {
+    throw error(400, 'PROGRAM_INPUT_INVALID', 'Program input contains unsupported characters.')
   }
 }
 
@@ -147,6 +164,8 @@ function baseProjection(record: SubmissionRecord) {
     record.replacementResolutionUsed?.failedSubmission.attemptNumber ?? null
   return {
     id: record.id,
+    gradingMode: record.gradingModeSnapshot ?? 'GRADED',
+    ...(record.gradingModeSnapshot === 'COMPLETION' ? { completionState: 'COMPLETE' } : {}),
     activityId: record.activityId,
     activityTitle: record.activityTitleSnapshot,
     attemptLabel: submissionAttemptLabel({
@@ -180,12 +199,11 @@ function studentProjection(record: SubmissionRecord, isCreditedResult = false) {
     ...baseProjection(record),
     sourceCode: record.sourceCode,
     visibleTestOutcomes: visibleResults,
-    gradeStatus: released ? 'released' : 'pending',
+    gradeStatus: record.gradingModeSnapshot === 'COMPLETION' ? 'ungraded' : released ? 'released' : 'pending',
     isCreditedResult: released && isCreditedResult,
     ...(released
       ? {
-          finalScore: Number(record.releasedFinalScore),
-          totalPoints: Number(record.totalPointsSnapshot),
+          ...(record.gradingModeSnapshot === 'COMPLETION' ? {} : { finalScore: Number(record.releasedFinalScore), totalPoints: Number(record.totalPointsSnapshot) }),
           feedback: record.feedback?.feedbackText ?? null,
         }
       : {}),
@@ -234,13 +252,13 @@ function instructorProjection(record: SubmissionRecord, isCreditedResult = false
             outcome: result.passStatus.toLowerCase(),
             actualOutput: result.actualOutput,
             errorMessage: result.errorMessage,
-            automatedPoints: Number(result.automatedPoints),
-            maximumPoints: Number(result.maximumPoints),
+            automatedPoints: record.gradingModeSnapshot === 'COMPLETION' ? null : Number(result.automatedPoints),
+            maximumPoints: record.gradingModeSnapshot === 'COMPLETION' ? null : Number(result.maximumPoints),
             executionTimeMs: result.executionTimeMs,
           })),
         }
       : null,
-    scores: {
+    scores: record.gradingModeSnapshot === 'COMPLETION' ? null : {
       originalAutomatedScore:
         record.originalAutomatedScore === null
           ? null
@@ -255,6 +273,9 @@ function instructorProjection(record: SubmissionRecord, isCreditedResult = false
           : null,
       totalPoints: Number(record.totalPointsSnapshot),
     },
+    gradingConfiguration: record.gradingConfigurationSnapshot ?? null,
+    rubricCriteria: record.rubricSnapshot ?? null,
+    rubricScores: record.rubricScores ?? null,
     corrections: record.scoreCorrections.map((correction) => ({
       correctionNumber: correction.correctionNumber,
       originalAutomatedScore: Number(correction.originalAutomatedScore),
@@ -286,10 +307,10 @@ function adminProjection(record: SubmissionRecord, isCreditedResult = false) {
     student: { id: record.student.id, fullName: record.student.fullName },
     assessmentStatus: record.submissionStatus.toLowerCase(),
     releasedFinalScore:
-      record.submissionStatus === 'RELEASED'
+      record.submissionStatus === 'RELEASED' && record.gradingModeSnapshot !== 'COMPLETION'
         ? Number(record.releasedFinalScore)
         : null,
-    totalPoints: Number(record.totalPointsSnapshot),
+    totalPoints: record.gradingModeSnapshot === 'COMPLETION' ? null : Number(record.totalPointsSnapshot),
   }
 }
 
@@ -396,6 +417,8 @@ function attemptStateProjection(
 
   return {
     activityId: record.activity.id,
+    gradingMode: record.activity.gradingMode ?? 'GRADED',
+    ...(record.activity.gradingMode === 'COMPLETION' ? { completionState: (record.acceptedAttempts ?? record.countingAttemptsUsed) > 0 ? 'COMPLETE' : 'NOT_SUBMITTED' } : {}),
     activityStatus: record.activity.status,
     dueState:
       record.activity.status === 'CLOSED'
@@ -455,6 +478,24 @@ function practiceProjection(record: PracticeRecord) {
       errorMessage: testCase.errorMessage,
       executionTimeMs: testCase.executionTimeMs,
     })),
+  }
+}
+
+function codeRunProjection(record: PracticeRecord) {
+  const execution = record.cases[0]
+  return {
+    id: record.id,
+    activityId: record.activityId,
+    status: record.status.toLowerCase(),
+    compileStatus: record.compileStatus.toLowerCase(),
+    runtimeStatus: record.runtimeStatus.toLowerCase(),
+    compilerOutput: record.compilerOutput,
+    stdout: execution?.actualOutput ?? null,
+    stderr: execution?.errorMessage ?? null,
+    executionTimeMs: execution?.executionTimeMs ?? null,
+    createdAt: record.createdAt,
+    completedAt: record.completedAt,
+    expiresAt: record.expiresAt,
   }
 }
 
@@ -771,7 +812,7 @@ export function createSubmissionService(dependencies: {
 
     async getPracticeRun(caller, runId) {
       const record = await repository.findPracticeById(runId)
-      if (!record) throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
+      if (!record || isCodeRunRecord(record)) throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
       if (caller.role === 'ADMIN') {
         throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
       }
@@ -785,6 +826,69 @@ export function createSubmissionService(dependencies: {
         throw error(404, 'PRACTICE_RUN_NOT_FOUND', 'Visible-test run not found.')
       }
       return practiceProjection(record)
+    },
+
+    async createCodeRun(caller, activityId, sourceCode, stdin) {
+      requireExecutionEnabled(config)
+      if (caller.role !== 'STUDENT' || caller.status !== 'ACTIVE') {
+        throw error(403, 'FORBIDDEN', 'You are not authorized to run this code.')
+      }
+      validateSource(sourceCode, config.sourceLimitBytes)
+      validateStdin(stdin)
+      const createdAt = now()
+      const result = await repository.createCodeRun({
+        activityId,
+        studentId: caller.id,
+        sourceCode,
+        sourceHash: codeRunSourceHash(sourceCode),
+        stdin,
+        now: createdAt,
+        expiresAt: new Date(
+          createdAt.getTime() + config.practiceRunTtlHours * 60 * 60 * 1000,
+        ),
+        runsPerMinute: config.practiceRunsPerMinute,
+        maxActivePerActivity: config.practiceMaxActivePerActivity,
+      })
+      if (result.kind === 'activity_not_found') {
+        throw error(404, 'ACTIVITY_NOT_FOUND', 'Programming activity not found.')
+      }
+      if (result.kind === 'forbidden') {
+        throw error(403, 'FORBIDDEN', 'You are not authorized to run this code.')
+      }
+      if (result.kind === 'activity_not_accepting') {
+        throw error(409, 'ACTIVITY_NOT_ACCEPTING_EXECUTION', 'The activity is not accepting code runs.')
+      }
+      if (result.kind === 'rate_limited') {
+        throw error(429, 'RATE_LIMIT_EXCEEDED', 'Code was run too frequently. Wait briefly before trying again.')
+      }
+      if (result.kind === 'capacity_unavailable') {
+        throw error(503, 'EXECUTION_CAPACITY_UNAVAILABLE', 'Another code or visible-test run is still processing.')
+      }
+      logger.info(
+        {
+          event: 'code_execution.created',
+          actorId: caller.id,
+          activityId,
+          practiceExecutionId: result.practice.id,
+        },
+        'student code run created',
+      )
+      return codeRunProjection(result.practice)
+    },
+
+    async getCodeRun(caller, runId) {
+      if (caller.role !== 'STUDENT' || caller.status !== 'ACTIVE') {
+        throw error(404, 'CODE_RUN_NOT_FOUND', 'Code run not found.')
+      }
+      const record = await repository.findOwnCodeRun(runId, caller.id)
+      if (
+        !record
+        || !isCodeRunRecord(record)
+        || record.expiresAt <= now()
+      ) {
+        throw error(404, 'CODE_RUN_NOT_FOUND', 'Code run not found.')
+      }
+      return codeRunProjection(record)
     },
 
     async createReviewRun(caller, submissionId) {

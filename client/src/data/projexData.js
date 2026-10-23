@@ -112,7 +112,7 @@ export const routeCatalog = [
         group: 'Class Membership',
         status: 'Backend connected',
         summary:
-          'Pending registered-email class invitations can be reviewed, accepted, or declined in Projex.',
+          'Pending registered-email class invitations can be reviewed, accepted, or declined in Origin.',
       },
       {
         path: 'people',
@@ -208,6 +208,10 @@ export const routeCatalog = [
         status: 'Compatibility route',
         summary:
           'Identifier-less route that directs the student to choose an authorized repository record.',
+      },
+      {
+        path: 'projects/:projectTaskId/repositories/:repositoryId/editor',
+        label: 'Group Browser Editor', group: 'Project Collaboration Mode', status: 'Backend connected', summary: 'Bounded authorized single-file Group Git commits.',
       },
       {
         path: 'projects/:projectTaskId/repositories/:repositoryId',

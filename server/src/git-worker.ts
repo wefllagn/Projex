@@ -1,3 +1,8 @@
+import { assertHostedGitService } from './infrastructure/preflight/hosted-service.js'
+import { createGroupBrowserRefWorker } from './modules/group-browser-refs/group-browser-ref-worker.js'
+import { createGitGroupBrowserRefWriter } from './infrastructure/git/git-group-browser-ref-writer.js'
+import { createGroupBrowserCommitWorker } from './modules/group-browser-commits/group-browser-commit-worker.js'
+import { BrowserCommitError, createGitGroupBrowserWriter } from './infrastructure/git/git-group-browser-writer.js'
 import 'dotenv/config'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -5,13 +10,18 @@ import { EnvironmentValidationError, loadEnv } from './config/env.js'
 import { createPrismaClient } from './infrastructure/database/prisma.js'
 import { createGitCommandRunner } from './infrastructure/git/git-command-runner.js'
 import { createPostgresRepositoryProvisioningQueue } from './infrastructure/job-queue/repository-provisioning-queue.js'
+import { createPostgresRepositoryCheckpointQueue } from './infrastructure/job-queue/repository-checkpoint-queue.js'
 import { createLogger } from './infrastructure/logging/logger.js'
 import { createRepositoryStorage } from './infrastructure/storage/repository-storage.js'
 import { createRepositoryProvisioningService } from './modules/repositories/repository-provisioning.service.js'
+import { createGitActivityCheckpointWriter } from './infrastructure/git/git-activity-checkpoint-writer.js'
+import { createPrismaGitTransportRepository } from './modules/git-transport/git-transport.repository.js'
+import { createActivityWorkspaceCheckpointWorkerService } from './modules/activity-workspace-checkpoints/activity-workspace-checkpoint-worker.service.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
-  if (env.gitExecutionMode !== 'local_process') {
+  if (env.gitExecutionMode === 'service_isolated') await assertHostedGitService(env.gitStorageRoot)
+  if (env.gitExecutionMode === 'disabled') {
     process.stderr.write('Git provisioning worker is disabled.\n')
     process.exitCode = 1
     return
@@ -19,6 +29,7 @@ async function bootstrap(): Promise<void> {
   const logger = createLogger(env.logLevel)
   const prisma = createPrismaClient(env.databaseUrl)
   const queue = createPostgresRepositoryProvisioningQueue(prisma)
+  const checkpointQueue = createPostgresRepositoryCheckpointQueue(prisma)
   const git = createGitCommandRunner({
     executable: env.gitExecutable,
     timeoutMs: env.gitCommandTimeoutMs,
@@ -30,6 +41,17 @@ async function bootstrap(): Promise<void> {
     repositorySizeLimitBytes: env.gitRepositorySizeLimitBytes,
   })
   const service = createRepositoryProvisioningService({ queue, git, storage, logger })
+  const checkpointService = createActivityWorkspaceCheckpointWorkerService({
+    queue: checkpointQueue,
+    writer: createGitActivityCheckpointWriter({
+      git,
+      resolveRepository: (repositoryId, storagePath) => storage.resolveManagedRepository(repositoryId, storagePath),
+    }),
+    accessRepository: createPrismaGitTransportRepository(prisma),
+    logger,
+  })
+  const groupBrowserWorker = createGroupBrowserCommitWorker({ prisma, logger, writer: createGitGroupBrowserWriter({ git, checkSize: async root => { if (await storage.measure(root) + 8192 > env.gitRepositorySizeLimitBytes) throw new BrowserCommitError('BROWSER_STORAGE_LIMIT') }, resolveRepository: (id, storagePath) => storage.resolveManagedRepository(id,storagePath) }) })
+  const groupRefWorker = createGroupBrowserRefWorker({prisma,logger,writer:createGitGroupBrowserRefWriter({git,maxBranches:env.gitMaxBranches,resolveRepository:(id,locator)=>storage.resolveManagedRepository(id,locator)})})
   const workerId = randomUUID()
   let stopping = false
   const stop = () => {
@@ -43,13 +65,25 @@ async function bootstrap(): Promise<void> {
   )
   try {
     while (!stopping) {
+      const refWork = await groupRefWorker.processNext(workerId)
+      const browserWork = await groupBrowserWorker.processNext(workerId)
       const job = await queue.claimNext({
         workerId,
         now: new Date(),
         leaseMs: env.gitProvisioningJobLeaseMs,
       })
       if (!job) {
-        await delay(env.gitProvisioningWorkerPollMs)
+        const checkpoint = await checkpointQueue.claimNext({
+          workerId,
+          now: new Date(),
+          leaseMs: env.gitProvisioningJobLeaseMs,
+        })
+        if (checkpoint) {
+          logger.info({ event: 'activity_workspace.checkpoint_claimed', checkpointId: checkpoint.id, repositoryId: checkpoint.repositoryId, workerId, claimAttempt: checkpoint.claimAttempt }, 'activity workspace checkpoint claimed')
+          await checkpointService.process(checkpoint)
+          continue
+        }
+        if (!browserWork && !refWork) await delay(env.gitProvisioningWorkerPollMs)
         continue
       }
       logger.info(
@@ -63,6 +97,15 @@ async function bootstrap(): Promise<void> {
         'repository provisioning job claimed',
       )
       await service.process(job)
+      const checkpoint = await checkpointQueue.claimNext({
+        workerId,
+        now: new Date(),
+        leaseMs: env.gitProvisioningJobLeaseMs,
+      })
+      if (checkpoint) {
+        logger.info({ event: 'activity_workspace.checkpoint_claimed', checkpointId: checkpoint.id, repositoryId: checkpoint.repositoryId, workerId, claimAttempt: checkpoint.claimAttempt }, 'activity workspace checkpoint claimed')
+        await checkpointService.process(checkpoint)
+      }
     }
   } finally {
     await prisma.$disconnect()

@@ -59,7 +59,7 @@ describe('Phase 10D.3 admin operational views', () => {
 
     renderRoute(<AdminOperationsOverviewPage api={api} />)
 
-    expect(await screen.findByText('Not observed')).toBeInTheDocument()
+    expect(await screen.findByText('Not monitored')).toBeInTheDocument()
     expect(screen.getByText('2 KB')).toBeInTheDocument()
     expect(screen.getByText('1 lease-derived stuck record')).toBeInTheDocument()
     expect(screen.queryByText(/capacity percentage|worker online|integrity verified/i)).not.toBeInTheDocument()
@@ -81,7 +81,7 @@ describe('Phase 10D.3 admin operational views', () => {
     renderRoute(<AdminOperationsOverviewPage api={api} />)
 
     expect(await screen.findByText('Unavailable')).toBeInTheDocument()
-    expect(screen.getByText('Not observed')).toBeInTheDocument()
+    expect(screen.getByText('Not monitored')).toBeInTheDocument()
     expect(screen.getAllByText(/temporarily unavailable/i)).toHaveLength(2)
     expect(screen.queryByText(/worker offline/i)).not.toBeInTheDocument()
   })
@@ -223,5 +223,30 @@ describe('Phase 10D.3 admin operational views', () => {
     expect(within(dialog).getByText('Active')).toBeInTheDocument()
     expect(within(dialog).queryByText(/private-path|private-token|storage path|token/i)).not.toBeInTheDocument()
     expect(api.listAuditEvents).toHaveBeenCalledWith(expect.objectContaining({ action: 'USER_STATUS_CHANGED', targetType: 'USER', sortOrder: 'asc' }), expect.any(Object))
+  })
+
+  it.each([
+    ['execution', 'listExecutionJobs', '/admin/operations/execution-jobs', { jobType: 'OFFICIAL_ASSESSMENT', status: 'SUCCEEDED', claimAttempt: 1, maxClaimAttempts: 3, stuck: false }],
+    ['provisioning', 'listProvisioningJobs', '/admin/operations/repository-provisioning-jobs', { repositoryId: 'repository-1', status: 'SUCCEEDED', claimAttempt: 1, maxClaimAttempts: 3, stuck: false }],
+    ['credentials', 'listGitCredentials', '/admin/operations/git-credentials', { userId: 'student-1', repositoryId: 'repository-1', allowedOperations: ['READ'], lifecycle: 'ACTIVE' }],
+  ])('renders multiple %s records without passing array indices as expected identities', async (kind, method, route, fields) => {
+    const records = ['first-record', 'second-record'].map((id) => ({ id, ...fields, ...timestamps }))
+    const api = { [method]: vi.fn().mockResolvedValue(listResponse(records)) }
+    renderRoute(<AdminOperationalListPage kind={kind} api={api} />, route)
+    expect(await screen.findByText('first-record')).toBeInTheDocument()
+    expect(screen.getByText('second-record')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+  })
+
+  it('renders multiple audit rows without treating array indices as expected record identities', async () => {
+    const events = ['first-event', 'second-event'].map((id) => ({
+      id, action: 'CLASS_CREATED', targetType: 'CLASS', targetId: 'class-1',
+      reason: null, requestId: null, createdAt: timestamps.createdAt, metadata: {},
+      actorAdmin: { id: 'admin-1', fullName: 'Synthetic Admin', email: 'admin@example.test' },
+    }))
+    const api = { listAuditEvents: vi.fn().mockResolvedValue(listResponse(events)) }
+    renderRoute(<AdminAuditEventsPage api={api} />, '/admin/audit-events')
+    expect(await screen.findAllByRole('button', { name: 'View details' })).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
   })
 })

@@ -83,7 +83,7 @@ export function createAuthService(dependencies: {
     profile: SafeUserProfile,
     metadata: SessionMetadata,
     updateLastLogin: boolean,
-    familyId = randomUUID(),
+    verifiedPasswordHash: string,
   ): Promise<AuthResult> {
     const sessionId = randomUUID()
     const refreshToken = tokenService.createOpaqueToken()
@@ -94,7 +94,8 @@ export function createAuthService(dependencies: {
     await repository.createSession({
       id: sessionId,
       userId: profile.id,
-      familyId,
+      familyId: randomUUID(),
+      verifiedPasswordHash,
       tokenHash: tokenService.hashOpaqueToken(refreshToken),
       csrfTokenHash: tokenService.hashOpaqueToken(csrfToken),
       expiresAt,
@@ -159,7 +160,7 @@ export function createAuthService(dependencies: {
       }
 
       const profile = safeProfile(user)
-      const result = await createSession(profile, metadata, true)
+      const result = await createSession(profile, metadata, true, user.passwordHash!)
       logger.info({ event: 'auth.login.succeeded', userId: user.id }, 'login succeeded')
       return result
     },

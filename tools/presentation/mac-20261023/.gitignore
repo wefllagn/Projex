@@ -1,0 +1,21 @@
+# Only reusable source/documentation belongs in this bundle.
+private/
+accounts.json
+.env
+.env.*
+*.env
+*.log
+logs/
+backups/
+restore-tests/
+git-managed/
+java-jobs/
+mail-preview/
+pgdata/
+evidence/
+solutions/
+__pycache__/
+*.pyc
+*.dump
+*.tar
+*.sql

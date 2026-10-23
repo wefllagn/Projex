@@ -13,7 +13,7 @@ export function classOfferingLabel(classRecord) {
     const period = classRecord.academicPeriod === 'FIRST_SEMESTER' ? '1st Semester' : classRecord.academicPeriod === 'SECOND_SEMESTER' ? '2nd Semester' : null
     return [classRecord.courseNumber, classRecord.officialClassCode, period, classRecord.schoolYear].filter(Boolean).join(' · ')
   }
-  return [classRecord?.section, classRecord?.semester, classRecord?.schoolYear].filter(Boolean).join(' · ') || 'Informal class'
+  return [classRecord?.section, classRecord?.semester, classRecord?.schoolYear].filter(Boolean).join(' · ') || 'Class'
 }
 
 export function firstName(fullName) {

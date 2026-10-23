@@ -9,7 +9,7 @@ import DashboardLayout from './DashboardLayout.jsx'
 function renderRole(role, destination) {
   const base = `/${role.toLowerCase()}`
   const user = { id: `${role}-1`, fullName: `Synthetic ${role}`, email: `${role.toLowerCase()}@integration.test`, role, status: 'ACTIVE' }
-  const classContext = { classes: [], requestedClassId: null, status: 'ready', pagination: { hasNextPage: false } }
+  const classContext = { api: { listMyClassInvitations: vi.fn().mockResolvedValue({ data: [], pagination: { totalItems: 0 } }) }, classes: [], requestedClassId: null, status: 'ready', pagination: { hasNextPage: false } }
   const logout = vi.fn()
   render(
     <AuthContext.Provider value={{ user, logout }}>
@@ -31,7 +31,7 @@ function renderRole(role, destination) {
 describe('authenticated mobile navigation', () => {
   it.each([
     ['STUDENT', '/student/todo', 'To-do', 'Student navigation'],
-    ['INSTRUCTOR', '/instructor/review-queues', 'Review Queues', 'Instructor navigation'],
+    ['INSTRUCTOR', '/instructor/review-queues', 'To Review', 'Instructor navigation'],
     ['ADMIN', '/admin/users', 'Users', 'Administrator navigation'],
   ])('opens and closes the %s drawer while preserving its authorized route', async (role, destination, linkName, navigationName) => {
     const user = userEvent.setup()
@@ -43,6 +43,11 @@ describe('authenticated mobile navigation', () => {
     expect(menu).toHaveAttribute('aria-controls', navigation.closest('aside').id)
     expect(menu).toHaveAttribute('aria-expanded', 'false')
     expect(shell).not.toHaveClass('is-mobile-menu-open')
+    if (role === 'STUDENT') {
+      expect(screen.queryByRole('link', { name: 'My Submissions' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Join Class' })).not.toBeInTheDocument()
+      expect(navigation.closest('aside')).toContainElement(screen.getByRole('button', { name: 'Sign out' }))
+    }
 
     await user.click(menu)
     expect(screen.getByRole('button', { name: 'Close navigation', expanded: true })).toHaveAttribute('aria-expanded', 'true')
@@ -91,4 +96,14 @@ describe('authenticated mobile navigation', () => {
     expect(screen.getByRole('button', { name: 'Close navigation', expanded: true })).toBeInTheDocument()
     expect(logout).not.toHaveBeenCalled()
   })
+})
+
+it('marks only the query-selected Class as current instead of every Class sharing the pathname', () => {
+  const classes=[{id:'class-1',className:'Computer Programming 1',status:'ACTIVE'},{id:'class-2',className:'Computer Programming 2',status:'ACTIVE'}]
+  const user={id:'instructor',fullName:'Instructor',role:'INSTRUCTOR',status:'ACTIVE'}
+  const {container}=render(<AuthContext.Provider value={{user,logout:vi.fn()}}><ClassContext.Provider value={{classes,requestedClassId:'class-2',status:'ready',pagination:{hasNextPage:false}}}><MemoryRouter initialEntries={['/instructor/classes?classId=class-2']}><Routes><Route path="/instructor/classes" element={<DashboardLayout role={{id:'instructor'}} />} /></Routes></MemoryRouter></ClassContext.Provider></AuthContext.Provider>)
+  const current=container.querySelectorAll('.student-class-link[aria-current="page"]')
+  expect(current).toHaveLength(1)
+  expect(current[0]).toHaveAccessibleName(/Computer Programming 2/)
+  expect(container.querySelector('.student-class-link:not([aria-current])')).not.toHaveClass('active')
 })

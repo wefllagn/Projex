@@ -9,6 +9,8 @@ export function createIntegrationPrisma(): PrismaClient {
 export async function cleanIntegrationDatabase(
   prisma: PrismaClient,
 ): Promise<void> {
+  await prisma.groupBrowserRefJob.deleteMany()
+  await prisma.groupBrowserCommitJob.deleteMany()
   await prisma.adminAuditEvent.deleteMany()
   await prisma.gitCredential.deleteMany()
   await prisma.repositoryProvisioningJob.deleteMany()
@@ -26,7 +28,6 @@ export async function cleanIntegrationDatabase(
   await prisma.submissionExecution.deleteMany()
   await prisma.activitySubmission.deleteMany()
   await prisma.testCase.deleteMany()
-  await prisma.programmingActivity.deleteMany()
   await prisma.repositoryFeedback.deleteMany()
   await prisma.repositoryActivity.deleteMany()
   await prisma.repositoryInvitation.deleteMany()
@@ -34,6 +35,8 @@ export async function cleanIntegrationDatabase(
     await transaction.repository.deleteMany()
     await transaction.team.deleteMany()
   })
+  await prisma.programmingActivity.deleteMany()
+  await prisma.classTopic.deleteMany()
   await prisma.projectTask.deleteMany()
   await prisma.classInvitation.deleteMany()
   await prisma.classMember.deleteMany()

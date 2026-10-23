@@ -464,3 +464,11 @@ Stable inspection errors include `GIT_INSPECTION_UNAVAILABLE`, `GIT_REVISION_NOT
 `GET /api/v1/capabilities` is public so the frontend can render truthful environment behavior before authentication. Its response contains only `profile`, `java.execution`, `git.provisioning`, `git.inspection`, and `git.smartHttp` in the standard success envelope. It never includes environment modes, paths, hosts, executables, limits, or secrets.
 
 The response is advisory for presentation; every backend operation independently enforces capability and authorization. Repository creation returns `503 REPOSITORY_PROVISIONING_UNAVAILABLE` before persistence when provisioning is disabled. Java enqueue endpoints retain `503 EXECUTION_UNAVAILABLE`.
+
+## Student To-do read filters
+
+`GET /api/v1/work-hub/student/todo` remains an authenticated, ACTIVE-Student read endpoint scoped to ACTIVE Classes and the Student's ACTIVE memberships. The optional `state` query accepts `all` (default for existing callers), `assigned`, `missing` or `done`. Existing bounded `page`, `pageSize`, `classId`, `search`, `kind` and legacy `due` filters remain available.
+
+Assigned selects PUBLISHED work with no accepted official Student submission or completed team repository, due at or after the server's current time. Missing selects overdue PUBLISHED/CLOSED work that has not reached those completion states. Done selects PUBLISHED/CLOSED Activities with an official submission belonging to the current Student, and Project tasks whose active Student team has an ACTIVE/ARCHIVED repository in READY_FOR_REVIEW or APPROVED. Assessment success/release and team membership alone are not completion conditions. Archived Classes and removed memberships remain excluded.
+
+The server applies state/class/search predicates before counts and bounded reads, then stably merges Activity and Project rows by deadline, kind and identity before slicing the page. Each safe row includes `workState` (`assigned`, `missing` or `done`); it contains no source snapshot, hidden test evidence or score. The extension changes no academic write contract, schema or migration. The database integration regression is prepared for a separately approved disposable environment; it is not verified by simulated previews or mock-backed route tests.

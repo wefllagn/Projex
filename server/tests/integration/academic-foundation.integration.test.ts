@@ -11,6 +11,16 @@ import { createClassService } from '../../src/modules/classes/class.service.js'
 import { createClassStaffRouter } from '../../src/modules/classes/class-staff.routes.js'
 import { createOfficialMetadataRouter } from '../../src/modules/classes/official-metadata.routes.js'
 import { createCourseRouter } from '../../src/modules/courses/course.routes.js'
+import { createPrismaActivityRepository } from '../../src/modules/activities/activity.repository.js'
+import { createActivityService } from '../../src/modules/activities/activity.service.js'
+import { createPrismaTestCaseRepository } from '../../src/modules/test-cases/test-case.repository.js'
+import { createTestCaseService } from '../../src/modules/test-cases/test-case.service.js'
+import { createPrismaSubmissionRepository } from '../../src/modules/submissions/submission.repository.js'
+import { createSubmissionService } from '../../src/modules/submissions/submission.service.js'
+import { createPrismaAdminOversightRepository } from '../../src/modules/admin/admin-oversight.repository.js'
+import { createAdminOversightService } from '../../src/modules/admin/admin-oversight.service.js'
+import { adminRepositoryQuerySchema, adminSubmissionQuerySchema } from '../../src/modules/admin/admin-oversight.schemas.js'
+import { createPrismaDatabaseHealth } from '../../src/infrastructure/database/prisma.js'
 import { createPrismaRepositoryRepository } from '../../src/modules/repositories/repository.repository.js'
 import { createRepositoryService } from '../../src/modules/repositories/repository.service.js'
 import { cleanIntegrationDatabase, createActiveMembership, createActiveUser, createIntegrationPrisma } from './database.js'
@@ -50,6 +60,63 @@ beforeEach(async () => cleanIntegrationDatabase(prisma))
 afterAll(async () => { await cleanIntegrationDatabase(prisma); await prisma.$disconnect() })
 
 describe('Course and Class Offering foundation', () => {
+  it('connects prepared Admin setup, Primary assignment, Student acceptance, Activity repository and immutable submission without granting Admin teaching authority', async () => {
+    const admin = await createActiveUser(prisma, 'ADMIN')
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const outsider = await createActiveUser(prisma, 'STUDENT')
+    const server = app()
+    const courseResponse = await request(server).post('/courses').set('x-test-actor', admin.id).send({ courseNumber: 'IT 112', courseName: 'Programming 1' }).expect(201)
+    const offering = await classService.create(admin, { program: 'INFORMATION_TECHNOLOGY', className: 'Official programming offering', courseId: courseResponse.body.data.id, officialClassCode: '9123A', academicPeriod: 'FIRST_SEMESTER', schoolYear: '2030-2031' }, randomUUID())
+    expect(offering.status).toBe('PREPARED')
+    expect((await prisma.class.findUniqueOrThrow({ where: { id: offering.id } })).classCodeActive).toBe(false)
+    await expect(classService.get(instructor, offering.id)).rejects.toMatchObject({ code: 'CLASS_NOT_FOUND' })
+    await request(server).post(`/classes/${offering.id}/staff/admin-assign-primary`).set('x-test-actor', admin.id).send({ nextPrimaryId: instructor.id, formerPrimary: 'LEAVE', reason: 'Assigning the responsible programming Instructor.', expectedUpdatedAt: offering.updatedAt.toISOString() }).expect(200)
+    expect(await classService.get(instructor, offering.id)).toMatchObject({ id: offering.id, status: 'ACTIVE' })
+
+    const csv = `email\n${student.email}`
+    const preview = await request(server).post(`/classes/${offering.id}/invitations/import/preview`).set('x-test-actor', admin.id).send({ csv }).expect(200)
+    await request(server).post(`/classes/${offering.id}/invitations/import/confirm`).set('x-test-actor', admin.id).send({ csv, fingerprint: preview.body.data.fingerprint }).expect(200)
+    expect(await prisma.classMember.count()).toBe(0)
+    const invitation = await prisma.classInvitation.findFirstOrThrow({ where: { classId: offering.id } })
+    const invitations = createClassInvitationService({ repository: createPrismaClassInvitationRepository(prisma), classRepository: createPrismaClassRepository(prisma), logger })
+    await expect(invitations.accept(outsider, invitation.id)).rejects.toMatchObject({ statusCode: 404 })
+    await invitations.accept(student, invitation.id)
+    expect(await classService.get(student, offering.id)).toMatchObject({ id: offering.id })
+
+    const now = () => new Date('2030-01-01T00:00:00.000Z')
+    const activityRepository = createPrismaActivityRepository(prisma)
+    const activities = createActivityService({ repository: activityRepository, classRepository: createPrismaClassRepository(prisma), logger, now })
+    const activityInput = { title: 'Hello Java', instructions: 'Print Hello.', dueDate: new Date('2030-02-01T00:00:00.000Z'), language: 'JAVA' as const, entryClassName: 'Main', starterCode: 'class Main {}', maxAttempts: 1, gradingMode: 'GRADED' as const, creditPolicy: 'LATEST' as const, totalPoints: 100 }
+    await expect(activities.create(admin, offering.id, activityInput)).rejects.toMatchObject({ statusCode: 403 })
+    const draft = await activities.create(instructor, offering.id, activityInput)
+    const cases = createTestCaseService({ repository: createPrismaTestCaseRepository(prisma), activityRepository, logger, now })
+    const configured = await cases.replace(instructor, draft.id, { expectedUpdatedAt: draft.updatedAt, testCases: [{ name: 'Visible hello', inputData: null, expectedOutput: 'Hello', isHidden: false, points: 40 }] })
+    const published = await activities.publish(instructor, draft.id, { expectedUpdatedAt: configured.activityUpdatedAt })
+    const repositories = createRepositoryService({ repository: createPrismaRepositoryRepository(prisma), logger, now })
+    const workspace = await repositories.createActivityWorkspace(student, published.id)
+    expect(workspace).toMatchObject({ activityId: published.id, repositoryType: 'ACTIVITY_WORKSPACE' })
+    expect(await prisma.activitySubmission.count()).toBe(0)
+    await expect(repositories.createActivityWorkspace(outsider, published.id)).rejects.toMatchObject({ statusCode: 404 })
+
+    // Queue only: this test does not start Java or infer assessment success.
+    const submissions = createSubmissionService({ repository: createPrismaSubmissionRepository(prisma), logger, now, config: { mode: 'local_process', sourceLimitBytes: 100_000, practiceRunTtlHours: 24, practiceRunsPerMinute: 5, practiceMaxActivePerActivity: 1 } })
+    const source = 'class Main { public static void main(String[] args) { System.out.println("Hello"); } }'
+    const requestId = randomUUID()
+    await submissions.create(student, published.id, source, requestId)
+    expect((await submissions.create(student, published.id, source, requestId)).idempotentReplay).toBe(true)
+    const accepted = await prisma.activitySubmission.findFirstOrThrow()
+    expect(accepted).toMatchObject({ sourceCode: source, studentId: student.id, attemptNumber: 1, submissionStatus: 'QUEUED' })
+    expect(await prisma.executionJob.count()).toBe(1)
+    const oversight = createAdminOversightService({ repository: createPrismaAdminOversightRepository(prisma), databaseHealth: createPrismaDatabaseHealth(prisma), now })
+    const metadata = await oversight.listRepositories(admin, adminRepositoryQuerySchema.parse({}))
+    const academic = await oversight.listSubmissions(admin, adminSubmissionQuerySchema.parse({}))
+    expect(metadata.items).toHaveLength(1)
+    expect(academic.items[0]).toMatchObject({ releasedScore: null })
+    expect(JSON.stringify({ metadata, academic })).not.toMatch(/sourceCode|passwordHash|secretHash|storageKey|expectedOutput/)
+    await expect(submissions.create(admin, published.id, source, randomUUID())).rejects.toMatchObject({ statusCode: 403 })
+  })
+
   it('limits Course changes to Admin and imports only a fully valid CSV', async () => {
     const admin = await createActiveUser(prisma, 'ADMIN')
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
@@ -113,7 +180,7 @@ describe('Course and Class Offering foundation', () => {
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const student = await createActiveUser(prisma, 'STUDENT')
     const course = await prisma.course.create({ data: { courseNumber: 'IT 112', courseName: 'Programming 1' } })
-    const existing = await classService.create(instructor, { className: 'Programming workspace' })
+    const existing = await classService.create(instructor, { program: 'INFORMATION_TECHNOLOGY', className: 'Programming workspace' })
     const member = await createActiveMembership(prisma, existing.id, student.id)
     const dueDate = new Date('2030-10-01T08:00:00.000Z')
     const activity = await prisma.programmingActivity.create({ data: { classId: existing.id, createdById: instructor.id, title: 'Existing exercise', instructions: 'Preserved instructions', dueDate, starterCode: 'class Main {}', totalPoints: 100 } })
@@ -146,7 +213,7 @@ describe('Course and Class Offering foundation', () => {
     await expect(classService.update(instructor, existing.id, { schoolYear: '2027-2028' })).rejects.toMatchObject({ code: 'OFFICIAL_METADATA_GUARDED' })
     await request(server).patch(`/courses/${course.id}`).set('x-test-actor', admin.id).send({ courseNumber: 'IT 112', courseName: 'Programming Fundamentals' }).expect(200)
     expect((await prisma.class.findUniqueOrThrow({ where: { id: existing.id } })).courseNameSnapshot).toBe('Programming 1')
-    const secondOffering = await classService.create(admin, { className: 'Petitioned offering', courseId: course.id, officialClassCode: '9123A', academicPeriod: 'FIRST_SEMESTER', schoolYear: '2027-2028' }, randomUUID())
+    const secondOffering = await classService.create(admin, { program: 'INFORMATION_TECHNOLOGY', className: 'Petitioned offering', courseId: course.id, officialClassCode: '9123A', academicPeriod: 'FIRST_SEMESTER', schoolYear: '2027-2028' }, randomUUID())
     expect(secondOffering.id).not.toBe(existing.id)
     expect(secondOffering.status).toBe('PREPARED')
     expect(secondOffering.instructor).toBeNull()
@@ -159,7 +226,7 @@ describe('Course and Class Offering foundation', () => {
     const primary = await createActiveUser(prisma, 'INSTRUCTOR')
     const nextPrimary = await createActiveUser(prisma, 'INSTRUCTOR')
     const outsider = await createActiveUser(prisma, 'INSTRUCTOR')
-    const existing = await classService.create(primary, { className: 'Staffed class' })
+    const existing = await classService.create(primary, { program: 'INFORMATION_TECHNOLOGY', className: 'Staffed class' })
     const server = app()
     await request(server).post(`/classes/${existing.id}/staff/invitations`).set('x-test-actor', outsider.id).send({ universityEmail: nextPrimary.email }).expect(404)
     await request(server).post(`/classes/${existing.id}/staff/invitations`).set('x-test-actor', primary.id).send({ universityEmail: nextPrimary.email }).expect(201)
@@ -182,7 +249,7 @@ describe('Course and Class Offering foundation', () => {
     const primary = await createActiveUser(prisma, 'INSTRUCTOR')
     const replacement = await createActiveUser(prisma, 'INSTRUCTOR')
     const student = await createActiveUser(prisma, 'STUDENT')
-    const existing = await classService.create(primary, { className: 'Staff recovery class' })
+    const existing = await classService.create(primary, { program: 'INFORMATION_TECHNOLOGY', className: 'Staff recovery class' })
     const member = await createActiveMembership(prisma, existing.id, student.id)
     const server = app()
     const input = { nextPrimaryId: replacement.id, formerPrimary: 'LEAVE', reason: 'Replacing the Primary after the staffing decision.' }
@@ -202,7 +269,7 @@ describe('Course and Class Offering foundation', () => {
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const student = await createActiveUser(prisma, 'STUDENT')
     const outsider = await createActiveUser(prisma, 'INSTRUCTOR')
-    const existing = await classService.create(instructor, { className: 'Invitation class' })
+    const existing = await classService.create(instructor, { program: 'INFORMATION_TECHNOLOGY', className: 'Invitation class' })
     const csv = `email\n${student.email}`
     const server = app()
     await request(server).post(`/classes/${existing.id}/invitations/import/preview`).set('x-test-actor', outsider.id).send({ csv }).expect(404)
@@ -220,7 +287,7 @@ describe('Course and Class Offering foundation', () => {
     const student = await createActiveUser(prisma, 'STUDENT')
     const inactive = await createActiveUser(prisma, 'STUDENT')
     await prisma.user.update({ where: { id: inactive.id }, data: { status: 'INACTIVE' } })
-    const existing = await classService.create(primary, { className: 'CSV boundary class' })
+    const existing = await classService.create(primary, { program: 'INFORMATION_TECHNOLOGY', className: 'CSV boundary class' })
     const server = app()
     const path = `/classes/${existing.id}/invitations/import`
     const actor = { 'x-test-actor': primary.id }
@@ -259,7 +326,7 @@ describe('Course and Class Offering foundation', () => {
     const member = await createActiveUser(prisma, 'STUDENT')
     const pending = await createActiveUser(prisma, 'STUDENT')
     const newStudent = await createActiveUser(prisma, 'STUDENT')
-    const existing = await classService.create(primary, { className: 'CSV retry class' })
+    const existing = await classService.create(primary, { program: 'INFORMATION_TECHNOLOGY', className: 'CSV retry class' })
     await createActiveMembership(prisma, existing.id, member.id)
     await prisma.classInvitation.create({ data: { classId: existing.id, inviteeId: pending.id, invitedById: primary.id, status: 'PENDING' } })
     const server = app()
