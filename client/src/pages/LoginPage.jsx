@@ -14,6 +14,7 @@ function useLoginController(role) {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [roleMismatch, setRoleMismatch] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
   const requestedRole = role.toUpperCase();
@@ -36,6 +37,8 @@ function useLoginController(role) {
 
     try {
       const user = await auth.login(email, password);
+      const accepted = user.role === requestedRole || (requestedRole === "INSTRUCTOR" && user.role === "ADMIN");
+      if (!accepted) { setRoleMismatch(true); return; }
       const intended = typeof location.state?.from === "string" ? location.state.from : "";
       navigate(
         intended && roleMatchesPath(user.role, intended) ? intended : roleHome(user.role),
@@ -43,7 +46,7 @@ function useLoginController(role) {
       );
     } catch (error) {
       setFieldErrors(error instanceof ApiError ? error.fieldErrors : {});
-      setMessage(error instanceof ApiError && error.status === 401 ? error.message : describeApiError(error));
+      setMessage(error instanceof ApiError && error.status === 401 ? "Email or password is invalid." : describeApiError(error));
     } finally {
       setPassword("");
       setShowPassword(false);
@@ -56,6 +59,7 @@ function useLoginController(role) {
     setMessage("");
     try {
       await auth.logout({ requireServerConfirmation: true });
+      setRoleMismatch(false);
       setEmail("");
       setPassword("");
       setShowPassword(false);
@@ -68,6 +72,7 @@ function useLoginController(role) {
   };
 
   return {
+    roleMismatch,
     authStatus: auth.status,
     authError: auth.error,
     retrySession: auth.bootstrap,

@@ -1,3 +1,4 @@
+import ClassIdentityBadge from '../classes/ClassIdentityBadge.jsx'
 import AccountMenu from '../components/AccountMenu.jsx'
 import { Brand } from '../origin/OriginPrimitives.jsx'
 import { StudentInvitationProvider, StudentNotificationMenu } from '../classes/StudentInvitationNotifications.jsx'
@@ -11,7 +12,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
-import { classHref, classInitial, classOfferingLabel } from '../classes/class-links.js'
+import { classHref, classOfferingLabel } from '../classes/class-links.js'
 import { courseOptions, sectionOptions } from '../data/projexData.js'
 import AcademicFields from '../classes/AcademicFields.jsx'
 import '../admin/admin-refinement.css'
@@ -133,21 +134,19 @@ function closeMobileNavigationOnLink(event, close) {
 }
 
 function SidebarClassLink({ item, to, active }) {
-  const initial = classInitial(item)
   return (
-    <NavLink
+    <Link
       to={to}
+      aria-current={active ? 'page' : undefined}
       aria-label={`${item.className} · ${classOfferingLabel(item)}${item.status === 'ARCHIVED' ? ' · Archived' : ''}`}
       className={active ? 'student-class-link is-active' : 'student-class-link'}
     >
-      <span className={`student-class-dot student-class-dot--${initial.toLowerCase()}`}>
-        {initial}
-      </span>
+      <ClassIdentityBadge className="student-class-dot" classRecord={item} />
       <span className="student-class-link__text">
         <strong>{item.className}</strong>
         <small>{classOfferingLabel(item)}{item.status === 'ARCHIVED' ? ' · Archived' : ''}</small>
       </span>
-    </NavLink>
+    </Link>
   )
 }
 

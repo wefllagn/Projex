@@ -139,7 +139,7 @@ describe('Origin public landing page', () => {
       'Feedback saved in this demo.',
     )
     await user.click(panel.getByRole('button', { name: /Sam Chen/ }))
-    await user.click(panel.getByRole('button', { name: /Alex Rivera/ }))
+    await user.click(panel.getByRole('button', { name: /Frank Ocean/ }))
     expect(panel.getByLabelText('Instructor feedback')).toHaveValue(
       'A clear solution.',
     )

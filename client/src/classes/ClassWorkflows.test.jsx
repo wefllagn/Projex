@@ -416,3 +416,12 @@ it('manages the join code in an on-demand People overlay and cancels changes wit
   expect(trigger).toHaveFocus()
   expect(screen.getByRole('heading', { name: 'People', exact: true })).toBeInTheDocument()
 })
+
+it('rejects a Student-safe roster response in the Instructor People view without crashing or showing stale records', async () => {
+  const client={ get:vi.fn(path=>Promise.resolve(path.includes('/members') ? {data:[{userId:'other',fullName:'Stale short projection'}],pagination} : {data:[classRecord],pagination})),post:vi.fn(),patch:vi.fn() }
+  renderWorkflow({client,entry:`/instructor/people?classId=${classId}`,role:'INSTRUCTOR',page:<InstructorRoutePage pagePath="people" />})
+  expect(await screen.findByRole('button',{name:'Try again'})).toBeInTheDocument()
+  expect(screen.queryByText('Stale short projection')).not.toBeInTheDocument()
+  expect(screen.queryByText(/toLowerCase|Unexpected Application Error|ROSTER_CONTEXT_CHANGED/)).not.toBeInTheDocument()
+  expect(client.patch).not.toHaveBeenCalled()
+})

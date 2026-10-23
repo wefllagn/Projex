@@ -1,3 +1,4 @@
+import UserAvatar from '../components/UserAvatar.jsx'
 import { useEffect, useState } from 'react'
 import { NavLink, useSearchParams } from 'react-router-dom'
 import { ApiError, apiClient, describeApiError } from '../api/api-client.js'
@@ -34,7 +35,7 @@ export default function StudentWorkOverview({ client = apiClient }) {
   const update = values => { const next = new URLSearchParams(params); for (const [key, value] of Object.entries(values)) { if (value) next.set(key, String(value)); else next.delete(key) } setParams(next) }
   return <section className="academic-your-work">
     <NavLink className="student-back-link" to={classHref('/student/activity', classId)}>Back to Classwork</NavLink>
-    <header><span className="student-user-avatar" aria-hidden="true" /><div><h2>{user.fullName}</h2><p>Your work · {selectedClass?.className}</p></div></header>
+    <header><UserAvatar /><div><h2>{user.fullName}</h2><p>Your work · {selectedClass?.className}</p></div></header>
     <div className="academic-your-work-toolbar"><label>Task filter<select value={filter} onChange={event => update({ task: event.target.value, workPage: null })}>{filters.map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>{current.status === 'ready' && <span>{current.pagination?.totalItems ?? current.rows.length} Activities</span>}</div>
     {current.status === 'loading' && <p role="status">Loading your work…</p>}
     {current.status === 'error' && <div role="alert"><p>{current.error?.code === 'INVALID_API_RESPONSE' ? 'The work list does not match this class.' : describeApiError(current.error)}</p><button className="student-outline-action" type="button" onClick={() => setRevision(value => value + 1)}>Try again</button></div>}

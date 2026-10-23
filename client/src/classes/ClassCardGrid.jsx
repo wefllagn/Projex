@@ -1,5 +1,6 @@
+import ClassIdentityBadge from './ClassIdentityBadge.jsx'
 import { NavLink } from 'react-router-dom'
-import { classHref, classInitial } from './class-links.js'
+import { classHref } from './class-links.js'
 import ProjexIcon from '../components/icons/ProjexIcon.jsx'
 
 export default function ClassCardGrid({ classes, role = 'student' }) {
@@ -11,7 +12,7 @@ export default function ClassCardGrid({ classes, role = 'student' }) {
         <h2>{item.className}</h2><span>{item.section || item.officialClassCode || 'Class'}</span>
         <small>{item.instructor?.fullName || 'Instructor not assigned'}</small>
       </NavLink>
-      <span className="academic-classroom-avatar" aria-hidden="true">{classInitial(item)}</span>
+      <ClassIdentityBadge className="academic-classroom-avatar" classRecord={item} />
       <div className="academic-classroom-body"><span className={active ? 'academic-classroom-status' : 'academic-classroom-status is-archived'}>{active ? 'Active' : 'Archived · read-only'}</span><p>{item.semester || item.academicPeriod || 'Term not set'}{item.schoolYear ? ` · ${item.schoolYear}` : ''}</p>{item.schedule && <p>{item.schedule}</p>}{item.room && <small>{item.room}</small>}</div>
       <footer><NavLink to={classHref(`/${role}/activity`, item.id)} aria-label={`Classwork for ${item.className}`} title="Classwork"><ProjexIcon name="activity" />Classwork</NavLink><NavLink to={role === 'student' ? `${classHref('/student/activity', item.id)}&view=work` : classHref('/instructor/people', item.id)} aria-label={`${role === 'student' ? 'Your work' : 'People'} for ${item.className}`} title={role === 'student' ? 'Your work' : 'People'}><ProjexIcon name={role === 'student' ? 'submission' : 'people'} /></NavLink></footer>
     </article>

@@ -30,8 +30,8 @@ function renderLogin({ component = <LoginPage />, login = vi.fn(), initialEntry 
 }
 
 describe('real login forms', () => {
-  it('uses the backend-returned role rather than the visual login entry role', async () => {
-    const login = vi.fn().mockResolvedValue({ role: 'INSTRUCTOR', status: 'ACTIVE' })
+  it('continues a successful login to the matching workspace', async () => {
+    const login = vi.fn().mockResolvedValue({ role: 'STUDENT', status: 'ACTIVE' })
     renderLogin({ login })
     const user = userEvent.setup()
 
@@ -40,7 +40,7 @@ describe('real login forms', () => {
     await user.click(screen.getByRole('button', { name: 'Login' }))
 
     expect(login).toHaveBeenCalledWith('synthetic@example.edu', 'Synthetic1!')
-    expect(await screen.findByText('instructor home')).toBeInTheDocument()
+    expect(await screen.findByText('student home')).toBeInTheDocument()
   })
 
   it('renders a safe authentication failure and clears the password', async () => {
@@ -141,4 +141,26 @@ describe('intentional account switching', () => {
     expect(await screen.findByText(home)).toBeInTheDocument()
     expect(client.post).not.toHaveBeenCalled()
   })
+})
+
+it.each([['STUDENT','/instructor-login','Student'],['INSTRUCTOR','/student-login','Instructor'],['ADMIN','/student-login','Admin']])('requires an intentional choice after valid wrong-workspace %s credentials', async (role,entry,label) => {
+  const api={get:vi.fn().mockRejectedValue(new ApiError({status:401})),post:vi.fn().mockResolvedValue({data:{id:'verified-user',role,status:'ACTIVE'}})}
+  render(<AuthProvider client={api}><MemoryRouter initialEntries={[entry]}><Routes>
+    <Route path="/student-login" element={<LoginPage />} /><Route path="/instructor-login" element={<InstructorLoginPage />} />
+    <Route path="/student" element={<p>Student destination</p>} /><Route path="/instructor" element={<p>Instructor destination</p>} /><Route path="/admin" element={<p>Admin destination</p>} />
+  </Routes></MemoryRouter></AuthProvider>)
+  await userEvent.type(await screen.findByLabelText('Email'),'valid@example.edu')
+  await userEvent.type(screen.getByLabelText('Password'),'ValidSecret1!')
+  await userEvent.click(screen.getByRole('button',{name:'Login',exact:true}))
+  expect(await screen.findByText(new RegExp(`This is .* ${label} account`))).toBeInTheDocument()
+  expect(screen.queryByText(label+' destination')).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button',{name:`Go to ${label} workspace`}))
+  expect(await screen.findByText(label+' destination')).toBeInTheDocument()
+})
+
+it('does not send an empty required login form', async () => {
+  const login=vi.fn();renderLogin({login})
+  await userEvent.click(screen.getByRole('button',{name:'Login',exact:true}))
+  expect(login).not.toHaveBeenCalled()
+  expect(screen.getByLabelText('Email')).toBeInvalid()
 })

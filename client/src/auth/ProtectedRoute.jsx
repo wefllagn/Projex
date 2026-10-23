@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import SessionRecovery from './SessionRecovery.jsx'
 import { Navigate, useLocation } from 'react-router-dom'
 import RequestState from '../components/RequestState.jsx'
 import { useAuth } from './auth-context.js'
@@ -10,6 +12,10 @@ function loginPathFor(role) {
 export default function ProtectedRoute({ role, children }) {
   const auth = useAuth()
   const location = useLocation()
+  const revalidate = auth.revalidate
+  useEffect(() => { if (revalidate) void revalidate() }, [revalidate, location.pathname, location.search])
+
+  if (auth.status === 'interrupted') return <SessionRecovery role={role} />
 
   if (auth.status === 'loading') return <RequestState kind="loading" />
   if (auth.status === 'error') {

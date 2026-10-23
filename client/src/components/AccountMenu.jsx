@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/auth-context.js'
 import { describeApiError } from '../api/api-client.js'
+import UserAvatar from './UserAvatar.jsx'
 import ProjexIcon from './icons/ProjexIcon.jsx'
 
 export default function AccountMenu({ expanded, onExpandedChange }) {
@@ -12,7 +13,7 @@ export default function AccountMenu({ expanded, onExpandedChange }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const menu = useRef(null), trigger = useRef(null)
-  const role = auth.user.role === 'INSTRUCTOR' ? 'Instructor' : 'Student'
+  const role = auth.user.role === 'ADMIN' ? 'Admin' : auth.user.role === 'INSTRUCTOR' ? 'Instructor' : 'Student'
   useEffect(() => {
     if (!open) return undefined
     const key = event => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus() } }
@@ -29,7 +30,7 @@ export default function AccountMenu({ expanded, onExpandedChange }) {
   }
   return <div className="student-profile-menu" ref={menu}>
     <button ref={trigger} type="button" className="student-profile-trigger" aria-label="Account menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-      <span className="student-user-avatar" aria-hidden="true" />
+      <UserAvatar />
       <span className="student-user-name"><strong>{auth.user.fullName}</strong><span>{role}</span></span>
       <ProjexIcon name="expand" size={16} />
     </button>
@@ -37,7 +38,7 @@ export default function AccountMenu({ expanded, onExpandedChange }) {
       <button type="button" className="academic-account-close" aria-label="Close account menu" onClick={() => { setOpen(false); trigger.current?.focus() }}><ProjexIcon name="close" /></button>
       <strong className="academic-account-email">{auth.user.email}</strong>
       <span className="academic-account-organization">Managed by slu.edu.ph</span>
-      <div className="student-profile-photo" aria-hidden="true"><span className="student-user-avatar" /></div>
+      <div className="student-profile-photo" aria-hidden="true"><UserAvatar /></div>
       <h2>{auth.user.fullName}</h2>
       <div className="student-profile-menu-list">
         <button type="button" className="academic-account-signout" disabled={busy} onClick={signOut}><ProjexIcon name="signout" />{busy ? 'Signing out…' : 'Sign out'}</button>

@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import SessionRecovery from '../auth/SessionRecovery.jsx'
 import RequestState from '../components/RequestState.jsx'
 import { Link } from 'react-router-dom'
 import { Brand, Icon, ThemeControl } from './OriginPrimitives.jsx'
@@ -124,18 +125,20 @@ export default function OriginLogin({ role, login }) {
               Instructor
             </Link>
           </nav>
-          {login.authStatus === 'loading' ? <RequestState kind="loading" />
+          {login.authStatus === 'interrupted' ? <SessionRecovery role={instructor ? 'INSTRUCTOR' : 'STUDENT'} /> : login.authStatus === 'loading' ? <RequestState kind="loading" />
             : login.authStatus === 'error' ? <RequestState kind="unavailable" error={login.authError} action={<button type="button" onClick={login.retrySession}>Try again</button>} />
             : login.authStatus === 'blocked' ? <RequestState kind="forbidden" title="Account unavailable" message="This account is not active. Contact an authorized Origin administrator." />
             : login.switchingAccount ? (
-            <div className="origin-auth-form" id="origin-login">
-              <p>You're already signed in as {login.currentRole === 'Admin' || login.currentRole === 'Instructor' ? 'an' : 'a'} {login.currentRole}.</p>
-              <p>To use {instructor ? 'an Instructor' : 'a Student'} account, sign out of your current account first.</p>
+            <div className="origin-auth-form origin-auth-account-switch" id="origin-login">
+              <p className="origin-auth-switch-title">{login.roleMismatch ? `This is ${login.currentRole === 'Student' ? 'a' : 'an'} ${login.currentRole} account` : `You're already signed in as ${login.currentRole === 'Student' ? 'a' : 'an'} ${login.currentRole}.`}</p>
+              <p>{login.roleMismatch ? `You're signing in to the ${instructor ? 'Instructor' : 'Student'} workspace. You can continue to your ${login.currentRole} workspace or use a different account.` : `To use ${instructor ? 'an Instructor' : 'a Student'} account, sign out of your current account first.`}</p>
+              <div className="origin-auth-switch-actions">
               {login.message && <p className="origin-auth-message" role="alert">{login.message}</p>}
               <button className="origin-button origin-auth-submit" type="button" disabled={login.submitting} onClick={login.switchAccount}>
-                {login.submitting ? 'Signing out…' : 'Sign out and switch account'}
+                {login.submitting ? 'Signing out…' : login.roleMismatch ? 'Use another account' : 'Sign out and switch account'}
               </button>
-              <button className="origin-button" type="button" disabled={login.submitting} onClick={login.continueAccount}>Continue as {login.currentRole}</button>
+              <button className="origin-button origin-auth-switch-secondary" type="button" disabled={login.submitting} onClick={login.continueAccount}>{login.roleMismatch ? `Go to ${login.currentRole} workspace` : `Continue as ${login.currentRole}`}</button>
+              </div>
             </div>
           ) : <form
             onSubmit={login.submit}

@@ -113,6 +113,8 @@ export function createApiClient({
 
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl)
   const authenticationFailureListeners = new Set()
+  const authorizationFailureListeners = new Set()
+  let generation = 0
   let refreshPromise = null
 
   function notifyAuthenticationFailure(error) {
@@ -223,15 +225,31 @@ export function createApiClient({
   }
 
   async function request(path, options = {}) {
+    const ticket = generation
+    const ensureCurrent = () => { if (ticket !== generation) throw new DOMException('Session changed', 'AbortError') }
+    const notifyDenied = error => {
+      if (error instanceof ApiError && error.status === 403) {
+        for (const listener of authorizationFailureListeners) listener(error, { path, method: String(options.method || 'GET').toUpperCase() })
+      }
+    }
     const allowRefresh = options.allowRefresh !== false
     try {
-      return await send(path, options)
+      const response = await send(path, options)
+      ensureCurrent()
+      return response
     } catch (error) {
+      ensureCurrent()
+      notifyDenied(error)
       if (!(error instanceof ApiError) || error.status !== 401 || !allowRefresh) throw error
       await refreshSession()
+      ensureCurrent()
       try {
-        return await send(path, { ...options, allowRefresh: false })
+        const response = await send(path, { ...options, allowRefresh: false })
+        ensureCurrent()
+        return response
       } catch (retryError) {
+        ensureCurrent()
+        notifyDenied(retryError)
         if (retryError instanceof ApiError && retryError.status === 401) {
           notifyAuthenticationFailure(retryError)
         }
@@ -243,6 +261,11 @@ export function createApiClient({
   return {
     request,
     refreshSession,
+    invalidateRequests() { generation += 1 },
+    subscribeAuthorizationFailure(listener) {
+      authorizationFailureListeners.add(listener)
+      return () => authorizationFailureListeners.delete(listener)
+    },
     subscribeAuthenticationFailure(listener) {
       authenticationFailureListeners.add(listener)
       return () => authenticationFailureListeners.delete(listener)

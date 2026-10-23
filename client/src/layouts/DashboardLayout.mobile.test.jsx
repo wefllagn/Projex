@@ -97,3 +97,13 @@ describe('authenticated mobile navigation', () => {
     expect(logout).not.toHaveBeenCalled()
   })
 })
+
+it('marks only the query-selected Class as current instead of every Class sharing the pathname', () => {
+  const classes=[{id:'class-1',className:'Computer Programming 1',status:'ACTIVE'},{id:'class-2',className:'Computer Programming 2',status:'ACTIVE'}]
+  const user={id:'instructor',fullName:'Instructor',role:'INSTRUCTOR',status:'ACTIVE'}
+  const {container}=render(<AuthContext.Provider value={{user,logout:vi.fn()}}><ClassContext.Provider value={{classes,requestedClassId:'class-2',status:'ready',pagination:{hasNextPage:false}}}><MemoryRouter initialEntries={['/instructor/classes?classId=class-2']}><Routes><Route path="/instructor/classes" element={<DashboardLayout role={{id:'instructor'}} />} /></Routes></MemoryRouter></ClassContext.Provider></AuthContext.Provider>)
+  const current=container.querySelectorAll('.student-class-link[aria-current="page"]')
+  expect(current).toHaveLength(1)
+  expect(current[0]).toHaveAccessibleName(/Computer Programming 2/)
+  expect(container.querySelector('.student-class-link:not([aria-current])')).not.toHaveClass('active')
+})

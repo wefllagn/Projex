@@ -27,7 +27,7 @@ const demoHistory = [
   {
     hash: 'e4f59a6',
     message: 'Add array implementation',
-    author: 'Alex Rivera',
+    author: 'Frank Ocean',
     file: 'src/ArraysDemo.java',
     detail: 'Add a sorting example using java.util.Arrays.',
     branch: 'feature/arrays',
@@ -43,7 +43,7 @@ const demoHistory = [
   {
     hash: 'd0a102b',
     message: 'Add project introduction',
-    author: 'Alex Rivera',
+    author: 'Frank Ocean',
     file: 'README.md',
     detail: 'Document how to compile and run the example.',
     branch: 'main',
@@ -53,8 +53,8 @@ const demoHistory = [
 const demoSubmissions = [
   {
     id: 'alex',
-    name: 'Alex Rivera',
-    initials: 'AR',
+    name: 'Frank Ocean',
+    initials: 'FO',
     status: 'Ready for review',
     passed: 3,
     time: '10:42 AM',
@@ -708,9 +708,9 @@ export default function OriginWorkspaceShowcase({ activeTab, setActiveTab }) {
               ))}
             </nav>
             <div className="origin-showcase-demo-user">
-              <span className="origin-demo-avatar">AR</span>
+              <span className="origin-demo-avatar">{activeTab === 'assessment' ? 'TS' : 'FO'}</span>
               <span>
-                Alex Rivera<small>Demo account</small>
+                {activeTab === 'assessment' ? 'Tony Stark' : 'Frank Ocean'}<small>Demo account</small>
               </span>
             </div>
           </aside>

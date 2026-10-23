@@ -1,9 +1,11 @@
 import {
   Navigate,
+  Outlet,
   RouterProvider,
   createBrowserRouter,
 } from 'react-router-dom'
 import './App.css'
+import { ApplicationErrorBoundary, RouteErrorRecovery, UnavailablePage } from './components/ApplicationErrorBoundary.jsx'
 import { AuthProvider } from './auth/AuthContext.jsx'
 import ProtectedRoute from './auth/ProtectedRoute.jsx'
 import ClassProvider from './classes/ClassProvider.jsx'
@@ -23,6 +25,7 @@ import './design/academic-refinement.css'
 import OriginApplication from './origin/OriginApplication.jsx'
 import './origin/origin-application.css'
 import './origin/origin-workspace.css'
+import './origin/origin-polish.css'
 
 function getRouteElement(role, route) {
   if (role.id === 'student') {
@@ -77,7 +80,7 @@ const roleRoutes = routeCatalog.flatMap((role) => [
   },
 ])
 
-const router = createBrowserRouter([
+const router = createBrowserRouter([{ element: <Outlet />, errorElement: <RouteErrorRecovery />, children: [
   {
     path: '/',
     element: <OriginLandingPage />,
@@ -101,17 +104,17 @@ const router = createBrowserRouter([
   ...roleRoutes,
   {
     path: '*',
-    element: <Navigate to="/" replace />,
+    element: <UnavailablePage />,
   },
-])
+]}])
 
 function App() {
   return (
-    <CapabilityProvider>
+    <ApplicationErrorBoundary><CapabilityProvider>
       <AuthProvider>
         <RouterProvider router={router} />
       </AuthProvider>
-    </CapabilityProvider>
+    </CapabilityProvider></ApplicationErrorBoundary>
   )
 }
 

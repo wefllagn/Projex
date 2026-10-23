@@ -93,7 +93,11 @@ describe('AuthProvider', () => {
     await act(() => auth.login('synthetic@example.edu', 'Synthetic1!'))
     await act(() => auth.logout())
 
-    expect(localSpy).not.toHaveBeenCalled()
+    expect(localSpy).toHaveBeenCalled()
+    for (const [key, value] of localSpy.mock.calls) {
+      expect(key).toBe('origin-session-change')
+      expect(value).not.toMatch(/Synthetic|synthetic|user-1|token|password/)
+    }
   })
 
   it('clears authenticated state when the API client reports exhausted session recovery', async () => {
@@ -109,7 +113,9 @@ describe('AuthProvider', () => {
 
     await user.click(screen.getByRole('button', { name: 'Login' }))
     expect(await screen.findByText('Synthetic Student')).toBeInTheDocument()
+    api.get.mockRejectedValue(new ApiError({ status: 401 }))
     act(() => reportAuthenticationFailure(new ApiError({ status: 401 })))
-    expect(await screen.findByText('anonymous')).toBeInTheDocument()
+    expect(await screen.findByText('interrupted')).toBeInTheDocument()
+    expect(screen.queryByText('Synthetic Student')).not.toBeInTheDocument()
   })
 })

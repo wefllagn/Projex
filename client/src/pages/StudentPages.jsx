@@ -1,3 +1,4 @@
+import ClassIdentityBadge from '../classes/ClassIdentityBadge.jsx'
 import GroupBrowserEditor from '../repositories/GroupBrowserEditor.jsx'
 import ClassCardGrid from '../classes/ClassCardGrid.jsx'
 import ClassOverviewCard from '../classes/ClassOverviewCard.jsx'
@@ -9,7 +10,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, NavLink, useSearchParams } from 'react-router-dom'
 import { describeApiError } from '../api/api-client.js'
 import { useClasses } from '../classes/class-context.js'
-import { classHref, classInitial, classOfferingLabel } from '../classes/class-links.js'
+import { classHref, classOfferingLabel } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
 import { WorkHubList } from '../work-hub/WorkHubViews.jsx'
 import { StudentClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
@@ -35,13 +36,12 @@ function ClassHeader({ activeTab }) {
     { label: 'Activities', path: '/student/activity', key: 'assignments' },
     { label: 'People', path: '/student/people', key: 'people' },
   ]
-  const initial = classInitial(selectedClass)
 
   return (
     <header className="student-class-header">
       <div className="student-class-header__top">
         <div className="student-course-title">
-          <span className="student-course-avatar">{initial}</span>
+          <ClassIdentityBadge className="student-course-avatar" classRecord={selectedClass} />
           <div>
             <h1>{selectedClass?.className || 'Select a class'}</h1>
             <div className="student-course-meta">

@@ -1,3 +1,4 @@
+import ClassIdentityBadge from '../classes/ClassIdentityBadge.jsx'
 import AppDialog from '../components/AppDialog.jsx'
 import AcademicEmptyState from '../components/AcademicEmptyState.jsx'
 import ClassCardGrid from '../classes/ClassCardGrid.jsx'
@@ -8,10 +9,10 @@ import ProgramField from '../classes/ProgramField.jsx'
 import ProjexIcon from '../components/icons/ProjexIcon.jsx'
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { describeApiError } from '../api/api-client.js'
+import { ApiError, describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { useClasses } from '../classes/class-context.js'
-import { classHref, classInitial, classOfferingLabel } from '../classes/class-links.js'
+import { classHref, classOfferingLabel } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
 import { WorkHubList } from '../work-hub/WorkHubViews.jsx'
 import { InstructorClassInvitationPanel } from '../classes/ClassInvitationViews.jsx'
@@ -50,13 +51,12 @@ function InstructorClassHeader({ activeTab }) {
     { label: 'People', path: '/instructor/people', key: 'people' },
     { label: 'Class Info', path: '/instructor/class-info', key: 'info' },
   ]
-  const initial = classInitial(selectedClass)
 
   return (
     <header className="student-class-header">
       <div className="student-class-header__top">
         <div className="student-course-title">
-          <span className="student-course-avatar">{initial}</span>
+          <ClassIdentityBadge className="student-course-avatar" classRecord={selectedClass} />
           <div>
             <h1>{selectedClass?.className || 'Select a class'}</h1>
             <div className="student-course-meta">
@@ -194,7 +194,7 @@ function CreateActivityPage({ mode = 'create' }) {
 function InstructorPeoplePage() {
   const [confirm, confirmation] = useConfirmation()
   const { api, selectedClass, selectionStatus } = useClasses()
-  const { user } = useAuth()
+  const { user, revalidate } = useAuth()
   const [rosterState, setRosterState] = useState({ classId: null, status: 'loading', members: [], pagination: null, error: null })
   const [mutatingMemberId, setMutatingMemberId] = useState(null)
   const [actionError, setActionError] = useState(null)
@@ -202,16 +202,25 @@ function InstructorPeoplePage() {
   const [inviteBusy, setInviteBusy] = useState(false)
   const [managingCode, setManagingCode] = useState(false)
 
+  const detailedRoster = useCallback(response => {
+    if (!Array.isArray(response.data) || response.data.some(member => !member?.memberId || typeof member.userStatus !== 'string' || typeof member.membershipStatus !== 'string')) {
+      void revalidate?.()
+      throw new ApiError({ code: 'ROSTER_CONTEXT_CHANGED' })
+    }
+    return response.data
+  }, [revalidate])
+
   const loadRoster = useCallback(async (classId, page = 1, signal) => {
     const response = await api.listMembers(classId, { page, pageSize: 50 }, { signal })
+    const members = detailedRoster(response)
     setRosterState((current) => ({
       classId,
       status: 'ready',
-      members: page === 1 ? response.data : [...current.members, ...response.data],
+      members: page === 1 ? members : [...current.members, ...members],
       pagination: response.pagination,
       error: null,
     }))
-  }, [api])
+  }, [api, detailedRoster])
 
   useEffect(() => {
     if (selectionStatus !== 'ready' || !selectedClass) return undefined
@@ -220,7 +229,7 @@ function InstructorPeoplePage() {
       .then((response) => setRosterState({
         classId: selectedClass.id,
         status: 'ready',
-        members: response.data,
+        members: detailedRoster(response),
         pagination: response.pagination,
         error: null,
       }))
@@ -230,7 +239,7 @@ function InstructorPeoplePage() {
         }
       })
     return () => controller.abort()
-  }, [api, selectedClass, selectionStatus])
+  }, [api, detailedRoster, selectedClass, selectionStatus])
 
   const roster = rosterState.classId === selectedClass?.id
     ? rosterState
@@ -285,7 +294,7 @@ function InstructorPeoplePage() {
         {selectedClass?.status === 'ARCHIVED' && <p className="instructor-people-action-status">Archived classes are read-only.</p>}
         {actionError && <p className="class-form-error" role="alert">{describeApiError(actionError)}</p>}
         {selectionStatus === 'ready' && roster.status === 'loading' && <RequestState kind="loading" compact message="Loading the detailed roster." />}
-        {roster.status === 'error' && <RequestState kind="unavailable" compact error={roster.error} />}
+        {roster.status === 'error' && <RequestState kind="unavailable" compact error={roster.error} action={<button type="button" className="student-outline-action" onClick={() => loadRoster(selectedClass.id).catch(error => setRosterState(current => ({ ...current, status: 'error', members: [], error })))}>Try again</button>} />}
 
         {roster.status === 'ready' && roster.members.length === 0 && <AcademicEmptyState icon="people" title="No students yet" description="Students will appear here after joining." />}
         {roster.members.length > 0 && <div className="instructor-data-table instructor-people-table academic-roster-table" role="table" aria-label="Class roster">
@@ -300,18 +309,18 @@ function InstructorPeoplePage() {
           {roster.members.map((student) => (
             <div className="instructor-table-row" role="row" key={student.memberId}>
               <div className="instructor-roster-student">
-                <span aria-hidden="true">{student.fullName.split(' ').map((part) => part.charAt(0)).join('').slice(0, 2)}</span>
+                <span aria-hidden="true">{(student.fullName || 'Student').split(' ').map((part) => part.charAt(0)).join('').slice(0, 2)}</span>
                 <strong>{student.fullName}</strong>
               </div>
               <span data-label="University email">{student.email}</span>
-              <em data-label="Account" className="academic-member-status">{student.userStatus.toLowerCase().replaceAll('_', ' ')}</em>
-              <em data-label="Membership" className={`academic-member-status ${student.membershipStatus === 'ACTIVE' ? 'is-approved' : 'is-revision'}`}>{student.membershipStatus.toLowerCase()}</em>
+              <em data-label="Account" className="academic-member-status">{(typeof student.userStatus === 'string' ? student.userStatus.toLowerCase().replaceAll('_', ' ') : 'Not available')}</em>
+              <em data-label="Membership" className={`academic-member-status ${student.membershipStatus === 'ACTIVE' ? 'is-approved' : 'is-revision'}`}>{(typeof student.membershipStatus === 'string' ? student.membershipStatus.toLowerCase() : 'Not available')}</em>
               <span data-label="Joined">{new Date(student.joinedAt).toLocaleDateString()}</span>
               <div>
                 <button
                   type="button"
                   className={student.membershipStatus === 'ACTIVE' ? 'instructor-remove-student' : undefined}
-                  disabled={selectedClass?.status === 'ARCHIVED' || mutatingMemberId === student.memberId}
+                  disabled={selectedClass?.status === 'ARCHIVED' || mutatingMemberId === student.memberId || !student.memberId || !['ACTIVE', 'REMOVED'].includes(student.membershipStatus)}
                   onClick={() => transitionMember(student)}
                 >
                   {mutatingMemberId === student.memberId ? 'Saving…' : student.membershipStatus === 'ACTIVE' ? 'Remove' : 'Reactivate'}
