@@ -1,3 +1,5 @@
+import { createPasswordRecoveryRouter } from './modules/password-recovery/password-recovery.js'
+import { createGradebookRouter } from './modules/gradebook/gradebook.js'
 import { createConsoleRouter } from './modules/interactive-console/console.routes.js'
 import { createGroupBrowserRefService } from './modules/group-browser-refs/group-browser-ref.service.js'
 import { createGroupBrowserRefRouter } from './modules/group-browser-refs/group-browser-ref.routes.js'
@@ -291,6 +293,8 @@ async function bootstrap(): Promise<void> {
         requireLogoutAuthentication,
         requireCsrf,
       }),
+      passwordRecovery: createPasswordRecoveryRouter({ prisma, tokenService, passwordService, logger, frontendOrigin: env.frontendOrigin, requireAuthentication, requireCsrf }),
+      gradebook: createGradebookRouter({ prisma, requireAuthentication }),
       accountSetup: createAccountSetupRouter(accountSetupService),
       admin: createAdminRouter({
         service: adminService,

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { gradingPeriodSchema, rubricCriteriaSchema } from './activity-grading.js'
 
 const titleSchema = z.string().trim().min(1).max(200)
 const instructionsSchema = z.string().trim().min(1).max(20_000)
@@ -28,6 +29,8 @@ export const activityIdParamsSchema = z.object({ activityId: z.uuid() }).strict(
 
 export const createActivitySchema = z
   .object({
+    gradingPeriod: gradingPeriodSchema.nullable().optional(),
+    rubricCriteria: rubricCriteriaSchema.optional(),
     title: titleSchema,
     instructions: instructionsSchema,
     dueDate: timestampSchema,
@@ -46,6 +49,8 @@ export const createActivitySchema = z
 export const updateActivitySchema = z
   .object({
     expectedUpdatedAt: timestampSchema,
+    gradingPeriod: gradingPeriodSchema.nullable().optional(),
+    rubricCriteria: rubricCriteriaSchema.optional(),
     title: titleSchema.optional(),
     instructions: instructionsSchema.optional(),
     dueDate: timestampSchema.optional(),

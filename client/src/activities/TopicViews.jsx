@@ -37,7 +37,7 @@ function ClassworkActivityRow({ activity, classId, instructor }) {
   const href = classHref(instructor ? `/instructor/activity/${activity.id}/submissions` : `/student/activity/${activity.id}`, classId)
   return <li>
     <NavLink to={href} className="classwork-row" aria-labelledby={titleId}>
-      <ProjexIcon name="activity" className="classwork-row-icon" />
+      <span className="classwork-row-icon origin-activity-icon" aria-hidden="true"><ProjexIcon name="activity" size={22} /></span>
       <span className="classwork-row-content">
         <strong id={titleId}>{activity.title}</strong>
         <small>{formatActivityStatus(activity.status)} · Due {formatActivityDate(activity.dueDate)} · {activity.gradingMode === 'COMPLETION' ? 'Ungraded' : `${activity.totalPoints} points`}{instructor && Number.isInteger(activity.submissionCount) ? ` · ${activity.submissionCount} submissions` : !instructor && activity.gradingMode === 'COMPLETION' ? ` · ${activity.completionState === 'COMPLETE' ? 'Complete' : 'Not submitted'}` : ''}</small>

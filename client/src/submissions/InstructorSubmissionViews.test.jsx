@@ -138,6 +138,22 @@ describe('instructor submission queue', () => {
 })
 
 describe('instructor submission review', () => {
+  it('saves each rubric criterion with the version and blocks release of unsaved criterion changes', async () => {
+    const criteria = [{ id: 'readability', name: 'Readability', maximumPoints: 10 }, { id: 'organization', name: 'Organization', maximumPoints: 10 }]
+    const saved = record({ status: 'reviewed', rubricCriteria: criteria, rubricScores: criteria.map(row => ({ criterionId: row.id, points: 0 })) })
+    const submissions = submissionTransport({ getSubmission: vi.fn().mockResolvedValue({ data: saved }), saveReview: vi.fn().mockResolvedValue({ data: { ...saved, scores: { ...saved.scores, instructorPoints: 17 }, rubricScores: [{ criterionId: 'readability', points: 8 }, { criterionId: 'organization', points: 9 }], updatedAt: '2026-08-10T02:00:00.000Z' } }) })
+    renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
+    const first = await screen.findByRole('spinbutton', { name: 'Readability / 10' })
+    fireEvent.change(first, { target: { value: '8' } })
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Organization / 10' }), { target: { value: '9' } })
+    expect(screen.getByText('Instructor total: 17 / 20')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Release final result' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Save review draft' }))
+    expect(submissions.saveReview).toHaveBeenCalledWith(submissionId, { expectedUpdatedAt: saved.updatedAt, instructorPoints: 17, feedbackText: '', rubricScores: [{ criterionId: 'readability', points: 8 }, { criterionId: 'organization', points: 9 }] })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Release final result' })).toBeEnabled())
+    expect(screen.getByText('57 / 100 points')).toBeInTheDocument()
+  })
+
   it('shows immutable source and authorized hidden evidence without per-test edits', async () => {
     renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissionTransport()} />)
 

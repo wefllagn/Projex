@@ -1,3 +1,4 @@
+import Gradebook from '../gradebook/Gradebook.jsx'
 import ClassIdentityBadge from '../classes/ClassIdentityBadge.jsx'
 import AppDialog from '../components/AppDialog.jsx'
 import AcademicEmptyState from '../components/AcademicEmptyState.jsx'
@@ -49,6 +50,7 @@ function InstructorClassHeader({ activeTab }) {
     { label: 'Overview', path: '/instructor/classes', key: 'stream' },
     { label: 'Activities', path: '/instructor/activity', key: 'assignments' },
     { label: 'People', path: '/instructor/people', key: 'people' },
+    { label: 'Gradebook', path: '/instructor/gradebook', key: 'gradebook' },
     { label: 'Class Info', path: '/instructor/class-info', key: 'info' },
   ]
 
@@ -76,7 +78,7 @@ function InstructorClassHeader({ activeTab }) {
               to={classHref(tab.path, selectedClass?.id)}
               className={activeTab === tab.key ? 'is-active' : undefined}
             >
-              <ProjexIcon name={{ stream: 'preview', assignments: 'activity', people: 'people', info: 'classes' }[tab.key]} />
+              <ProjexIcon name={{ stream: 'preview', assignments: 'activity', people: 'people', gradebook: 'activity', info: 'classes' }[tab.key]} />
               {tab.label}
             </NavLink>
           ))}
@@ -569,6 +571,7 @@ function InstructorProjectRepositoryPage() {
 
 export function InstructorRoutePage({ pagePath }) {
   const pages = {
+    gradebook: <InstructorClassPage activeTab="gradebook"><Gradebook /></InstructorClassPage>,
     dashboard: <InstructorDashboard />,
     classes: <InstructorClassesPage />,
     'review-queues': <InstructorReviewQueuePage />,

@@ -30,6 +30,7 @@ const accountSummarySelect = {
   passwordChangedAt: true,
   lastLoginAt: true,
   accountSetupTokens: {
+    where: { purpose: 'ACCOUNT_SETUP' },
     orderBy: { createdAt: 'desc' as const },
     take: 1,
     select: {

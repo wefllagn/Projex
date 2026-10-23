@@ -41,6 +41,7 @@ export function validateActivityForm(form) {
   if (form.gradingMode !== 'COMPLETION' && (!Number.isFinite(totalPoints) || totalPoints <= 0 || totalPoints > 1_000 || Math.round(totalPoints * 100) !== totalPoints * 100)) errors.totalPoints = 'Enter 0.01 to 1,000 points with at most two decimals.'
   if (!form.dueDate || Number.isNaN(dueDate.getTime())) errors.dueDate = 'Choose a valid deadline.'
 
+  if (form.rubricCriteria?.some(row => !row.name.trim() || !Number.isFinite(Number(row.maximumPoints)) || Number(row.maximumPoints) <= 0)) errors.rubricCriteria = 'Give each rubric criterion a name and positive maximum points.'
   return errors
 }
 
@@ -55,6 +56,8 @@ export function activityPayload(form, status = 'DRAFT') {
   if (status === 'PUBLISHED') return common
   return {
     ...common,
+    ...(form.gradingPeriod !== undefined ? { gradingPeriod: form.gradingPeriod || null } : {}),
+    ...(form.rubricCriteria != null ? { rubricCriteria: form.rubricCriteria.map(row => ({ ...row, name: row.name.trim(), maximumPoints: Number(row.maximumPoints) })) } : {}),
     creditPolicy: form.creditPolicy,
     language: 'JAVA',
     entryClassName: form.entryClassName.trim(),
@@ -112,5 +115,10 @@ export function publicationRequirements(activity, testCases) {
   if (!testCases.some((testCase) => !testCase.isHidden)) reasons.push('Add at least one visible test case.')
   if (activity?.gradingMode !== 'COMPLETION' && totalTestPoints <= 0) reasons.push('Test cases must award a positive total number of points.')
   if (activity && activity.gradingMode !== 'COMPLETION' && totalTestPoints > Number(activity.totalPoints)) reasons.push('Test-case points cannot exceed the activity total.')
+  if (activity?.gradingMode !== 'COMPLETION' && activity?.rubricCriteria != null) {
+    if (!activity.gradingPeriod) reasons.push('Choose a grading period before publication.')
+    const allocated = activity.rubricCriteria.reduce((sum, row) => sum + Number(row.maximumPoints || 0), 0)
+    if (Math.round(allocated * 100) !== Math.round((Number(activity.totalPoints) - totalTestPoints) * 100)) reasons.push('Rubric allocation must match the available Instructor points.')
+  }
   return reasons
 }

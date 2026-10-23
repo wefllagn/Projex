@@ -21,6 +21,8 @@ export interface ActivityRecord {
   starterCode: string
   maxAttempts: number
   creditPolicy: AttemptCreditPolicy
+  gradingPeriod?: string | null
+  rubricCriteria?: Prisma.JsonValue
   gradingMode?: 'GRADED' | 'COMPLETION'
   topicId?: string | null
   totalPoints: Prisma.Decimal | null
@@ -71,6 +73,8 @@ export interface ActivityProjection {
   starterCode: string
   maxAttempts: number
   creditPolicy: AttemptCreditPolicy
+  gradingPeriod?: string | null
+  rubricCriteria?: Prisma.JsonValue
   gradingMode: 'GRADED' | 'COMPLETION'
   topicId: string | null
   totalPoints: number | null
@@ -96,6 +100,8 @@ export interface AdminActivityProjection {
   entryClassName: string
   maxAttempts: number
   creditPolicy: AttemptCreditPolicy
+  gradingPeriod?: string | null
+  rubricCriteria?: Prisma.JsonValue
   gradingMode: 'GRADED' | 'COMPLETION'
   topicId: string | null
   totalPoints: number | null
@@ -141,6 +147,8 @@ export function toActivityProjection(
     starterCode: record.starterCode,
     maxAttempts: record.maxAttempts,
     creditPolicy: record.creditPolicy,
+    gradingPeriod: record.gradingPeriod ?? null,
+    rubricCriteria: record.rubricCriteria ?? null,
     gradingMode: record.gradingMode ?? 'GRADED',
     topicId: record.topicId ?? null,
     totalPoints: record.gradingMode === 'COMPLETION' ? null : Number(record.totalPoints),
@@ -171,6 +179,8 @@ export function toAdminActivityProjection(
     entryClassName: record.entryClassName,
     maxAttempts: record.maxAttempts,
     creditPolicy: record.creditPolicy,
+    gradingPeriod: record.gradingPeriod ?? null,
+    rubricCriteria: record.rubricCriteria ?? null,
     gradingMode: record.gradingMode ?? 'GRADED',
     topicId: record.topicId ?? null,
     totalPoints: record.gradingMode === 'COMPLETION' ? null : Number(record.totalPoints),

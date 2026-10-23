@@ -1,3 +1,4 @@
+import { criteriaFrom, awardedRubricPoints } from '../activities/activity-grading.js'
 import {
   Prisma,
   type PrismaClient,
@@ -461,6 +462,8 @@ export function createPrismaSubmissionRepository(
               activityTitleSnapshot: activity.title,
               dueDateSnapshot: activity.dueDate,
               gradingModeSnapshot: activity.gradingMode,
+              rubricSnapshot: activity.rubricCriteria ?? Prisma.DbNull,
+              rubricScores: criteriaFrom(activity.rubricCriteria).length ? criteriaFrom(activity.rubricCriteria).map(row => ({ criterionId: row.id, points: 0 })) : Prisma.DbNull,
               totalPointsSnapshot: activity.totalPoints,
               instructorPoints: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(0),
               automatedMaximum: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(automatedMaximum),
@@ -809,7 +812,11 @@ export function createPrismaSubmissionRepository(
         ) {
           return { kind: 'invalid_state' } as const
         }
-        if (record.gradingModeSnapshot === 'COMPLETION' ? input.review.instructorPoints !== undefined : input.review.instructorPoints === undefined || input.review.instructorPoints > Number(record.instructorMaximum)) {
+        const criteria = criteriaFrom(record.rubricSnapshot)
+        const rubricPoints = criteria.length ? awardedRubricPoints(criteria, input.review.rubricScores) : null
+        const instructorPoints = criteria.length ? rubricPoints : input.review.instructorPoints
+        if ((!criteria.length && input.review.rubricScores !== undefined) || (criteria.length && (rubricPoints === null || (input.review.instructorPoints !== undefined && input.review.instructorPoints !== rubricPoints)))) return { kind: 'score_out_of_bounds' } as const
+        if (record.gradingModeSnapshot === 'COMPLETION' ? instructorPoints !== undefined : instructorPoints === undefined || instructorPoints === null || instructorPoints > Number(record.instructorMaximum)) {
           return { kind: 'score_out_of_bounds' } as const
         }
         if (input.review.feedbackText !== undefined) {
@@ -838,7 +845,8 @@ export function createPrismaSubmissionRepository(
         await transaction.activitySubmission.update({
           where: { id: record.id },
           data: {
-            instructorPoints: record.gradingModeSnapshot === 'COMPLETION' ? null : new Prisma.Decimal(input.review.instructorPoints!),
+            instructorPoints: record.gradingModeSnapshot === 'COMPLETION' ? null : new Prisma.Decimal(instructorPoints!),
+            ...(criteria.length ? { rubricScores: input.review.rubricScores } : {}),
             submissionStatus: 'REVIEWED',
             reviewedAt: input.now,
             updatedAt: nextUpdatedAt(input.review.expectedUpdatedAt, input.now),

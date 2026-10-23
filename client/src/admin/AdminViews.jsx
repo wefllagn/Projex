@@ -222,8 +222,8 @@ function SetupLinkDialog({ issuance, onClose }) {
     <div className="student-submit-backdrop" role="presentation">
       <section className="admin-dialog" role="dialog" aria-modal="true" aria-labelledby="setup-link-dialog-title">
         <button type="button" className="student-modal-close" onClick={onClose} aria-label="Close dialog" />
-        <p className="eyebrow">Setup required</p>
-        <h2 id="setup-link-dialog-title">{issuance.kind === 'created' ? 'Account created' : 'New setup link generated'}</h2>
+        <p className="eyebrow">{issuance.kind === 'recovery' ? 'Password recovery' : 'Setup required'}</p>
+        <h2 id="setup-link-dialog-title">{issuance.kind === 'recovery' ? 'Password recovery link generated' : issuance.kind === 'created' ? 'Account created' : 'New setup link generated'}</h2>
         <p>Send this link only to the intended user. It is a temporary one-time credential and will not be shown again after you close this dialog.</p>
         <div className="admin-detail-values admin-setup-identity">
           <DetailValue label="Name">{issuance.user.fullName}</DetailValue>
@@ -231,15 +231,15 @@ function SetupLinkDialog({ issuance, onClose }) {
           <DetailValue label="Expires">{formatDate(issuance.expiresAt)}</DetailValue>
         </div>
         <label className="admin-dialog-field">
-          Setup link
+          {issuance.kind === 'recovery' ? 'Recovery link' : 'Setup link'}
           <input ref={linkField} readOnly autoComplete="off" value={issuance.setupLink} onFocus={(event) => event.currentTarget.select()} />
         </label>
-        <p className="admin-setup-warning">Anyone with this link can choose the initial Origin password until the link expires, is replaced, or is used.</p>
-        {copyState === 'copied' && <p className="admin-notice" role="status">Setup link copied.</p>}
-        {copyState === 'manual' && <p className="class-form-error" role="status">Automatic copy is unavailable. The setup link is selected; copy it manually.</p>}
+        <p className="admin-setup-warning">Anyone with this link can choose a new Origin password until the link expires, is replaced, or is used.</p>
+        {copyState === 'copied' && <p className="admin-notice" role="status">{issuance.kind === 'recovery' ? 'Recovery link copied.' : 'Setup link copied.'}</p>}
+        {copyState === 'manual' && <p className="class-form-error" role="status">Automatic copy is unavailable. The link is selected; copy it manually.</p>}
         <div className="admin-dialog__actions">
           <button type="button" className="student-outline-action" onClick={onClose}>Close</button>
-          <button type="button" className="student-primary-action" onClick={copy}>Copy Setup Link</button>
+          <button type="button" className="student-primary-action" onClick={copy}>{issuance.kind === 'recovery' ? 'Copy Recovery Link' : 'Copy Setup Link'}</button>
         </div>
       </section>
     </div>
@@ -502,6 +502,7 @@ export function AdminUserDetailPage({ api = adminApi }) {
             <DetailValue label="Last issued">{formatDate(account.accountSetup.lastIssuedAt)}</DetailValue>
             <DetailValue label="Expires">{formatDate(account.accountSetup.expiresAt, 'Not applicable')}</DetailValue>
           </div>
+          {account.status === 'ACTIVE' && ['STUDENT', 'INSTRUCTOR'].includes(account.role) && <button type="button" className="student-outline-action" onClick={() => { setNotice(''); setDialog('recovery') }}>Generate password recovery link</button>}
           {account.status === 'SETUP_PENDING' && <button type="button" className="student-outline-action" disabled={resending} onClick={resend}>{resending ? 'Generating…' : 'Generate new setup link'}</button>}
         </AdminPanel>
         <AdminPanel title="Sessions" eyebrow="Aggregate counts only">
@@ -526,6 +527,7 @@ export function AdminUserDetailPage({ api = adminApi }) {
         </AdminPanel>
       </div>
       {setupIssuance && <SetupLinkDialog issuance={setupIssuance} onClose={() => setSetupIssuance(null)} />}
+      {dialog === 'recovery' && <AdminDialog title="Generate password recovery link?" summary="This replaces outstanding recovery links. The link expires in one hour and can be used once. Existing sessions end when the password is reset. Deliver it privately to the account owner." submitLabel="Generate recovery link" busy={resending} onClose={() => setDialog(null)} onSubmit={async event => { event.preventDefault(); setResending(true); setNotice(''); try { const response = await api.issuePasswordRecovery(account.userId); if (!response.data?.setupLink || !response.data?.expiresAt) throw new AdminProjectionError(); setSetupIssuance({ user: { fullName: account.fullName, universityEmail: account.universityEmail }, setupLink: response.data.setupLink, expiresAt: response.data.expiresAt, kind: 'recovery' }); setDialog(null) } catch (error) { setNotice(describeApiError(error)) } finally { setResending(false) } }}>{notice && <p role="alert" className="class-form-error">{notice}</p>}</AdminDialog>}
       {dialog === 'status' && (
         <StatusDialog
           account={account}

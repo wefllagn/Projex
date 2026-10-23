@@ -72,6 +72,7 @@ const roleRoutes = routeCatalog.flatMap((role) => [
             <RoleDashboard role={role} />
           ),
       },
+      { path: 'gradebook', element: getRouteElement(role, { path: 'gradebook' }) },
       ...role.routes.map((route) => ({
         path: route.path,
         element: getRouteElement(role, route),
@@ -101,6 +102,7 @@ const router = createBrowserRouter([{ element: <Outlet />, errorElement: <RouteE
     path: '/account-setup',
     element: <AccountSetupPage />,
   },
+  { path: '/password-recovery', element: <AccountSetupPage recovery /> },
   ...roleRoutes,
   {
     path: '*',

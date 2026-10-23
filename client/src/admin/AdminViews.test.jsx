@@ -97,6 +97,18 @@ function detailApi(summary = account()) {
 }
 
 describe('Phase 10D.1 admin views', () => {
+  it('generates a private recovery link for an activated account with explicit expiry and replacement confirmation', async () => {
+    const api = { ...detailApi(), issuePasswordRecovery: vi.fn().mockResolvedValue({ data: { ...manualSetup, setupLink: manualSetup.setupLink.replace('account-setup', 'password-recovery') } }) }
+    renderDetail(api)
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate password recovery link' }))
+    expect(screen.getByText(/link expires in one hour and can be used once/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Generate recovery link' }))
+    expect(await screen.findByRole('heading', { name: 'Password recovery link generated' })).toBeInTheDocument()
+    expect(api.issuePasswordRecovery).toHaveBeenCalledWith(directoryUser.id)
+    expect(screen.getByRole('textbox', { name: 'Recovery link' })).toHaveValue(manualSetup.setupLink.replace('account-setup', 'password-recovery'))
+    expect(screen.getByRole('button', { name: 'Copy Recovery Link' })).toBeInTheDocument()
+  })
+
   it('renders only authoritative overview metrics and an honest later-milestone boundary', async () => {
     const api = { getOverview: vi.fn().mockResolvedValue({ data: overview() }) }
     render(<MemoryRouter><AdminOverviewPage api={api} /></MemoryRouter>)

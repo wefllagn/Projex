@@ -1,3 +1,4 @@
+import ActivityGrading from './ActivityGrading.jsx'
 import AppDialog from '../components/AppDialog.jsx'
 import UnsavedChangesGuard from '../components/UnsavedChangesGuard.jsx'
 import { TopicSelector, GroupedClasswork } from './TopicViews.jsx'
@@ -24,6 +25,8 @@ import { createTemporaryTestCaseId } from './temporary-test-case-id.js'
 
 const EMPTY_FORM = {
   gradingMode: 'GRADED',
+  gradingPeriod: '',
+  rubricCriteria: [],
   topicId: '',
   title: '',
   instructions: '',
@@ -42,6 +45,8 @@ function contextMismatchError() {
 function formFromActivity(activity) {
   return {
     gradingMode: activity.gradingMode ?? 'GRADED',
+    gradingPeriod: activity.gradingPeriod ?? '',
+    rubricCriteria: activity.rubricCriteria ?? null,
     topicId: activity.topicId ?? '',
     title: activity.title,
     instructions: activity.instructions,
@@ -69,14 +74,14 @@ function emptyTestCase() {
   return { id: createTemporaryTestCaseId(), name: '', inputData: '', expectedOutput: '', isHidden: false, points: '0' }
 }
 
-function ActivityFormFields({ form, errors, onChange, readOnly, status, section, topicSelector }) {
+function ActivityFormFields({ automatedPoints = 0, form, errors, onChange, readOnly, status, section, topicSelector }) {
   const frozen = readOnly || status === 'PUBLISHED'
   const field = key => ({ 'aria-invalid': Boolean(errors[key]), 'aria-describedby': errors[key] ? `activity-${key}-error` : undefined })
   const error = key => errors[key] && <small id={`activity-${key}-error`} className="activity-field-error">{errors[key]}</small>
   return <>
     <div className="activity-settings-details" role="tabpanel" id="activity-settings-details" aria-labelledby="activity-tab-details" hidden={section !== 'details'}>
       <div className="activity-settings-description">{topicSelector}<section className="activity-authoring-section"><h3>Activity details</h3><label>Activity title<input {...field('title')} value={form.title} onChange={event => onChange('title', event.target.value)} disabled={readOnly} />{error('title')}</label><label>Instructions<GrowingTextarea {...field('instructions')} value={form.instructions} onChange={event => onChange('instructions', event.target.value)} disabled={readOnly} />{error('instructions')}</label></section></div>
-      <div className="activity-settings-policy"><section className="activity-authoring-section"><h3>Grading</h3><div className="instructor-form-grid"><label>Grading mode<select value={form.gradingMode} onChange={event => onChange('gradingMode', event.target.value)} disabled={frozen}><option value="GRADED">Graded</option><option value="COMPLETION">Ungraded · completion</option></select></label>{form.gradingMode !== 'COMPLETION' && <><label>Total points<input type="number" min="0.01" max="1000" step="0.01" {...field('totalPoints')} value={form.totalPoints} onChange={event => onChange('totalPoints', event.target.value)} disabled={frozen} />{error('totalPoints')}</label><label>Credited result<select {...field('creditPolicy')} value={form.creditPolicy} onChange={event => onChange('creditPolicy', event.target.value)} disabled={frozen}><option value="LATEST">Latest attempt</option><option value="HIGHEST">Highest attempt</option></select>{error('creditPolicy')}</label></>}</div></section>
+      <div className="activity-settings-policy"><section className="activity-authoring-section"><h3>Grading</h3><div className="instructor-form-grid"><label>Grading mode<select value={form.gradingMode} onChange={event => onChange('gradingMode', event.target.value)} disabled={frozen}><option value="GRADED">Graded</option><option value="COMPLETION">Ungraded · completion</option></select></label>{form.gradingMode !== 'COMPLETION' && <><label>Total points<input type="number" min="0.01" max="1000" step="0.01" {...field('totalPoints')} value={form.totalPoints} onChange={event => onChange('totalPoints', event.target.value)} disabled={frozen} />{error('totalPoints')}</label><label>Credited result<select {...field('creditPolicy')} value={form.creditPolicy} onChange={event => onChange('creditPolicy', event.target.value)} disabled={frozen}><option value="LATEST">Latest attempt</option><option value="HIGHEST">Highest attempt</option></select>{error('creditPolicy')}</label></>}</div><ActivityGrading form={form} onChange={onChange} automatedPoints={automatedPoints} frozen={frozen} />{error('rubricCriteria')}</section>
       <section className="activity-authoring-section"><h3>Deadline &amp; attempts</h3><div className="instructor-form-grid"><label>Deadline<input type="datetime-local" {...field('dueDate')} value={form.dueDate} onChange={event => onChange('dueDate', event.target.value)} disabled={readOnly} />{error('dueDate')}</label><label>Maximum attempts<select {...field('maxAttempts')} value={form.maxAttempts} onChange={event => onChange('maxAttempts', event.target.value)} disabled={readOnly}><option value="1">1 attempt</option><option value="2">2 attempts</option><option value="3">3 attempts</option></select>{error('maxAttempts')}</label></div></section></div>
       {status === 'PUBLISHED' && <p className="activity-lifecycle-note">Published grading and test cases are locked. You can extend the deadline or increase attempts.</p>}
     </div>
@@ -257,7 +262,7 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
       }}>{[['details', 'Details'], ['java', 'Java starter'], ...(current.activity ? [['tests', 'Test cases']] : [])].map(([id, label]) => <button type="button" role="tab" key={id} id={`activity-tab-${id}`} aria-controls={`activity-settings-${id}`} aria-selected={settingsSection === id} tabIndex={settingsSection === id ? 0 : -1} onClick={() => setSettingsSection(id)}>{label}{id === 'tests' && ` (${testCases.length})`}</button>)}</div>
       {notice && (noticeIsSuccess ? <div className="activity-save-notice" role="status"><strong>Changes saved</strong><p>{notice}</p></div> : <RequestState kind={noticeIsConflict ? 'conflict' : 'unavailable'} compact title={noticeIsConflict ? 'Review the latest changes' : 'Action not completed'} message={notice} />)}
       <form noValidate onSubmit={creating ? create : event => event.preventDefault()}>
-        <ActivityFormFields form={form} errors={errors} onChange={changeForm} readOnly={readOnly || Boolean(busy)} status={current.activity?.status || 'DRAFT'} section={settingsSection} topicSelector={<TopicSelector classId={selectedClass?.id} value={form.topicId} onChange={value => changeForm('topicId', value)} disabled={Boolean(busy) || selectedClass?.status === 'ARCHIVED' || current.activity?.status === 'ARCHIVED'} api={api} />} />
+        <ActivityFormFields automatedPoints={testCases.reduce((sum, row) => sum + (Number(row.points) || 0), 0)} form={form} errors={errors} onChange={changeForm} readOnly={readOnly || Boolean(busy)} status={current.activity?.status || 'DRAFT'} section={settingsSection} topicSelector={<TopicSelector classId={selectedClass?.id} value={form.topicId} onChange={value => changeForm('topicId', value)} disabled={Boolean(busy) || selectedClass?.status === 'ARCHIVED' || current.activity?.status === 'ARCHIVED'} api={api} />} />
         <div className="instructor-form-actions" hidden={settingsSection === 'tests'}>
           {creating ? <button type="submit" className="student-primary-action" disabled={busy === 'create' || selectedClass?.status === 'ARCHIVED'}>{busy === 'create' ? 'Creating…' : 'Create draft'}</button> : <button type="button" className="student-primary-action" onClick={saveActivity} disabled={!formDirty || current.activity?.status === 'ARCHIVED' || selectedClass?.status === 'ARCHIVED' || Boolean(busy)}>{busy === 'activity' ? 'Saving…' : 'Save activity'}</button>}
           <p>{creating ? 'Add test cases after saving the draft.' : formDirty ? 'Unsaved activity changes.' : ''}</p>

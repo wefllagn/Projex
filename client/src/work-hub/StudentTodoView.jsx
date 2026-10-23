@@ -82,7 +82,7 @@ export default function StudentTodoView({ classes = [], moreClasses = false, onM
         <h2><ProjexIcon name="calendar" size={18} />{heading}</h2>
         <ul>{rows.map(item => <li key={`${item.kind}-${item.id}`}>
           <NavLink className="academic-todo-row" to={classHref(item.kind === 'project' ? `/student/projects/${item.id}` : `/student/activity/${item.id}`, item.class.id)}>
-            <span className="academic-row-icon"><ProjexIcon name={item.kind === 'project' ? 'project' : 'activity'} size={24} /></span>
+            <span className={`academic-row-icon${item.kind === 'project' ? '' : ' origin-activity-icon'}`}><ProjexIcon name={item.kind === 'project' ? 'project' : 'activity'} size={24} /></span>
             <span className="academic-todo-identity"><strong>{item.title}</strong><small>{item.class.className}{item.class.section ? ` · ${item.class.section}` : ''}</small>{item.gradingMode === 'COMPLETION' && <small>Ungraded{item.completionState === 'COMPLETE' ? ' · Complete' : ''}</small>}</span>
             <time className={selected === 'missing' ? 'is-missing' : ''} dateTime={item.dueDate}>{item.dueDate ? new Date(item.dueDate).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'No due date'}</time>
             <ProjexIcon name="chevronRight" size={18} />

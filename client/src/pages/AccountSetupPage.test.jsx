@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { StrictMode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { ApiError } from '../api/api-client.js'
+import { ApiError, apiClient } from '../api/api-client.js'
 import { AuthContext } from '../auth/auth-context.js'
 import AccountSetupPage from './AccountSetupPage.jsx'
 import { consumeSetupToken } from './account-setup-token.js'
@@ -22,6 +22,22 @@ function renderPage(completeAccountSetup = vi.fn().mockResolvedValue({ data: { s
 }
 
 describe('account setup', () => {
+  it('retries a temporary recovery failure with the in-memory token and clears it after success', async () => {
+    window.history.replaceState(null, '', `/password-recovery#token=${syntheticToken}`)
+    const post = vi.spyOn(apiClient, 'post').mockRejectedValueOnce(new ApiError({ status: 503, code: 'TEMPORARILY_UNAVAILABLE', message: 'Try again.' })).mockResolvedValueOnce({ data: { recoveryCompleted: true } })
+    render(<AuthContext.Provider value={{}}><MemoryRouter><AccountSetupPage recovery /></MemoryRouter></AuthContext.Provider>)
+    const user = userEvent.setup()
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await user.type(screen.getByLabelText('New password'), 'Synthetic1!')
+      await user.type(screen.getByLabelText('Confirm password'), 'Synthetic1!')
+      await user.click(screen.getByRole('button', { name: 'Reset password' }))
+    }
+    expect(await screen.findByText(/existing sessions have ended/)).toBeInTheDocument()
+    expect(post).toHaveBeenLastCalledWith('/password-recovery/complete', { setupToken: syntheticToken, password: 'Synthetic1!', confirmPassword: 'Synthetic1!' }, { csrf: false, allowRefresh: false })
+    expect(window.location.hash).toBe('')
+    post.mockRestore()
+  })
+
   it('reads a setup token from the fragment and immediately removes the fragment URL', () => {
     const replaceState = vi.fn()
     const token = consumeSetupToken({

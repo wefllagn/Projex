@@ -55,10 +55,15 @@ function score(value) {
   return value === null || value === undefined ? 'Not available' : Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })
 }
 
+function rubricTotal(values) {
+  return values.reduce((sum, row) => sum + Math.round(Number(row.points || 0) * 100), 0) / 100
+}
+
 function reviewForm(record) {
   return {
     instructorPoints: String(record?.scores?.instructorPoints ?? 0),
     feedbackText: record?.feedback?.text ?? '',
+    rubricScores: (record?.rubricCriteria ?? []).map(row => ({ criterionId: row.id, points: String(record?.rubricScores?.find(score => score.criterionId === row.id)?.points ?? 0) })),
   }
 }
 
@@ -71,7 +76,7 @@ function errorKind(error) {
 function SubmissionQueueRow({ record, classId }) {
   return (
     <NavLink className="academic-submission-row" to={classHref(`/instructor/activity/${record.activityId}/submissions/${record.id}`, classId)}>
-      <span className="academic-row-icon"><ProjexIcon name="activity" size={22} /></span>
+      <span className="academic-row-icon origin-activity-icon"><ProjexIcon name="activity" size={22} /></span>
       <span className="academic-submission-student"><strong>{record.student.fullName}</strong>{record.student.email && <small>{record.student.email}</small>}<small>{record.attemptLabel}{record.isCreditedResult ? ' · Credited result' : ''}</small></span>
       <span className="academic-submission-state"><em className={`submission-status submission-status--${record.gradingMode === 'COMPLETION' ? 'complete' : record.status}`}>{submissionStatusLabel(record, formatStatus)}</em><time dateTime={record.submittedAt}>{formatDate(record.submittedAt)}</time>{record.isLate && <small>Accepted late</small>}</span>
       <ProjexIcon name="chevronRight" size={18} />
@@ -173,7 +178,7 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
   const [correction, setCorrection] = useState({ newEffectiveScore: '', reason: '' })
   const [confirmAction, setConfirmAction] = useState('')
   const actionLock = useRef(false)
-  const [review, setReview] = useState({ instructorPoints: '0', feedbackText: '' })
+  const [review, setReview] = useState({ instructorPoints: '0', feedbackText: '', rubricScores: [] })
   const [rerun, setRerun] = useState(null)
   const [rerunError, setRerunError] = useState(null)
   const [rerunBounded, setRerunBounded] = useState(false)
@@ -313,11 +318,11 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
 
   const saveReview = async (event) => {
     event.preventDefault()
-    const points = Number(review.instructorPoints)
+    const points = current.record.rubricCriteria.length ? rubricTotal(review.rubricScores) : Number(review.instructorPoints)
     if ((current.record.gradingMode !== 'COMPLETION' && (!Number.isFinite(points) || points < 0 || points > current.record.scores.instructorMaximum)) || review.feedbackText.trim().length > 20_000) return
     setBusy('review')
     try {
-      const response = await submissions.saveReview(submissionId, { ...(current.record.gradingMode === 'COMPLETION' ? {} : { instructorPoints: points }), feedbackText: review.feedbackText.trim(), expectedUpdatedAt: current.record.updatedAt })
+      const response = await submissions.saveReview(submissionId, { ...(current.record.gradingMode === 'COMPLETION' ? {} : { instructorPoints: points }), ...(current.record.rubricCriteria.length ? { rubricScores: review.rubricScores.map(row => ({ ...row, points: Number(row.points) })) } : {}), feedbackText: review.feedbackText.trim(), expectedUpdatedAt: current.record.updatedAt })
       adopt(response, review.feedbackText.trim() ? 'Review and private feedback draft saved.' : 'Review saved and the unreleased feedback draft was cleared.', true)
     } catch (error) { await handleMutationError(error) } finally { setBusy('') }
   }
@@ -377,12 +382,14 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
   const archived = current.activity.status === 'ARCHIVED' || selectedClass.status === 'ARCHIVED'
   const editable = !archived && canCorrectOrReview(record)
   const completion = record.gradingMode === 'COMPLETION'
-  const reviewDirty = review.feedbackText.trim() !== (record.feedback?.text ?? '') || (!completion && (review.instructorPoints === '' || Number(review.instructorPoints) !== record.scores.instructorPoints))
+  const rubricValid = record.rubricCriteria.every(criterion => { const row = review.rubricScores.find(score => score.criterionId === criterion.id); return row && row.points !== '' && Number.isFinite(Number(row.points)) && Number(row.points) >= 0 && Number(row.points) <= criterion.maximumPoints })
+  const rubricDirty = record.rubricCriteria.some(criterion => { const row = review.rubricScores.find(score => score.criterionId === criterion.id); return !row || row.points === '' || Number(row.points) !== (record.rubricScores.find(score => score.criterionId === criterion.id)?.points ?? 0) })
+  const reviewDirty = rubricDirty || review.feedbackText.trim() !== (record.feedback?.text ?? '') || (!completion && !record.rubricCriteria.length && (review.instructorPoints === '' || Number(review.instructorPoints) !== record.scores.instructorPoints))
   const correctionDirty = correction.newEffectiveScore !== '' || correction.reason.trim() !== ''
   const projectedFinalScore = completion ? null : record.scores.effectiveAutomatedScore === null ? null : record.scores.effectiveAutomatedScore + record.scores.instructorPoints
   const correctionHint = completion ? '' : correction.newEffectiveScore === '' ? `Enter an automated score between 0 and ${record.scores.automatedMaximum}.` : !Number.isFinite(Number(correction.newEffectiveScore)) || Number(correction.newEffectiveScore) < 0 || Number(correction.newEffectiveScore) > record.scores.automatedMaximum ? `The automated score must be between 0 and ${record.scores.automatedMaximum}; Instructor points are separate.` : correction.reason.trim().length < 10 ? 'Explain the correction in at least 10 characters.' : correction.reason.trim().length > 2000 ? 'Keep the correction reason within 2,000 characters.' : ''
   const correctionValid = !completion && !correctionHint
-  const reviewValid = completion ? review.feedbackText.trim().length <= 20_000 : Number.isFinite(Number(review.instructorPoints)) && review.instructorPoints !== '' && Number(review.instructorPoints) >= 0 && Number(review.instructorPoints) <= record.scores.instructorMaximum && review.feedbackText.trim().length <= 20_000
+  const reviewValid = !rubricValid ? false : completion ? review.feedbackText.trim().length <= 20_000 : Number.isFinite(Number(review.instructorPoints)) && review.instructorPoints !== '' && Number(review.instructorPoints) >= 0 && Number(review.instructorPoints) <= record.scores.instructorMaximum && review.feedbackText.trim().length <= 20_000
   const resolutionValid = resolution.reason.trim().length >= 10 && resolution.reason.trim().length <= 2000 && (resolution.resolutionType !== 'REPLACEMENT_GRANTED' || (resolution.replacementExpiresAt && new Date(resolution.replacementExpiresAt).getTime() > Date.now()))
 
   return (
@@ -403,12 +410,12 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
           {record.status !== 'released' && !completion && <div className="academic-review-summary"><div><span>Saved grade preview</span><strong>{score(projectedFinalScore)} / {score(record.scores.totalPoints)} points</strong></div><small>Not released to the Student</small></div>}
           {(reviewDirty || correctionDirty) && <p className="academic-inline-help" role="status">{correctionDirty ? 'Record or clear your automated-score correction before releasing.' : 'Save your grading and feedback changes before releasing.'} The preview shows the saved result.</p>}
           {completion && <section className="instructor-score-panel"><h3>Complete · Ungraded</h3><p>Official submission accepted. Feedback release is separate from completion.</p></section>}
-          {editable && <form className="instructor-feedback-panel instructor-live-feedback" onSubmit={saveReview}><label>Private feedback draft<textarea aria-label="Private feedback draft" aria-describedby="feedback-draft-help" value={review.feedbackText} maxLength={20000} onChange={(event) => setReview((value) => ({ ...value, feedbackText: event.target.value }))} /><small id="feedback-draft-help">Saving an empty field clears the unreleased draft.</small></label>{!completion && <label>Instructor points<input type="number" min="0" max={record.scores.instructorMaximum} step="0.01" value={review.instructorPoints} onChange={(event) => setReview((value) => ({ ...value, instructorPoints: event.target.value }))} /></label>}<div className="instructor-form-actions"><button type="submit" className="student-primary-action" disabled={!reviewValid || Boolean(busy)}>{busy === 'review' ? 'Saving…' : 'Save review draft'}</button></div></form>}
+          {editable && <form className="instructor-feedback-panel instructor-live-feedback" onSubmit={saveReview}><label>Private feedback draft<textarea aria-label="Private feedback draft" aria-describedby="feedback-draft-help" value={review.feedbackText} maxLength={20000} onChange={(event) => setReview((value) => ({ ...value, feedbackText: event.target.value }))} /><small id="feedback-draft-help">Saving an empty field clears the unreleased draft.</small></label>{!completion && record.rubricCriteria.length > 0 && <fieldset><legend>Instructor rubric</legend>{record.rubricCriteria.map(criterion => <label key={criterion.id}>{criterion.name} / {criterion.maximumPoints}<input type="number" min="0" max={criterion.maximumPoints} step="0.01" value={review.rubricScores.find(row => row.criterionId === criterion.id)?.points ?? ''} onChange={event => setReview(value => ({ ...value, rubricScores: value.rubricScores.map(row => row.criterionId === criterion.id ? { ...row, points: event.target.value } : row) }))} /></label>)}<p>Instructor total: {rubricTotal(review.rubricScores)} / {record.scores.instructorMaximum}</p></fieldset>}{!completion && !record.rubricCriteria.length && <label>Instructor points<input type="number" min="0" max={record.scores.instructorMaximum} step="0.01" value={review.instructorPoints} onChange={(event) => setReview((value) => ({ ...value, instructorPoints: event.target.value }))} /></label>}<div className="instructor-form-actions"><button type="submit" className="student-primary-action" disabled={!reviewValid || Boolean(busy)}>{busy === 'review' ? 'Saving…' : 'Save review draft'}</button></div></form>}
           {canRelease(record) && !archived && <section className="instructor-release-panel"><div><h3>{completion ? 'Release feedback' : 'Release result'}</h3><p>{completion ? 'Share your saved comments with the Student.' : 'Share the final score and feedback with the Student.'} This cannot be undone.</p></div><button type="button" className="student-primary-action" disabled={Boolean(busy) || reviewDirty || correctionDirty} onClick={() => setConfirmAction('release')}>{busy === 'release' ? 'Releasing…' : completion ? 'Release feedback' : 'Release final result'}</button></section>}
           {!completion && <details className="instructor-score-panel academic-score-breakdown"><summary>Score breakdown</summary>
         <div className="instructor-section-title"><h3>Score components</h3></div>
         <dl className="activity-facts"><div><dt>Original automated</dt><dd>{score(record.scores.originalAutomatedScore)} / {score(record.scores.automatedMaximum)}</dd></div><div><dt>Effective automated</dt><dd>{score(record.scores.effectiveAutomatedScore)} / {score(record.scores.automatedMaximum)}</dd></div><div><dt>Instructor points</dt><dd>{score(record.scores.instructorPoints)} / {score(record.scores.instructorMaximum)}</dd></div><div><dt>{record.status === 'released' ? 'Released final score' : 'Projected final score'}</dt><dd>{record.status === 'released' ? score(record.scores.finalScore) : score(projectedFinalScore)} / {score(record.scores.totalPoints)}</dd></div></dl>
-
+        {record.rubricCriteria.length > 0 && <dl className="activity-facts">{record.rubricCriteria.map(criterion => <div key={criterion.id}><dt>{criterion.name}</dt><dd>{score(record.rubricScores.find(row => row.criterionId === criterion.id)?.points ?? 0)} / {score(criterion.maximumPoints)}</dd></div>)}</dl>}
       </details>}
           <details className="academic-record-metadata"><summary>Submission details</summary><dl className="academic-record-facts"><div><dt>Attempt record</dt><dd>{record.attemptLabel}<small>{record.countsTowardAttemptLimit ? 'Counts toward normal allowance' : 'Does not count toward normal allowance'}</small></dd></div><div><dt>{completion ? 'Completion' : 'Credited-result policy'}</dt><dd>{completion ? 'Complete · official submission accepted' : current.activity.creditPolicy === 'HIGHEST' ? 'Highest released attempt' : 'Latest released attempt'}{record.isCreditedResult && <small>Current credited result</small>}</dd></div><div><dt>Activity state</dt><dd>{formatStatus(current.activity.status)}</dd></div></dl></details>
           {canResolveAssessmentFailure(record) && !archived && <section className="instructor-failure-panel"><div className="instructor-section-title"><h3>Infrastructure assessment failure</h3><span>The original submission remains immutable</span></div><p>Retry the same assessment first when appropriate, or explicitly resolve the infrastructure failure.</p><button type="button" className="student-outline-action" onClick={retry} disabled={Boolean(busy) || !capabilities.java.execution}>{busy === 'retry' ? 'Queueing retry…' : 'Retry same assessment'}</button>{!capabilities.java.execution && <p className="activity-lifecycle-note">Java assessment retry is unavailable in this environment.</p>}<form onSubmit={resolveFailure}><label>Resolution<select value={resolution.resolutionType} onChange={(event) => setResolution((value) => ({ ...value, resolutionType: event.target.value, replacementExpiresAt: '' }))}><option value="CLOSED_WITHOUT_REPLACEMENT">Close without replacement</option><option value="REPLACEMENT_GRANTED">Grant replacement attempt</option></select></label>{resolution.resolutionType === 'REPLACEMENT_GRANTED' && <label>Replacement expires (local time)<input type="datetime-local" value={resolution.replacementExpiresAt} onChange={(event) => setResolution((value) => ({ ...value, replacementExpiresAt: event.target.value }))} /><small>Local time; availability is checked when the Student submits.</small></label>}<label>Mandatory reason<textarea value={resolution.reason} maxLength={2000} onChange={(event) => setResolution((value) => ({ ...value, reason: event.target.value }))} /></label><button type="submit" className="student-primary-action" disabled={!resolutionValid || Boolean(busy)}>{busy === 'resolution' ? 'Resolving…' : 'Resolve failure'}</button></form></section>}

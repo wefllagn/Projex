@@ -25,6 +25,8 @@ export interface AppDependencies {
   now?: () => Date
   featureRouters?: {
     auth: Router
+    passwordRecovery?: Router
+    gradebook?: Router
     accountSetup: Router
     admin?: Router
     users: Router
@@ -88,6 +90,8 @@ export function createApp({
   if (featureRouters?.capabilities) app.use('/api/v1/capabilities', featureRouters.capabilities)
   if (featureRouters) {
     if (featureRouters.interactiveConsole) app.use('/api/v1', featureRouters.interactiveConsole)
+    if (featureRouters.passwordRecovery) app.use('/api/v1', featureRouters.passwordRecovery)
+    if (featureRouters.gradebook) app.use('/api/v1', featureRouters.gradebook)
     app.use('/api/v1/auth', featureRouters.auth)
     app.use('/api/v1/account-setup', featureRouters.accountSetup)
     if (featureRouters.admin) {

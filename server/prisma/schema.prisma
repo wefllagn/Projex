@@ -26,6 +26,7 @@ enum UserStatus {
 }
 
 enum AdminAuditAction {
+  USER_PASSWORD_RECOVERY_ISSUED
   USER_STUDENT_PROVISIONED
   USER_INSTRUCTOR_PROVISIONED
   USER_SETUP_REISSUED
@@ -421,6 +422,7 @@ model AdminAuditEvent {
 }
 
 model AccountSetupToken {
+  purpose       String    @default("ACCOUNT_SETUP") @db.VarChar(32)
   id            String    @id @default(uuid()) @map("setup_token_id") @db.Uuid
   userId        String    @map("user_id") @db.Uuid
   tokenHash     String    @unique @map("token_hash")
@@ -601,6 +603,8 @@ model ClassTopic {
 }
 
 model ProgrammingActivity {
+  gradingPeriod String? @map("grading_period") @db.VarChar(16)
+  rubricCriteria Json? @map("rubric_criteria")
   gradingMode ActivityGradingMode @default(GRADED) @map("grading_mode")
   topicId String? @map("topic_id") @db.Uuid
   topic ClassTopic? @relation(fields: [topicId, classId], references: [id, classId], onDelete: Restrict, onUpdate: Cascade)
@@ -657,6 +661,8 @@ model TestCase {
 }
 
 model ActivitySubmission {
+  rubricSnapshot Json? @map("rubric_snapshot")
+  rubricScores Json? @map("rubric_scores")
   gradingModeSnapshot ActivityGradingMode @default(GRADED) @map("grading_mode_snapshot")
   id                          String                       @id @default(uuid()) @map("submission_id") @db.Uuid
   activityId                  String                       @map("activity_id") @db.Uuid

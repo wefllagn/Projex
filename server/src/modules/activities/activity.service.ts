@@ -183,6 +183,8 @@ function publishedFieldViolation(input: UpdateActivityInput): string | null {
     'totalPoints',
     'creditPolicy',
     'gradingMode',
+    'gradingPeriod',
+    'rubricCriteria',
   ]
   return frozenFields.find((field) => input[field] !== undefined) ?? null
 }

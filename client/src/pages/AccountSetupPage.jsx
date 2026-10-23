@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ApiError, describeApiError } from '../api/api-client.js'
+import { ApiError, apiClient, describeApiError } from '../api/api-client.js'
 import { useAuth } from '../auth/auth-context.js'
 import { consumeSetupToken } from './account-setup-token.js'
 
@@ -14,7 +14,7 @@ function passwordPolicyError(password) {
   return null
 }
 
-export default function AccountSetupPage() {
+export default function AccountSetupPage({ recovery = false }) {
   const auth = useAuth()
   const tokenRef = useRef('')
   const cleanupTimerRef = useRef(null)
@@ -29,7 +29,7 @@ export default function AccountSetupPage() {
     if (!tokenRef.current) tokenRef.current = consumeSetupToken()
     if (!tokenRef.current) {
       setStatus('invalid')
-      setMessage('This setup link is missing its secure token. Request a new setup email.')
+      setMessage(recovery ? 'This recovery link is missing its secure token. Ask your Admin for a new link.' : 'This setup link is missing its secure token. Request a new setup email.')
     }
 
     return () => {
@@ -39,7 +39,7 @@ export default function AccountSetupPage() {
         tokenRef.current = ''
       }, 0)
     }
-  }, [])
+  }, [recovery])
 
   const clearSensitiveState = () => {
     tokenRef.current = ''
@@ -60,21 +60,23 @@ export default function AccountSetupPage() {
 
     setStatus('submitting')
     try {
-      await auth.completeAccountSetup(tokenRef.current, password, confirmPassword)
+      if (recovery) await apiClient.post('/password-recovery/complete', { setupToken: tokenRef.current, password, confirmPassword }, { csrf: false, allowRefresh: false })
+      else await auth.completeAccountSetup(tokenRef.current, password, confirmPassword)
       clearSensitiveState()
       setStatus('success')
-      setMessage('Your Origin password is ready. You can now sign in.')
+      setMessage(recovery ? 'Your password has been reset and existing sessions have ended. You can now sign in.' : 'Your Origin password is ready. You can now sign in.')
     } catch (error) {
       setPassword('')
       setConfirmPassword('')
       setFieldErrors(error instanceof ApiError ? error.fieldErrors : {})
-      setStatus('invalid')
+      const invalid = !recovery || (error instanceof ApiError && error.code === 'RECOVERY_TOKEN_INVALID')
+      setStatus(invalid ? 'invalid' : 'ready')
       setMessage(
-        error instanceof ApiError && error.code === 'SETUP_TOKEN_INVALID'
-          ? 'This setup link is invalid, expired, or already used. Request a new setup email.'
+        error instanceof ApiError && ['SETUP_TOKEN_INVALID', 'RECOVERY_TOKEN_INVALID'].includes(error.code)
+          ? recovery ? 'This recovery link is invalid, expired, replaced, or already used. Ask your Admin for a new link.' : 'This setup link is invalid, expired, or already used. Request a new setup email.'
           : describeApiError(error),
       )
-      tokenRef.current = ''
+      if (invalid) tokenRef.current = ''
     }
   }
 
@@ -84,8 +86,8 @@ export default function AccountSetupPage() {
         <img className="student-login-logo" src="/assets/brand/projex-login-logo.png" alt="Origin by Saint Louis University" />
         <form className="student-login-card account-setup-card" onSubmit={submit}>
           <div>
-            <h1>Set up your account</h1>
-            <p>Create the password you will use to sign in to Origin.</p>
+            <h1>{recovery ? 'Reset your password' : 'Set up your account'}</h1>
+            <p>{recovery ? 'Choose a new password. Your account and academic work stay unchanged.' : 'Create the password you will use to sign in to Origin.'}</p>
           </div>
 
           {status === 'success' || status === 'invalid' ? (
@@ -94,6 +96,7 @@ export default function AccountSetupPage() {
             </div>
           ) : (
             <>
+              {recovery && message && <p className="auth-form-message is-error" role="alert">{message}</p>}
               <label className="student-login-field">
                 <span>New password</span>
                 <input
@@ -118,7 +121,7 @@ export default function AccountSetupPage() {
               </label>
               <p className="account-setup-policy">Use 10–128 characters with uppercase, lowercase, number, and special character.</p>
               <button type="submit" className="student-login-button" disabled={status === 'submitting'}>
-                {status === 'submitting' ? 'Setting up account…' : 'Set password'}
+                {status === 'submitting' ? recovery ? 'Resetting password…' : 'Setting up account…' : recovery ? 'Reset password' : 'Set password'}
               </button>
             </>
           )}

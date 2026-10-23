@@ -1,3 +1,4 @@
+import Gradebook from '../gradebook/Gradebook.jsx'
 import ClassIdentityBadge from '../classes/ClassIdentityBadge.jsx'
 import GroupBrowserEditor from '../repositories/GroupBrowserEditor.jsx'
 import ClassCardGrid from '../classes/ClassCardGrid.jsx'
@@ -35,6 +36,7 @@ function ClassHeader({ activeTab }) {
     { label: 'Overview', path: '/student/classes', key: 'stream' },
     { label: 'Activities', path: '/student/activity', key: 'assignments' },
     { label: 'People', path: '/student/people', key: 'people' },
+    { label: 'Gradebook', path: '/student/gradebook', key: 'gradebook' },
   ]
 
   return (
@@ -67,7 +69,7 @@ function ClassHeader({ activeTab }) {
               end={tab.key === 'stream'}
               className={activeTab === tab.key ? 'is-active' : undefined}
             >
-              <ProjexIcon name={tab.key === 'assignments' ? 'activity' : tab.key === 'people' ? 'people' : 'preview'} />
+              <ProjexIcon name={['assignments', 'gradebook'].includes(tab.key) ? 'activity' : tab.key === 'people' ? 'people' : 'preview'} />
               {tab.label}
             </NavLink>
           ))}
@@ -437,6 +439,7 @@ function ProjectRepositoryPage() {
 
 export function StudentRoutePage({ pagePath }) {
   const pages = {
+    gradebook: <StudentClassPage activeTab="gradebook"><Gradebook /></StudentClassPage>,
     dashboard: <HomeDashboardPage />,
     classes: <StudentClassesPage />,
     todo: <StudentTodoPage />,

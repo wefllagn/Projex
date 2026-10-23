@@ -63,6 +63,7 @@ export function createPrismaAdminOversightRepository(prisma: PrismaClient) {
           where: { status: 'SETUP_PENDING' },
           select: {
             accountSetupTokens: {
+              where: { purpose: 'ACCOUNT_SETUP' },
               orderBy: { createdAt: 'desc' },
               take: 1,
               select: { expiresAt: true, usedAt: true, invalidatedAt: true },

@@ -1,3 +1,4 @@
+import { rubricAllocationValid, type RubricCriterion } from './activity-grading.js'
 import { AppError } from '../../shared/errors/app-error.js'
 import {
   Prisma,
@@ -23,6 +24,8 @@ export const activityRecordSelect = {
   starterCode: true,
   maxAttempts: true,
   creditPolicy: true,
+  gradingPeriod: true,
+  rubricCriteria: true,
   gradingMode: true,
   topicId: true,
   totalPoints: true,
@@ -72,6 +75,8 @@ export type ActivityPublishFailureReason =
   | 'TEST_CASE_POINTS_REQUIRED'
   | 'TEST_CASE_POINTS_EXCEED_TOTAL'
   | 'STARTER_CODE_REQUIRED'
+  | 'RUBRIC_ALLOCATION_INVALID'
+  | 'GRADING_PERIOD_REQUIRED'
 
 export type PublishActivityResult =
   | { kind: 'updated'; activity: ActivityRecord }
@@ -87,6 +92,8 @@ export interface ActivityMutableFields {
   starterCode?: string
   maxAttempts?: number
   creditPolicy?: 'LATEST' | 'HIGHEST'
+  gradingPeriod?: 'PRELIM' | 'MIDTERM' | 'FINAL' | null
+  rubricCriteria?: RubricCriterion
   gradingMode?: 'GRADED' | 'COMPLETION'
   topicId?: string | null
   totalPoints?: number | null
@@ -229,6 +236,8 @@ export function createPrismaActivityRepository(
             maxAttempts: input.activity.maxAttempts,
             creditPolicy: input.activity.creditPolicy,
             gradingMode: input.activity.gradingMode,
+            gradingPeriod: input.activity.gradingPeriod,
+            rubricCriteria: input.activity.rubricCriteria ?? Prisma.DbNull,
             topicId: input.activity.topicId,
             totalPoints: input.activity.totalPoints,
             status: 'DRAFT',
@@ -424,6 +433,8 @@ export function createPrismaActivityRepository(
             reason: 'TEST_CASE_POINTS_EXCEED_TOTAL',
           } as const
         }
+        if (current.gradingMode !== 'COMPLETION' && !rubricAllocationValid(current.rubricCriteria, Number(current.totalPoints) - testCasePoints)) return { kind: 'not_publishable', reason: 'RUBRIC_ALLOCATION_INVALID' } as const
+        if (current.gradingMode !== 'COMPLETION' && current.rubricCriteria != null && !current.gradingPeriod) return { kind: 'not_publishable', reason: 'GRADING_PERIOD_REQUIRED' } as const
         const result = await transaction.programmingActivity.updateMany({
           where: {
             id: input.activityId,

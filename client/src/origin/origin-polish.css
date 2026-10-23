@@ -41,3 +41,7 @@
 .origin-application .academic-repository-row { transition: background-color 150ms ease,box-shadow 150ms ease; }
 .origin-application .academic-repository-row:has(a:hover), .origin-application .academic-repository-row:focus-within { background: var(--origin-hover); box-shadow: inset 0 1px 0 var(--origin-edge-light); }
 .origin-application .academic-repository-row:has(a:active) { background: var(--origin-pressed); box-shadow: inset 0 2px 4px var(--origin-inset); }
+
+.origin-application .projex-academic-shell .origin-activity-icon { display: grid; place-items: center; background: transparent; border: 1px solid var(--origin-control); box-shadow: inset 0 1px 0 var(--origin-edge-light); border-radius: 9px; filter: none; }
+.origin-application .classwork-row-icon.origin-activity-icon { padding: 9px; }
+.origin-application .classwork-row-icon.origin-activity-icon .projex-icon { width: 22px; height: 22px; }
