@@ -188,7 +188,7 @@ function ProvisionUserDialog({ role, api, onClose, onCreated }) {
   return (
     <AdminDialog
       title={`Provision ${role === 'STUDENT' ? 'student' : 'instructor'}`}
-      summary="Projex will create a temporary one-time setup link and also use the configured delivery channel."
+      summary="Origin will create a temporary one-time setup link and also use the configured delivery channel."
       onClose={onClose}
       onSubmit={submit}
       submitLabel="Provision account"
@@ -234,7 +234,7 @@ function SetupLinkDialog({ issuance, onClose }) {
           Setup link
           <input ref={linkField} readOnly autoComplete="off" value={issuance.setupLink} onFocus={(event) => event.currentTarget.select()} />
         </label>
-        <p className="admin-setup-warning">Anyone with this link can choose the initial Projex password until the link expires, is replaced, or is used.</p>
+        <p className="admin-setup-warning">Anyone with this link can choose the initial Origin password until the link expires, is replaced, or is used.</p>
         {copyState === 'copied' && <p className="admin-notice" role="status">Setup link copied.</p>}
         {copyState === 'manual' && <p className="class-form-error" role="status">Automatic copy is unavailable. The setup link is selected; copy it manually.</p>}
         <div className="admin-dialog__actions">
@@ -368,7 +368,7 @@ function StatusDialog({ account, api, onClose, onUpdated, onConflict }) {
     }
   }
   return (
-    <AdminDialog title="Change account status" summary={`Change ${account.fullName}'s account from ${humanize(account.status)}. This can revoke access across Projex.`} onClose={onClose} onSubmit={submit} submitLabel="Confirm status change" busy={busy} danger>
+    <AdminDialog title="Change account status" summary={`Change ${account.fullName}'s account from ${humanize(account.status)}. This can revoke access across Origin.`} onClose={onClose} onSubmit={submit} submitLabel="Confirm status change" busy={busy} danger>
       <div className="admin-form-grid">
         <label>New status<select value={nextStatus} onChange={(event) => setNextStatus(event.target.value)}>{options.map((status) => <option key={status}>{status}</option>)}</select></label>
         <label className="admin-form-span">Reason<textarea required minLength="10" maxLength="500" value={reason} onChange={(event) => setReason(event.target.value)} /></label>

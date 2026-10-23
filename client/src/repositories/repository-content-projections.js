@@ -4,7 +4,7 @@ const COMMIT_ID = /^[0-9a-f]{40}$/i
 const OPERATIONS = new Set(['READ', 'WRITE'])
 
 function invalidProjection() {
-  return new ApiError({ code: 'INVALID_API_RESPONSE', message: 'Projex returned an invalid repository response.' })
+  return new ApiError({ code: 'INVALID_API_RESPONSE', message: 'Origin returned an invalid repository response.' })
 }
 
 function requiredString(value) {

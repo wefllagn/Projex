@@ -422,6 +422,12 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
       leaseMs: 60_000,
     })
     expect(practiceJob?.cases).toHaveLength(1)
+    // PostgreSQL's clock can be a few milliseconds ahead of Node on Windows.
+    // Keep the synthetic completion at or after the persisted creation time.
+    const practiceJobRecord = await prisma.executionJob.findUniqueOrThrow({
+      where: { practiceExecutionId: practiceId },
+      select: { createdAt: true },
+    })
     await queue.complete(
       practiceJob!,
       {
@@ -439,7 +445,7 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
           },
         ],
       },
-      new Date(),
+      new Date(Math.max(Date.now(), practiceJobRecord.createdAt.getTime())),
     )
     const practiceResult = await studentAgent
       .get(`/api/v1/visible-test-runs/${practiceId}`)

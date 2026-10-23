@@ -1,0 +1,213 @@
+/* Origin's public identity, reduced to a calm working surface. Tokens live on
+   the document while authenticated so portalled menus and dialogs share them. */
+:root[data-origin-appearance] {
+  --origin-ground: #e5ebf0;
+  --origin-surface: #f6f9fc;
+  --origin-raised: #dce5ed;
+  --origin-ink: #243544;
+  --origin-muted: #465e72;
+  --origin-faint: #526b80;
+  --origin-border: #bac9d6;
+  --origin-control: #8ca2b5;
+  --origin-metal: linear-gradient(135deg, #ffffffeb, #d9e3ec 64%, #c7d6e2);
+  --origin-edge-light: #ffffffc9;
+  --origin-shadow: #47647b25;
+  --origin-horizon: #6fa3ce;
+  --origin-accent: #2468a8;
+  --origin-accent-soft: #eaf2fa;
+  --origin-positive: #287549;
+  --origin-positive-soft: #edf7f0;
+  --origin-negative: #b13b48;
+  --origin-negative-soft: #fceef0;
+  --origin-warning: #8c641e;
+  --origin-warning-soft: #fbf5e7;
+  --origin-on-action: #ffffff;
+  --px-primary: var(--origin-accent);
+  --px-ink: var(--origin-ink);
+  --px-muted: var(--origin-muted);
+  --px-surface: var(--origin-surface);
+  --px-subtle: var(--origin-raised);
+  --px-border: var(--origin-border);
+  --px-focus: var(--origin-accent);
+  --sans: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', sans-serif;
+  --text: var(--origin-ink);
+  --page: var(--origin-ground);
+  --muted: var(--origin-muted);
+  --border: var(--origin-border);
+  --focus: var(--origin-accent);
+  color-scheme: light;
+  background: var(--origin-ground);
+}
+:root[data-origin-appearance='dark'] {
+  --origin-ground: #070e14;
+  --origin-surface: #0d1822;
+  --origin-raised: #162432;
+  --origin-ink: #eef2f7;
+  --origin-muted: #a4b6c6;
+  --origin-faint: #8ea5b9;
+  --origin-border: #6b879c40;
+  --origin-control: #52697d;
+  --origin-metal: linear-gradient(135deg, #384754b3, #172735 40%, #0d1925 78%, #243d50);
+  --origin-edge-light: #d2e4ed38;
+  --origin-shadow: #00000045;
+  --origin-horizon: #a8d4ff;
+  --origin-accent: #79b8f4;
+  --origin-accent-soft: #213447;
+  --origin-positive: #82c99d;
+  --origin-positive-soft: #20392a;
+  --origin-negative: #f09aa4;
+  --origin-negative-soft: #3c262c;
+  --origin-warning: #e6bf7c;
+  --origin-warning-soft: #392f20;
+  color-scheme: dark;
+}
+.origin-application { color: var(--origin-ink); background: var(--origin-ground); font: 14px/1.5 var(--sans); min-height: 100dvh; padding-top: 48px; }
+.origin-app-bar { position: fixed; z-index: 90; top: 0; inset-inline: 0; height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px; background: var(--origin-ground); color: var(--origin-muted); font-size: 12px; }
+.origin-app-context, .origin-app-utilities { display: flex; align-items: center; gap: 16px; }
+.origin-app-context strong { font-weight: 500; color: var(--origin-ink); }
+.origin-app-context svg, .origin-app-theme svg { width: 16px; height: 16px; }
+.origin-app-theme { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 4px 10px; color: var(--origin-ink); background: transparent; border: 1px solid var(--origin-control); border-radius: 6px; cursor: pointer; font-size: 12px; }
+.origin-app-theme:hover { background: var(--origin-surface); }
+.origin-app-skip { position: fixed; z-index: 300; top: -80px; left: 16px; padding: 12px 20px; color: var(--origin-ink); background: var(--origin-surface); }
+.origin-app-skip:focus { top: 8px; }
+.origin-application .student-app-shell { min-height: calc(100dvh - 48px); grid-template-columns: 232px minmax(0, 1fr); background: var(--origin-ground); }
+.origin-application .student-app-shell.is-sidebar-collapsed { grid-template-columns: 72px minmax(0, 1fr); }
+.origin-application .student-sidebar { top: 48px; height: calc(100dvh - 48px); border: 0; background: var(--origin-ground); padding: 12px; gap: 24px; }
+.origin-application .student-sidebar-brand-row { min-height: 48px; gap: 8px; grid-template-columns: 32px minmax(0,1fr); }
+.origin-application .student-sidebar-toggle { width: 32px; height: 32px; background: transparent; border-radius: 6px; color: var(--origin-muted); }
+.origin-application .student-brand { min-height: 40px; }
+.origin-application .origin-brand { display: inline-flex; align-items: center; gap: 8px; font-size: 25px; font-weight: 600; letter-spacing: -.055em; color: var(--origin-ink); }
+.origin-application .origin-brand-mark { position: relative; display: block; width: 25px; height: 25px; transform: rotate(-28deg); }
+.origin-application .origin-brand-mark span { position: absolute; left: 4px; width: 17px; height: 5px; border-radius: 1px; background: currentColor; }
+.origin-application .origin-brand-mark span:nth-child(1) { top: 2px; }
+.origin-application .origin-brand-mark span:nth-child(2) { top: 10px; }
+.origin-application .origin-brand-mark span:nth-child(3) { top: 18px; }
+.origin-application .student-sidebar__nav { gap: 4px; }
+.origin-application .student-sidebar__link, .origin-application .student-class-link { min-height: 40px; gap: 10px; padding: 9px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--origin-muted); font-size: 13px; font-weight: 500; box-shadow: none; }
+.origin-application .student-sidebar__link:is(:hover,.active), .origin-application .student-class-link:is(:hover,.is-active) { background: var(--origin-surface); color: var(--origin-ink); box-shadow: none; }
+.origin-application .student-sidebar__link::after, .origin-application .student-class-link::after { content: none; }
+.origin-application .student-sidebar__group { padding-top: 18px; border: 0; }
+.origin-application .student-sidebar__group p { color: var(--origin-faint); font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: .01em; padding-left: 12px; }
+.origin-application .student-class-dot { background: var(--origin-raised); color: var(--origin-muted); border: 1px solid var(--origin-border); border-radius: 6px; }
+.origin-application .academic-sidebar-signout { background: transparent; border-top: 1px solid var(--origin-border); padding: 12px 0 0; }
+.origin-application .student-main { min-width: 0; margin: 0 8px 8px 0; border: 1px solid var(--origin-border); border-radius: 14px; background: var(--origin-surface); overflow: clip; }
+.origin-application :is(.student-home-page,.student-global-page,.student-class-page,.student-class-content,.student-page-content,.admin-main,.group-browser-editor) { background: var(--origin-surface); color: var(--origin-ink); }
+.origin-application :is(.student-global-topbar,.student-class-header,.student-home-topbar) { background: var(--origin-surface); border-color: var(--origin-border); box-shadow: none; }
+.origin-application :is(h1,h2,h3,h4) { color: var(--origin-ink); font-family: var(--sans); letter-spacing: -.025em; text-wrap: pretty; }
+.origin-application :is(.student-global-title h1,.student-course-title h1,.student-home-hero h1,.admin-page-header h1) { font-size: 26px; font-weight: 600; }
+.origin-application :is(.student-home-hero,.academic-home-intro) { background: transparent; border: 0; box-shadow: none; padding-block: 22px; }
+.origin-application .student-home-hero :is(h1,p) { color: var(--origin-ink); }
+.origin-application :is(.academic-home-class-count,.academic-class-summary) { background: var(--origin-raised); border: 1px solid var(--origin-border); border-radius: 10px; color: var(--origin-ink); box-shadow: none; }
+.origin-application :is(.academic-home-class-count strong,.academic-class-summary dd,.admin-metric__value) { color: var(--origin-ink); font-size: 28px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.origin-application :is(.academic-class-card,.student-detail-card,.student-work-card,.student-side-card,.student-content-card,.admin-panel,.admin-metric,.group-project-card,.repository-content-panel) { background: var(--origin-surface); border: 1px solid var(--origin-border); border-radius: 10px; box-shadow: none; }
+.origin-application .academic-class-card { padding: 20px; min-height: 124px; transition: border-color 120ms ease, background-color 120ms ease; }
+.origin-application .academic-class-card:hover { transform: none; box-shadow: none; border-color: var(--origin-control); background: var(--origin-raised); }
+.origin-application :is(.academic-class-icon,.academic-row-icon,.student-detail-icon,.student-dashboard-stat-icon) { background: transparent; box-shadow: none; border: 0; color: var(--origin-muted); }
+.origin-application :is(.student-class-tabs,.group-repo-tabs,.student-submission-tabs) { border-color: var(--origin-border); }
+.origin-application :is(.student-class-tabs,.group-repo-tabs) a { color: var(--origin-muted); background: transparent; font-weight: 500; }
+.origin-application :is(.student-class-tabs,.group-repo-tabs) a:is(.is-active,.active,[aria-current='page']) { color: var(--origin-ink); border-color: var(--origin-ink); background: transparent; }
+.origin-application :is(.student-primary-action,.student-submit-code,.student-assignment-action,.activity-code-button), :root[data-origin-appearance] .projex-dialog .student-primary-action { background: #253e56; border-color: #253e56; color: #fff; box-shadow: none; border-radius: 7px; font-weight: 600; }
+:root[data-origin-appearance='dark'] .origin-application :is(.student-primary-action,.student-submit-code,.student-assignment-action,.activity-code-button), :root[data-origin-appearance='dark'] .projex-dialog .student-primary-action { background: #c8d9e7; border-color: #c8d9e7; color: #18232d; }
+.origin-application :is(.student-outline-action,.student-primary-action,.student-assignment-action) { min-height: 38px; font-size: 13px; padding: 8px 14px; }
+.origin-application .student-outline-action { background: var(--origin-surface); border: 1px solid var(--origin-control); color: var(--origin-ink); box-shadow: none; border-radius: 7px; }
+.origin-application button:hover:not(:disabled) { filter: none; }
+.origin-application :is(input,select,textarea), :root[data-origin-appearance] .projex-dialog :is(input,select,textarea) { color: var(--origin-ink); border-color: var(--origin-control); background-color: var(--origin-surface); border-radius: 6px; }
+.origin-application :is(input,textarea)::placeholder { color: var(--origin-faint); }
+.origin-application :is(button,a,input,select,textarea,[tabindex]):focus-visible { outline: 2px solid var(--origin-accent); outline-offset: 3px; }
+.origin-application button:disabled { opacity: .6; }
+.origin-application :is(table,th,td) { border-color: var(--origin-border); font-variant-numeric: tabular-nums; }
+.origin-application th { background: var(--origin-surface); color: var(--origin-muted); font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.origin-application td { font-size: 13px; }
+.origin-application tr:hover td { background: var(--origin-raised); }
+.origin-application :is(.student-empty-state,.academic-empty-state,.request-state) { background: var(--origin-raised); border-color: var(--origin-border); box-shadow: none; color: var(--origin-muted); }
+.origin-application :is(.student-profile-dropdown,.student-action-menu,.group-code-menu__dropdown) { background: var(--origin-surface); border: 1px solid var(--origin-border); border-radius: 10px; box-shadow: 0 12px 32px #0002; }
+.origin-application .student-profile-trigger { border-radius: 7px; }
+.origin-application .student-user-avatar { background-color: var(--origin-raised); }
+:root[data-origin-appearance='dark'] .origin-application .projex-icon { filter: grayscale(1) brightness(2.8); }
+.origin-application .student-sidebar .projex-icon { width: 18px; height: 18px; }
+:root[data-origin-appearance] .projex-dialog { color: var(--origin-ink); background: var(--origin-surface); border: 1px solid var(--origin-border); border-radius: 14px; box-shadow: 0 20px 80px #0004; max-height: calc(100dvh - 48px); }
+:root[data-origin-appearance] .projex-dialog :is(header,footer) { border-color: var(--origin-border); background: var(--origin-surface); }
+:root[data-origin-appearance] .projex-dialog h2 { font-size: 20px; font-weight: 600; color: var(--origin-ink); }
+:root[data-origin-appearance] .projex-dialog-backdrop { background: #080e1580; backdrop-filter: none; }
+.origin-application :is(.student-app-shell.is-coding-workspace,.student-main:has(.student-coding-page),.student-coding-page) { height: calc(100dvh - 56px); max-height: calc(100dvh - 56px); }
+.origin-application .student-coding-page { background: var(--origin-surface); }
+.origin-application .student-coding-topbar { background: var(--origin-surface); border-bottom: 1px solid var(--origin-border); padding: 12px 18px; gap: 12px; }
+.origin-application .student-coding-toolbar button { min-height: 36px; padding: 8px 10px; border-radius: 6px; font-size: 12px; }
+.origin-application .student-coding-shell { padding: 12px 12px 0; }
+.origin-application :is(.student-coding-instructions,.student-editor-area,.student-output-area,.student-tests-area) { background: var(--origin-surface); border-color: var(--origin-border); border-radius: 8px; box-shadow: none; }
+.origin-application :is(.student-coding-tabs,.student-editor-tabs,.student-panel-tabs,.student-panel-status-row,.java-source-toolbar) { background: var(--origin-raised); color: var(--origin-muted); border-color: var(--origin-border); }
+.origin-application .student-coding-activity-title { padding: 18px; background: var(--origin-surface); }
+.origin-application .student-coding-scroll { padding: 18px; }
+.origin-application .student-pane-resizer { background: transparent; border: 0; position: relative; border-radius: 4px; }
+.origin-application .student-pane-resizer::before { content: ''; position: absolute; width: 3px; height: 40px; top: calc(50% - 20px); left: calc(50% - 1.5px); border-radius: 3px; background: var(--origin-control); }
+.origin-application .student-pane-resizer:is(:hover,:focus-visible), .origin-application .is-pane-resizing .student-pane-resizer { background: var(--origin-accent-soft); }
+.origin-application .student-pane-resizer:is(:hover,:focus-visible)::before { background: var(--origin-accent); }
+.origin-application :is(.java-source-workspace,.java-source-input,.group-editor-source) { background: var(--origin-surface); color: var(--origin-ink); }
+.origin-application .java-source-input { border-radius: 0; caret-color: var(--origin-accent); }
+.origin-application .java-source-gutter { background: var(--origin-raised); color: var(--origin-faint); border-color: var(--origin-border); }
+.origin-application .interactive-console { padding: 12px; }
+.origin-application .interactive-console .student-panel-status-row { border-radius: 6px; padding: 8px 10px; }
+.origin-application .interactive-console-output { min-height: 160px; background: var(--origin-ground); color: var(--origin-ink); border: 1px solid var(--origin-border); border-radius: 6px; padding: 14px; font: 13px/1.7 var(--mono); }
+.origin-application .interactive-console-input { padding-top: 12px; border-top: 1px solid var(--origin-border); }
+.origin-application .interactive-console-input label { font-size: 12px; font-weight: 600; }
+.origin-application .interactive-console > p { font-size: 12px; color: var(--origin-muted); }
+.origin-application .group-editor-workspace { border-radius: 8px; border-color: var(--origin-border); }
+.origin-application .group-editor-files { background: var(--origin-raised); }
+.origin-application :is(.group-editor-heading h1,.group-repo-heading h1) { font-size: 24px; font-weight: 600; }
+.origin-application :is(.group-editor-heading,.group-repo-header) { border-bottom: 1px solid var(--origin-border); padding-bottom: 16px; }
+.origin-application .group-editor-actions { background: var(--origin-raised); border-radius: 8px; padding: 12px; }
+.origin-application .group-editor-notice { background: var(--origin-warning-soft); color: var(--origin-warning); }
+.origin-application .admin-metric { padding: 18px; background: var(--origin-raised); border: 0; }
+.origin-application .admin-panel__header { background: transparent; }
+.origin-application .admin-page-header { padding-bottom: 20px; border-bottom: 1px solid var(--origin-border); }
+.origin-application :is(.admin-badge,.projex-status) { border-radius: 4px; font-size: 12px; white-space: nowrap; }
+.origin-application .admin-sidebar-identity { color: var(--origin-ink); }
+.origin-application .admin-sidebar-identity small { color: var(--origin-muted); }
+.origin-application .origin-brand-mark, .origin-application .origin-brand-mark span { border: 0; box-shadow: none; background-image: none; }
+.origin-application .origin-brand-mark { background: none; }
+.origin-application .projex-icon { filter: grayscale(1); }
+.origin-application :is(.academic-overview-card,.student-global-panel,.student-home-section,.student-course-avatar,.student-join-class,.student-create-class) { box-shadow: none; background-image: none; }
+.origin-application .academic-overview-card { background: var(--origin-raised); }
+.origin-application :is(.student-coding-actions,.student-coding-footer,.student-coding-bottom,.student-workspace-footer) { background: var(--origin-surface); border-color: var(--origin-border); color: var(--origin-muted); }
+.origin-application .student-coding-tabs button { background: transparent; color: var(--origin-muted); }
+.origin-application .student-coding-tabs button:is(.active,.is-active,[aria-selected='true']) { background: var(--origin-raised); color: var(--origin-ink); }
+.origin-application .student-coding-scroll p { font-weight: 400; color: var(--origin-muted); font-size: 14px; line-height: 1.7; }
+.origin-application .student-mobile-header__brand .origin-brand { font-size: 20px; gap: 6px; }
+.origin-application .student-mobile-header__brand .origin-brand-mark { width: 20px; transform: rotate(-28deg) scale(.8); }
+.origin-application :is(.student-activity-instructions,.activity-instructions,.student-detail-instructions) p { font-weight: 400; line-height: 1.75; }
+.origin-application .student-segmented-tabs { background: var(--origin-raised); border: 1px solid var(--origin-border); border-radius: 8px; padding: 4px; box-shadow: none; }
+.origin-application .student-segmented-tabs :is(a,button) { background: transparent; color: var(--origin-muted); border: 0; border-radius: 5px; box-shadow: none; }
+.origin-application .student-segmented-tabs :is(a,button):is(.active,.is-active,[aria-selected='true'],[aria-current='page']) { background: var(--origin-surface); color: var(--origin-ink); box-shadow: none; }
+.origin-application .student-segmented-tabs .projex-icon { color: currentColor; }
+@media (max-width: 1100px) {
+}
+@media (max-width: 1180px) {
+  .origin-application :is(.student-app-shell.is-coding-workspace,.student-main:has(.student-coding-page),.student-coding-page) { height: auto; max-height: none; overflow: visible; }
+}
+@media (max-width: 900px) {
+  .origin-application .student-app-shell, .origin-application .student-app-shell.is-sidebar-collapsed { grid-template-columns: minmax(0,1fr); }
+  .origin-application .student-main { margin: 0 8px 8px; }
+  .origin-application .student-mobile-header { top: 48px; background: var(--origin-ground); color: var(--origin-ink); border: 0; }
+  .origin-application .student-sidebar { top: 48px; background: var(--origin-ground); z-index: 150; }
+  .origin-app-utilities > span { display: none; }
+}
+@media (max-width: 600px) {
+  .origin-app-bar { padding-inline: 16px; }
+  .origin-app-context { gap: 8px; font-size: 11px; }
+  .origin-app-context > svg { display: none; }
+  .origin-app-theme { min-height: 36px; }
+  .origin-application .student-main { margin: 0; border-radius: 0; border-inline: 0; }
+  .origin-application :is(.student-global-title h1,.student-course-title h1,.student-home-hero h1,.admin-page-header h1) { font-size: 23px; }
+  .origin-application :is(.student-primary-action,.student-outline-action,.student-assignment-action,.student-sidebar__link) { min-height: 44px; }
+  .origin-application .student-coding-toolbar { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+  .origin-application .student-coding-toolbar button { min-height: 44px; margin: 0; white-space: normal; }
+  .origin-application .student-coding-shell { padding: 8px; }
+  .origin-application .group-browser-editor { padding: 16px; }
+  .origin-application .group-editor-heading { align-items: flex-start; }
+  .origin-application .group-editor-actions { grid-template-columns: minmax(0,1fr); }
+  :root[data-origin-appearance] .projex-dialog { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); border-radius: 10px; }
+  :root[data-origin-appearance] .projex-dialog footer { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .origin-application *, .origin-application *::before, .origin-application *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

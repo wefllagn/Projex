@@ -124,7 +124,7 @@ describe('instructor submission queue', () => {
       entry: `/instructor/activity/${activityId}/submissions?classId=${classId}`,
       path: '/instructor/activity/:activityId/submissions',
     })
-    expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(await screen.findByText('The requested Origin record was not found.')).toBeInTheDocument()
   })
 
   it('redirects the legacy monitor route to the canonical queue without inventing totals', async () => {
@@ -304,7 +304,7 @@ describe('instructor submission review', () => {
     await userEvent.type(screen.getByLabelText('Correction reason'), 'Reject mismatched response identity.')
     await userEvent.click(screen.getByRole('button', { name: 'Record correction' }))
 
-    expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(await screen.findByText('The requested Origin record was not found.')).toBeInTheDocument()
     expect(screen.getByText('Assessed')).toBeInTheDocument()
   })
 
@@ -401,7 +401,7 @@ describe('instructor submission review', () => {
   it('fails closed on mismatched submission identity and keeps released records immutable', async () => {
     const mismatch = submissionTransport({ getSubmission: vi.fn().mockResolvedValue({ data: record({ activityId: '00000000-0000-4000-8000-000000000099' }) }) })
     const first = renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={mismatch} />)
-    expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(await screen.findByText('The requested Origin record was not found.')).toBeInTheDocument()
     first.unmount()
 
     const released = record({ status: 'released', scores: { ...record().scores, finalScore: 40 }, feedback: { text: 'Released feedback', instructorId: 'instructor-1', updatedAt: '2026-08-10T01:00:00.000Z', releasedAt: '2026-08-10T02:00:00.000Z' } })

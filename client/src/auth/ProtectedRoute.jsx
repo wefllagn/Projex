@@ -29,7 +29,7 @@ export default function ProtectedRoute({ role, children }) {
       <RequestState
         kind="forbidden"
         title="Account unavailable"
-        message="This account is not active. Contact an authorized Projex administrator."
+        message="This account is not active. Contact an authorized Origin administrator."
       />
     )
   }

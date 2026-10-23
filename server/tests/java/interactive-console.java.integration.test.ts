@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process'
 import { setTimeout as delay } from 'node:timers/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import type { Writable } from 'node:stream'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createJavaRunner, cleanupAbandonedConsoleDirectories } from '../../src/infrastructure/java/java-runner.js'
@@ -44,7 +45,7 @@ describe('real interactive Java process', () => {
       if (text.includes('Enter your age: ') && !sentAge) { sentAge = true; stdin.write('23\n') }
     })
     expect(sentName && sentAge).toBe(true)
-    expect(result.execution?.stdout).toBe('Enter your name: Enter your age: Hello, Julius!\nAge: 23\n')
+    expect(result.execution?.stdout.replaceAll('\r\n', '\n')).toBe('Enter your name: Enter your age: Hello, Julius!\nAge: 23\n')
     expect(result.execution?.exitCode).toBe(0)
   })
   it('preserves blank lines, Unicode and significant whitespace over multiple loop inputs and EOF', async () => {
@@ -52,12 +53,12 @@ describe('real interactive Java process', () => {
     const result = await run('java.util.Scanner s=new java.util.Scanner(System.in); System.out.print("Ready:"); while(s.hasNextLine()) System.out.println("["+s.nextLine()+"]");', (text, stdin) => {
       if (text.includes('Ready:') && !sent) { sent = true; stdin.end('  José  \n\n last \n') }
     })
-    expect(result.execution?.stdout).toBe('Ready:[  José  ]\n[]\n[ last ]\n')
+    expect(result.execution?.stdout.replaceAll('\r\n', '\n')).toBe('Ready:[  José  ]\n[]\n[ last ]\n')
     expect(result.execution?.exitCode).toBe(0)
   })
   it('allows EOF without input', async () => {
     const result = await run('System.out.print("Waiting:"); System.out.println(System.in.read());', (_text, stdin) => stdin.end())
-    expect(result.execution?.stdout).toBe('Waiting:-1\n')
+    expect(result.execution?.stdout.replaceAll('\r\n', '\n')).toBe('Waiting:-1\n')
   })
   it('surfaces compiler rejection without starting a runtime', async () => {
     const result = await run('this is not java;')
@@ -77,7 +78,7 @@ describe('real interactive Java process', () => {
   })
   it('stops a waiting process rather than merely stopping output polling', async () => {
     const result = await run('System.out.print("Waiting:"); System.in.read();', (_text, _stdin, abort) => abort.abort())
-    expect(result.execution?.exitCode).toBeNull()
+    expect(result.execution?.exitCode).toBe(process.platform === 'win32' ? 1 : null)
     expect(result.execution?.timedOut).toBe(false)
   })
   it('bounds runaway output', async () => {
@@ -87,7 +88,7 @@ describe('real interactive Java process', () => {
   })
   it('kills Java when its worker is abruptly killed and reaps only stale console directories', async () => {
     const isolated = await mkdtemp(path.join(os.tmpdir(), 'projex-console-interruption-'))
-    const runnerPath = path.resolve('src/infrastructure/java/java-runner.ts')
+    const runnerPath = pathToFileURL(path.resolve('src/infrastructure/java/java-runner.ts')).href
     const script = `import {createJavaRunner} from ${JSON.stringify(runnerPath)};
       const r=createJavaRunner({javaExecutable:'java',javacExecutable:'javac',release:17,jobRoot:${JSON.stringify(isolated)},compileTimeoutMs:10000,testTimeoutMs:1000,outputLimitBytes:4096,memoryLimitMb:64});
       await r.executeInteractive({entryClassName:'Main',sourceCode:'public class Main { public static void main(String[] a) throws Exception {System.out.println(ProcessHandle.current().pid());System.in.read();} }'},

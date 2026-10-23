@@ -7,7 +7,7 @@ import OutlinedSelect from './OutlinedSelect.jsx'
 
 const options = [{ value: 'all', label: 'All topics' }, { value: 'none', label: 'No topic' }, { value: 'java', label: 'Java fundamentals' }]
 function Harness({ change }) { const [value, setValue] = useState('all'); return <><OutlinedSelect label="Topic filter" value={value} options={options} onChange={next => { change(next); setValue(next) }} /><button>Other action</button></> }
-describe('outlined Projex select', () => {
+describe('outlined Origin select', () => {
   it('supports keyboard selection, selected state and Escape without changing the value', async () => {
     const user = userEvent.setup(), change = vi.fn()
     render(<Harness change={change} />)

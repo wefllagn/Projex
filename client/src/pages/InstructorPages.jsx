@@ -491,7 +491,7 @@ function InstructorClassCodePage({ overlay = false, onClose }) {
     <>
       {confirmation}
       <div className={overlay ? 'academic-join-code-content' : 'student-people-panel instructor-info-panel'}>
-        {overlay ? <p className="academic-join-code-class">{selectedClass?.className}</p> : <section><h2>Class Join Code</h2><p>Join codes are generated and validated only by the Projex server.</p></section>}
+        {overlay ? <p className="academic-join-code-class">{selectedClass?.className}</p> : <section><h2>Class Join Code</h2><p>Join codes are generated and validated only by the Origin server.</p></section>}
         {selectionStatus === 'ready' && current.status === 'loading' && <RequestState kind="loading" compact message="Loading the join-code status." />}
         {current.status === 'error' && <RequestState kind="unavailable" compact error={current.error} />}
         {current.status === 'ready' && (

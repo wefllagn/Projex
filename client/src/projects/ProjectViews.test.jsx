@@ -63,7 +63,7 @@ describe('Group Project Collaboration pane', () => {
   it('rejects mismatched academic context before exposing the repository action', async () => {
     const mine = { id: 'mine', projectTaskId: 'task-1', repositoryType: 'CLASS_PROJECT', repositoryName: 'Actual repository', groupRelationship: 'MY_GROUP' }
     show({ listRepositories: vi.fn((query) => Promise.resolve({ data: query.groupScope === 'MINE' ? [mine] : [], pagination: {} })), getGroupContext: vi.fn().mockResolvedValue({ data: { repositoryId: 'mine', project: { id: 'task-1' }, class: { id: 'other-class' }, team: { name: 'Group', activeMemberCount: 2 } } }) })
-    expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(await screen.findByText('The requested Origin record was not found.')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Open Repository' })).not.toBeInTheDocument()
   })
 })
@@ -106,7 +106,7 @@ describe('Phase 10C.1 project views', () => {
   it('fails closed when a project list contains another class and never renders prototype data', async () => {
     const api = { listProjectTasks: vi.fn().mockResolvedValue({ data: [{ ...project, classId: 'other-class', title: 'Should not render' }], pagination: { totalItems: 1, totalPages: 1 } }) }
     renderWithClass(<StudentProjectList api={api} />)
-    expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(await screen.findByText('The requested Origin record was not found.')).toBeInTheDocument()
     expect(screen.queryByText('Should not render')).not.toBeInTheDocument()
     expect(screen.queryByText(/Prelim Group Project/i)).not.toBeInTheDocument()
   })

@@ -72,7 +72,14 @@ async function fixture() {
   const runner = createJavaRunner({ javaExecutable: 'java', javacExecutable: 'javac', release: 17, jobRoot: root,
     compileTimeoutMs: 10000, testTimeoutMs: 1000, outputLimitBytes: 4096, memoryLimitMb: 64 })
   async function work() {
-    const job = await createPostgresExecutionQueue(prisma).claimNext({ workerId: randomUUID(), now: new Date(), leaseMs: 5000 })
+    // Poll as the real worker does: database availability can lead the Node
+    // clock by a few milliseconds on Windows immediately after creation.
+    const queue = createPostgresExecutionQueue(prisma)
+    const workerId = randomUUID()
+    const job = await until(
+      () => queue.claimNext({ workerId, now: new Date(), leaseMs: 5000 }),
+      (candidate) => candidate !== null,
+    )
     expect(job).not.toBeNull()
     return { done: executeConsoleJob(prisma, runner, job!, { leaseMs: 5000, stopping: () => false }), job: job! }
   }
@@ -95,7 +102,7 @@ describe('authenticated durable interactive console with real Java', () => {
     await done
     const response = await f.client.get(id).expect(200)
     expect(response.body.data).toMatchObject({ phase: 'COMPLETED', exitCode: 0, nextSequence: 3 })
-    expect(response.body.data.transcript).toContain('Enter your name: Julius\nEnter your age: 23\nHello, Julius!\nAge: 23\n')
+    expect(response.body.data.transcript.replaceAll('\r\n', '\n')).toContain('Enter your name: Julius\nEnter your age: 23\nHello, Julius!\nAge: 23\n')
     expect(response.body.data).not.toHaveProperty('sourceCode')
     expect(response.body.data).not.toHaveProperty('workerId')
     expect(await prisma.activitySubmission.count()).toBe(0)
@@ -134,7 +141,7 @@ describe('authenticated durable interactive console with real Java', () => {
     for (const [index,text] of ['  Julius  ', '', '23'].entries()) await f.client.post(`/interactive-code-runs/${id}/input`, { sequence:index+1, text }).expect(200)
     await f.client.post(`/interactive-code-runs/${id}/input`, { sequence:4, text:'', eof:true }).expect(200)
     await done
-    expect((await f.record(id)).stdout).toBe('Ready:[  Julius  ]\n[]\n[23]\n')
+    expect((await f.record(id)).stdout.replaceAll('\r\n', '\n')).toBe('Ready:[  Julius  ]\n[]\n[23]\n')
   })
   it('expires disconnected sessions and revalidates revoked membership while running', async () => {
     const f = await fixture()

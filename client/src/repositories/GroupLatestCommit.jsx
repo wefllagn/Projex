@@ -7,7 +7,7 @@ export function GroupLatestCommit({ branch, repositoryId, api, refreshVersion, o
   const previewId = useId()
   const [preview, setPreview] = useState(false)
   const initials = branch.authorName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('') || 'G'
-  const identityHelp = 'Git identity is supplied by the commit author, not verified by Projex.'
+  const identityHelp = 'Git identity is supplied by the commit author, not verified by Origin.'
   return <div className="group-latest-commit">
     <button type="button" className="group-latest-author" onClick={() => onOpenCommit(branch.commitId)} title={identityHelp} aria-label={`View commit by ${branch.authorName}`}><span className="group-git-avatar" aria-hidden="true">{initials}</span><strong>{branch.authorName}</strong></button>
     <div className="group-commit-summary" onMouseEnter={() => setPreview(true)} onMouseLeave={() => setPreview(false)} onFocus={() => setPreview(true)} onBlur={() => setPreview(false)} onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setPreview(false) } }}><button type="button" className="group-latest-subject" aria-describedby={preview ? previewId : undefined} onClick={() => onOpenCommit(branch.commitId)}>{branch.subject || 'Untitled commit'}</button>

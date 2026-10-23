@@ -3,5 +3,5 @@
 .interactive-console-input { display: grid; gap: 6px; margin: 12px 0; }
 .interactive-console-input > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .interactive-console-input input { flex: 1 1 140px; min-width: 0; padding: 8px; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 5px; font: inherit; }
-.interactive-console-input :focus-visible, .interactive-console-output:focus-visible { outline: 2px solid #4c8dff; outline-offset: 3px; }
+.interactive-console-input :focus-visible, .interactive-console-output:focus-visible { outline: 2px solid var(--origin-accent, #4c8dff); outline-offset: 3px; }
 @media (max-width: 600px) { .interactive-console-input input { flex-basis: 100%; } .interactive-console-output { max-height: 40vh; } }

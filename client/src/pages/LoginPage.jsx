@@ -212,8 +212,8 @@ export function RoleLandingPage() {
       <span className="role-landing-glow role-landing-glow--two" aria-hidden="true" />
       <div className="role-landing-shell">
         <header className="role-landing-brandbar">
-          <Link className="role-landing-brand" to="/" aria-label="Projex home">
-            <img src="/assets/brand/projex-landingpage-logo.png" alt="Projex" />
+          <Link className="role-landing-brand" to="/" aria-label="Origin home">
+            <img src="/assets/brand/projex-landingpage-logo.png" alt="Origin" />
           </Link>
           <div className="role-landing-school">
             <span>Saint Louis University</span>
@@ -256,7 +256,7 @@ export function RoleLandingPage() {
 
           <aside
             className="role-landing-preview"
-            aria-label="Projex product preview"
+            aria-label="Origin product preview"
           >
             <div className="role-landing-preview-card role-landing-preview-card--main">
               <div className="role-landing-preview-top">
@@ -368,7 +368,7 @@ export function RoleLandingPage() {
                 (activeBenefit === benefitCards.length - 1 ? " is-visible" : "")
               }
             >
-              &copy; 2026 Projex. All rights reserved.
+              &copy; 2026 Origin. All rights reserved.
             </footer>
           </div>
         </section>

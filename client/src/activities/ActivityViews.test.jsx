@@ -145,7 +145,7 @@ describe('student activity integration', () => {
     const api = { listActivities: vi.fn().mockResolvedValue({ data: [{ ...activity, classId: 'another-class', title: sensitiveTitle }], pagination }) }
     renderView(<StudentActivityList api={api} />)
 
-    expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(await screen.findByText('The requested Origin record was not found.')).toBeInTheDocument()
     expect(screen.queryByText(sensitiveTitle)).not.toBeInTheDocument()
   })
 

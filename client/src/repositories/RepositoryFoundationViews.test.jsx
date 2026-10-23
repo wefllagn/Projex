@@ -54,7 +54,7 @@ describe('Phase 10C.1 repository views', () => {
     api.getRepository.mockRejectedValueOnce(new ApiError({ status: 404 }))
     fireEvent.click(screen.getByRole('button', { name: 'Retry refresh' }))
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'team-repo' })).not.toBeInTheDocument())
-    expect(screen.getByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(screen.getByText('The requested Origin record was not found.')).toBeInTheDocument()
   })
   it('retires class workspace creation while preserving authorized legacy access', async () => {
     const workspace = { ...repository, id: 'workspace-1', classId: selectedClass.id, projectTaskId: null, teamId: null, repositoryType: 'CLASS_WORKSPACE', visibility: 'PRIVATE' }
@@ -124,7 +124,7 @@ describe('Phase 10C.1 repository views', () => {
     const api = repositoryApiMock({ getRepository: vi.fn().mockResolvedValue({ data: { ...repository, projectTaskId: 'other-task' } }) })
     const projects = { getProjectTask: vi.fn() }
     wrapper(<Routes><Route path="/student/projects/:projectTaskId/repositories/:repositoryId" element={<RepositoryFoundationDetail api={api} projects={projects} />} /></Routes>, '/student/projects/task-1/repositories/repo-1?classId=class-1')
-    expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(await screen.findByText('The requested Origin record was not found.')).toBeInTheDocument()
     expect(screen.queryByText('Repository description')).not.toBeInTheDocument()
   })
 

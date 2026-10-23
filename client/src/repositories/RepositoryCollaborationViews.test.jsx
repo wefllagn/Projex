@@ -37,11 +37,11 @@ function baseApi(overrides = {}) {
 describe('Phase 10C.2 repository collaboration', () => {
   it('loads a Personal repository without requesting unsupported invitations', async () => {
     const personal = { ...repository, repositoryType: 'PERSONAL', projectTaskId: null, teamId: null, visibility: 'PRIVATE' }
-    const api = baseApi({ listRepositoryInvitations: vi.fn().mockRejectedValue(new ApiError({ status: 404, code: 'REPOSITORY_NOT_FOUND', message: 'The requested Projex record was not found.' })) })
+    const api = baseApi({ listRepositoryInvitations: vi.fn().mockRejectedValue(new ApiError({ status: 404, code: 'REPOSITORY_NOT_FOUND', message: 'The requested Origin record was not found.' })) })
     render(<RepositoryCollaborationPanel role="student" owner repository={personal} project={null} api={api} onRepositoryChange={vi.fn()} onReloadRepository={vi.fn()} />)
     expect(await screen.findByText('Safe Teammate')).toBeInTheDocument()
     expect(api.listRepositoryInvitations).not.toHaveBeenCalled()
-    expect(screen.queryByText('The requested Projex record was not found.')).not.toBeInTheDocument()
+    expect(screen.queryByText('The requested Origin record was not found.')).not.toBeInTheDocument()
     expect(screen.queryByText('Invited Student')).not.toBeInTheDocument()
   })
 

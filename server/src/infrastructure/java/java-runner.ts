@@ -260,7 +260,7 @@ export function createJavaRunner(config: JavaRunnerConfig) {
         }
         await hooks.onPhase('RUNNING')
         const execution = await runProcess({ executable: config.javaExecutable,
-          args: [`-Xmx${config.memoryLimitMb}m`, '-Xss1m', '-XX:ActiveProcessorCount=1', '-Dfile.encoding=UTF-8', '-cp', classes, input.entryClassName],
+          args: [`-Xmx${config.memoryLimitMb}m`, '-Xss1m', '-XX:ActiveProcessorCount=1', '-Dfile.encoding=UTF-8', '-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8', '-cp', classes, input.entryClassName],
           cwd: directory, timeoutMs: hooks.timeoutMs ?? 90_000, outputLimitBytes: config.outputLimitBytes - Buffer.byteLength(compilation.stdout + compilation.stderr), interactive: hooks })
         return { compilation, execution }
       } finally {

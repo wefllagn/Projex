@@ -86,16 +86,16 @@ export function describeApiError(error) {
   }
 
   if (error.code === 'NETWORK_ERROR') {
-    return 'Projex could not reach the server. Check the connection and try again.'
+    return 'Origin could not reach the server. Check the connection and try again.'
   }
   if (error.code === 'REQUEST_TIMEOUT' || error.code === 'TIMEOUT') return 'This is taking longer than expected. Please try again.'
   if (BUSINESS_MESSAGES[error.code] && Object.hasOwn(BUSINESS_MESSAGES, error.code)) return BUSINESS_MESSAGES[error.code]
   if (error.status === 401) return 'Your session has expired. Please sign in again.'
   if (error.status === 403) return 'You do not have permission to perform this action.'
-  if (error.status === 404) return 'The requested Projex record was not found.'
+  if (error.status === 404) return 'The requested Origin record was not found.'
   if (error.status === 409) return 'This record changed while you were working. Refresh it before trying again.'
   if (error.status === 400 || error.status === 422) return 'Please check the highlighted fields and try again.'
-  if (error.status === 503) return 'This Projex service is temporarily unavailable. Please try again later.'
+  if (error.status === 503) return 'This Origin service is temporarily unavailable. Please try again later.'
   if (error.status === 429) return 'Too many requests. Please wait and try again.'
   return 'We couldn’t complete this right now. Please try again.'
 }
@@ -152,7 +152,7 @@ export function createApiClient({
       if (error?.name === 'AbortError') throw error
       throw new ApiError({
         code: 'NETWORK_ERROR',
-        message: 'Projex could not reach the server.',
+        message: 'Origin could not reach the server.',
         cause: error,
       })
     }
@@ -176,7 +176,7 @@ export function createApiClient({
         throw new ApiError({
           status: response.status,
           code: 'INVALID_API_RESPONSE',
-          message: 'Projex returned an invalid response.',
+          message: 'Origin returned an invalid response.',
         })
       }
       return { data: null, meta: { requestId: null } }
@@ -185,14 +185,14 @@ export function createApiClient({
       throw new ApiError({
         status: response.status,
         code: 'INVALID_API_RESPONSE',
-        message: 'Projex returned an invalid response.',
+        message: 'Origin returned an invalid response.',
       })
     }
     if (acceptedDataStatus && payload.data === null) {
       throw new ApiError({
         status: response.status,
         code: 'INVALID_API_RESPONSE',
-        message: 'Projex returned an invalid response.',
+        message: 'Origin returned an invalid response.',
       })
     }
 

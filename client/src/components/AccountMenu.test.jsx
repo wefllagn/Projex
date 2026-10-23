@@ -15,7 +15,7 @@ describe('shared academic account menu', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByText('alex@preview.invalid')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Alex Rivera' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Manage your Projex account' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Manage your Origin account' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Profile|Settings/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/Privacy Policy|Terms of Service/)).not.toBeInTheDocument()
     await user.keyboard('{Escape}')

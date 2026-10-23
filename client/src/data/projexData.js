@@ -112,7 +112,7 @@ export const routeCatalog = [
         group: 'Class Membership',
         status: 'Backend connected',
         summary:
-          'Pending registered-email class invitations can be reviewed, accepted, or declined in Projex.',
+          'Pending registered-email class invitations can be reviewed, accepted, or declined in Origin.',
       },
       {
         path: 'people',

@@ -200,18 +200,18 @@ describe('API client', () => {
     const client = createApiClient({ fetchImpl: vi.fn().mockRejectedValue(new Error('private transport detail')) })
     await expect(client.get('/health', { allowRefresh: false })).rejects.toMatchObject({
       code: 'NETWORK_ERROR',
-      message: 'Projex could not reach the server.',
+      message: 'Origin could not reach the server.',
     })
   })
 
   it.each([
     [401, 'Your session has expired. Please sign in again.'],
     [403, 'You do not have permission to perform this action.'],
-    [404, 'The requested Projex record was not found.'],
+    [404, 'The requested Origin record was not found.'],
     [409, 'This record changed while you were working. Refresh it before trying again.'],
     [422, 'Please check the highlighted fields and try again.'],
     [429, 'Too many requests. Please wait and try again.'],
-    [503, 'This Projex service is temporarily unavailable. Please try again later.'],
+    [503, 'This Origin service is temporarily unavailable. Please try again later.'],
   ])('provides a safe status message for HTTP %s', (status, expected) => {
     expect(describeApiError(new ApiError({ status, message: 'Lifecycle correction' }))).toBe(expected)
   })

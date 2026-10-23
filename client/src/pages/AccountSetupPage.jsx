@@ -63,7 +63,7 @@ export default function AccountSetupPage() {
       await auth.completeAccountSetup(tokenRef.current, password, confirmPassword)
       clearSensitiveState()
       setStatus('success')
-      setMessage('Your Projex password is ready. You can now sign in.')
+      setMessage('Your Origin password is ready. You can now sign in.')
     } catch (error) {
       setPassword('')
       setConfirmPassword('')
@@ -80,12 +80,12 @@ export default function AccountSetupPage() {
 
   return (
     <main className="student-login-page">
-      <section className="student-login-stage" aria-label="Projex account setup">
-        <img className="student-login-logo" src="/assets/brand/projex-login-logo.png" alt="Projex by Saint Louis University" />
+      <section className="student-login-stage" aria-label="Origin account setup">
+        <img className="student-login-logo" src="/assets/brand/projex-login-logo.png" alt="Origin by Saint Louis University" />
         <form className="student-login-card account-setup-card" onSubmit={submit}>
           <div>
             <h1>Set up your account</h1>
-            <p>Create the password you will use to sign in to Projex.</p>
+            <p>Create the password you will use to sign in to Origin.</p>
           </div>
 
           {status === 'success' || status === 'invalid' ? (
@@ -130,7 +130,7 @@ export default function AccountSetupPage() {
 
         <aside className="student-login-info" aria-label="Account security information">
           <div className="student-login-info__copy">
-            <h2>Your Projex account, secured.</h2>
+            <h2>Your Origin account, secured.</h2>
             <p>The setup link is removed from your browser address as soon as this page opens.</p>
           </div>
           <img className="student-login-mascot" src="/assets/brand/projex-login-mascot.png" alt="" aria-hidden="true" />

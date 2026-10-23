@@ -3,40 +3,40 @@
 .group-repository-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; padding: 12px 0 18px; }
 .group-repository-header > div { min-width: 0; }
 .group-repository-header h1 { font-size: 25px; margin: 4px 0 7px; overflow-wrap: anywhere; }
-.group-repository-header p { margin: 0 0 8px; font-size: 13px; color: #5d6e91; overflow-wrap: anywhere; }
+.group-repository-header p { margin: 0 0 8px; font-size: 13px; color: var(--origin-muted, #5d6e91); overflow-wrap: anywhere; }
 .group-state, .group-header-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.group-state span { padding: 4px 9px; border-radius: 16px; background: #eef4ff; font-size: 12px; }
-.group-state small, .group-help { font-size: 12px; color: #617391; line-height: 1.6; }
+.group-state span { padding: 4px 9px; border-radius: 16px; background: var(--origin-raised, #eef4ff); font-size: 12px; }
+.group-state small, .group-help { font-size: 12px; color: var(--origin-muted, #617391); line-height: 1.6; }
 .group-header-actions .student-outline-action, .group-header-actions .activity-code-button, .group-repository-actions > .student-outline-action, .group-members > header .student-primary-action { width: auto; min-height: 36px; flex: 0 0 auto; padding: 8px 12px; font-size: 12px; }
-.group-repository-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border-bottom: 1px solid #dae4f3; margin-bottom: 16px; }
+.group-repository-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border-bottom: 1px solid var(--origin-border, #dae4f3); margin-bottom: 16px; }
 .group-tabs { display: flex; flex-wrap: wrap; gap: 2px; margin-right: auto; }
-.group-tabs button { border: 0; background: transparent; color: #586b90; padding: 12px; cursor: pointer; border-bottom: 3px solid transparent; }
-.group-tabs button[aria-selected=true] { color: #0961ed; border-bottom-color: #0961ed; font-weight: 700; }
-.group-repository-page button:focus-visible, .group-dialog button:focus-visible, .group-dialog input:focus-visible, .group-repository-page summary:focus-visible { outline: 3px solid #82b0ff; outline-offset: 2px; }
+.group-tabs button { border: 0; background: transparent; color: var(--origin-muted, #586b90); padding: 12px; cursor: pointer; border-bottom: 3px solid transparent; }
+.group-tabs button[aria-selected=true] { color: var(--origin-accent, #0961ed); border-bottom-color: var(--origin-accent, #0961ed); font-weight: 700; }
+.group-repository-page button:focus-visible, .group-dialog button:focus-visible, .group-dialog input:focus-visible, .group-repository-page summary:focus-visible { outline: 3px solid var(--origin-accent, #82b0ff); outline-offset: 2px; }
 .group-repository-page button:disabled, .group-dialog button:disabled { cursor: not-allowed; opacity: .55; }
 .group-source > .repository-empty-guidance { padding: 18px; }
-.group-source, .group-members { border: 1px solid #dce6f4; border-radius: 10px; background: #fff; min-width: 0; }
+.group-source, .group-members { border: 1px solid var(--origin-border, #dce6f4); border-radius: 10px; background: var(--origin-surface, #fff); min-width: 0; }
 .group-source > .group-help { margin: 14px; }
-.group-branch-toolbar { padding: 12px 14px; border-bottom: 1px solid #e6ecf5; }
+.group-branch-toolbar { padding: 12px 14px; border-bottom: 1px solid var(--origin-border, #e6ecf5); }
 .group-branch-toolbar label { display: flex; align-items: center; gap: 10px; font-size: 12px; }
-.group-branch-toolbar select { min-width: 100px; max-width: 100%; border: 1px solid #dce6f4; border-radius: 6px; padding: 7px 9px; background: #fff; color: inherit; }
-.group-latest-commit { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 12px 14px; background: #f6f9ff; border-bottom: 1px solid #dce6f4; font-size: 13px; overflow-wrap: anywhere; }
-.group-latest-commit span, .group-readme small { font-size: 12px; color: #617391; }
+.group-branch-toolbar select { min-width: 100px; max-width: 100%; border: 1px solid var(--origin-border, #dce6f4); border-radius: 6px; padding: 7px 9px; background: var(--origin-surface, #fff); color: inherit; }
+.group-latest-commit { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 12px 14px; background: var(--origin-surface, #f6f9ff); border-bottom: 1px solid var(--origin-border, #dce6f4); font-size: 13px; overflow-wrap: anywhere; }
+.group-latest-commit span, .group-readme small { font-size: 12px; color: var(--origin-muted, #617391); }
 .group-repository-page pre, .group-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; }
 .group-file-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; }
 .group-file-tools nav { overflow-wrap: anywhere; font-size: 13px; min-width: 0; }
 .group-file-tools form { display: flex; gap: 6px; min-width: 0; }
-.group-file-tools input { min-width: 0; width: 150px; border: 1px solid #dce6f4; border-radius: 6px; padding: 7px 9px; }
-.group-file-tools button, .group-file-preview button, .group-members button:not(.student-primary-action), .group-dialog button:not(.student-primary-action):not(.student-outline-action) { border: 1px solid #dce6f4; border-radius: 6px; background: #fff; color: #155cbe; padding: 7px 10px; cursor: pointer; }
+.group-file-tools input { min-width: 0; width: 150px; border: 1px solid var(--origin-border, #dce6f4); border-radius: 6px; padding: 7px 9px; }
+.group-file-tools button, .group-file-preview button, .group-members button:not(.student-primary-action), .group-dialog button:not(.student-primary-action):not(.student-outline-action) { border: 1px solid var(--origin-border, #dce6f4); border-radius: 6px; background: var(--origin-surface, #fff); color: var(--origin-accent, #155cbe); padding: 7px 10px; cursor: pointer; }
 .group-file-tools nav button { border: 0; padding: 4px 0; }
-.group-file-list > button { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 11px 14px; border: 0; border-top: 1px solid #edf1f7; background: #fff; color: #243b65; cursor: pointer; }
-.group-file-list > button:hover { background: #f5f8ff; }
+.group-file-list > button { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 11px 14px; border: 0; border-top: 1px solid var(--origin-border, #edf1f7); background: var(--origin-surface, #fff); color: var(--origin-ink, #243b65); cursor: pointer; }
+.group-file-list > button:hover { background: var(--origin-surface, #f5f8ff); }
 .group-file-list strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
-.group-file-list small { font-size: 11px; color: #7684a0; }
+.group-file-list small { font-size: 11px; color: var(--origin-muted, #7684a0); }
 .group-file-list > p { padding: 12px 14px; }
-.group-file-preview > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-top: 1px solid #e5ecf6; font-size: 13px; overflow-wrap: anywhere; }
-.group-file-preview pre, .group-readme pre { margin: 0; padding: 16px; background: #fafcff; font-size: 12px; line-height: 1.7; }
-.group-readme { border-top: 1px solid #dce6f4; }
+.group-file-preview > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--origin-border, #e5ecf6); font-size: 13px; overflow-wrap: anywhere; }
+.group-file-preview pre, .group-readme pre { margin: 0; padding: 16px; background: var(--origin-surface, #fafcff); font-size: 12px; line-height: 1.7; }
+.group-readme { border-top: 1px solid var(--origin-border, #dce6f4); }
 .group-readme h2 { font-size: 15px; margin: 16px 16px 4px; }
 .group-readme small { display: block; margin: 0 16px 12px; }
 .group-repository-page .repository-git-history-grid > * { min-width: 0; }
@@ -50,7 +50,7 @@
 .group-commit-count:hover { text-decoration: underline; background: var(--px-subtle); border-radius: 6px; }
 .group-go-to-file { display: flex; gap: 4px; min-width: 0; }
 .group-go-to-file input { width: 140px; min-width: 0; border: 1px solid var(--px-border); border-radius: 6px; padding: 8px; font: inherit; font-size: 13px; }
-.group-go-to-file button { padding: 8px; border: 1px solid var(--px-border); border-radius: 6px; background: #fff; color: var(--px-primary); cursor: pointer; font-size: 12px; }
+.group-go-to-file button { padding: 8px; border: 1px solid var(--px-border); border-radius: 6px; background: var(--origin-surface, #fff); color: var(--px-primary); cursor: pointer; font-size: 12px; }
 .group-go-to-file button:hover:not(:disabled), .group-commit-hash button:hover { background: var(--px-subtle); }
 .group-code-toolbar .activity-code-button { min-height: 34px; padding: 8px 14px; }
 .group-code-menu .activity-code-button { justify-content: center; gap: 10px; line-height: 1; }
@@ -69,18 +69,18 @@
 .group-code-menu .activity-code-section p { font-size: 12px; line-height: 1.5; margin: 0; }
 .group-code-menu .activity-code-footnote { border-top: 1px solid var(--px-border); padding: 12px 0 0; margin: 0; font-size: 12px; line-height: 1.5; }
 .group-go-to-file input { width: 180px; }
-.group-copy-feedback { position: fixed; z-index: 220; transform: translateX(-50%); padding: 8px 12px; border-radius: 7px; color: #fff; background: #122350; box-shadow: 0 4px 16px rgb(18 35 80 / 18%); font-size: 12px; line-height: 1.4; pointer-events: none; max-width: calc(100vw - 24px); }
+.group-copy-feedback { position: fixed; z-index: 220; transform: translateX(-50%); padding: 8px 12px; border-radius: 7px; color: var(--origin-on-action, #fff); background: var(--origin-accent, #122350); box-shadow: 0 4px 16px rgb(18 35 80 / 18%); font-size: 12px; line-height: 1.4; pointer-events: none; max-width: calc(100vw - 24px); }
 .group-latest-commit { gap: 12px; }
 .group-latest-author { display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; color: var(--px-ink); cursor: pointer; padding: 0; font: inherit; min-width: 0; }
 .group-latest-author strong { font-size: 12px; min-width: 0; }
 .group-latest-commit .group-latest-author strong { flex: 0 1 auto; min-width: 0; text-align: left; }
-.group-git-avatar { display: grid; place-items: center; height: 24px; width: 24px; flex: 0 0 24px; border-radius: 50%; color: #305fa0; background: #e4edfc; font-size: 10px; font-weight: 700; }
+.group-git-avatar { display: grid; place-items: center; height: 24px; width: 24px; flex: 0 0 24px; border-radius: 50%; color: var(--origin-accent, #305fa0); background: var(--origin-raised, #e4edfc); font-size: 10px; font-weight: 700; }
 .group-commit-summary { position: relative; flex: 1; min-width: 100px; }
 .group-latest-subject, .group-latest-hash { border: 0; color: var(--px-ink); background: transparent; padding: 5px 0; cursor: pointer; font: inherit; text-align: left; overflow-wrap: anywhere; }
 .group-latest-subject:hover, .group-latest-author:hover strong, .group-latest-hash:hover { color: var(--px-primary); text-decoration: underline; }
 .group-latest-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 .group-latest-meta .group-commit-count { color: var(--px-ink); font-weight: 600; padding-left: 12px; margin-left: 4px; border-left: 1px solid var(--px-border); }
-.group-commit-hovercard { display: none; position: absolute; z-index: 25; top: 100%; left: 0; width: min(320px, calc(100vw - 64px)); box-sizing: border-box; padding: 16px; border: 1px solid var(--px-border); border-radius: 10px; background: #fff; box-shadow: 0 10px 30px rgb(18 35 80 / 12%); color: var(--px-ink); pointer-events: none; }
+.group-commit-hovercard { display: none; position: absolute; z-index: 25; top: 100%; left: 0; width: min(320px, calc(100vw - 64px)); box-sizing: border-box; padding: 16px; border: 1px solid var(--px-border); border-radius: 10px; background: var(--origin-surface, #fff); box-shadow: 0 10px 30px rgb(18 35 80 / 12%); color: var(--px-ink); pointer-events: none; }
 .group-commit-summary:is(:hover,:focus-within) .group-commit-hovercard { display: block; }
 .group-commit-hovercard { pointer-events: auto; }
 .group-commit-hovercard > strong { display: block; min-width: 0; margin: 8px 0; font-size: 14px; }
@@ -90,7 +90,7 @@
 .group-feature-preview .group-state-illustration { margin: 4px auto 16px; }
 .group-feature-preview h3 { font-size: 20px; margin: 16px 0 8px; }
 .group-state-illustration { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 16px; background: var(--px-subtle); flex: 0 0 56px; }
-.group-request-state { display: flex; align-items: flex-start; gap: 16px; padding: 28px; margin: 12px; border: 1px solid var(--px-border); border-radius: 10px; background: #fafcff; color: var(--px-ink); }
+.group-request-state { display: flex; align-items: flex-start; gap: 16px; padding: 28px; margin: 12px; border: 1px solid var(--px-border); border-radius: 10px; background: var(--origin-surface, #fafcff); color: var(--px-ink); }
 .group-request-state h2 { font-size: 19px; margin: 4px 0 8px; }
 .group-request-state p { max-width: 62ch; margin: 0; font-size: 14px; line-height: 1.6; }
 .group-request-state small { font-size: 12px; color: var(--px-muted); }
@@ -109,7 +109,7 @@
 .group-file-finder .group-go-to-file { position: relative; width: 100%; }
 .group-file-finder .group-go-to-file input { width: 100%; padding-right: 32px; box-sizing: border-box; }
 .group-file-finder .group-file-clear { position: absolute; right: 3px; top: 3px; bottom: 3px; padding: 0 9px; border: 0; background: transparent; font-size: 18px; }
-.group-file-suggestions { position: absolute; z-index: 50; right: 0; top: calc(100% + 6px); width: 380px; max-width: calc(100vw - 48px); max-height: min(420px, 55vh); overflow: auto; overscroll-behavior: contain; border: 1px solid var(--px-border); border-radius: 8px; box-shadow: var(--px-shadow-menu, 0 8px 24px rgb(18 35 80 / 15%)); background: #fff; padding: 5px; }
+.group-file-suggestions { position: absolute; z-index: 50; right: 0; top: calc(100% + 6px); width: 380px; max-width: calc(100vw - 48px); max-height: min(420px, 55vh); overflow: auto; overscroll-behavior: contain; border: 1px solid var(--px-border); border-radius: 8px; box-shadow: var(--px-shadow-menu, 0 8px 24px rgb(18 35 80 / 15%)); background: var(--origin-surface, #fff); padding: 5px; }
 .group-file-suggestions [role=option] { display: flex; align-items: center; gap: 10px; padding: 9px; min-height: 44px; border-radius: 5px; cursor: pointer; }
 .group-file-suggestions [role=option][aria-selected=true], .group-file-suggestions [role=option]:hover { background: var(--px-subtle); color: var(--px-primary); }
 .group-file-suggestions [role=option] > span { flex: 1; min-width: 0; }
@@ -117,12 +117,12 @@
 .group-file-suggestions strong { font-size: 13px; }
 .group-file-suggestions small { color: var(--px-muted); margin-top: 3px; font-size: 12px; }
 .group-file-suggestions p { margin: 8px; font-size: 13px; line-height: 1.5; }
-.group-file-suggestions button { border: 1px solid var(--px-border); border-radius: 5px; color: var(--px-primary); padding: 8px; background: #fff; margin: 4px 8px; cursor: pointer; }
+.group-file-suggestions button { border: 1px solid var(--px-border); border-radius: 5px; color: var(--px-primary); padding: 8px; background: var(--origin-surface, #fff); margin: 4px 8px; cursor: pointer; }
 @media (max-width: 600px) {
   .group-toolbar-end .group-file-finder { flex: 1; width: 0; }
   .group-file-suggestions { left: 0; right: auto; width: calc(100vw - 68px); }
 }
-.group-state-recovery button { border: 1px solid var(--px-border); border-radius: 6px; color: var(--px-primary); background: #fff; padding: 9px 14px; cursor: pointer; }
+.group-state-recovery button { border: 1px solid var(--px-border); border-radius: 6px; color: var(--px-primary); background: var(--origin-surface, #fff); padding: 9px 14px; cursor: pointer; }
 .group-latest-commit { align-items: center; border-top: 1px solid var(--px-border); }
 .group-latest-commit strong { flex: 1; min-width: 120px; font-weight: 600; }
 .group-latest-commit code, .group-latest-commit time { font-size: 12px; color: var(--px-muted); }
@@ -135,34 +135,34 @@
 .group-members h2 { font-size: 17px; margin: 0; }
 .group-members h3 { font-size: 14px; margin: 20px 0 8px; }
 .group-member-list, .group-pending-list { margin: 0; padding: 0; list-style: none; }
-.group-member-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 0; border-bottom: 1px solid #edf1f7; }
-.group-avatar { display: grid; place-items: center; flex: 0 0 30px; height: 30px; border-radius: 50%; background: #eef4ff; color: #2966b7; font-size: 11px; font-weight: 700; }
+.group-member-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--origin-border, #edf1f7); }
+.group-avatar { display: grid; place-items: center; flex: 0 0 30px; height: 30px; border-radius: 50%; background: var(--origin-raised, #eef4ff); color: var(--origin-accent, #2966b7); font-size: 11px; font-weight: 700; }
 .group-member-row > div:first-of-type { flex: 1; min-width: 100px; }
 .group-member-row strong, .group-pending-list strong { display: block; font-size: 13px; overflow-wrap: anywhere; }
-.group-member-row small, .group-pending-list small { display: block; font-size: 11px; color: #6b7b98; margin-top: 4px; }
-.group-role { font-size: 12px; color: #536a90; }
+.group-member-row small, .group-pending-list small { display: block; font-size: 11px; color: var(--origin-muted, #6b7b98); margin-top: 4px; }
+.group-role { font-size: 12px; color: var(--origin-muted, #536a90); }
 .group-member-action { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; }
 .group-members label { display: block; font-size: 12px; }
-.group-members input { max-width: 100%; border: 1px solid #dce6f4; border-radius: 6px; padding: 7px; }
-.group-pending-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; font-size: 12px; border-bottom: 1px solid #edf1f7; }
+.group-members input { max-width: 100%; border: 1px solid var(--origin-border, #dce6f4); border-radius: 6px; padding: 7px; }
+.group-pending-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; font-size: 12px; border-bottom: 1px solid var(--origin-border, #edf1f7); }
 .group-members details, .group-secondary-actions { margin-top: 16px; font-size: 12px; }
-.group-members summary, .group-secondary-actions summary { cursor: pointer; color: #516b94; padding: 8px 0; }
+.group-members summary, .group-secondary-actions summary { cursor: pointer; color: var(--origin-muted, #516b94); padding: 8px 0; }
 .group-secondary-actions { padding: 0 4px; }
 .group-secondary-actions .student-outline-action { width: auto; }
 .group-dialog-backdrop { position: fixed; inset: 0; z-index: 150; background: rgb(19 39 72 / 30%); display: flex; align-items: center; justify-content: center; padding: 20px; }
-.group-dialog { width: min(520px, 100%); max-height: calc(100dvh - 40px); overflow-y: auto; min-width: 0; background: #fff; color: #122350; padding: 22px; border-radius: 14px; box-shadow: 0 14px 50px rgb(19 39 72 / 20%); }
+.group-dialog { width: min(520px, 100%); max-height: calc(100dvh - 40px); overflow-y: auto; min-width: 0; background: var(--origin-surface, #fff); color: var(--origin-ink, #122350); padding: 22px; border-radius: 14px; box-shadow: 0 14px 50px rgb(19 39 72 / 20%); }
 .group-dialog > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .group-dialog h2 { font-size: 18px; margin: 0; }
 .group-dialog p { font-size: 13px; line-height: 1.6; }
 .group-dialog label { display: block; font-size: 13px; }
-.group-dialog label > input:not([type=radio]):not([type=checkbox]), .group-dialog textarea { display: block; box-sizing: border-box; width: 100%; border: 1px solid #dce6f4; border-radius: 7px; padding: 10px; margin-top: 8px; }
+.group-dialog label > input:not([type=radio]):not([type=checkbox]), .group-dialog textarea { display: block; box-sizing: border-box; width: 100%; border: 1px solid var(--origin-border, #dce6f4); border-radius: 7px; padding: 10px; margin-top: 8px; }
 .group-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .group-dialog footer button { width: auto; }
 .group-dialog .student-repo-card { border: 0; padding: 0; box-shadow: none; }
 .group-dialog .repository-review-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
 .group-dialog .repository-review-actions button { width: auto; }
 .group-candidate-list { max-height: 260px; overflow-y: auto; margin: 12px 0; }
-.group-candidate-list label { display: flex; gap: 10px; align-items: center; padding: 11px 3px; border-bottom: 1px solid #edf1f7; text-transform: none; letter-spacing: normal; }
+.group-candidate-list label { display: flex; gap: 10px; align-items: center; padding: 11px 3px; border-bottom: 1px solid var(--origin-border, #edf1f7); text-transform: none; letter-spacing: normal; }
 .group-candidate-list input[type=radio] { width: 16px; height: 16px; min-height: 0; flex: 0 0 16px; padding: 0; margin: 0; }
 .group-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .group-repository-page .group-state .projex-status { border-radius: 6px; }
@@ -173,30 +173,30 @@
 .group-tabs button { display: flex; align-items: center; gap: 4px; min-height: 44px; }
 .group-recovery { position: relative; margin-left: auto; font-size: 13px; }
 .group-recovery summary { cursor: pointer; padding: 8px; }
-.group-recovery button { position: absolute; top: 100%; right: 0; z-index: 20; width: 160px; border: 1px solid var(--px-border); border-radius: 6px; padding: 12px; background: #fff; color: var(--px-primary); cursor: pointer; }
+.group-recovery button { position: absolute; top: 100%; right: 0; z-index: 20; width: 160px; border: 1px solid var(--px-border); border-radius: 6px; padding: 12px; background: var(--origin-surface, #fff); color: var(--px-primary); cursor: pointer; }
 .group-history { padding: 16px; }
 .group-history .repository-git-history-grid { display: block; }
 .group-commit-list section > h3 { font-size: 14px; font-weight: 600; margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; }
 .group-commit-list ul { padding: 0; margin: 0 0 12px 7px; list-style: none; border-left: 2px solid var(--px-border); }
 .group-commit-list li { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--px-border); padding: 0 12px; }
 .group-commit-list li:hover { background: var(--px-subtle); }
-.group-commit-list li[data-selected=true] { background: #edf4ff; box-shadow: inset 3px 0 var(--px-primary); }
+.group-commit-list li[data-selected=true] { background: var(--origin-raised, #edf4ff); box-shadow: inset 3px 0 var(--px-primary); }
 .group-commit-select { flex: 1; text-align: left; min-width: 0; padding: 12px 8px; border: 0; color: var(--px-ink); background: transparent; cursor: pointer; }
 .group-commit-select strong, .group-commit-select small { display: block; overflow-wrap: anywhere; }
 .group-commit-select strong { font-size: 14px; font-weight: 600; }
 .group-commit-select small { font-size: 12px; color: var(--px-muted); margin-top: 6px; }
 .group-commit-hash { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-.group-commit-hash button { border: 1px solid var(--px-border); border-radius: 6px; color: var(--px-primary); background: #fff; padding: 8px; cursor: pointer; }
+.group-commit-hash button { border: 1px solid var(--px-border); border-radius: 6px; color: var(--px-primary); background: var(--origin-surface, #fff); padding: 8px; cursor: pointer; }
 .group-history .repository-git-commit-detail { border: 0; border-top: 1px solid var(--px-border); padding: 16px 0 0; margin-top: 20px; min-width: 0; }
 .group-history .repository-git-commit-detail h3 { font-size: 17px; }
 .group-history .repository-git-commit-detail ul { font-size: 13px; overflow-wrap: anywhere; }
 .group-history .repository-git-commit-detail p { overflow-wrap: anywhere; }
 .group-diff pre { font-size: 12px; line-height: 1.7; padding: 0; border: 1px solid var(--px-border); border-radius: 6px; }
 .group-diff-line { display: block; min-height: 1.7em; padding: 0 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.group-diff-line--added { color: #174f30; background: #e7f5eb; border-left: 3px solid #2a7c46; }
-.group-diff-line--removed { color: #812934; background: #ffedef; border-left: 3px solid #ba4352; }
+.group-diff-line--added { color: var(--origin-positive, #174f30); background: var(--origin-positive-soft, #e7f5eb); border-left: 3px solid var(--origin-positive, #2a7c46); }
+.group-diff-line--removed { color: var(--origin-negative, #812934); background: var(--origin-negative-soft, #ffedef); border-left: 3px solid var(--origin-negative, #ba4352); }
 .group-diff-line--file { color: var(--px-ink); background: var(--px-neutral-bg); }
-.group-diff-line--hunk { color: #264f88; background: #eaf2ff; }
+.group-diff-line--hunk { color: var(--origin-accent, #264f88); background: var(--origin-raised, #eaf2ff); }
 .group-branch-list { list-style: none; margin: 0; padding: 0; }
 .group-branch-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--px-border); }
 .group-branch-list li > div { flex: 1; min-width: 160px; }

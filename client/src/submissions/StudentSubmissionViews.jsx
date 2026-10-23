@@ -317,7 +317,7 @@ function SubmitConfirmation({ mode, pending, onCancel, onConfirm }) {
         <h2 id="submit-activity-title">{mode === 'retry' ? 'Retry the same submission request?' : 'Create an official submission?'}</h2>
         <p>
           {mode === 'retry'
-            ? 'Projex will resend the exact source snapshot with the same request key. This cannot intentionally create a second request.'
+            ? 'Origin will resend the exact source snapshot with the same request key. This cannot intentionally create a second request.'
             : 'This records an immutable official attempt. Running visible tests does not consume an attempt.'}
         </p>
         <div className="student-submit-modal-actions">

@@ -20,6 +20,9 @@ import StudentRoutePage from './pages/StudentPages.jsx'
 import { routeCatalog } from './data/projexData.js'
 import { CapabilityProvider } from './capabilities/CapabilityProvider.jsx'
 import './design/academic-refinement.css'
+import OriginApplication from './origin/OriginApplication.jsx'
+import './origin/origin-application.css'
+import './origin/origin-workspace.css'
 
 function getRouteElement(role, route) {
   if (role.id === 'student') {
@@ -38,7 +41,7 @@ function getRouteElement(role, route) {
 }
 
 function RoleLayout({ role }) {
-  const layout = <DashboardLayout role={role} />
+  const layout = <OriginApplication role={role}><DashboardLayout role={role} /></OriginApplication>
   return role.id === 'student' || role.id === 'instructor'
     ? <ClassProvider>{layout}</ClassProvider>
     : layout

@@ -341,7 +341,7 @@ export function InstructorProjectEditor({ mode, api = projectApi }) {
     const question = action === 'close'
       ? 'Are you sure? Closing this project stops new student collaboration and Git writes. Existing work stays available for instructor review.'
       : action === 'archive'
-        ? 'Are you sure? Archiving makes this project read-only and preserves its records. Projex checks that repository reviews and invitations are resolved first. Restoring returns the project to Closed.'
+        ? 'Are you sure? Archiving makes this project read-only and preserves its records. Origin checks that repository reviews and invitations are resolved first. Restoring returns the project to Closed.'
         : null
     if (question && !await confirm(question, action === 'close' ? 'Close project?' : 'Archive project?')) return
     setBusy(true); setError(null); setNotice('')

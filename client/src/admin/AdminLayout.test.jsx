@@ -34,7 +34,7 @@ describe('admin dashboard layout', () => {
     expect(selected).toHaveLength(1)
     expect(selected[0]).toHaveTextContent(label)
   })
-  it('uses the Projex student/instructor shell language without prototype controls', () => {
+  it('uses the Origin student/instructor shell language without prototype controls', () => {
     renderLayout()
     expect(screen.getByRole('navigation', { name: 'Administrator navigation' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument()

@@ -119,7 +119,7 @@ describe('Phase 10D.1 admin views', () => {
   it('shows truthful loading, empty, and request failure states without mock fallback', async () => {
     const api = { listUsers: vi.fn().mockResolvedValue({ data: [], pagination: { page: 1, totalPages: 0, totalItems: 0, hasPreviousPage: false, hasNextPage: false } }) }
     renderUsers(api)
-    expect(screen.getByText('Loading Projex')).toBeInTheDocument()
+    expect(screen.getByText('Loading Origin')).toBeInTheDocument()
     expect(await screen.findByText('No users match these filters.')).toBeInTheDocument()
     expect(screen.queryByText('Alyssa Mendoza')).not.toBeInTheDocument()
   })

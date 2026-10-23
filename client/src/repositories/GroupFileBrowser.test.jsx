@@ -110,7 +110,7 @@ describe('Group compact file browser', () => {
     await exact('src/Missing.java')
     expect(await screen.findByRole('heading', { name: 'We couldn’t find that file.' })).toBeInTheDocument()
     expect(screen.getByLabelText('Search files')).toHaveValue('src/Missing.java')
-    expect(screen.queryByRole('link', { name: 'Back to Projex' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Back to Origin' })).not.toBeInTheDocument()
     expect(screen.queryByText(/404|private-ref|internal/)).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Retry file' }))
     expect(await screen.findByText('recovered')).toBeInTheDocument()

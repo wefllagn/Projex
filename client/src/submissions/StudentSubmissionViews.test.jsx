@@ -914,7 +914,7 @@ describe('student submission records', () => {
       path: '/student/activity/:activityId/submissions/:submissionId',
     })
 
-    expect(await screen.findByText('The requested Projex record was not found.')).toBeInTheDocument()
+    expect(await screen.findByText('The requested Origin record was not found.')).toBeInTheDocument()
     expect(screen.queryByText('CROSS-CLASS-SOURCE')).not.toBeInTheDocument()
   })
 })

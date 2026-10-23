@@ -39,7 +39,7 @@ function renderAdminGuard(auth) {
 describe('ProtectedRoute', () => {
   it('prevents protected content from flashing during bootstrap', () => {
     renderGuard({ status: 'loading', user: null })
-    expect(screen.getByText('Loading Projex')).toBeInTheDocument()
+    expect(screen.getByText('Loading Origin')).toBeInTheDocument()
     expect(screen.queryByText('protected student content')).not.toBeInTheDocument()
   })
 

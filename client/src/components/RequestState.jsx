@@ -1,11 +1,11 @@
 import { describeApiError } from '../api/api-client.js'
 
 const stateCopy = {
-  loading: ['Loading Projex', 'Restoring your secure session.'],
+  loading: ['Loading Origin', 'Restoring your secure session.'],
   empty: ['Nothing here yet', 'There are no records to show.'],
-  unavailable: ['Temporarily unavailable', 'This Projex service is not available right now.'],
+  unavailable: ['Temporarily unavailable', 'This Origin service is not available right now.'],
   forbidden: ['Access unavailable', 'Your account cannot access this area.'],
-  notFound: ['Not found', 'The requested Projex record could not be found.'],
+  notFound: ['Not found', 'The requested Origin record could not be found.'],
   conflict: ['Refresh required', 'This record changed while you were working.'],
 }
 

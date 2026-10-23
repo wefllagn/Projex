@@ -194,7 +194,7 @@ export default function OriginLogin({ role, login }) {
             )}
             {login.message && (
               <p className="origin-auth-message" role="alert">
-                {login.message.replaceAll('Projex', 'Origin')}
+                {login.message.replaceAll('Origin', 'Origin')}
               </p>
             )}
             <button

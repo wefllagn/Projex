@@ -22,10 +22,10 @@ function apiMock(overrides = {}) {
     getSummary: vi.fn().mockResolvedValue({ data: summary }),
     listBranches: vi.fn().mockResolvedValue({ data: [{ ...summary.latestCommit, branchName: 'main', isDefault: true }] }),
     getTree: vi.fn().mockResolvedValue({ data: { commitId: commitB, path: '', entries: [{ name: 'README.md', path: 'README.md', entryType: 'blob', objectId: commitA, sizeBytes: 12 }] } }),
-    getFile: vi.fn().mockResolvedValue({ data: { commitId: commitB, path: 'README.md', sizeBytes: 12, encoding: 'utf-8', content: '# Projex' } }),
+    getFile: vi.fn().mockResolvedValue({ data: { commitId: commitB, path: 'README.md', sizeBytes: 12, encoding: 'utf-8', content: '# Origin' } }),
     listCommits: vi.fn().mockResolvedValue({ data: [summary.latestCommit], pagination: { page: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false } }),
     getCommit: vi.fn().mockResolvedValue({ data: { ...summary.latestCommit, parentCommitIds: [commitA], files: [{ status: 'M', path: 'README.md' }] } }),
-    getDiff: vi.fn().mockResolvedValue({ data: { baseCommitId: commitA, targetCommitId: commitB, path: null, patch: '+Projex' } }),
+    getDiff: vi.fn().mockResolvedValue({ data: { baseCommitId: commitA, targetCommitId: commitB, path: null, patch: '+Origin' } }),
     getTransportUrl: vi.fn().mockReturnValue('http://localhost:3000/api/v1/git/repositories/repo-1'),
     listCredentials: vi.fn().mockResolvedValue({ data: [] }),
     issueCredential: vi.fn().mockResolvedValue({ data: { credentialId: 'credential-1', repositoryId: 'repo-1', operations: ['READ'], createdAt: '2026-08-01T00:00:00.000Z', expiresAt: '2099-08-01T00:15:00.000Z', lastUsedAt: null, revokedAt: null, username: 'credential-1', secret: 'synthetic-one-time-secret' } }),
@@ -93,7 +93,7 @@ describe('repository Git panel', () => {
     const api = apiMock()
     render(<RepositoryGitPanel repository={repository} api={api} />)
     fireEvent.click(await screen.findByRole('button', { name: /README.md/i }))
-    expect(await screen.findByText('# Projex')).toBeInTheDocument()
+    expect(await screen.findByText('# Origin')).toBeInTheDocument()
     expect(api.getTree).toHaveBeenCalledWith('repo-1', { branchName: 'main', path: '' }, expect.any(Object))
     expect(api.getFile).toHaveBeenCalledWith('repo-1', { branchName: 'main', path: 'README.md' }, expect.any(Object))
     expect(screen.queryByText(/campus navigation/i)).not.toBeInTheDocument()
@@ -103,12 +103,12 @@ describe('repository Git panel', () => {
     const api = apiMock()
     render(<RepositoryGitPanel repository={{ ...repository, repositoryType: 'ACTIVITY_WORKSPACE', activityId: 'activity-1' }} api={api} />)
     fireEvent.click(await screen.findByRole('button', { name: 'File README.md' }))
-    expect(await screen.findByText('# Projex')).toBeInTheDocument()
+    expect(await screen.findByText('# Origin')).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Search files' })).toBeInTheDocument()
     expect(api.getTree).toHaveBeenCalledWith(repository.id, { commitId: commitB, path: '' }, expect.any(Object))
     expect(api.getFile).toHaveBeenCalledWith(repository.id, { commitId: commitB, path: 'README.md' }, expect.any(Object))
     fireEvent.click(screen.getByRole('button', { name: `View commit ${commitB.slice(0,8)}` }))
-    expect(await screen.findByLabelText('Commit diff')).toHaveTextContent('Projex')
+    expect(await screen.findByLabelText('Commit diff')).toHaveTextContent('Origin')
     expect(api.getCommit).toHaveBeenCalledWith(repository.id, commitB, expect.any(Object))
   })
 
@@ -244,7 +244,7 @@ describe('repository Git panel', () => {
     render(<RepositoryGitPanel repository={repository} api={api} />)
     fireEvent.click(screen.getByRole('tab', { name: 'History' }))
     fireEvent.click(await screen.findByRole('button', { name: /Latest/i }))
-    expect(await screen.findByText('+Projex')).toBeInTheDocument()
+    expect(await screen.findByText('+Origin')).toBeInTheDocument()
     expect(screen.getAllByText(/self-asserted Git author/i).length).toBeGreaterThan(0)
     expect(api.getDiff).toHaveBeenCalledWith('repo-1', { baseCommitId: commitA, targetCommitId: commitB }, expect.any(Object))
   })
@@ -284,7 +284,7 @@ describe('repository Git panel', () => {
     render(<RepositoryGitPanel repository={repository} api={api} />)
     fireEvent.click(await screen.findByRole('button', { name: /README.md/i }))
     expect(await screen.findByText(/binary and cannot be previewed/i)).toBeInTheDocument()
-    expect(screen.queryByText('# Projex')).not.toBeInTheDocument()
+    expect(screen.queryByText('# Origin')).not.toBeInTheDocument()
   })
 
   it('renders safe size-limit failures without attempting client-side reconstruction', async () => {

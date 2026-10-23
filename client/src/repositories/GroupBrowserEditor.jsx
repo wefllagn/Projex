@@ -271,7 +271,7 @@ export default function GroupBrowserEditor({ api = repositoryApi, gitApi = repos
         <footer className="group-editor-status"><span>UTF-8 · {bytes.toLocaleString()} / 65,536 bytes</span><span>{canWrite ? 'One file per commit' : 'Read-only'}</span></footer>
       </section>
     </div>
-    {helpOpen && <AppDialog title="Code in Projex" className="group-editor-dialog" onClose={closeHelp}>
+    {helpOpen && <AppDialog title="Code in Origin" className="group-editor-dialog" onClose={closeHelp}>
       <p className="group-editor-intro">Make a quick change, then save it to your team’s Git repository.</p>
       <ol><li>Open a file, or choose <strong>New file</strong>.</li><li>Edit your code and describe your change.</li><li>Select <strong>Commit changes</strong> to save it to Git.</li></ol>
       <aside className="group-editor-local-advice"><span className="group-editor-advice-icon"><ProjexIcon name="repository" size={22} /></span><div><strong>Go further with your own IDE</strong><p>For advanced development and Git features, we recommend cloning this repository and using your preferred IDE.</p><NavLink className="student-outline-action" onClick={closeHelp} to={back}>View clone options <span aria-hidden="true">→</span></NavLink></div></aside>

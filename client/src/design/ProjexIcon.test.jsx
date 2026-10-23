@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ProjexIcon } from './ProjexIcon.jsx'
 
-describe('Projex icon semantics', () => {
+describe('Origin icon semantics', () => {
   it('renders original assets with fixed dimensions and an accessible standalone label', () => {
     render(<ProjexIcon name="repository" size={24} label="Repository" />)
     expect(screen.getByRole('img', { name: 'Repository' })).toHaveAttribute('width', '24')

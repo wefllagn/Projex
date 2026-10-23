@@ -1,4 +1,5 @@
 import AccountMenu from '../components/AccountMenu.jsx'
+import { Brand } from '../origin/OriginPrimitives.jsx'
 import { StudentInvitationProvider, StudentNotificationMenu } from '../classes/StudentInvitationNotifications.jsx'
 import '../design/academic-ui.css'
 import AppDialog from '../components/AppDialog.jsx'
@@ -37,7 +38,7 @@ function SidebarBrand({ to, label, collapsed, onToggle, onClose }) {
         <span aria-hidden="true" />
       </button>
       <NavLink to={to} className="student-brand" aria-label={label}>
-        <img src="/assets/brand/projex-sidebar-logo.png" alt="Projex" />
+        <Brand />
       </NavLink>
       <button type="button" className="student-mobile-nav-close" onClick={onClose} aria-label="Close navigation">×</button>
     </div>
@@ -91,7 +92,7 @@ function MobileShellNavigation({ role, open, setOpen, close, navigationId }) {
         >
           <span aria-hidden="true">☰</span>
         </button>
-        <span className="student-mobile-header__brand">Projex</span>
+        <span className="student-mobile-header__brand"><Brand /></span>
         {role !== 'Administrator' ? <div className="academic-mobile-controls">
           {role === 'Student' && <StudentNotificationMenu onOpen={() => { setAccountRoute(null); close() }} />}
           <AccountMenu expanded={accountOpen} onExpandedChange={value => { if (value) close(); setAccountRoute(value ? location.key : null) }} />
@@ -239,7 +240,7 @@ export function CreateClassModal({ onClose, onCreated }) {
         </div>
         <details className="class-create-invitations"><summary>Invite Students (optional)</summary>
           <div>
-            <span>Only existing registered Projex Students can be invited.</span>
+            <span>Only existing registered Origin Students can be invited.</span>
             <span>If any listed Student is no longer eligible, the class and all invitations will not be created.</span>
           </div>
           <div className="class-invitation-create-row">
@@ -323,7 +324,7 @@ function InstructorDashboardLayout() {
       <aside id="instructor-navigation" className="student-sidebar">
         <SidebarBrand
           to="/instructor"
-          label="Projex instructor home"
+          label="Origin instructor home"
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((current) => !current)}
           onClose={mobileNavigation.close}
@@ -366,7 +367,7 @@ function InstructorDashboardLayout() {
         <AcademicSidebarSignout />
       </aside>
 
-      <main className="student-main">
+      <main id="origin-main" tabIndex={-1} className="student-main">
         <Outlet />
       </main>
 
@@ -401,7 +402,7 @@ function StudentDashboardLayout() {
       <aside id="student-navigation" className="student-sidebar">
         <SidebarBrand
           to="/student"
-          label="Projex student home"
+          label="Origin student home"
           collapsed={effectiveSidebarCollapsed}
           onToggle={() => setSidebarCollapsed((current) => !current)}
           onClose={mobileNavigation.close}
@@ -441,7 +442,7 @@ function StudentDashboardLayout() {
         <AcademicSidebarSignout />
       </aside>
 
-      <main className="student-main">
+      <main id="origin-main" tabIndex={-1} className="student-main">
         <Outlet />
       </main>
     </div></StudentInvitationProvider>
@@ -473,7 +474,7 @@ function AdminDashboardLayout() {
       <aside id="administrator-navigation" className="student-sidebar admin-sidebar">
         <SidebarBrand
           to="/admin"
-          label="Projex administrator home"
+          label="Origin administrator home"
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((current) => !current)}
           onClose={mobileNavigation.close}
@@ -504,7 +505,7 @@ function AdminDashboardLayout() {
           </div>
         </nav>
       </aside>
-      <main className="student-main admin-main">
+      <main id="origin-main" tabIndex={-1} className="student-main admin-main">
         <Outlet />
       </main>
     </div>
@@ -544,7 +545,7 @@ function DashboardLayout({ role }) {
         <NavLink to="/" className="brand">
           <span className="brand__mark">PX</span>
           <span>
-            <strong>Projex</strong>
+            <strong>Origin</strong>
             <small>Saint Louis University</small>
           </span>
         </NavLink>
