@@ -3,6 +3,7 @@ import {
   activityPayload,
   activityUpdatePayload,
   publicationRequirements,
+  sumTestCasePoints,
   testCasePayload,
   validateActivityForm,
   validateTestCases,
@@ -20,6 +21,13 @@ const form = {
 }
 
 describe('activity form contracts', () => {
+  it('sums decimal test weights without rejecting an exact allocation', () => {
+    const cases = [0.1, 0.2].map((points, i) => ({ name: `Case ${i}`, inputData: '', expectedOutput: '', points: String(points), isHidden: false }))
+    expect(sumTestCasePoints(cases)).toBe(0.3)
+    expect(validateTestCases(cases, 0.3)).toEqual([])
+    expect(publicationRequirements({ status: 'DRAFT', dueDate: '2099-01-01', totalPoints: 0.3, gradingPeriod: 'PRELIM', rubricCriteria: [] }, cases)).toEqual([])
+  })
+
   it('drops hidden rubric values when changing a draft to Ungraded', () => {
     const ungraded = { ...form, gradingMode: 'COMPLETION', totalPoints: '', rubricCriteria: [{ id: 'draft', name: '', maximumPoints: '' }] }
     expect(validateActivityForm(ungraded)).toEqual({})

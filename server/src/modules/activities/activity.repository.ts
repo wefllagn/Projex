@@ -418,9 +418,9 @@ export function createPrismaActivityRepository(
           } as const
         }
         const testCasePoints = current.testCases.reduce(
-          (total, testCase) => total + Number(testCase.points),
-          0,
-        )
+          (total, testCase) => total.plus(testCase.points ?? 0),
+          new Prisma.Decimal(0),
+        ).toNumber()
         if (current.gradingMode !== 'COMPLETION' && testCasePoints <= 0) {
           return {
             kind: 'not_publishable',

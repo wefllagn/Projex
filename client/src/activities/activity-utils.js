@@ -80,6 +80,10 @@ export function activityUpdatePayload(form, activity) {
   return changed
 }
 
+export function sumTestCasePoints(testCases) {
+  return testCases.reduce((sum, row) => sum + Math.round((Number(row.points) || 0) * 100), 0) / 100
+}
+
 export function validateTestCases(testCases, activityTotalPoints, gradingMode = 'GRADED') {
   const errors = []
   if (testCases.length > 50) errors.push('An activity can contain at most 50 test cases.')
@@ -91,7 +95,7 @@ export function validateTestCases(testCases, activityTotalPoints, gradingMode = 
     if (testCase.expectedOutput.length > 32_000) errors.push(`${label} expected output exceeds 32,000 characters.`)
     if (gradingMode !== 'COMPLETION' && (!Number.isFinite(points) || points < 0 || points > 1_000 || Math.abs(points * 100 - Math.round(points * 100)) > 1e-8)) errors.push(`${label} points must be 0 to 1,000 with at most two decimals.`)
   })
-  const points = testCases.reduce((sum, testCase) => sum + (Number(testCase.points) || 0), 0)
+  const points = sumTestCasePoints(testCases)
   if (gradingMode !== 'COMPLETION' && points > Number(activityTotalPoints)) errors.push('Test-case points cannot exceed the activity total.')
   return errors
 }
@@ -107,7 +111,7 @@ export function testCasePayload(testCases, gradingMode = 'GRADED') {
 }
 
 export function publicationRequirements(activity, testCases) {
-  const totalTestPoints = testCases.reduce((sum, testCase) => sum + Number(testCase.points || 0), 0)
+  const totalTestPoints = sumTestCasePoints(testCases)
   const reasons = []
   if (!activity || activity.status !== 'DRAFT') reasons.push('Only draft activities can be published.')
   if (activity && new Date(activity.dueDate).getTime() <= Date.now()) reasons.push('The deadline must be in the future.')

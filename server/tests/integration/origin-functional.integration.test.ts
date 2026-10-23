@@ -40,6 +40,29 @@ beforeEach(async () => { await cleanIntegrationDatabase(prisma); now = new Date(
 afterAll(async () => { await cleanIntegrationDatabase(prisma); await prisma.$disconnect() })
 
 describe('Origin functional release contracts', () => {
+  it('preserves exact decimal test allocations from authoring through final release and Gradebook', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR'), student = await createActiveUser(prisma, 'STUDENT')
+    const cls = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, cls.id, student.id)
+    const activities = createActivityService({ repository: createPrismaActivityRepository(prisma), classRepository: createPrismaClassRepository(prisma), logger, now: () => now })
+    let activity = await activities.create(instructor, cls.id, { title: 'Decimal point allocation', instructions: 'Print 1.', starterCode: 'class Main {}', entryClassName: 'Main', language: 'JAVA', maxAttempts: 1, creditPolicy: 'LATEST', gradingMode: 'GRADED', gradingPeriod: 'PRELIM', rubricCriteria: [], totalPoints: 0.3, dueDate: new Date('2031-02-01') })
+    const tests = await createPrismaTestCaseRepository(prisma).replace({ activityId: activity.id, expectedUpdatedAt: activity.updatedAt, now, testCases: [0.1, 0.2].map((points, i) => ({ name: `Case ${i}`, inputData: null, expectedOutput: '1', isHidden: false, points })) })
+    expect(tests.kind).toBe('updated')
+    activity = await activities.get(instructor, activity.id) as typeof activity
+    activity = await activities.publish(instructor, activity.id, { expectedUpdatedAt: activity.updatedAt })
+    const service = submissionService(), created = await service.create(student, activity.id, 'class Main {}', 'rc-decimal-allocation-one')
+    const id = (created.submission as { id: string }).id
+    const queue = createPostgresExecutionQueue(prisma), job = await queue.claimNext({ workerId: 'rc-decimal', now, leaseMs: 60000 })
+    await queue.complete(job!, { compileStatus: 'SUCCESS', runtimeStatus: 'PASSED', compilerOutput: null, cases: job!.cases.map((row, i) => ({ id: row.id, status: 'PASSED', actualOutput: '1', errorMessage: null, executionTimeMs: 1, automatedPoints: i === 0 ? 0.1 : 0.2 })) }, now)
+    let record = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
+    expect(Number(record.automatedMaximum)).toBe(0.3)
+    expect(Number(record.instructorMaximum)).toBe(0)
+    await service.review(instructor, id, { instructorPoints: 0, expectedUpdatedAt: record.updatedAt })
+    record = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
+    await service.release(instructor, id, { expectedUpdatedAt: record.updatedAt })
+    expect((await readGradebook(prisma, student, cls.id, 'PRELIM', now)).rows[0]).toMatchObject({ earned: 0.3, possible: 0.3, percentage: 100 })
+  })
+
   it('rejects an old-password login already being verified when recovery resets the account', async () => {
     const admin = await createActiveUser(prisma, 'ADMIN'), student = await createActiveUser(prisma, 'STUDENT')
     await prisma.user.update({ where: { id: student.id }, data: { passwordHash: await passwords.hash('OldPassword1!') } })

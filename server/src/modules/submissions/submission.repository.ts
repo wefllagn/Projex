@@ -447,9 +447,9 @@ export function createPrismaSubmissionRepository(
           }
 
           const automatedMaximum = activity.testCases.reduce(
-            (total, testCase) => total + Number(testCase.points),
-            0,
-          )
+            (total, testCase) => total.plus(testCase.points ?? 0),
+            new Prisma.Decimal(0),
+          ).toNumber()
           const totalPoints = Number(activity.totalPoints)
           const attemptNumber = (aggregate._max.attemptNumber ?? 0) + 1
           const submission = await transaction.activitySubmission.create({
@@ -467,9 +467,7 @@ export function createPrismaSubmissionRepository(
               totalPointsSnapshot: activity.totalPoints,
               instructorPoints: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(0),
               automatedMaximum: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(automatedMaximum),
-              instructorMaximum: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(
-                totalPoints - automatedMaximum,
-              ),
+              instructorMaximum: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(totalPoints).minus(automatedMaximum),
               submittedAt: input.now,
               updatedAt: input.now,
               submissionStatus: 'QUEUED',

@@ -93,9 +93,9 @@ export function createPrismaTestCaseRepository(
           return { kind: 'stale' } as const
         }
         const totalTestPoints = input.testCases.reduce(
-          (total, testCase) => total + (testCase.points ?? 0),
-          0,
-        )
+          (total, testCase) => total.plus(testCase.points ?? 0),
+          new Prisma.Decimal(0),
+        ).toNumber()
         if (activity.gradingMode !== 'COMPLETION' && (input.testCases.some(testCase => testCase.points === null) || totalTestPoints > Number(activity.totalPoints))) {
           return { kind: 'points_exceed_total' } as const
         }
