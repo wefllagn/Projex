@@ -21,6 +21,12 @@ const form = {
 }
 
 describe('activity form contracts', () => {
+  it('uses automatic allocation publication rules without legacy manual point instructions', () => {
+    const activity = { status: 'DRAFT', dueDate: '2099-01-01', totalPoints: 100, gradingMode: 'GRADED', gradingPeriod: 'PRELIM', rubricCriteria: [], gradingConfiguration: { version: 1, percentages: { correctness: 70, readability: 15, organization: 10, documentation: 5 } } }
+    expect(publicationRequirements(activity, [])).toEqual(['Add at least one test case.', 'Add at least one visible test case.'])
+    expect(publicationRequirements(activity, [{ isHidden: false, importance: 'HIGH' }])).toEqual([])
+  })
+
   it('sums decimal test weights without rejecting an exact allocation', () => {
     const cases = [0.1, 0.2].map((points, i) => ({ name: `Case ${i}`, inputData: '', expectedOutput: '', points: String(points), isHidden: false }))
     expect(sumTestCasePoints(cases)).toBe(0.3)

@@ -1,4 +1,5 @@
 import ActivityGrading from './ActivityGrading.jsx'
+import { DEFAULT_GRADING_CONFIGURATION, IMPORTANCE_OPTIONS, weightedPreview } from './weighted-grading.js'
 import AppDialog from '../components/AppDialog.jsx'
 import UnsavedChangesGuard from '../components/UnsavedChangesGuard.jsx'
 import { TopicSelector, GroupedClasswork } from './TopicViews.jsx'
@@ -27,6 +28,7 @@ import { createTemporaryTestCaseId } from './temporary-test-case-id.js'
 const EMPTY_FORM = {
   gradingMode: 'GRADED',
   gradingPeriod: '',
+  gradingConfiguration: DEFAULT_GRADING_CONFIGURATION,
   rubricCriteria: [],
   topicId: '',
   title: '',
@@ -47,6 +49,7 @@ function formFromActivity(activity) {
   return {
     gradingMode: activity.gradingMode ?? 'GRADED',
     gradingPeriod: activity.gradingPeriod ?? '',
+    gradingConfiguration: activity.gradingConfiguration ?? null,
     rubricCriteria: activity.rubricCriteria ?? null,
     topicId: activity.topicId ?? '',
     title: activity.title,
@@ -67,12 +70,13 @@ function rowsFromResponse(testCases) {
     inputData: testCase.inputData ?? '',
     expectedOutput: testCase.expectedOutput,
     isHidden: Boolean(testCase.isHidden),
+    importance: testCase.importance ?? 'NORMAL',
     points: String(testCase.points),
   }))
 }
 
 function emptyTestCase() {
-  return { id: createTemporaryTestCaseId(), name: '', inputData: '', expectedOutput: '', isHidden: false, points: '0' }
+  return { id: createTemporaryTestCaseId(), name: '', inputData: '', expectedOutput: '', isHidden: false, points: '0', importance: 'NORMAL' }
 }
 
 function ActivityFormFields({ automatedPoints = 0, form, errors, onChange, readOnly, status, section, topicSelector }) {
@@ -82,7 +86,7 @@ function ActivityFormFields({ automatedPoints = 0, form, errors, onChange, readO
   return <>
     <div className="activity-settings-details" role="tabpanel" id="activity-settings-details" aria-labelledby="activity-tab-details" hidden={section !== 'details'}>
       <div className="activity-settings-description">{topicSelector}<section className="activity-authoring-section"><h3>Activity details</h3><label>Activity title<input {...field('title')} value={form.title} onChange={event => onChange('title', event.target.value)} disabled={readOnly} />{error('title')}</label><label>Instructions<GrowingTextarea {...field('instructions')} value={form.instructions} onChange={event => onChange('instructions', event.target.value)} disabled={readOnly} />{error('instructions')}</label></section></div>
-      <div className="activity-settings-policy"><section className="activity-authoring-section"><h3>Grading</h3><div className="instructor-form-grid"><label>Grading mode<select value={form.gradingMode} onChange={event => onChange('gradingMode', event.target.value)} disabled={frozen}><option value="GRADED">Graded</option><option value="COMPLETION">Ungraded · completion</option></select></label>{form.gradingMode !== 'COMPLETION' && <><label>Total points<input type="number" min="0.01" max="1000" step="0.01" {...field('totalPoints')} value={form.totalPoints} onChange={event => onChange('totalPoints', event.target.value)} disabled={frozen} />{error('totalPoints')}</label><label>Credited result<select {...field('creditPolicy')} value={form.creditPolicy} onChange={event => onChange('creditPolicy', event.target.value)} disabled={frozen}><option value="LATEST">Latest attempt</option><option value="HIGHEST">Highest attempt</option></select>{error('creditPolicy')}</label></>}</div><ActivityGrading form={form} onChange={onChange} automatedPoints={automatedPoints} frozen={frozen} />{error('rubricCriteria')}</section>
+      <div className="activity-settings-policy"><section className="activity-authoring-section"><h3>Grading</h3><div className="instructor-form-grid"><label>Grading mode<select value={form.gradingMode} onChange={event => onChange('gradingMode', event.target.value)} disabled={frozen}><option value="GRADED">Graded</option><option value="COMPLETION">Ungraded · completion</option></select></label>{form.gradingMode !== 'COMPLETION' && <><label>Total points<input type="number" min="0.01" max="1000" step="0.01" {...field('totalPoints')} value={form.totalPoints} onChange={event => onChange('totalPoints', event.target.value)} disabled={frozen} />{error('totalPoints')}</label><label>Credited result<select {...field('creditPolicy')} value={form.creditPolicy} onChange={event => onChange('creditPolicy', event.target.value)} disabled={frozen}><option value="LATEST">Latest attempt</option><option value="HIGHEST">Highest attempt</option></select>{error('creditPolicy')}</label></>}</div><ActivityGrading form={form} onChange={onChange} automatedPoints={automatedPoints} frozen={frozen} />{error('rubricCriteria')}{error('gradingConfiguration')}</section>
       <section className="activity-authoring-section"><h3>Deadline &amp; attempts</h3><div className="instructor-form-grid"><label>Deadline<input type="datetime-local" {...field('dueDate')} value={form.dueDate} onChange={event => onChange('dueDate', event.target.value)} disabled={readOnly} />{error('dueDate')}</label><label>Maximum attempts<select {...field('maxAttempts')} value={form.maxAttempts} onChange={event => onChange('maxAttempts', event.target.value)} disabled={readOnly}><option value="1">1 attempt</option><option value="2">2 attempts</option><option value="3">3 attempts</option></select>{error('maxAttempts')}</label></div></section></div>
       {status === 'PUBLISHED' && <p className="activity-lifecycle-note">Published grading and test cases are locked. You can extend the deadline or increase attempts.</p>}
     </div>
@@ -95,7 +99,7 @@ function GrowingTextarea(props) {
   useEffect(() => { if (ref.current) { ref.current.style.height = 'auto'; ref.current.style.height = `${Math.min(260, Math.max(72, ref.current.scrollHeight))}px` } }, [props.value])
   return <textarea {...props} ref={ref} rows={3} />
 }
-function TestCaseEditor({ activity, testCases, setTestCases, dirty, setDirty, busy, onSave }) {
+function TestCaseEditor({ activity, testCases, setTestCases, dirty, setDirty, busy, onSave, configurationDirty }) {
   const [selected, setSelected] = useState(null)
   const [removing, setRemoving] = useState(false)
   const nameInput = useRef(null)
@@ -103,7 +107,9 @@ function TestCaseEditor({ activity, testCases, setTestCases, dirty, setDirty, bu
   const completion = activity.gradingMode === 'COMPLETION'
   const index = Math.max(0, testCases.findIndex(row => row.id === selected))
   const row = testCases[index]
-  const errors = validateTestCases(testCases, activity.totalPoints, activity.gradingMode)
+  const weighted = Boolean(activity.gradingConfiguration)
+  const calculated = weighted && activity.gradingMode !== 'COMPLETION' ? weightedPreview(activity.totalPoints, activity.gradingConfiguration, testCases).testPoints : []
+  const errors = validateTestCases(testCases, activity.totalPoints, activity.gradingMode, activity.gradingConfiguration)
   const update = (field, value) => { setDirty(true); setTestCases(rows => rows.map(item => item.id === row.id ? { ...item, [field]: value } : item)) }
   const move = offset => {
     const target = index + offset
@@ -112,7 +118,7 @@ function TestCaseEditor({ activity, testCases, setTestCases, dirty, setDirty, bu
     setTestCases(rows => { const next = [...rows]; [next[index], next[target]] = [next[target], next[index]]; return next })
   }
   const add = () => { const item = emptyTestCase(); setDirty(true); setTestCases(rows => [...rows, item]); setSelected(item.id); requestAnimationFrame(() => nameInput.current?.focus()) }
-  return <section className="instructor-testcase-panel activity-testcase-editor"><div className="instructor-section-title"><div><h3>Test cases</h3><p>{testCases.length} of 50{!completion && ` · ${sumTestCasePoints(testCases)} of ${activity.totalPoints} points`}</p></div>{editable && <button type="button" className="student-outline-action" onClick={add} disabled={testCases.length >= 50 || busy}>Add test case</button>}</div>{!editable && <p>Test cases are read-only after publication.</p>}{testCases.length === 0 && <p>Add a visible test case to provide feedback.</p>}<div className="case-workbench"><nav className="case-navigator" aria-label="Test cases">{testCases.map((item, number) => <button type="button" key={item.id} aria-current={row?.id === item.id ? 'true' : undefined} onClick={() => setSelected(item.id)}><strong>{number + 1}. {item.name || 'Untitled case'}</strong><small>{item.isHidden ? 'Hidden' : 'Visible'}</small></button>)}</nav>{row && <fieldset className="case-selected" disabled={!editable || busy}><legend>Test case {index + 1}</legend><div className="instructor-form-grid"><label>Name<input ref={nameInput} value={row.name} onChange={event => update('name', event.target.value)} /></label>{!completion && <label>Points<input type="number" min="0" max="1000" step="0.01" value={row.points} onChange={event => update('points', event.target.value)} /></label>}<label className="activity-testcase-wide">Input<GrowingTextarea value={row.inputData} onChange={event => update('inputData', event.target.value)} /></label><label className="activity-testcase-wide">Expected output<GrowingTextarea value={row.expectedOutput} onChange={event => update('expectedOutput', event.target.value)} /></label></div><label><input type="checkbox" checked={row.isHidden} onChange={event => update('isHidden', event.target.checked)} /> Hidden from students</label>{editable && <div className="activity-testcase-actions"><button type="button" onClick={() => move(-1)} disabled={index === 0}>Move up</button><button type="button" onClick={() => move(1)} disabled={index === testCases.length - 1}>Move down</button><button type="button" onClick={() => setRemoving(true)}>Remove</button></div>}</fieldset>}</div>{errors.length > 0 && <div className="activity-validation-summary" role="alert"><strong>Check your test cases</strong><ul>{errors.map(error => <li key={error}>{error}</li>)}</ul></div>}{editable && <div className="instructor-form-actions"><button type="button" className="student-primary-action" onClick={onSave} disabled={!dirty || busy || errors.length > 0}>{busy ? 'Saving…' : 'Save test cases'}</button>{dirty && <p>Unsaved test-case changes.</p>}</div>}{removing && <AppDialog title="Remove test case?" onClose={() => setRemoving(false)}><p>Remove “{row?.name || `Test case ${index + 1}`}” from this draft?</p><footer><button type="button" className="student-primary-action" onClick={() => setRemoving(false)}>Keep case</button><button type="button" className="student-outline-action" onClick={() => { setDirty(true); setTestCases(rows => rows.filter(item => item.id !== row.id)); setRemoving(false) }}>Remove case</button></footer></AppDialog>}</section>
+  return <section className="instructor-testcase-panel activity-testcase-editor"><div className="instructor-section-title"><div><h3>Test cases</h3><p>{testCases.length} of 50{!completion && (weighted ? ' · Correctness points are calculated automatically' : ` · ${sumTestCasePoints(testCases)} of ${activity.totalPoints} points`)}</p></div>{editable && <button type="button" className="student-outline-action" onClick={add} disabled={testCases.length >= 50 || busy}>Add test case</button>}</div>{!editable && <p>Test cases are read-only after publication.</p>}{testCases.length === 0 && <p>Add a visible test case to provide feedback.</p>}<div className="case-workbench"><nav className="case-navigator" aria-label="Test cases">{testCases.map((item, number) => <button type="button" key={item.id} aria-current={row?.id === item.id ? 'true' : undefined} onClick={() => setSelected(item.id)}><strong>{number + 1}. {item.name || 'Untitled case'}</strong><small>{item.isHidden ? 'Hidden' : 'Visible'}</small></button>)}</nav>{row && <fieldset className="case-selected" disabled={!editable || busy}><legend>Test case {index + 1}</legend><div className="instructor-form-grid"><label>Name<input ref={nameInput} value={row.name} onChange={event => update('name', event.target.value)} /></label>{!completion && (weighted ? <label>Importance<select value={row.importance ?? 'NORMAL'} onChange={event => update('importance', event.target.value)}>{IMPORTANCE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><small>Calculated maximum: {calculated[index] ?? '—'} points</small></label> : <label>Points<input type="number" min="0" max="1000" step="0.01" value={row.points} onChange={event => update('points', event.target.value)} /></label>)}<label className="activity-testcase-wide">Input<GrowingTextarea value={row.inputData} onChange={event => update('inputData', event.target.value)} /></label><label className="activity-testcase-wide">Expected output<GrowingTextarea value={row.expectedOutput} onChange={event => update('expectedOutput', event.target.value)} /></label></div><label><input type="checkbox" checked={row.isHidden} onChange={event => update('isHidden', event.target.checked)} /> Hidden from students</label>{editable && <div className="activity-testcase-actions"><button type="button" onClick={() => move(-1)} disabled={index === 0}>Move up</button><button type="button" onClick={() => move(1)} disabled={index === testCases.length - 1}>Move down</button><button type="button" onClick={() => setRemoving(true)}>Remove</button></div>}</fieldset>}</div>{errors.length > 0 && <div className="activity-validation-summary" role="alert"><strong>Check your test cases</strong><ul>{errors.map(error => <li key={error}>{error}</li>)}</ul></div>}{editable && <div className="instructor-form-actions"><button type="button" className="student-primary-action" onClick={onSave} disabled={!dirty || busy || errors.length > 0 || configurationDirty}>{busy ? 'Saving…' : 'Save test cases'}</button>{dirty && <p>Unsaved test-case changes.</p>}{configurationDirty && <p>Save Activity changes before saving test cases.</p>}</div>}{removing && <AppDialog title="Remove test case?" onClose={() => setRemoving(false)}><p>Remove “{row?.name || `Test case ${index + 1}`}” from this draft?</p><footer><button type="button" className="student-primary-action" onClick={() => setRemoving(false)}>Keep case</button><button type="button" className="student-outline-action" onClick={() => { setDirty(true); setTestCases(rows => rows.filter(item => item.id !== row.id)); setRemoving(false) }}>Remove case</button></footer></AppDialog>}</section>
 }
 
 export function InstructorActivityList({ api = activityApi }) {
@@ -202,17 +208,18 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
       }
       const response = await api.updateActivity(state.activity.id, { expectedUpdatedAt: state.activity.updatedAt, ...changes })
       setState((current) => ({ ...current, activity: response.data }))
-      if ((response.data.gradingMode ?? 'GRADED') !== (state.activity.gradingMode ?? 'GRADED')) { setTestCases(rows => rows.map(row => ({ ...row, points: response.data.gradingMode === 'COMPLETION' ? '' : '0' }))); setTestsDirty(true) }
+      if (response.data.gradingConfiguration && !testsDirty) { const testResponse = await api.listTestCases(state.activity.id, { page: 1, pageSize: 50 }); const rows = rowsFromResponse(testResponse.data); setTestCases(rows); setState(current => ({ ...current, testCases: rows })) }
+      if (!response.data.gradingConfiguration && (response.data.gradingMode ?? 'GRADED') !== (state.activity.gradingMode ?? 'GRADED')) { setTestCases(rows => rows.map(row => ({ ...row, points: response.data.gradingMode === 'COMPLETION' ? '' : '0' }))); setTestsDirty(true) }
       setForm(formFromActivity(response.data)); setFormDirty(false); setNotice('Activity saved.')
     } catch (error) { await handleError(error) } finally { setBusy('') }
   }
 
   const saveTestCases = async () => {
-    const testErrors = validateTestCases(testCases, state.activity.totalPoints, state.activity.gradingMode)
+    const testErrors = validateTestCases(testCases, state.activity.totalPoints, state.activity.gradingMode, state.activity.gradingConfiguration)
     if (testErrors.length > 0) { setNotice(testErrors[0]); return }
     setBusy('tests'); setNotice('')
     try {
-      const response = await api.replaceTestCases(state.activity.id, { expectedUpdatedAt: state.activity.updatedAt, testCases: testCasePayload(testCases, state.activity.gradingMode) })
+      const response = await api.replaceTestCases(state.activity.id, { expectedUpdatedAt: state.activity.updatedAt, testCases: testCasePayload(testCases, state.activity.gradingMode, state.activity.gradingConfiguration) })
       const activity = { ...state.activity, updatedAt: response.data.activityUpdatedAt }
       const rows = rowsFromResponse(response.data.testCases)
       setState((current) => ({ ...current, activity, testCases: rows }))
@@ -269,7 +276,7 @@ export function InstructorActivityEditor({ api = activityApi, mode = 'edit' }) {
           <p>{creating ? 'Add test cases after saving the draft.' : formDirty ? 'Unsaved activity changes.' : ''}</p>
         </div>
       </form>
-      {current.activity && <div role="tabpanel" id="activity-settings-tests" aria-labelledby="activity-tab-tests" hidden={settingsSection !== 'tests'}><TestCaseEditor activity={current.activity} testCases={testCases} setTestCases={setTestCases} dirty={testsDirty} setDirty={setTestsDirty} busy={Boolean(busy)} onSave={saveTestCases} /></div>}
+      {current.activity && <div role="tabpanel" id="activity-settings-tests" aria-labelledby="activity-tab-tests" hidden={settingsSection !== 'tests'}><TestCaseEditor configurationDirty={formDirty} activity={current.activity} testCases={testCases} setTestCases={setTestCases} dirty={testsDirty} setDirty={setTestsDirty} busy={Boolean(busy)} onSave={saveTestCases} /></div>}
       {current.activity && (
         <section className="activity-lifecycle-panel">
           <div><h3>Publishing &amp; availability</h3><p>Save changes before changing availability.</p></div>

@@ -462,6 +462,7 @@ export function createPrismaSubmissionRepository(
               activityTitleSnapshot: activity.title,
               dueDateSnapshot: activity.dueDate,
               gradingModeSnapshot: activity.gradingMode,
+              gradingConfigurationSnapshot: activity.gradingMode === 'COMPLETION' ? Prisma.DbNull : activity.gradingConfiguration ?? Prisma.DbNull,
               rubricSnapshot: activity.gradingMode === 'COMPLETION' ? Prisma.DbNull : activity.rubricCriteria ?? Prisma.DbNull,
               rubricScores: activity.gradingMode !== 'COMPLETION' && criteriaFrom(activity.rubricCriteria).length ? criteriaFrom(activity.rubricCriteria).map(row => ({ criterionId: row.id, points: 0 })) : Prisma.DbNull,
               totalPointsSnapshot: activity.totalPoints,
@@ -874,7 +875,7 @@ export function createPrismaSubmissionRepository(
         const automated = effectiveScore(record)
         const completion = record.gradingModeSnapshot === 'COMPLETION'
         if (!completion && automated === null) return { kind: 'invalid_state' } as const
-        const finalScore = (automated ?? 0) + Number(record.instructorPoints)
+        const finalScore = new Prisma.Decimal(automated ?? 0).plus(record.instructorPoints ?? 0).toNumber()
         if (!completion && finalScore > Number(record.totalPointsSnapshot)) {
           return { kind: 'score_out_of_bounds' } as const
         }

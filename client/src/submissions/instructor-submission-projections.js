@@ -115,6 +115,7 @@ export function projectInstructorSubmission(value = {}) {
       finalScore: number(scores.finalScore),
       totalPoints: number(scores.totalPoints) ?? 0,
     },
+    gradingConfiguration: value.gradingConfiguration ?? null,
     rubricCriteria: Array.isArray(value.rubricCriteria) ? value.rubricCriteria.map(row => ({ id: string(row.id), name: string(row.name, 'Criterion'), maximumPoints: number(row.maximumPoints) ?? 0 })) : [],
     rubricScores: Array.isArray(value.rubricScores) ? value.rubricScores.map(row => ({ criterionId: string(row.criterionId), points: number(row.points) ?? 0 })) : [],
     corrections: Array.isArray(value.corrections)

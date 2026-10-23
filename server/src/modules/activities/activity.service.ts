@@ -185,6 +185,7 @@ function publishedFieldViolation(input: UpdateActivityInput): string | null {
     'gradingMode',
     'gradingPeriod',
     'rubricCriteria',
+    'gradingConfiguration',
   ]
   return frozenFields.find((field) => input[field] !== undefined) ?? null
 }
@@ -332,6 +333,8 @@ export function createActivityService(dependencies: {
           })
         }
       }
+      if (input.gradingConfiguration !== undefined && (Boolean(access.activity.gradingConfiguration) !== Boolean(input.gradingConfiguration))) throw new AppError({ statusCode: 409, code: 'GRADING_MODEL_IMMUTABLE', message: 'Existing Activities keep their original grading model. Create a new Activity to use rubric-first grading.' })
+      if (access.activity.gradingConfiguration && input.rubricCriteria !== undefined) throw new AppError({ statusCode: 400, code: 'RUBRIC_CONFIGURATION_MANAGED', message: 'Change the four percentage allocations instead of editing derived rubric points.' })
       const mode = input.gradingMode ?? access.activity.gradingMode ?? 'GRADED'
       const points = input.totalPoints === undefined ? access.activity.totalPoints : input.totalPoints
       if ((mode === 'COMPLETION') !== (points === null)) throw new AppError({ statusCode: 400, code: 'INVALID_GRADING_CONFIGURATION', message: 'Choose points for Graded or no points for Ungraded.' })

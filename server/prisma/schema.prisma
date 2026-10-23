@@ -603,6 +603,7 @@ model ClassTopic {
 }
 
 model ProgrammingActivity {
+  gradingConfiguration Json? @map("grading_configuration")
   gradingPeriod String? @map("grading_period") @db.VarChar(16)
   rubricCriteria Json? @map("rubric_criteria")
   gradingMode ActivityGradingMode @default(GRADED) @map("grading_mode")
@@ -642,6 +643,7 @@ model ProgrammingActivity {
 }
 
 model TestCase {
+  importance String? @db.VarChar(16)
   id             String                  @id @default(uuid()) @map("test_case_id") @db.Uuid
   activityId     String                  @map("activity_id") @db.Uuid
   name           String
@@ -661,6 +663,7 @@ model TestCase {
 }
 
 model ActivitySubmission {
+  gradingConfigurationSnapshot Json? @map("grading_configuration_snapshot")
   rubricSnapshot Json? @map("rubric_snapshot")
   rubricScores Json? @map("rubric_scores")
   gradingModeSnapshot ActivityGradingMode @default(GRADED) @map("grading_mode_snapshot")

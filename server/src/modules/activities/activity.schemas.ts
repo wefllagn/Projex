@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { gradingPeriodSchema, rubricCriteriaSchema } from './activity-grading.js'
+import { gradingConfigurationSchema } from './weighted-grading.js'
 
 const titleSchema = z.string().trim().min(1).max(200)
 const instructionsSchema = z.string().trim().min(1).max(20_000)
@@ -29,6 +30,7 @@ export const activityIdParamsSchema = z.object({ activityId: z.uuid() }).strict(
 
 export const createActivitySchema = z
   .object({
+    gradingConfiguration: gradingConfigurationSchema.nullable().optional(),
     gradingPeriod: gradingPeriodSchema.nullable().optional(),
     rubricCriteria: rubricCriteriaSchema.optional(),
     title: titleSchema,
@@ -49,6 +51,7 @@ export const createActivitySchema = z
 export const updateActivitySchema = z
   .object({
     expectedUpdatedAt: timestampSchema,
+    gradingConfiguration: gradingConfigurationSchema.nullable().optional(),
     gradingPeriod: gradingPeriodSchema.nullable().optional(),
     rubricCriteria: rubricCriteriaSchema.optional(),
     title: titleSchema.optional(),

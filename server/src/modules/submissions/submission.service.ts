@@ -273,6 +273,7 @@ function instructorProjection(record: SubmissionRecord, isCreditedResult = false
           : null,
       totalPoints: Number(record.totalPointsSnapshot),
     },
+    gradingConfiguration: record.gradingConfigurationSnapshot ?? null,
     rubricCriteria: record.rubricSnapshot ?? null,
     rubricScores: record.rubricScores ?? null,
     corrections: record.scoreCorrections.map((correction) => ({

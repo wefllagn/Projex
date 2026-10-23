@@ -1,3 +1,5 @@
+import { DEFAULT_GRADING_CONFIGURATION, configurationPayload, weightedPreview } from './weighted-grading.js'
+
 export const ACTIVITY_STATUSES = ['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED']
 
 export function formatActivityStatus(value) {
@@ -41,7 +43,8 @@ export function validateActivityForm(form) {
   if (form.gradingMode !== 'COMPLETION' && (!Number.isFinite(totalPoints) || totalPoints <= 0 || totalPoints > 1_000 || Math.abs(totalPoints * 100 - Math.round(totalPoints * 100)) > 1e-8)) errors.totalPoints = 'Enter 0.01 to 1,000 points with at most two decimals.'
   if (!form.dueDate || Number.isNaN(dueDate.getTime())) errors.dueDate = 'Choose a valid deadline.'
 
-  if (form.gradingMode !== 'COMPLETION' && form.rubricCriteria?.some(row => !row.name.trim() || !Number.isFinite(Number(row.maximumPoints)) || Number(row.maximumPoints) <= 0)) errors.rubricCriteria = 'Give each rubric criterion a name and positive maximum points.'
+  if (form.gradingMode !== 'COMPLETION' && form.gradingConfiguration) { const preview = weightedPreview(totalPoints, form.gradingConfiguration); if (preview.error) errors.gradingConfiguration = preview.error }
+  if (!form.gradingConfiguration && form.gradingMode !== 'COMPLETION' && form.rubricCriteria?.some(row => !row.name.trim() || !Number.isFinite(Number(row.maximumPoints)) || Number(row.maximumPoints) <= 0)) errors.rubricCriteria = 'Give each rubric criterion a name and positive maximum points.'
   return errors
 }
 
@@ -57,7 +60,7 @@ export function activityPayload(form, status = 'DRAFT') {
   return {
     ...common,
     ...(form.gradingPeriod !== undefined ? { gradingPeriod: form.gradingPeriod || null } : {}),
-    ...(form.gradingMode === 'COMPLETION' ? { rubricCriteria: [] } : form.rubricCriteria != null ? { rubricCriteria: form.rubricCriteria.map(row => ({ ...row, name: row.name.trim(), maximumPoints: Number(row.maximumPoints) })) } : {}),
+    ...(form.gradingConfiguration ? { gradingConfiguration: configurationPayload(form.gradingMode === 'COMPLETION' ? DEFAULT_GRADING_CONFIGURATION : form.gradingConfiguration) } : form.gradingMode === 'COMPLETION' ? { rubricCriteria: [] } : form.rubricCriteria != null ? { rubricCriteria: form.rubricCriteria.map(row => ({ ...row, name: row.name.trim(), maximumPoints: Number(row.maximumPoints) })) } : {}),
     creditPolicy: form.creditPolicy,
     language: 'JAVA',
     entryClassName: form.entryClassName.trim(),
@@ -84,7 +87,7 @@ export function sumTestCasePoints(testCases) {
   return testCases.reduce((sum, row) => sum + Math.round((Number(row.points) || 0) * 100), 0) / 100
 }
 
-export function validateTestCases(testCases, activityTotalPoints, gradingMode = 'GRADED') {
+export function validateTestCases(testCases, activityTotalPoints, gradingMode = 'GRADED', configuration = null) {
   const errors = []
   if (testCases.length > 50) errors.push('An activity can contain at most 50 test cases.')
   testCases.forEach((testCase, index) => {
@@ -93,20 +96,21 @@ export function validateTestCases(testCases, activityTotalPoints, gradingMode = 
     if (!testCase.name.trim() || testCase.name.trim().length > 200) errors.push(`${label} needs a name of no more than 200 characters.`)
     if (testCase.inputData.length > 32_000) errors.push(`${label} input exceeds 32,000 characters.`)
     if (testCase.expectedOutput.length > 32_000) errors.push(`${label} expected output exceeds 32,000 characters.`)
-    if (gradingMode !== 'COMPLETION' && (!Number.isFinite(points) || points < 0 || points > 1_000 || Math.abs(points * 100 - Math.round(points * 100)) > 1e-8)) errors.push(`${label} points must be 0 to 1,000 with at most two decimals.`)
+    if (!configuration && gradingMode !== 'COMPLETION' && (!Number.isFinite(points) || points < 0 || points > 1_000 || Math.abs(points * 100 - Math.round(points * 100)) > 1e-8)) errors.push(`${label} points must be 0 to 1,000 with at most two decimals.`)
   })
   const points = sumTestCasePoints(testCases)
-  if (gradingMode !== 'COMPLETION' && points > Number(activityTotalPoints)) errors.push('Test-case points cannot exceed the activity total.')
+  if (configuration && gradingMode !== 'COMPLETION') { const preview = weightedPreview(activityTotalPoints, configuration, testCases); if (preview.error) errors.push(preview.error) }
+  if (!configuration && gradingMode !== 'COMPLETION' && points > Number(activityTotalPoints)) errors.push('Test-case points cannot exceed the activity total.')
   return errors
 }
 
-export function testCasePayload(testCases, gradingMode = 'GRADED') {
+export function testCasePayload(testCases, gradingMode = 'GRADED', configuration = null) {
   return testCases.map((testCase) => ({
     name: testCase.name.trim(),
     inputData: testCase.inputData === '' ? null : testCase.inputData,
     expectedOutput: testCase.expectedOutput,
     isHidden: Boolean(testCase.isHidden),
-    points: gradingMode === 'COMPLETION' ? null : Number(testCase.points),
+    ...(configuration ? { importance: testCase.importance ?? 'NORMAL' } : { points: gradingMode === 'COMPLETION' ? null : Number(testCase.points) }),
   }))
 }
 
@@ -117,9 +121,14 @@ export function publicationRequirements(activity, testCases) {
   if (activity && new Date(activity.dueDate).getTime() <= Date.now()) reasons.push('The deadline must be in the future.')
   if (testCases.length === 0) reasons.push('Add at least one test case.')
   if (!testCases.some((testCase) => !testCase.isHidden)) reasons.push('Add at least one visible test case.')
-  if (activity?.gradingMode !== 'COMPLETION' && totalTestPoints <= 0) reasons.push('Test cases must award a positive total number of points.')
-  if (activity && activity.gradingMode !== 'COMPLETION' && totalTestPoints > Number(activity.totalPoints)) reasons.push('Test-case points cannot exceed the activity total.')
-  if (activity?.gradingMode !== 'COMPLETION' && activity?.rubricCriteria != null) {
+  if (!activity?.gradingConfiguration && activity?.gradingMode !== 'COMPLETION' && totalTestPoints <= 0) reasons.push('Test cases must award a positive total number of points.')
+  if (activity && !activity.gradingConfiguration && activity.gradingMode !== 'COMPLETION' && totalTestPoints > Number(activity.totalPoints)) reasons.push('Test-case points cannot exceed the activity total.')
+  if (activity?.gradingMode !== 'COMPLETION' && activity?.gradingConfiguration) {
+    if (!activity.gradingPeriod) reasons.push('Choose a grading period before publication.')
+    const preview = weightedPreview(activity.totalPoints, activity.gradingConfiguration, testCases)
+    if (preview.error) reasons.push(preview.error)
+  }
+  if (!activity?.gradingConfiguration && activity?.gradingMode !== 'COMPLETION' && activity?.rubricCriteria != null) {
     if (!activity.gradingPeriod) reasons.push('Choose a grading period before publication.')
     const allocated = activity.rubricCriteria.reduce((sum, row) => sum + Number(row.maximumPoints || 0), 0)
     if (Math.round(allocated * 100) !== Math.round((Number(activity.totalPoints) - totalTestPoints) * 100)) reasons.push('Rubric allocation must match the available Instructor points.')

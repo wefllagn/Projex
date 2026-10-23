@@ -1,4 +1,6 @@
 import { Prisma, type PrismaClient } from '@prisma/client'
+import { configuredTestPoints } from '../activities/weighted-grading.js'
+import { AppError } from '../../shared/errors/app-error.js'
 import type {
   TestCaseInput,
   TestCaseListQuery,
@@ -13,6 +15,7 @@ const testCaseRecordSelect = {
   inputData: true,
   expectedOutput: true,
   isHidden: true,
+  importance: true,
   points: true,
   createdAt: true,
   updatedAt: true,
@@ -79,6 +82,7 @@ export function createPrismaTestCaseRepository(
             updatedAt: true,
             totalPoints: true,
             gradingMode: true,
+            gradingConfiguration: true,
             class: { select: { status: true } },
           },
         })
@@ -92,11 +96,15 @@ export function createPrismaTestCaseRepository(
         if (activity.updatedAt.getTime() !== input.expectedUpdatedAt.getTime()) {
           return { kind: 'stale' } as const
         }
+        const weighted = Boolean(activity.gradingConfiguration)
+        if (weighted && input.testCases.some(row => row.points != null)) throw new AppError({ statusCode: 400, code: 'TEST_CASE_POINTS_DERIVED', message: 'Choose importance; Origin calculates test-case points.' })
+        if (!weighted && input.testCases.some(row => row.importance !== undefined)) throw new AppError({ statusCode: 400, code: 'LEGACY_TEST_CASE_POINTS_REQUIRED', message: 'This existing Activity retains its original per-test point configuration.' })
+        const derived = weighted && activity.gradingMode !== 'COMPLETION' ? configuredTestPoints(Number(activity.totalPoints), activity.gradingConfiguration, input.testCases) : []
         const totalTestPoints = input.testCases.reduce(
           (total, testCase) => total.plus(testCase.points ?? 0),
           new Prisma.Decimal(0),
         ).toNumber()
-        if (activity.gradingMode !== 'COMPLETION' && (input.testCases.some(testCase => testCase.points === null) || totalTestPoints > Number(activity.totalPoints))) {
+        if (!weighted && activity.gradingMode !== 'COMPLETION' && (input.testCases.some(testCase => testCase.points == null) || totalTestPoints > Number(activity.totalPoints))) {
           return { kind: 'points_exceed_total' } as const
         }
         const touched = await transaction.programmingActivity.updateMany({
@@ -122,7 +130,8 @@ export function createPrismaTestCaseRepository(
               inputData: testCase.inputData,
               expectedOutput: testCase.expectedOutput,
               isHidden: testCase.isHidden,
-              points: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(testCase.points!),
+              importance: weighted ? testCase.importance ?? 'NORMAL' : null,
+              points: activity.gradingMode === 'COMPLETION' ? null : new Prisma.Decimal(weighted ? derived[index]! : testCase.points!),
               createdAt: input.now,
               updatedAt: input.now,
             })),
