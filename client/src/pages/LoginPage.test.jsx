@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/api-client.js'
+import { AuthProvider } from '../auth/AuthContext.jsx'
 import { AuthContext } from '../auth/auth-context.js'
 import LoginPage, { InstructorLoginPage } from './LoginPage.jsx'
 
@@ -82,5 +83,62 @@ describe('real login forms', () => {
     await user.click(screen.getByRole('button', { name: 'Hide password' }))
     expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password')
     expect(login).not.toHaveBeenCalled()
+  })
+})
+
+function renderSession(role, entry = '/instructor-login', logoutError) {
+  const client = {
+    get: vi.fn().mockResolvedValue({ data: { role, status: 'ACTIVE' } }),
+    post: vi.fn().mockImplementation((path) => path === '/auth/logout' && logoutError
+      ? Promise.reject(logoutError) : Promise.resolve({ data: {} })),
+  }
+  render(<AuthProvider client={client}><MemoryRouter initialEntries={[entry]}><Routes>
+    <Route path="/student-login" element={<LoginPage />} />
+    <Route path="/instructor-login" element={<InstructorLoginPage />} />
+    <Route path="/student" element={<span>student home</span>} />
+    <Route path="/instructor" element={<span>instructor home</span>} />
+    <Route path="/admin" element={<span>admin home</span>} />
+  </Routes></MemoryRouter></AuthProvider>)
+  return client
+}
+
+describe('intentional account switching', () => {
+  it.each([
+    ['STUDENT', '/instructor-login', 'Student', 'Instructor'],
+    ['INSTRUCTOR', '/student-login', 'Instructor', 'Student'],
+    ['ADMIN', '/student-login', 'Admin', 'Student'],
+  ])('keeps %s authenticated until confirmed logout', async (role, entry, current, target) => {
+    const client = renderSession(role, entry)
+    expect(await screen.findByText(new RegExp(`already signed in as .* ${current}`))).toBeInTheDocument()
+    expect(screen.getByText(new RegExp(`To use .* ${target} account`))).toBeInTheDocument()
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument()
+    expect(client.post).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Sign out and switch account' }))
+    expect(client.post).toHaveBeenCalledWith('/auth/logout', {})
+    expect(await screen.findByLabelText('Password')).toHaveValue('')
+    expect(screen.getByRole('region', { name: `${target} login` })).toBeInTheDocument()
+  })
+
+  it('continues the current role without logging out', async () => {
+    const client = renderSession('STUDENT')
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue as Student' }))
+    expect(await screen.findByText('student home')).toBeInTheDocument()
+    expect(client.post).not.toHaveBeenCalled()
+  })
+
+  it('keeps the switch screen retryable when server logout fails', async () => {
+    const client = renderSession('STUDENT', '/instructor-login', new ApiError({ code: 'NETWORK_ERROR' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Sign out and switch account' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('could not reach the server')
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument()
+    client.post.mockResolvedValue({ data: {} })
+    await userEvent.click(screen.getByRole('button', { name: 'Sign out and switch account' }))
+    expect(await screen.findByLabelText('Password')).toBeInTheDocument()
+  })
+
+  it.each([['STUDENT', '/student-login', 'student home'], ['INSTRUCTOR', '/instructor-login', 'instructor home'], ['ADMIN', '/instructor-login', 'admin home']])('preserves same-role/shared Admin entry for %s', async (role, entry, home) => {
+    const client = renderSession(role, entry)
+    expect(await screen.findByText(home)).toBeInTheDocument()
+    expect(client.post).not.toHaveBeenCalled()
   })
 })

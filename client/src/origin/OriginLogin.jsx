@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import RequestState from '../components/RequestState.jsx'
 import { Link } from 'react-router-dom'
 import { Brand, Icon, ThemeControl } from './OriginPrimitives.jsx'
 import { useOriginTheme } from './use-origin-theme.js'
@@ -123,7 +124,20 @@ export default function OriginLogin({ role, login }) {
               Instructor
             </Link>
           </nav>
-          <form
+          {login.authStatus === 'loading' ? <RequestState kind="loading" />
+            : login.authStatus === 'error' ? <RequestState kind="unavailable" error={login.authError} action={<button type="button" onClick={login.retrySession}>Try again</button>} />
+            : login.authStatus === 'blocked' ? <RequestState kind="forbidden" title="Account unavailable" message="This account is not active. Contact an authorized Origin administrator." />
+            : login.switchingAccount ? (
+            <div className="origin-auth-form" id="origin-login">
+              <p>You're already signed in as {login.currentRole === 'Admin' || login.currentRole === 'Instructor' ? 'an' : 'a'} {login.currentRole}.</p>
+              <p>To use {instructor ? 'an Instructor' : 'a Student'} account, sign out of your current account first.</p>
+              {login.message && <p className="origin-auth-message" role="alert">{login.message}</p>}
+              <button className="origin-button origin-auth-submit" type="button" disabled={login.submitting} onClick={login.switchAccount}>
+                {login.submitting ? 'Signing out…' : 'Sign out and switch account'}
+              </button>
+              <button className="origin-button" type="button" disabled={login.submitting} onClick={login.continueAccount}>Continue as {login.currentRole}</button>
+            </div>
+          ) : <form
             onSubmit={login.submit}
             className="origin-auth-form"
             id="origin-login"
@@ -205,7 +219,7 @@ export default function OriginLogin({ role, login }) {
               {login.submitting ? 'Signing in…' : 'Login'}
               {!login.submitting && <Icon name="arrow" />}
             </button>
-          </form>
+          </form>}
           <p className="origin-auth-account-note">
             Use the account provided through your class or institution.
           </p>

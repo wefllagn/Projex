@@ -1,14 +1,14 @@
 /* Origin's public identity, reduced to a calm working surface. Tokens live on
    the document while authenticated so portalled menus and dialogs share them. */
 :root[data-origin-appearance] {
-  --origin-ground: #e5ebf0;
-  --origin-surface: #f6f9fc;
-  --origin-raised: #dce5ed;
+  --origin-ground: #eaf0f5;
+  --origin-surface: #fbfcfe;
+  --origin-raised: #e4ecf3;
   --origin-ink: #243544;
-  --origin-muted: #465e72;
-  --origin-faint: #526b80;
-  --origin-border: #bac9d6;
-  --origin-control: #8ca2b5;
+  --origin-muted: #40586d;
+  --origin-faint: #4c6479;
+  --origin-border: #acbfce;
+  --origin-control: #7893a9;
   --origin-metal: linear-gradient(135deg, #ffffffeb, #d9e3ec 64%, #c7d6e2);
   --origin-edge-light: #ffffffc9;
   --origin-shadow: #47647b25;
@@ -211,3 +211,6 @@
 @media (prefers-reduced-motion: reduce) {
   .origin-application *, .origin-application *::before, .origin-application *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* The Instructor account control shares the Student right-edge convention. */
+.origin-application .instructor-user-area { margin-inline-start: auto; }

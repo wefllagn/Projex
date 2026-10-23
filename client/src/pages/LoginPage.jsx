@@ -5,7 +5,7 @@ import { ApiError, describeApiError } from "../api/api-client.js";
 import { useAuth } from "../auth/auth-context.js";
 import { roleHome, roleMatchesPath } from "../auth/auth-routes.js";
 
-function useLoginController() {
+function useLoginController(role) {
   const auth = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -16,11 +16,17 @@ function useLoginController() {
   const [message, setMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
+  const requestedRole = role.toUpperCase();
+  // Admin retains the existing shared Instructor sign-in entry.
+  const matchingRole = auth.user?.role === requestedRole ||
+    (requestedRole === "INSTRUCTOR" && auth.user?.role === "ADMIN");
+  const switchingAccount = auth.status === "authenticated" && !matchingRole;
+
   useEffect(() => {
-    if (auth.status === "authenticated") {
+    if (auth.status === "authenticated" && matchingRole) {
       navigate(roleHome(auth.user.role), { replace: true });
     }
-  }, [auth.status, auth.user, navigate]);
+  }, [auth.status, auth.user, matchingRole, navigate]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -45,7 +51,30 @@ function useLoginController() {
     }
   };
 
+  const switchAccount = async () => {
+    setSubmitting(true);
+    setMessage("");
+    try {
+      await auth.logout({ requireServerConfirmation: true });
+      setEmail("");
+      setPassword("");
+      setShowPassword(false);
+      navigate(location.pathname, { replace: true, state: location.state });
+    } catch (error) {
+      setMessage(describeApiError(error));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return {
+    authStatus: auth.status,
+    authError: auth.error,
+    retrySession: auth.bootstrap,
+    currentRole: auth.user?.role === "ADMIN" ? "Admin" : auth.user?.role === "INSTRUCTOR" ? "Instructor" : "Student",
+    continueAccount: () => navigate(roleHome(auth.user.role), { replace: true }),
+    switchingAccount,
+    switchAccount,
     email,
     fieldErrors,
     message,
@@ -378,12 +407,12 @@ export function RoleLandingPage() {
 }
 
 export function InstructorLoginPage() {
-  const login = useLoginController();
+  const login = useLoginController("instructor");
   return <OriginLogin role="instructor" login={login} />;
 }
 
 function LoginPage() {
-  const login = useLoginController();
+  const login = useLoginController("student");
   return <OriginLogin role="student" login={login} />;
 }
 

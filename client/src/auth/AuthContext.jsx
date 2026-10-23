@@ -73,14 +73,14 @@ export function AuthProvider({ children, client = apiClient, autoBootstrap = tru
     return response.data
   }, [client])
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async ({ requireServerConfirmation = false } = {}) => {
     try {
       await client.post('/auth/logout', {})
-    } catch {
-      // Protected content must disappear even when the server session is already unavailable.
-    } finally {
-      setState({ status: 'anonymous', user: null, error: null })
+    } catch (error) {
+      // A role switch must not claim logout succeeded while the session is usable.
+      if (requireServerConfirmation && !(error instanceof ApiError && error.status === 401)) throw error
     }
+    setState({ status: 'anonymous', user: null, error: null })
   }, [client])
 
   const logoutAll = useCallback(async () => {
