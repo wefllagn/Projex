@@ -36,7 +36,7 @@ export function createConsoleRouter(deps: { prisma: PrismaClient; config: Execut
   const mutations = [noStore, requireJson, deps.requireAuthentication, deps.requireCsrf, requireAnyRole(['STUDENT'])]
   router.post('/activities/:activityId/interactive-code-runs', ...mutations, async (req, res, next) => {
     try {
-      if (deps.config.mode !== 'local_process') throw new AppError({ statusCode: 503, code: 'EXECUTION_UNAVAILABLE', message: 'Java execution is unavailable.' })
+      if (deps.config.mode === 'disabled') throw new AppError({ statusCode: 503, code: 'EXECUTION_UNAVAILABLE', message: 'Java execution is unavailable.' })
       const { activityId } = parseRequest(z.object({ activityId: z.uuid() }), req.params)
       const input = parseRequest(startInput, req.body)
       if (Buffer.byteLength(input.sourceCode, 'utf8') > deps.config.sourceLimitBytes || input.sourceCode.includes('\0')) {

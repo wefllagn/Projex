@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createJavaRunner } from '../../src/infrastructure/java/java-runner.js'
+import { isolationProbeSource } from '../../src/infrastructure/java/java-isolation-verifier.js'
 
 let testRoot: string
 
@@ -32,6 +33,12 @@ function runner(outputLimitBytes = 16_384, timeoutMs = 1_000) {
 }
 
 describe('controlled local Java runner', () => {
+  it('compiles the Linux isolation acceptance source without treating local compilation as sandbox verification', async () => {
+    const result = await runner().execute({ entryClassName: 'Main', sourceCode: isolationProbeSource, cases: [] })
+    expect(result.compileStatus).toBe('SUCCESS')
+    expect(result.cases).toEqual([])
+    expect(await readdir(testRoot)).toEqual([])
+  })
   it('compiles once and evaluates deterministic stdin/stdout cases', async () => {
     const result = await runner().execute({
       entryClassName: 'Main',

@@ -1,0 +1,5 @@
+# Add the actual adviser/panel/VPN public IPs before the final deny.
+# allow 203.0.113.10/32;  # Documentation example only: REPLACE, do not use as a real address.
+allow 127.0.0.1;
+allow ::1;
+deny all;

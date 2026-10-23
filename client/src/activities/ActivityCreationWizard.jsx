@@ -42,6 +42,12 @@ export default function ActivityCreationWizard({ api, initialActivity, initialCa
     if (!available) queueMicrotask(() => setStorageAvailable(false))
   }, [key, activity?.updatedAt, form, tests, step, formDirty, testsDirty])
   useEffect(() => { heading.current?.focus() }, [step])
+  useEffect(() => {
+    if (!Object.keys(errors).length) return
+    const invalid = heading.current?.parentElement.querySelector('[aria-invalid="true"], .activity-field-error')
+    invalid?.scrollIntoView?.({ block: 'center' })
+    invalid?.focus?.({ preventScroll: true })
+  }, [errors])
   const change = (field, value) => { setForm(old => ({ ...old, [field]: value })); setFormDirty(true); setErrors({}); setNotice('') }
   const run = async action => {
     if (locked.current || selectedClass.status === 'ARCHIVED') return

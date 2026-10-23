@@ -22,13 +22,20 @@ function validEnvironment(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv 
 
 describe('execution environment boundaries', () => {
   it('requires secure cookies and exactly one proxy hop in production', () => {
-    const production = { NODE_ENV: 'production', MAIL_TRANSPORT: 'smtp', SMTP_HOST: 'smtp.example.invalid', SMTP_USER: 'placeholder', SMTP_PASSWORD: 'placeholder' }
+    const production = { NODE_ENV: 'production', FRONTEND_ORIGIN: 'https://origin.example.invalid', MAIL_TRANSPORT: 'smtp', SMTP_HOST: 'smtp.example.invalid', SMTP_USER: 'placeholder', SMTP_PASSWORD: 'placeholder' }
     expect(() => loadEnv(validEnvironment(production))).toThrow(EnvironmentValidationError)
     const env = loadEnv(validEnvironment({ ...production, AUTH_COOKIE_SECURE: 'true', TRUST_PROXY_HOPS: '1' }))
     expect(env.authCookieSecure).toBe(true)
     expect(env.trustProxyHops).toBe(1)
     expect(env.javaExecutionMode).toBe('disabled')
     expect(env.gitExecutionMode).toBe('disabled')
+  })
+
+  it('accepts only pinned container images and confined browser Git for the hosted pilot', () => {
+    const production = validEnvironment({ NODE_ENV: 'production', FRONTEND_ORIGIN: 'https://origin.example.invalid', AUTH_COOKIE_SECURE: 'true', TRUST_PROXY_HOPS: '1', MAIL_TRANSPORT: 'smtp', SMTP_HOST: 'smtp.example.invalid', SMTP_USER: 'placeholder', SMTP_PASSWORD: 'placeholder', JAVA_EXECUTION_MODE: 'container', JAVA_DOCKER_IMAGE: 'sha256:' + 'a'.repeat(64), GIT_EXECUTION_MODE: 'service_isolated', GIT_EXECUTABLE: '/usr/bin/git', GIT_STORAGE_ROOT: '/var/lib/origin/git' })
+    expect(loadEnv(production).javaExecutionMode).toBe('container')
+    expect(loadEnv(production).gitExecutionMode).toBe('service_isolated')
+    for (const unsafe of [{ JAVA_DOCKER_IMAGE: 'eclipse-temurin:17' }, { JAVA_DOCKER_EXECUTABLE: 'docker' }, { FRONTEND_ORIGIN: 'http://origin.example.invalid' }, { FRONTEND_ORIGIN: 'not a url' }, { GIT_SMART_HTTP_ENABLED: 'true' }, { HOST: '0.0.0.0' }, { JAVA_EXECUTION_MODE: 'local_process' }, { GIT_EXECUTION_MODE: 'local_process' }]) expect(() => loadEnv({ ...production, ...unsafe })).toThrow(EnvironmentValidationError)
   })
 
   it('bounds idle expiry within the absolute refresh lifetime', () => {

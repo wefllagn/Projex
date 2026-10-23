@@ -16,6 +16,12 @@ function view(client, initialActivity = record, initialCases = cases, onPublishe
 }
 afterEach(() => sessionStorage.clear())
 describe('guided Activity creation', () => {
+ it('keeps validation on Details and focuses the first invalid control', async () => {
+  const client = api(), user = userEvent.setup(); render(view(client, null, []))
+  await user.click(screen.getByRole('button', { name: 'Next' }))
+  expect(screen.getByRole('textbox', { name: /^Activity title/ })).toHaveFocus()
+  expect(screen.queryByText(/Add at least one test case/)).not.toBeInTheDocument()
+ })
  it('delays readiness until Publishing, saves tests with the latest version, and releases into free navigation', async () => {
   const client = api(), published = vi.fn(), user = userEvent.setup()
   client.replaceTestCases = vi.fn().mockResolvedValue({ data: { activityUpdatedAt: '2026-10-24T03:00:00Z', testCases: cases.map(row => ({ ...row, importance: 'HIGH' })) } })

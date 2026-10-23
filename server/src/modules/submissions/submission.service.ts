@@ -26,7 +26,7 @@ import {
 import { isOrdinarySubmissionOpen } from '../activities/activity.types.js'
 
 export interface ExecutionFeatureConfig {
-  mode: 'disabled' | 'local_process'
+  mode: 'disabled' | 'local_process' | 'container'
   sourceLimitBytes: number
   practiceRunTtlHours: number
   practiceRunsPerMinute: number

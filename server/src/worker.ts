@@ -1,3 +1,5 @@
+import { verifyJavaContainerBoundaries } from './infrastructure/java/java-isolation-verifier.js'
+import { verifyJavaContainerHost } from './infrastructure/java/java-container.js'
 import { executeConsoleJob } from './modules/interactive-console/console.worker.js'
 import 'dotenv/config'
 import { randomUUID } from 'node:crypto'
@@ -14,7 +16,7 @@ import { createLogger } from './infrastructure/logging/logger.js'
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
-  if (env.javaExecutionMode !== 'local_process') {
+  if (env.javaExecutionMode === 'disabled') {
     process.stderr.write('Java worker is disabled.\n')
     process.exitCode = 1
     return
@@ -22,7 +24,10 @@ async function bootstrap(): Promise<void> {
   const logger = createLogger(env.logLevel)
   const prisma = createPrismaClient(env.databaseUrl)
   const queue = createPostgresExecutionQueue(prisma)
+  const container = env.javaExecutionMode === 'container' ? { executable: env.javaDockerExecutable, image: env.javaDockerImage } : undefined
+  if (container) await verifyJavaContainerHost(container)
   const runner = createJavaRunner({
+    container,
     javaExecutable: env.javaExecutable,
     javacExecutable: env.javacExecutable,
     release: env.javaRelease,
@@ -32,6 +37,7 @@ async function bootstrap(): Promise<void> {
     outputLimitBytes: env.javaOutputLimitBytes,
     memoryLimitMb: env.javaMemoryLimitMb,
   })
+  if (container) await verifyJavaContainerBoundaries(runner)
   const workerId = randomUUID()
   let stopping = false
   let iteration = 0

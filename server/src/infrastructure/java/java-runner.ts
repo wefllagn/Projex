@@ -1,3 +1,6 @@
+import { JavaInfrastructureError } from './java-infrastructure-error.js'
+export { JavaInfrastructureError } from './java-infrastructure-error.js'
+import { createContainerProcess, type JavaContainerConfig } from './java-container.js'
 import { StringDecoder } from 'node:string_decoder'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { mkdir, mkdtemp, rm, writeFile, readdir, lstat } from 'node:fs/promises'
@@ -30,6 +33,7 @@ export interface JavaAssessmentResult {
 }
 
 export interface JavaRunnerConfig {
+  container?: JavaContainerConfig
   javaExecutable: string
   javacExecutable: string
   release: number
@@ -38,13 +42,6 @@ export interface JavaRunnerConfig {
   testTimeoutMs: number
   outputLimitBytes: number
   memoryLimitMb: number
-}
-
-export class JavaInfrastructureError extends Error {
-  constructor(readonly code: string) {
-    super(code)
-    this.name = 'JavaInfrastructureError'
-  }
 }
 
 export interface ProcessResult {
@@ -126,7 +123,10 @@ async function runProcess(input: {
   timeoutMs: number
   outputLimitBytes: number
   interactive?: InteractiveProcessHooks
+  container?: JavaContainerConfig
 }): Promise<ProcessResult> {
+  const sandbox = input.container ? await createContainerProcess(input.container, input) : null
+  if (sandbox) input = { ...input, executable: sandbox.executable, args: sandbox.args }
   const started = Date.now()
   return new Promise((resolve, reject) => {
     let stdout = Buffer.alloc(0)
@@ -147,7 +147,7 @@ async function runProcess(input: {
     const decoders = { stdout: new StringDecoder('utf8'), stderr: new StringDecoder('utf8') }
     const cancel = () => { void terminateProcessTree(child) }
     input.interactive?.signal.addEventListener('abort', cancel, { once: true })
-    const finish = (exitCode: number | null) => {
+    const finish = async (exitCode: number | null) => {
       if (settled) return
       settled = true
       clearTimeout(timer)
@@ -157,6 +157,7 @@ async function runProcess(input: {
         if (tail) input.interactive?.onOutput?.(channel, tail)
       }
       if (input.interactive) void terminateProcessTree(child)
+      try { await sandbox?.finish(timedOut || outputLimited || Boolean(input.interactive?.signal.aborted)) } catch (error) { reject(error); return }
       resolve({
         exitCode,
         stdout: boundedText(stdout.toString('utf8'), input.outputLimitBytes),
@@ -188,10 +189,11 @@ async function runProcess(input: {
     // Programs may terminate before consuming all pre-supplied input.
     // A closed stdin pipe must not crash the separate worker.
     child.stdin.on('error', () => undefined)
-    child.once('error', (processError) => {
+    child.once('error', async (processError) => {
       clearTimeout(timer)
       if (settled) return
       settled = true
+      await sandbox?.remove().catch(() => undefined)
       reject(
         new JavaInfrastructureError(
           (processError as NodeJS.ErrnoException).code === 'ENOENT'
@@ -251,7 +253,7 @@ export function createJavaRunner(config: JavaRunnerConfig) {
         await mkdir(classes)
         await writeFile(path.join(directory, `${input.entryClassName}.java`), input.sourceCode, { flag: 'wx' })
         await hooks.onPhase('COMPILING')
-        const compilation = await runProcess({ executable: config.javacExecutable,
+        const compilation = await runProcess({ container: config.container, executable: config.javacExecutable,
           args: ['--release', String(config.release), '-encoding', 'UTF-8', '-d', classes, `${input.entryClassName}.java`],
           cwd: directory, timeoutMs: config.compileTimeoutMs, outputLimitBytes: config.outputLimitBytes,
           interactive: { signal: hooks.signal, onOutput: hooks.onOutput, onStart: (stdin) => stdin.end() } })
@@ -259,7 +261,7 @@ export function createJavaRunner(config: JavaRunnerConfig) {
           return { compilation, execution: null }
         }
         await hooks.onPhase('RUNNING')
-        const execution = await runProcess({ executable: config.javaExecutable,
+        const execution = await runProcess({ container: config.container, executable: config.javaExecutable,
           args: [`-Xmx${config.memoryLimitMb}m`, '-Xss1m', '-XX:ActiveProcessorCount=1', '-Dfile.encoding=UTF-8', '-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8', '-cp', classes, input.entryClassName],
           cwd: directory, timeoutMs: hooks.timeoutMs ?? 90_000, outputLimitBytes: config.outputLimitBytes - Buffer.byteLength(compilation.stdout + compilation.stderr), interactive: hooks })
         return { compilation, execution }
@@ -290,6 +292,7 @@ export function createJavaRunner(config: JavaRunnerConfig) {
         const sourceFileName = `${input.entryClassName}.java`
         await writeFile(sourcePath, input.sourceCode, { encoding: 'utf8', flag: 'wx' })
         const compilation = await runProcess({
+          container: config.container,
           executable: config.javacExecutable,
           args: [
             '--release',
@@ -330,6 +333,7 @@ export function createJavaRunner(config: JavaRunnerConfig) {
         const caseResults: JavaCaseResult[] = []
         for (const testCase of input.cases) {
           const execution = await runProcess({
+            container: config.container,
             executable: config.javaExecutable,
             args: [
               `-Xmx${config.memoryLimitMb}m`,

@@ -1,3 +1,4 @@
+import { assertHostedGitService } from './infrastructure/preflight/hosted-service.js'
 import { createGroupBrowserRefWorker } from './modules/group-browser-refs/group-browser-ref-worker.js'
 import { createGitGroupBrowserRefWriter } from './infrastructure/git/git-group-browser-ref-writer.js'
 import { createGroupBrowserCommitWorker } from './modules/group-browser-commits/group-browser-commit-worker.js'
@@ -19,7 +20,8 @@ import { createActivityWorkspaceCheckpointWorkerService } from './modules/activi
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
-  if (env.gitExecutionMode !== 'local_process') {
+  if (env.gitExecutionMode === 'service_isolated') await assertHostedGitService(env.gitStorageRoot)
+  if (env.gitExecutionMode === 'disabled') {
     process.stderr.write('Git provisioning worker is disabled.\n')
     process.exitCode = 1
     return

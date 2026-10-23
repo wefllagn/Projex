@@ -1,4 +1,4 @@
-.projex-academic-shell .student-class-content .academic-class-frame.activity-creation-wizard { display: flex; flex-direction: column; overflow: hidden; }
+.projex-academic-shell .student-class-content .academic-class-frame.activity-creation-wizard { display: flex; flex-direction: column; gap: 0; overflow: hidden; }
 .activity-creation-wizard > :not(.activity-wizard-content) { flex-shrink: 0; }
 .activity-creation-wizard .activity-wizard-progress { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0 0 18px; padding: 0; }
 .activity-wizard-progress button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 1px solid var(--origin-border); border-radius: 12px; background: transparent; color: var(--origin-ink); text-align: left; font: inherit; cursor: pointer; }

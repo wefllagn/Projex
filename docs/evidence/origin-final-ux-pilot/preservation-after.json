@@ -1,0 +1,45 @@
+{
+  "verifiedAt": "2026-10-23T20:27:13.829091+00:00",
+  "protectedFileHashesMatched": 8123,
+  "protectedWorktreesMatched": 10,
+  "protectedHealth": [
+    {
+      "name": "Projex",
+      "frontend": 5196,
+      "api": 3022,
+      "healthy": true,
+      "migrations": 28
+    },
+    {
+      "name": "Origin",
+      "frontend": 5198,
+      "api": 3024,
+      "healthy": true,
+      "migrations": 28
+    },
+    {
+      "name": "Phase2",
+      "frontend": 5202,
+      "api": 3026,
+      "healthy": true,
+      "migrations": 28
+    },
+    {
+      "name": "RC",
+      "frontend": 5204,
+      "api": 3028,
+      "healthy": true,
+      "migrations": 29
+    },
+    {
+      "name": "Final",
+      "frontend": 5206,
+      "api": 3030,
+      "healthy": true,
+      "migrations": 30
+    }
+  ],
+  "finalPreviewAcademicTablesMatched": 7,
+  "allExistingGlobalThemeLayoutStylesPreserved": true,
+  "noProtectedMigrationsWritesRestartsOrCleanupPerformed": true
+}

@@ -1,3 +1,4 @@
+import { assertHostedGitService } from './infrastructure/preflight/hosted-service.js'
 import { createPasswordRecoveryRouter } from './modules/password-recovery/password-recovery.js'
 import { createGradebookRouter } from './modules/gradebook/gradebook.js'
 import { createConsoleRouter } from './modules/interactive-console/console.routes.js'
@@ -84,6 +85,7 @@ import { createActivityWorkspaceCheckpointRouter } from './modules/activity-work
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
+  if (env.gitExecutionMode === 'service_isolated') await assertHostedGitService(env.gitStorageRoot)
   const logger = createLogger(env.logLevel)
   const prisma = createPrismaClient(env.databaseUrl)
   const passwordService = createPasswordService()
@@ -150,7 +152,7 @@ async function bootstrap(): Promise<void> {
   const adminService = createAdminService({
     repository: createPrismaAdminRepository(prisma),
     logger,
-    gitProvisioningRetryEnabled: env.gitExecutionMode === 'local_process',
+    gitProvisioningRetryEnabled: env.gitExecutionMode !== 'disabled',
   })
   const adminOversightService = createAdminOversightService({
     repository: createPrismaAdminOversightRepository(prisma),
@@ -205,7 +207,7 @@ async function bootstrap(): Promise<void> {
       provisioningMaxAttempts: env.gitProvisioningMaxAttempts,
     }),
     logger,
-    provisioningEnabled: env.gitExecutionMode === 'local_process',
+    provisioningEnabled: env.gitExecutionMode !== 'disabled',
   })
   const gitCredentialService = createGitCredentialService({
     issuanceEnabled: env.gitSmartHttpEnabled,
@@ -228,14 +230,14 @@ async function bootstrap(): Promise<void> {
       maxConcurrent: env.gitHttpMaxConcurrent,
     })
   const repositoryContentService = createRepositoryContentService({
-    enabled: env.gitExecutionMode === 'local_process',
+    enabled: env.gitExecutionMode !== 'disabled',
     accessRepository: gitTransportRepository,
     storage: gitStorage,
     reader: groupGitReader,
     logger,
   })
   const activityWorkspaceCheckpointService = createActivityWorkspaceCheckpointService({
-    enabled: env.gitExecutionMode === 'local_process',
+    enabled: env.gitExecutionMode !== 'disabled',
     sourceLimitBytes: env.javaSourceLimitBytes,
     repository: createPrismaActivityWorkspaceCheckpointRepository(prisma),
     accessRepository: gitTransportRepository,
@@ -279,10 +281,10 @@ async function bootstrap(): Promise<void> {
       workHub: createWorkHubRouter({ prisma, requireAuthentication }),
       capabilities: createCapabilitiesRouter(createCapabilitiesService({
         profile: env.nodeEnv === 'production' ? 'HOSTED_SAFE' : 'LOCAL_FULL',
-        java: { execution: env.javaExecutionMode === 'local_process' },
+        java: { execution: env.javaExecutionMode !== 'disabled' },
         git: {
-          provisioning: env.gitExecutionMode === 'local_process',
-          inspection: env.gitExecutionMode === 'local_process',
+          provisioning: env.gitExecutionMode !== 'disabled',
+          inspection: env.gitExecutionMode !== 'disabled',
           smartHttp: env.gitSmartHttpEnabled,
         },
       })),
@@ -362,8 +364,8 @@ async function bootstrap(): Promise<void> {
         service: repositoryContentService,
         requireAuthentication,
       }),
-      groupBrowserRefs: createGroupBrowserRefRouter({service:createGroupBrowserRefService({prisma,accessRepository:gitTransportRepository,enabled:env.gitExecutionMode==='local_process',reader:groupGitReader,storage:gitStorage}),requireAuthentication,requireCsrf}),
-      groupBrowserCommits: createGroupBrowserCommitRouter({ service: createGroupBrowserCommitService({ prisma, accessRepository: gitTransportRepository, enabled: env.gitExecutionMode === 'local_process' }), requireAuthentication, requireCsrf }),
+      groupBrowserRefs: createGroupBrowserRefRouter({service:createGroupBrowserRefService({prisma,accessRepository:gitTransportRepository,enabled:env.gitExecutionMode!=='disabled',reader:groupGitReader,storage:gitStorage}),requireAuthentication,requireCsrf}),
+      groupBrowserCommits: createGroupBrowserCommitRouter({ service: createGroupBrowserCommitService({ prisma, accessRepository: gitTransportRepository, enabled: env.gitExecutionMode !== 'disabled' }), requireAuthentication, requireCsrf }),
       activityWorkspaceCheckpoints: createActivityWorkspaceCheckpointRouter({
         service: activityWorkspaceCheckpointService,
         requireAuthentication,
