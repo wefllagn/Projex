@@ -323,7 +323,7 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
   }
 
   const release = async () => {
-    if (actionLock.current) return
+    if (actionLock.current || reviewDirty || correctionDirty) return
     actionLock.current = true
     setBusy('release')
     try {
@@ -377,7 +377,9 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
   const archived = current.activity.status === 'ARCHIVED' || selectedClass.status === 'ARCHIVED'
   const editable = !archived && canCorrectOrReview(record)
   const completion = record.gradingMode === 'COMPLETION'
-  const projectedFinalScore = completion ? null : record.scores.effectiveAutomatedScore === null ? null : record.scores.effectiveAutomatedScore + Number(review.instructorPoints || 0)
+  const reviewDirty = review.feedbackText.trim() !== (record.feedback?.text ?? '') || (!completion && (review.instructorPoints === '' || Number(review.instructorPoints) !== record.scores.instructorPoints))
+  const correctionDirty = correction.newEffectiveScore !== '' || correction.reason.trim() !== ''
+  const projectedFinalScore = completion ? null : record.scores.effectiveAutomatedScore === null ? null : record.scores.effectiveAutomatedScore + record.scores.instructorPoints
   const correctionHint = completion ? '' : correction.newEffectiveScore === '' ? `Enter an automated score between 0 and ${record.scores.automatedMaximum}.` : !Number.isFinite(Number(correction.newEffectiveScore)) || Number(correction.newEffectiveScore) < 0 || Number(correction.newEffectiveScore) > record.scores.automatedMaximum ? `The automated score must be between 0 and ${record.scores.automatedMaximum}; Instructor points are separate.` : correction.reason.trim().length < 10 ? 'Explain the correction in at least 10 characters.' : correction.reason.trim().length > 2000 ? 'Keep the correction reason within 2,000 characters.' : ''
   const correctionValid = !completion && !correctionHint
   const reviewValid = completion ? review.feedbackText.trim().length <= 20_000 : Number.isFinite(Number(review.instructorPoints)) && review.instructorPoints !== '' && Number(review.instructorPoints) >= 0 && Number(review.instructorPoints) <= record.scores.instructorMaximum && review.feedbackText.trim().length <= 20_000
@@ -398,10 +400,11 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
       <SubmissionSections label="Instructor submission sections" sections={[
         { id: 'review', label: 'Review', content: <>
           {record.status === 'released' && <section className="submission-released-result"><p className="student-feedback-eyebrow">{record.isCreditedResult ? 'Credited result' : 'Released result'}</p><h2>{completion ? 'Feedback released · Complete' : `${score(record.scores.finalScore)} / ${score(record.scores.totalPoints)} points`}</h2><p>{record.feedback?.text || 'No textual feedback was released.'}</p>{record.feedback?.releasedAt && <small>Feedback released {formatDate(record.feedback.releasedAt)}</small>}</section>}
-          {record.status !== 'released' && !completion && <div className="academic-review-summary"><div><span>Grade preview</span><strong>{score(projectedFinalScore)} / {score(record.scores.totalPoints)} points</strong></div><small>Not released to the Student</small></div>}
+          {record.status !== 'released' && !completion && <div className="academic-review-summary"><div><span>Saved grade preview</span><strong>{score(projectedFinalScore)} / {score(record.scores.totalPoints)} points</strong></div><small>Not released to the Student</small></div>}
+          {(reviewDirty || correctionDirty) && <p className="academic-inline-help" role="status">{correctionDirty ? 'Record or clear your automated-score correction before releasing.' : 'Save your grading and feedback changes before releasing.'} The preview shows the saved result.</p>}
           {completion && <section className="instructor-score-panel"><h3>Complete · Ungraded</h3><p>Official submission accepted. Feedback release is separate from completion.</p></section>}
           {editable && <form className="instructor-feedback-panel instructor-live-feedback" onSubmit={saveReview}><label>Private feedback draft<textarea aria-label="Private feedback draft" aria-describedby="feedback-draft-help" value={review.feedbackText} maxLength={20000} onChange={(event) => setReview((value) => ({ ...value, feedbackText: event.target.value }))} /><small id="feedback-draft-help">Saving an empty field clears the unreleased draft.</small></label>{!completion && <label>Instructor points<input type="number" min="0" max={record.scores.instructorMaximum} step="0.01" value={review.instructorPoints} onChange={(event) => setReview((value) => ({ ...value, instructorPoints: event.target.value }))} /></label>}<div className="instructor-form-actions"><button type="submit" className="student-primary-action" disabled={!reviewValid || Boolean(busy)}>{busy === 'review' ? 'Saving…' : 'Save review draft'}</button></div></form>}
-          {canRelease(record) && !archived && <section className="instructor-release-panel"><div><h3>{completion ? 'Release feedback' : 'Release result'}</h3><p>{completion ? 'Share your saved comments with the Student.' : 'Share the final score and feedback with the Student.'} This cannot be undone.</p></div><button type="button" className="student-primary-action" disabled={Boolean(busy)} onClick={() => setConfirmAction('release')}>{busy === 'release' ? 'Releasing…' : completion ? 'Release feedback' : 'Release final result'}</button></section>}
+          {canRelease(record) && !archived && <section className="instructor-release-panel"><div><h3>{completion ? 'Release feedback' : 'Release result'}</h3><p>{completion ? 'Share your saved comments with the Student.' : 'Share the final score and feedback with the Student.'} This cannot be undone.</p></div><button type="button" className="student-primary-action" disabled={Boolean(busy) || reviewDirty || correctionDirty} onClick={() => setConfirmAction('release')}>{busy === 'release' ? 'Releasing…' : completion ? 'Release feedback' : 'Release final result'}</button></section>}
           {!completion && <details className="instructor-score-panel academic-score-breakdown"><summary>Score breakdown</summary>
         <div className="instructor-section-title"><h3>Score components</h3></div>
         <dl className="activity-facts"><div><dt>Original automated</dt><dd>{score(record.scores.originalAutomatedScore)} / {score(record.scores.automatedMaximum)}</dd></div><div><dt>Effective automated</dt><dd>{score(record.scores.effectiveAutomatedScore)} / {score(record.scores.automatedMaximum)}</dd></div><div><dt>Instructor points</dt><dd>{score(record.scores.instructorPoints)} / {score(record.scores.instructorMaximum)}</dd></div><div><dt>{record.status === 'released' ? 'Released final score' : 'Projected final score'}</dt><dd>{record.status === 'released' ? score(record.scores.finalScore) : score(projectedFinalScore)} / {score(record.scores.totalPoints)}</dd></div></dl>
@@ -429,7 +432,7 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
         </> },
       ]} />
       {confirmation}
-      {confirmAction === 'release' && <AppDialog title={completion ? 'Release feedback?' : 'Release final result?'} busy={Boolean(busy)} onClose={() => setConfirmAction('')}><p>Release this saved review to the Student? Released reviews cannot be edited.</p><footer><button type="button" className="student-outline-action" onClick={() => setConfirmAction('')} disabled={Boolean(busy)}>Cancel</button><button type="button" className="student-primary-action" onClick={release} disabled={Boolean(busy)}>Confirm release</button></footer></AppDialog>}
+      {confirmAction === 'release' && <AppDialog title={completion ? 'Release feedback?' : 'Release final result?'} busy={Boolean(busy)} onClose={() => setConfirmAction('')}><p>Release this saved review to the Student? Released reviews cannot be edited.</p><footer><button type="button" className="student-outline-action" onClick={() => setConfirmAction('')} disabled={Boolean(busy)}>Cancel</button><button type="button" className="student-primary-action" onClick={release} disabled={Boolean(busy) || reviewDirty || correctionDirty}>Confirm release</button></footer></AppDialog>}
     </section>
   )
 }

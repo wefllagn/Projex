@@ -148,7 +148,7 @@ describe('instructor submission review', () => {
     expect(screen.queryByRole('button', { name: 'Run Tests' })).not.toBeInTheDocument()
     expect(screen.queryByText(/similarity/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/Hidden boundary points/i)).not.toBeInTheDocument()
-    expect(screen.getByText('Grade preview')).toBeInTheDocument()
+    expect(screen.getByText('Saved grade preview')).toBeInTheDocument()
   })
 
   it('reruns the submitted source separately without changing the original review or score', async () => {
@@ -489,4 +489,28 @@ it('explains the automated-score limit and correction-reason requirement, then e
   expect(button).toBeEnabled()
   expect(screen.getByLabelText('Correction reason')).toHaveValue('Reason retained while fixing this score.')
   expect(submissions.correctAutomatedScore).not.toHaveBeenCalled()
+})
+
+it('shows persisted points and blocks release until grading and feedback edits are saved', async () => {
+  const saved = record({ status: 'reviewed' })
+  const submissions = submissionTransport({
+    getSubmission: vi.fn().mockResolvedValue({ data: saved }),
+    saveReview: vi.fn().mockResolvedValue({ data: record({ status: 'reviewed', scores: { ...saved.scores, instructorPoints: 5 }, feedback: { text: 'Saved feedback.', releasedAt: null } }) }),
+  })
+  renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
+  await screen.findByText('Immutable submitted source')
+  const release = screen.getByRole('button', { name: 'Release final result' })
+  expect(release).toBeEnabled()
+  fireEvent.change(screen.getByLabelText('Instructor points'), { target: { value: '5' } })
+  await userEvent.type(screen.getByLabelText(/^Private feedback draft/), 'Saved feedback.')
+  expect(release).toBeDisabled()
+  expect(screen.getByText('Saved grade preview').parentElement).toHaveTextContent('40 / 100')
+  await userEvent.click(screen.getByRole('button', { name: 'Save review draft' }))
+  await screen.findByText('Review and private feedback draft saved.')
+  expect(screen.getByText('Saved grade preview').parentElement).toHaveTextContent('45 / 100')
+  expect(release).toBeEnabled()
+  await userEvent.click(screen.getByRole('tab', { name: 'Tools & history' }))
+  await userEvent.type(screen.getByLabelText('Correction reason'), 'Unrecorded correction.')
+  expect(release).toBeDisabled()
+  expect(submissions.releaseSubmission).not.toHaveBeenCalled()
 })
