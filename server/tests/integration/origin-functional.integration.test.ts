@@ -14,6 +14,7 @@ import { createPostgresExecutionQueue } from '../../src/infrastructure/job-queue
 import { createPasswordRecoveryService, createPasswordRecoveryRouter } from '../../src/modules/password-recovery/password-recovery.js'
 import { createTokenService } from '../../src/modules/auth/auth.tokens.js'
 import { createPasswordService } from '../../src/modules/auth/auth.password.js'
+import { createPrismaAccountSetupRepository } from '../../src/modules/account-setup/account-setup.repository.js'
 import { createPrismaAuthRepository } from '../../src/modules/auth/auth.repository.js'
 import { createAuthenticationMiddleware } from '../../src/modules/auth/auth.middleware.js'
 import { ACCESS_COOKIE_NAME } from '../../src/modules/auth/auth.constants.js'
@@ -69,6 +70,10 @@ describe('Origin functional release contracts', () => {
     await expect(service.review(instructor, id, { instructorPoints: 0, expectedUpdatedAt: version })).rejects.toMatchObject({ code: 'STALE_SUBMISSION_VERSION' })
     expect(await service.get(student, id)).not.toHaveProperty('scores')
     record = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
+    const concurrentReviews = await Promise.allSettled([1, 2].map(() => service.review(instructor, id, { rubricScores: [{ criterionId: criteria[0]!.id, points: 8 }, { criterionId: criteria[1]!.id, points: 18 }], expectedUpdatedAt: record.updatedAt })))
+    expect(concurrentReviews.filter(result => result.status === 'fulfilled')).toHaveLength(1)
+    expect(concurrentReviews.find(result => result.status === 'rejected')).toMatchObject({ reason: { code: 'STALE_SUBMISSION_VERSION' } })
+    record = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
     await service.release(instructor, id, { expectedUpdatedAt: record.updatedAt })
     expect(await service.get(student, id)).toMatchObject({ finalScore: 91, totalPoints: 100, feedback: 'Reviewed each criterion.' })
     record = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
@@ -114,12 +119,22 @@ describe('Origin functional release contracts', () => {
     const issued = await request(app).post(`/users/${student.id}/password-recovery`).set('Cookie',adminCookie).set('X-CSRF-Token','rc-csrf').send({}).expect(201)
     expect(issued.headers['cache-control']).toBe('no-store')
     const service = createPasswordRecoveryService(recoveryDependencies()), token1 = raw(issued.body.data.setupLink)
+    const cls = await createActiveClass(prisma, instructor.id)
+    const membership = await createActiveMembership(prisma, cls.id, student.id)
+    const pending = await createActiveUser(prisma, 'STUDENT')
+    await prisma.user.update({ where: { id: pending.id }, data: { status: 'SETUP_PENDING' } })
+    await expect(service.issue(admin, pending.id, randomUUID())).rejects.toMatchObject({ code: 'RECOVERY_NOT_AVAILABLE' })
+    const setupToken = tokens.createOpaqueToken()
+    await prisma.accountSetupToken.create({ data: { userId: pending.id, tokenHash: tokens.hashOpaqueToken(setupToken), expiresAt: new Date(now.getTime() + 3600000) } })
+    await expect(service.complete(setupToken, 'NewPassword1!')).rejects.toMatchObject({ code: 'RECOVERY_TOKEN_INVALID' })
+    expect(await createPrismaAccountSetupRepository(prisma).completeSetup({ tokenHash: tokens.hashOpaqueToken(token1), passwordHash: 'unused', completedAt: now })).toBeNull()
     const newer = await service.issue(admin, student.id, randomUUID()), token2 = raw(newer.setupLink)
     await expect(service.complete(token1, 'NewPassword1!')).rejects.toMatchObject({ code: 'RECOVERY_TOKEN_INVALID' })
     await request(app).get('/me').set('Cookie',studentCookie).expect(200)
     await request(app).post('/password-recovery/complete').send({ setupToken: token2, password: 'NewPassword1!', confirmPassword: 'NewPassword1!' }).expect(200)
     await request(app).get('/me').set('Cookie',studentCookie).expect(401)
     await request(app).post('/password-recovery/complete').send({ setupToken: token2, password: 'NewPassword1!', confirmPassword: 'NewPassword1!' }).expect(400)
+    expect(await prisma.classMember.findUnique({ where: { id: membership.id } })).toMatchObject({ studentId: student.id, classId: cls.id, status: 'ACTIVE' })
     const user = await prisma.user.findUniqueOrThrow({ where: { id: student.id } })
     expect(await passwords.verify(user.passwordHash!, 'NewPassword1!')).toBe(true); expect(user.fullName).toBe(student.fullName); expect(user.status).toBe('ACTIVE'); expect(user.role).toBe('STUDENT')
     const audit = await prisma.adminAuditEvent.findMany({ where: { action: 'USER_PASSWORD_RECOVERY_ISSUED' } })

@@ -94,6 +94,10 @@ function safeAuditMetadata(action: string, value: Prisma.JsonValue | null): Reco
         ? { provisionedRole, initialClassAssigned }
         : null
     }
+    case 'USER_PASSWORD_RECOVERY_ISSUED': {
+      const expiresAt = stringValue(value, 'expiresAt')
+      return expiresAt && Number.isFinite(Date.parse(expiresAt)) ? { expiresAt } : null
+    }
     case 'USER_SETUP_REISSUED': {
       const setupState = stringValue(value, 'setupState')
       return setupState === 'SETUP_PENDING' ? { setupState } : null

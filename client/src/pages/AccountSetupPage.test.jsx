@@ -22,6 +22,18 @@ function renderPage(completeAccountSetup = vi.fn().mockResolvedValue({ data: { s
 }
 
 describe('account setup', () => {
+  it('explains expired, replaced and consumed recovery links without retaining password fields', async () => {
+    window.history.replaceState(null, '', `/password-recovery#token=${syntheticToken}`)
+    const post = vi.spyOn(apiClient, 'post').mockRejectedValue(new ApiError({ status: 400, code: 'RECOVERY_TOKEN_INVALID', message: 'Invalid recovery link.' }))
+    render(<AuthContext.Provider value={{}}><MemoryRouter><AccountSetupPage recovery /></MemoryRouter></AuthContext.Provider>)
+    await userEvent.type(screen.getByLabelText('New password'), 'Synthetic1!')
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'Synthetic1!')
+    await userEvent.click(screen.getByRole('button', { name: 'Reset password' }))
+    expect(await screen.findByText(/invalid, expired, replaced, or already used/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('New password')).not.toBeInTheDocument()
+    post.mockRestore()
+  })
+
   it('retries a temporary recovery failure with the in-memory token and clears it after success', async () => {
     window.history.replaceState(null, '', `/password-recovery#token=${syntheticToken}`)
     const post = vi.spyOn(apiClient, 'post').mockRejectedValueOnce(new ApiError({ status: 503, code: 'TEMPORARILY_UNAVAILABLE', message: 'Try again.' })).mockResolvedValueOnce({ data: { recoveryCompleted: true } })

@@ -197,7 +197,8 @@ function safeAuditMetadata(action, value) {
   }
   if (action === 'USER_STUDENT_PROVISIONED' || action === 'USER_INSTRUCTOR_PROVISIONED') {
     addText('provisionedRole'); addBoolean('initialClassAssigned')
-  } else if (action === 'USER_SETUP_REISSUED') addText('setupState')
+  } else if (action === 'USER_PASSWORD_RECOVERY_ISSUED') addText('expiresAt')
+  else if (action === 'USER_SETUP_REISSUED') addText('setupState')
   else if (action === 'USER_STATUS_CHANGED') {
     addText('previousStatus'); addText('newStatus'); addCount('revokedSessionCount')
   } else if (action === 'USER_SESSIONS_REVOKED') addCount('revokedSessionCount')
