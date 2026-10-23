@@ -1,0 +1,8 @@
+{
+  "databasePort": 55498,
+  "originalTablesMatched": 40,
+  "migrationsBefore": 29,
+  "migrationsAfter": 30,
+  "allOriginalRowsColumnsPreserved": true,
+  "legacyConfigurationAndImportanceNull": true
+}

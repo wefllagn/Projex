@@ -1,5 +1,7 @@
 # Origin functional release candidate
 
+> Historical RC handoff. The subsequent authorized final grading and Gradebook work is documented in [ORIGIN_FINAL_FUNCTIONAL_HANDOFF.md](ORIGIN_FINAL_FUNCTIONAL_HANDOFF.md).
+
 Branch: `release/origin-functional-completion`
 
 Approved base: `ui/origin-phase2-polish` at `2f5831ef8a3f8cc98acd66127e0158e28a2f8ae5`

@@ -1,0 +1,74 @@
+{
+  "protectedFileHashesMatched": 5181,
+  "protectedWorktreeStates": {
+    "projex-presentation": {
+      "matched": true,
+      "head": "ead3ab262f6f408230269a8fa22dd5eb31838981"
+    },
+    "origin-final-pass": {
+      "matched": true,
+      "head": "97c0f5a39899b765e0596724ed5a6b1a4f9deef5"
+    },
+    "origin-phase2-polish": {
+      "matched": true,
+      "head": "2f5831ef8a3f8cc98acd66127e0158e28a2f8ae5"
+    },
+    "origin-functional-completion": {
+      "matched": true,
+      "head": "5bc86d00f417ae6e081b9e3f119f4cdf90911166"
+    },
+    "origin-approved-design-handoff": {
+      "matched": true,
+      "head": "234245b3ef4e21671a69e06833c7ad8ed3f9eb02"
+    },
+    "origin-landing-macos": {
+      "matched": true,
+      "head": "29891f901fdb64a2b61e6ab6f7568bd1e5edf34e"
+    }
+  },
+  "allFrozenClientFilesMatchedReconciledRC": 363,
+  "changedClientFiles": [
+    "client/src/activities/ActivityGrading.jsx",
+    "client/src/activities/ActivityGrading.test.jsx",
+    "client/src/activities/InstructorActivityViews.jsx",
+    "client/src/activities/activity-utils.js",
+    "client/src/activities/activity-utils.test.js",
+    "client/src/activities/weighted-grading.js",
+    "client/src/activities/weighted-grading.test.js",
+    "client/src/gradebook/Gradebook.jsx",
+    "client/src/gradebook/Gradebook.test.jsx",
+    "client/src/submissions/InstructorSubmissionViews.jsx",
+    "client/src/submissions/instructor-submission-projections.js"
+  ],
+  "protectedHealth": [
+    {
+      "name": "Projex",
+      "frontendPort": 5196,
+      "apiPort": 3022,
+      "healthy": true,
+      "migrationCount": 28
+    },
+    {
+      "name": "Origin",
+      "frontendPort": 5198,
+      "apiPort": 3024,
+      "healthy": true,
+      "migrationCount": 28
+    },
+    {
+      "name": "Phase2",
+      "frontendPort": 5202,
+      "apiPort": 3026,
+      "healthy": true,
+      "migrationCount": 28
+    },
+    {
+      "name": "RC",
+      "frontendPort": 5204,
+      "apiPort": 3028,
+      "healthy": true,
+      "migrationCount": 29
+    }
+  ],
+  "noProtectedWritesMigrationsOrRestartsPerformed": true
+}
