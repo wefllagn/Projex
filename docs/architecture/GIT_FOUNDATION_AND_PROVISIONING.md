@@ -4,7 +4,7 @@
 
 Phase 8A adds the controlled-local Git foundation and durable bare-repository provisioning. Phase 8B builds authenticated loopback-only Smart HTTP on this foundation as documented in `GIT_SMART_HTTP_TRANSPORT.md`. Phase 8C adds the read-only browsing, history, tree, bounded text-file, and diff boundary documented in `GIT_REPOSITORY_INSPECTION.md`; merge, server-created history, contribution attribution, and frontend behavior remain deferred.
 
-The controlled-local Git minimum is `2.55.0` on both supported platforms. Version
+The Git compatibility minimum is `2.55.0` on Windows/macOS and `2.43.0` on Linux. Version
 detection invokes the validated absolute `GIT_EXECUTABLE`; PATH ordering is never
 authoritative. The platform policy is:
 
@@ -12,13 +12,20 @@ authoritative. The platform policy is:
 | --- | --- | --- |
 | Windows | `git version X.Y.Z.windows.N`, at least `2.55.0` | Existing Git for Windows format/minimum retained; tested Windows baseline `2.55.0.windows.3` is historical |
 | macOS | `git version X.Y.Z`, at least `2.55.0` | Actual Homebrew `2.55.0` detection and temporary empty-bare verification passed on arm64 macOS |
+| Linux | `git version X.Y.Z`, at least `2.43.0` | Ubuntu 24.04 vendor-maintained Git; guarded real-Git provisioning, inspection, checkpoints, browser commits/ref transactions and Smart HTTP regressions are required |
 
 Version components must be safe nonnegative integers. Older releases, release
 candidates, unknown vendor suffixes (including unverified Apple Git formats),
 malformed output and unsupported host platforms are rejected. A Windows suffix
-is required on Windows and rejected on macOS. Version text is not a binary
-authenticity attestation: operators must still select the intended installed
-executable and resolve its canonical identity. No version is spoofed.
+is required on Windows and rejected on macOS/Linux. Version text is not a binary
+authenticity or security-patch attestation: operators must still select the intended installed
+executable and resolve its canonical identity. No version is spoofed. Ubuntu backports security fixes while retaining `2.43.0`
+in `git --version`; operators must verify the installed Ubuntu package revision
+and current vendor security updates, not install unpatched upstream `2.43.0`.
+The compatibility policy does not relax production `service_isolated` checks,
+systemd confinement, storage ownership, authorization, or disabled native
+Smart HTTP in the pilot. See `deploy/pilot/LINUX_GIT_RELEASE.md` for this
+release's operation inventory, verification evidence and upgrade procedure.
 
 For macOS Homebrew, resolve executable symlinks before process-local configuration,
 especially `GIT_EXECUTABLE` and `GIT_HTTP_BACKEND_EXECUTABLE`: Smart HTTP's existing

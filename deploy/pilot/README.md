@@ -1,5 +1,8 @@
 # Origin limited Ubuntu/Azure pilot
 
+For the code-only Linux Git compatibility update from frozen `2a2a3e5`, use
+[the Linux Git release procedure](LINUX_GIT_RELEASE.md).
+
 This is an **application deployment package**, not evidence of an online deployment. The owner handles Azure, SSH, network rules, DNS and certificates. No commands below have been executed on `origin-demo-vm`. Its earlier IP `20.205.63.170` is unverified. **Do not use a Mac preview database, credentials, filesystem or Git root on the VM.** Start with a new pilot database and provision pilot accounts through Admin.
 
 Use Ubuntu **24.04 LTS**, systemd, Python 3.12+, Node **24**, PostgreSQL **16** (Ubuntu package), nginx and Docker Engine with **cgroup v2, default seccomp and AppArmor**. A small pilot should have at least 2 vCPU, 4 GiB RAM and sufficient free persistent disk; this is a starting budget, not a tested capacity claim. One Java worker and one Git worker only. Monitor memory, queue latency and disk before adding testers. Do not disable swap/cgroups/security profiles to force the tests to pass.

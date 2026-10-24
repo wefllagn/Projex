@@ -36,6 +36,11 @@ describe('Git version validation', () => {
     ['darwin', '2.55.1'],
     ['darwin', '2.56.0'],
     ['darwin', '3.0.0'],
+    ['linux', '2.43.0'],
+    ['linux', '2.43.9'],
+    ['linux', '2.44.0'],
+    ['linux', '2.55.0'],
+    ['linux', '3.0.0'],
   ] as const)('accepts supported %s release %s', (platform, release) => {
     expect(() => assertSupportedGitVersion(parseGitVersion(`git version ${release}\n`), platform)).not.toThrow()
   })
@@ -46,7 +51,12 @@ describe('Git version validation', () => {
     ['darwin', '2.54.9'],
     ['darwin', '1.99.99'],
     ['darwin', '2.55.0.windows.3'],
-    ['linux', '2.55.0'],
+    ['linux', '2.42.99'],
+    ['linux', '1.99.99'],
+    ['linux', '2.43.0.windows.3'],
+    ['linux', '2.55.0.windows.3'],
+    ['win32', '2.43.0.windows.3'],
+    ['darwin', '2.43.0'],
     ['freebsd', '2.55.0'],
   ] as const)('rejects unsupported %s release %s', (platform, release) => {
     expect(() => assertSupportedGitVersion(parseGitVersion(`git version ${release}`), platform))
@@ -57,6 +67,9 @@ describe('Git version validation', () => {
     '2.55.0',
     'git version 2.55',
     'git version 2.55.0-rc1',
+    'git version 2.43.0-rc1',
+    'git version 2.43.0.ubuntu.1',
+    'git version 2.43.0\nuntrusted output',
     'git version 2.55.0.vendor.1',
     'git version 2.55.0 (Apple Git-999)',
     'git version 2.55.0.windows',
