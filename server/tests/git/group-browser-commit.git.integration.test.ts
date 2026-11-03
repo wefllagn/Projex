@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { availableBrowserWorker } from './browser-worker-fixture.js'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import pino from 'pino'
@@ -19,7 +20,7 @@ const prisma = createIntegrationPrisma(), logger = pino({ level: 'silent' })
 const git = createGitCommandRunner({ executable: process.env.GIT_EXECUTABLE!, timeoutMs: 30000, outputLimitBytes: 4194304 })
 const storage = createRepositoryStorage({ root: process.env.GIT_STORAGE_ROOT!, repositorySizeLimitBytes: 104857600 })
 const writer = createGitGroupBrowserWriter({ git, resolveRepository: (id,locator) => storage.resolveManagedRepository(id,locator), checkSize: async root => { await storage.measure(root) } })
-const worker = createGroupBrowserCommitWorker({ prisma,writer,logger })
+const worker = availableBrowserWorker(prisma, createGroupBrowserCommitWorker({ prisma,writer,logger }))
 const service = createGroupBrowserCommitService({ prisma, accessRepository: createPrismaGitTransportRepository(prisma), enabled: true })
 const content = createRepositoryContentService({ enabled: true, accessRepository: createPrismaGitTransportRepository(prisma), storage, logger, reader: createGitRepositoryReader({ executable: process.env.GIT_EXECUTABLE!, timeoutMs:30000, commandOutputLimitBytes:4194304, fileLimitBytes:262144, diffLimitBytes:524288, maxChangedFiles:500, maxBranches:100, maxConcurrent:4 }) })
 async function fixture() {
@@ -91,14 +92,14 @@ describe('real Group browser commits',()=>{
     await git.run(['add','README.md'],clone);await git.run(['-c','user.name=Native QA','-c','user.email=native@example.test','commit','-m','Native update'],clone)
     const queued=await service.create(f.lead,f.repository.id,{...initial,operation:'UPDATE',content:'Browser update\n',expectedHeadCommitHash:first.commitHash},randomUUID())
     const racingWriter={...writer,publish:async(...args:Parameters<typeof writer.publish>)=>{await git.run(['push','origin','main'],clone);return writer.publish(...args)}}
-    await createGroupBrowserCommitWorker({prisma,writer:racingWriter,logger}).processNext(randomUUID())
+    await availableBrowserWorker(prisma, createGroupBrowserCommitWorker({prisma,writer:racingWriter,logger})).processNext(randomUUID())
     expect(await service.get(f.lead,f.repository.id,queued.jobId)).toMatchObject({status:'CONFLICTED',failureCode:'BROWSER_HEAD_CHANGED'})
     expect((await git.run(['--git-dir','.','show','main:README.md'],f.root)).stdout).toBe('Native update\n')
   })
   it('recovers a published commit after worker interruption without making another commit',async()=>{
     const f=await fixture(), key=randomUUID(), queued=await service.create(f.lead,f.repository.id,initial,key)
     const crashingWriter={...writer,publish:async(...args:Parameters<typeof writer.publish>)=>{await writer.publish(...args);throw new Error('QA interrupted after atomic refs')}}
-    await createGroupBrowserCommitWorker({prisma,writer:crashingWriter,logger}).processNext(randomUUID())
+    await availableBrowserWorker(prisma, createGroupBrowserCommitWorker({prisma,writer:crashingWriter,logger})).processNext(randomUUID())
     expect(await service.get(f.lead,f.repository.id,queued.jobId)).toMatchObject({status:'PENDING',commitHash:null})
     await prisma.groupBrowserCommitJob.update({where:{id:queued.jobId},data:{availableAt:new Date(0)}})
     await prisma.repository.update({where:{id:f.repository.id},data:{reviewStatus:'READY_FOR_REVIEW',readyForReviewAt:new Date()}})

@@ -50,6 +50,15 @@ The serializable creation transaction:
 
 I2.3 Activity Git Workspace saves are explicitly outside this transaction. A browser checkpoint or native Git push creates no `ActivitySubmission`, consumes no attempt, queues no Java assessment, and produces no score. Loading the latest pushed/checkpointed entry file only replaces the editable browser source. The Student must still review that source and use the existing explicit Submit confirmation; submission continues to persist its own immutable source snapshot.
 
+Background Git observation does not adopt a new checkpoint base. The editor keeps
+its initial observed base until an explicit source load or a confirmed successful
+checkpoint; repeated saves after a newer push remain conflicts. Loading source
+must preserve any edits made while the request or confirmation was pending.
+Literal merge markers are source data: transport, submission snapshots and the
+Instructor viewer must neither insert nor strip them. See
+`../SUBMISSION_GIT_LIFECYCLE_AUDIT.md` for the 2026-11-03 regression evidence and
+the distinction between Activity attempt rules and Group review freezes.
+
 A new attempt returns `201`. An exact replay returns the original response with `200` and `meta.idempotentReplay=true`. Reusing the same scoped key with different source returns `DUPLICATE_SUBMISSION_REQUEST`. Another student has a separate scope.
 
 ## Attempt allowance and replacement grants

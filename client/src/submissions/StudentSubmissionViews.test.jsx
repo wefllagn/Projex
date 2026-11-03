@@ -365,6 +365,64 @@ describe('student programming workspace', () => {
     expect(git.repositories.createActivityCheckpoint).not.toHaveBeenCalled()
   })
 
+  it.each([false, true])('keeps the editor base after background refresh (initially empty: %s)', async (empty) => {
+    const newerCommit = 'b'.repeat(40)
+    const getSummary = vi.fn()
+      .mockResolvedValueOnce({ data: { repositoryId, empty, latestCommit: empty ? null : { commitId } } })
+      .mockResolvedValue({ data: { repositoryId, empty: false, latestCommit: { commitId: newerCommit } } })
+    const git = gitDependencies({ contentOverrides: { getSummary } })
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissionTransport()} />)
+    const editor = await screen.findByLabelText('Java source code')
+    await waitFor(() => expect(getSummary).toHaveBeenCalledTimes(1))
+    fireEvent.change(editor, { target: { value: changedCode } })
+    act(() => window.dispatchEvent(new Event('focus')))
+    await waitFor(() => expect(getSummary.mock.calls.length).toBeGreaterThanOrEqual(2))
+    await userEvent.click(screen.getByRole('button', { name: 'Save to Git' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save to Git' }))
+    expect(git.repositories.createActivityCheckpoint).not.toHaveBeenCalled()
+    expect(editor).toHaveValue(changedCode)
+  })
+
+  it('preserves edits typed while Git source is loading', async () => {
+    let resolveFile
+    const file = new Promise(resolve => { resolveFile = resolve })
+    const git = gitDependencies({ contentOverrides: {
+      getSummary: vi.fn().mockResolvedValue({ data: { repositoryId, empty: false, latestCommit: { commitId } } }),
+      getFile: vi.fn(() => file),
+    } })
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissionTransport()} />)
+    const editor = await screen.findByLabelText('Java source code')
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Load latest from Git' }))
+    await waitFor(() => expect(git.repositoryContent.getFile).toHaveBeenCalled())
+    fireEvent.change(editor, { target: { value: changedCode } })
+    await act(async () => resolveFile({ data: { commitId, path: 'Main.java', content: starterCode } }))
+    expect(editor).toHaveValue(changedCode)
+  })
+
+  it('adopts a newer base only after loading source and submits literal markers unchanged', async () => {
+    const newerCommit = 'b'.repeat(40)
+    const markedSource = '/*\n<<<<<<< HEAD\nleft\n=======\nright\n>>>>>>> feature/student\n*/\nclass Main {}'
+    const getSummary = vi.fn()
+      .mockResolvedValueOnce({ data: { repositoryId, empty: false, latestCommit: { commitId } } })
+      .mockResolvedValue({ data: { repositoryId, empty: false, latestCommit: { commitId: newerCommit } } })
+    const git = gitDependencies({ contentOverrides: { getSummary,
+      getFile: vi.fn().mockResolvedValue({ data: { commitId: newerCommit, path: 'Main.java', content: markedSource } }),
+    } })
+    const submissions = submissionTransport()
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissions} />)
+    const editor = await screen.findByLabelText('Java source code')
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Load latest from Git' }))
+    await waitFor(() => expect(editor).toHaveValue(markedSource))
+    await userEvent.click(screen.getByRole('button', { name: 'Save to Git' }))
+    expect(git.repositories.createActivityCheckpoint).toHaveBeenCalledWith(activityId,
+      { sourceCode: markedSource, expectedHeadCommitHash: newerCommit }, expect.any(String))
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Submit source' }))
+    await waitFor(() => expect(submissions.createSubmission).toHaveBeenCalledWith(activityId, markedSource, expect.any(String)))
+  })
+
   it('retries an ambiguous checkpoint with the exact source snapshot and idempotency key', async () => {
     const checkpointRecord = {
       checkpointId: '00000000-0000-4000-8000-000000000050', repositoryId, activityId,

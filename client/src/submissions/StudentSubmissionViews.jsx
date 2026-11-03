@@ -427,7 +427,9 @@ export function StudentProgrammingWorkspace({
   const editorRef = useRef(null)
   const practicedSource = useRef(null)
   const checkpointIntent = useRef(null)
-  const observedGitHead = useRef(null)
+  // Background observation is not consent to use a newer commit as the editor base.
+  const editorGitHead = useRef(undefined)
+  const latestSource = useRef(source)
   const acceptedNavigation = useRef(false)
   const navigationBlocker = useBlocker(({ currentLocation, nextLocation }) => Boolean(
     source.key && source.value !== source.initial && !acceptedNavigation.current
@@ -439,6 +441,8 @@ export function StudentProgrammingWorkspace({
     mounted.current = true
     return () => { mounted.current = false }
   }, [])
+
+  useEffect(() => { latestSource.current = source }, [source])
 
   useEffect(() => {
     if (!workspace.activity) return
@@ -457,7 +461,7 @@ export function StudentProgrammingWorkspace({
     setRepositoryTree({ status: 'idle', path: '', entries: [], error: null })
     setNewerGitAvailable(false)
     checkpointIntent.current = null
-    observedGitHead.current = null
+    editorGitHead.current = undefined
     acceptedNavigation.current = false
   }, [selectedClass?.id, workspace.activity])
 
@@ -478,8 +482,8 @@ export function StudentProgrammingWorkspace({
       const summaryResponse = await repositoryContent.getSummary(repository.id, { signal })
       if (summaryResponse.data.repositoryId !== repository.id) throw contextMismatchError('The Git summary does not match this repository.')
       const nextHead = summaryResponse.data.latestCommit?.commitId ?? null
-      if (announceChange && observedGitHead.current && nextHead && observedGitHead.current !== nextHead) setNewerGitAvailable(true)
-      observedGitHead.current = nextHead
+      if (editorGitHead.current === undefined) editorGitHead.current = nextHead
+      if (announceChange && nextHead !== editorGitHead.current) setNewerGitAvailable(true)
       setGitWorkspace({ status: 'ready', repository, summary: summaryResponse.data, error: null })
       return summaryResponse.data
     } catch (error) {
@@ -540,6 +544,7 @@ export function StudentProgrammingWorkspace({
     const intent = checkpointIntent.current
     setCheckpoint({ record, requesting: false, bounded: false, error: null, intent: pending ? intent : null })
     if (record.status === 'SUCCEEDED') {
+      editorGitHead.current = record.resultingCommitHash
       if (intent) setSource((current) => ({ ...current, initial: intent.sourceCode }))
       Promise.resolve().then(() => loadGitWorkspace())
     }
@@ -565,9 +570,9 @@ export function StudentProgrammingWorkspace({
     try {
       if (!intent) {
         const freshSummary = await repositoryContent.getSummary(gitWorkspace.repository.id)
-        const expected = gitWorkspace.summary?.latestCommit?.commitId ?? null
+        const expected = editorGitHead.current
         const current = freshSummary.data.latestCommit?.commitId ?? null
-        if (current !== expected) {
+        if (expected === undefined || current !== expected) {
           setGitWorkspace((state) => ({ ...state, summary: freshSummary.data }))
           throw new ApiError({ status: 409, code: 'CHECKPOINT_HEAD_CHANGED', message: 'Newer Git code is available. Load it before saving this browser source.' })
         }
@@ -611,14 +616,17 @@ export function StudentProgrammingWorkspace({
       if (fileResponse.data.commitId !== latestCommitHash || fileResponse.data.path !== filePath) {
         throw contextMismatchError('The loaded Git source does not match the requested file.')
       }
+      const sourceChanged = () => latestSource.current.key !== source.key || latestSource.current.value !== source.value
+      if (sourceChanged()) throw new ApiError({ status: 409, code: 'CHECKPOINT_HEAD_CHANGED', message: 'Your browser source changed while Git was loading. Review it before loading again.' })
       if (source.value !== source.initial && !await confirm('Replace the unsaved browser source with the latest Git Workspace version?', 'Load latest from Git?')) {
         setGitSource((current) => ({ ...current, loading: false }))
         return
       }
+      if (sourceChanged()) throw new ApiError({ status: 409, code: 'CHECKPOINT_HEAD_CHANGED', message: 'Your browser source changed while Git was loading. Review it before loading again.' })
       setSource((current) => ({ ...current, initial: fileResponse.data.content, value: fileResponse.data.content }))
       setGitSource({ loading: false, loadedCommitHash: latestCommitHash, error: null })
       setNewerGitAvailable(false)
-      observedGitHead.current = latestCommitHash
+      editorGitHead.current = latestCommitHash
     } catch (error) {
       setGitSource((current) => ({ ...current, loading: false, error }))
     }

@@ -104,4 +104,11 @@ describe('Git authorization', () => {
     expect(evaluateGitPermission(access({ projectTask: { ...access().projectTask!, dueDate: now } }), now).write).toBe(false)
     expect(evaluateGitPermission(access({ reviewStatus: 'READY_FOR_REVIEW' }), now).write).toBe(false)
   })
+
+  it.each(['WORKING', 'CHANGES_REQUESTED', 'READY_FOR_REVIEW', 'APPROVED'] as const)('enforces Group %s independently of task cutoff', reviewStatus => {
+    const permission = evaluateGitPermission(access({ reviewStatus }), now)
+    expect(permission).toEqual({ read: true, write: ['WORKING', 'CHANGES_REQUESTED'].includes(reviewStatus), canUpdateMain: ['WORKING', 'CHANGES_REQUESTED'].includes(reviewStatus) })
+    expect(evaluateGitPermission(access({ reviewStatus, status: 'ARCHIVED' }), now)).toEqual({ read: true, write: false, canUpdateMain: false })
+    expect(evaluateGitPermission(access({ reviewStatus, projectTask: { ...access().projectTask!, status: 'CLOSED' } }), now)).toEqual({ read: true, write: false, canUpdateMain: false })
+  })
 })
