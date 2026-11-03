@@ -171,6 +171,14 @@ specific policy choices, then implement and test the actual branch/worker/receiv
 and execution boundaries, including release/archive races, before review.
 Push, merge and deployment remain unapproved.
 
+Two predecessor risks remain open: the historical localhost conflict-marker
+incident has not been attributed to a specific attempt/source record, and native
+Smart HTTP authority is still a request-admission snapshot rather than an atomic
+fence against a lifecycle change during an upload. The new Practice exception
+must address its final-publication boundary before it can be accepted. See the
+preserved SUBMISSION_GIT_LIFECYCLE_AUDIT.md; no resolution of either issue is
+claimed by this hardening commit.
+
 ## Manual acceptance after building an isolated instance of this branch
 
 These fixes are not installed in the existing localhost/Azure demo.
