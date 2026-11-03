@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { isWellFormedText } from '../../shared/source-text.js'
 import type { Logger } from 'pino'
 import { AppError } from '../../shared/errors/app-error.js'
 import type { PaginationMeta } from '../../shared/http/response.js'
@@ -104,7 +105,7 @@ function validateSource(sourceCode: string, limit: number): void {
   if (Buffer.byteLength(sourceCode, 'utf8') > limit) {
     throw error(413, 'SOURCE_CODE_TOO_LARGE', 'The source code exceeds the allowed size.')
   }
-  if (sourceCode.includes('\0')) {
+  if (!sourceCode.trim() || sourceCode.includes('\0') || !isWellFormedText(sourceCode)) {
     throw error(400, 'SOURCE_CODE_INVALID', 'The source code contains unsupported characters.')
   }
 }
@@ -204,7 +205,7 @@ function studentProjection(record: SubmissionRecord, isCreditedResult = false) {
     ...(released
       ? {
           ...(record.gradingModeSnapshot === 'COMPLETION' ? {} : { finalScore: Number(record.releasedFinalScore), totalPoints: Number(record.totalPointsSnapshot) }),
-          feedback: record.feedback?.feedbackText ?? null,
+          feedback: record.feedback?.releasedAt ? record.feedback.feedbackText : null,
         }
       : {}),
     failureResolution: record.failureResolution
@@ -561,6 +562,9 @@ export function createSubmissionService(dependencies: {
       }
       if (result.kind === 'attempt_limit_reached') {
         throw error(409, 'ATTEMPT_LIMIT_REACHED', "This activity's usable attempt limit has been reached.")
+      }
+      if (result.kind === 'concurrent_conflict') {
+        throw error(409, 'SUBMISSION_BUSY', 'Another submission request is processing. Check attempt history before trying again.')
       }
       if (result.kind === 'created') {
         logger.info(

@@ -400,6 +400,30 @@ describe('student programming workspace', () => {
     expect(editor).toHaveValue(changedCode)
   })
 
+  it('requires review again if a delayed Git load changes source while Submit confirmation is open', async () => {
+    let resolveFile
+    const file = new Promise(resolve => { resolveFile = resolve })
+    const git = gitDependencies({ contentOverrides: {
+      getSummary: vi.fn().mockResolvedValue({ data: { repositoryId, empty: false, latestCommit: { commitId } } }),
+      getFile: vi.fn(() => file),
+    } })
+    const submissions = submissionTransport()
+    renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissions} />)
+    await screen.findByLabelText('Java source code')
+    await userEvent.click(screen.getByRole('tab', { name: 'Git' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Load latest from Git' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Submit', exact: true }))
+    await act(async () => resolveFile({ data: { commitId, path: 'Main.java', content: changedCode } }))
+    expect(screen.getByRole('button', { name: 'Submit source', exact: true })).toBeDisabled()
+    expect(screen.getByText('Your code changed. Cancel to review it before submitting.')).toBeInTheDocument()
+    expect(submissions.createSubmission).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }))
+    expect(screen.getByLabelText('Java source code')).toHaveValue(changedCode)
+    await userEvent.click(screen.getByRole('button', { name: 'Submit', exact: true }))
+    await userEvent.click(screen.getByRole('button', { name: 'Submit source', exact: true }))
+    await waitFor(() => expect(submissions.createSubmission).toHaveBeenCalledWith(activityId, changedCode, expect.any(String)))
+  })
+
   it('adopts a newer base only after loading source and submits literal markers unchanged', async () => {
     const newerCommit = 'b'.repeat(40)
     const markedSource = '/*\n<<<<<<< HEAD\nleft\n=======\nright\n>>>>>>> feature/student\n*/\nclass Main {}'
@@ -423,14 +447,14 @@ describe('student programming workspace', () => {
     await waitFor(() => expect(submissions.createSubmission).toHaveBeenCalledWith(activityId, markedSource, expect.any(String)))
   })
 
-  it('retries an ambiguous checkpoint with the exact source snapshot and idempotency key', async () => {
+  it.each(['NETWORK_ERROR', 'REQUEST_TIMEOUT', 'TIMEOUT'])('retries an ambiguous checkpoint with the exact source snapshot and idempotency key (%s)', async code => {
     const checkpointRecord = {
       checkpointId: '00000000-0000-4000-8000-000000000050', repositoryId, activityId,
       status: 'SUCCEEDED', resultingCommitHash: commitId,
     }
     const git = gitDependencies({ repositoryOverrides: {
       createActivityCheckpoint: vi.fn()
-        .mockRejectedValueOnce(new ApiError({ code: 'NETWORK_ERROR', message: 'offline' }))
+        .mockRejectedValueOnce(new ApiError({ code, message: 'offline' }))
         .mockResolvedValueOnce({ data: checkpointRecord }),
     } })
     renderWithClass(<StudentProgrammingWorkspace {...git} api={activityTransport()} submissions={submissionTransport()} />)
@@ -737,10 +761,16 @@ describe('student programming workspace', () => {
     expect(await screen.findByText('Canonical submission destination')).toBeInTheDocument()
   })
 
-  it('retains the exact source and key after an ambiguous request and warns about changed source', async () => {
+  it.each([
+    { code: 'NETWORK_ERROR', status: 0 },
+    { code: 'REQUEST_TIMEOUT', status: 0 },
+    { code: 'TIMEOUT', status: 0 },
+    { code: 'SUBMISSION_BUSY', status: 409 },
+    { code: 'UPSTREAM_FAILED', status: 502 },
+  ])('retains the exact source and key after an ambiguous $code request and warns about changed source', async ({ code, status }) => {
     const submissions = submissionTransport({
       createSubmission: vi.fn()
-        .mockRejectedValueOnce(new ApiError({ code: 'NETWORK_ERROR', message: 'offline' }))
+        .mockRejectedValueOnce(new ApiError({ code, status, message: 'Untrusted technical detail' }))
         .mockResolvedValueOnce({ data: submissionRecord(), meta: { idempotentReplay: true } }),
     })
     renderWithClass(<StudentProgrammingWorkspace {...gitDependencies()} api={activityTransport()} submissions={submissions} />, { destination: true })

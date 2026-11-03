@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isWellFormedText } from '../../shared/source-text.js'
 import { rubricScoresSchema } from '../activities/activity-grading.js'
 
 const uuid = z.uuid()
@@ -17,14 +18,14 @@ export const idempotencyKeySchema = z
   .regex(/^[A-Za-z0-9._:-]+$/)
 
 export const createSubmissionSchema = z
-  .object({ sourceCode: z.string().min(1).max(100_000) })
+  .object({ sourceCode: z.string().min(1).max(100_000).refine(value => Boolean(value.trim()) && isWellFormedText(value)) })
   .strict()
 
 export const createPracticeRunSchema = createSubmissionSchema
 
 export const createCodeRunSchema = z
   .object({
-    sourceCode: z.string().min(1).max(100_000),
+    sourceCode: createSubmissionSchema.shape.sourceCode,
     stdin: z.string().max(20_000),
   })
   .strict()

@@ -130,6 +130,7 @@ export type CreateSubmissionResult =
   | { kind: 'forbidden' }
   | { kind: 'activity_not_accepting' }
   | { kind: 'attempt_limit_reached' }
+  | { kind: 'concurrent_conflict' }
 
 export type CreatePracticeResult =
   | { kind: 'created'; practice: PracticeRecord }
@@ -329,9 +330,21 @@ async function loadSubmission(
 export function createPrismaSubmissionRepository(
   prisma: PrismaClient,
 ): SubmissionRepository {
+  // A waiting serializable transaction can retain a snapshot from before the
+  // allocation lock. Restart only rolled-back database work, with the same intent.
+  async function retrySubmissionCreation(work: () => Promise<CreateSubmissionResult>): Promise<CreateSubmissionResult> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try { return await work() }
+      catch (error) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2034') throw error
+        if (attempt === 2) return { kind: 'concurrent_conflict' }
+      }
+    }
+    return { kind: 'concurrent_conflict' }
+  }
   return {
     createSubmission(input) {
-      return prisma.$transaction(
+      return retrySubmissionCreation(() => prisma.$transaction(
         async (transaction) => {
           await lockScope(
             transaction,
@@ -521,7 +534,7 @@ export function createPrismaSubmissionRepository(
           } as const
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      )
+      ))
     },
 
     async list(input) {

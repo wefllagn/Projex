@@ -61,6 +61,17 @@ the distinction between Activity attempt rules and Group review freezes.
 
 A new attempt returns `201`. An exact replay returns the original response with `200` and `meta.idempotentReplay=true`. Reusing the same scoped key with different source returns `DUPLICATE_SUBMISSION_REQUEST`. Another student has a separate scope.
 
+Blank-only or malformed Unicode source is rejected before allocating an attempt.
+Valid comments, Unicode and line endings are preserved. Submission creation may
+restart a rolled-back serializable transaction up to three total attempts with
+the same source and idempotency key. Each transaction repeats the authoritative
+checks; unknown database/connection failures are not automatically replayed.
+Exhausted serialization contention returns `SUBMISSION_BUSY` rather than exposing
+a database exception. The browser retains the original intent for this outcome,
+timeouts and ambiguous server failures, and offers the existing history/exact
+retry workflow. A source change during the Submit confirmation requires cancel
+and review before confirmation can proceed.
+
 ## Attempt allowance and replacement grants
 
 - `maxAttempts` is 1 through 3 and limits records where `countsTowardAttemptLimit=true`.
@@ -100,6 +111,14 @@ stateDiagram-v2
 - `instructorPoints` remains within `0..instructorMaximum`.
 - `finalScore = effectiveAutomatedScore + instructorPoints` and remains within `0..totalPointsSnapshot`.
 - Release snapshots `releasedFinalScore` and makes the submission immutable during Phase 6.
+
+The release transaction also publishes any written feedback with `releasedAt`
+and `releasedById`. Saving an explicitly empty review removes its draft feedback
+row; releasing that reviewed submission therefore represents an intentional
+published result without written comments. Student projections never return a
+feedback row lacking its own release timestamp, even if a legacy/inconsistent
+submission is marked RELEASED. This visibility rule does not create a new release
+process or define a post-release Practice Mode policy.
 
 Every score correction is append-only and preserves correction order, original automated score, previous effective score, new effective score, mandatory reason, instructor identity, and timestamp.
 

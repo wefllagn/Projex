@@ -22,7 +22,7 @@ import {
   formatActivityDate,
   formatActivityStatus,
 } from '../activities/activity-utils.js'
-import { ApiError, describeApiError } from '../api/api-client.js'
+import { ApiError, describeApiError, isTemporaryApiError } from '../api/api-client.js'
 import { useClasses } from '../classes/class-context.js'
 import { classHref } from '../classes/class-links.js'
 import RequestState from '../components/RequestState.jsx'
@@ -43,6 +43,8 @@ import { repositoryApi } from '../repositories/repository-api.js'
 import { repositoryContentApi } from '../repositories/repository-content-api.js'
 
 const FIRST_PAGE = { page: 1, pageSize: 20, status: '' }
+const isUncertainWrite = error => error?.code === 'SUBMISSION_BUSY'
+  || (isTemporaryApiError(error) && !['EXECUTION_UNAVAILABLE', 'GIT_CHECKPOINT_UNAVAILABLE'].includes(error?.code))
 const DESKTOP_WORKSPACE_QUERY = '(min-width: 1181px)'
 const WORKSPACE_PANE_DEFAULTS = { instructions: 320, output: 360 }
 const WORKSPACE_PANE_LIMITS = {
@@ -309,7 +311,7 @@ function VisibleOutcomeList({ outcomes, emptyMessage = 'No visible-test outcomes
   )
 }
 
-function SubmitConfirmation({ mode, pending, onCancel, onConfirm }) {
+function SubmitConfirmation({ mode, pending, sourceChanged, onCancel, onConfirm }) {
   return (
     <div className="student-submit-backdrop" role="dialog" aria-modal="true" aria-labelledby="submit-activity-title">
       <section className="student-submit-modal">
@@ -320,9 +322,10 @@ function SubmitConfirmation({ mode, pending, onCancel, onConfirm }) {
             ? 'Origin will resend the exact source snapshot with the same request key. This cannot intentionally create a second request.'
             : 'This records an immutable official attempt. Running visible tests does not consume an attempt.'}
         </p>
+        {sourceChanged && <p role="status">Your code changed. Cancel to review it before submitting.</p>}
         <div className="student-submit-modal-actions">
           <button type="button" className="student-outline-action" disabled={pending} onClick={onCancel}>Cancel</button>
-          <button type="button" className="student-primary-action" disabled={pending} onClick={onConfirm}>
+          <button type="button" className="student-primary-action" disabled={pending || sourceChanged} onClick={onConfirm}>
             {pending ? 'Submitting…' : mode === 'retry' ? 'Retry same request' : 'Submit source'}
           </button>
         </div>
@@ -416,6 +419,7 @@ export function StudentProgrammingWorkspace({
   const [history, setHistory] = useState({ key: null, status: 'idle', items: [], error: null, reviewedAfterAmbiguity: false })
   const [submission, setSubmission] = useState({ status: 'idle', intent: null, error: null })
   const [confirmMode, setConfirmMode] = useState(null)
+  const [confirmSource, setConfirmSource] = useState(null)
   const [gitWorkspace, setGitWorkspace] = useState({ status: 'idle', repository: null, summary: null, error: null })
   const [checkpoint, setCheckpoint] = useState({ record: null, requesting: false, bounded: false, error: null, intent: null })
   const [gitSource, setGitSource] = useState({ loading: false, loadedCommitHash: null, error: null })
@@ -452,6 +456,8 @@ export function StudentProgrammingWorkspace({
       : { key, initial: workspace.activity.starterCode ?? '', value: workspace.activity.starterCode ?? '' })
     setPractice({ record: null, error: null, requesting: false, bounded: false })
     setSubmission({ status: 'idle', intent: null, error: null })
+    setConfirmMode(null)
+    setConfirmSource(null)
     setAttemptState({ key: workspace.activity.id, status: 'loading', record: null, error: null })
     setHistory({ key: workspace.activity.id, status: 'idle', items: [], error: null, reviewedAfterAmbiguity: false })
     setGitWorkspace({ status: 'loading', repository: null, summary: null, error: null })
@@ -564,7 +570,7 @@ export function StudentProgrammingWorkspace({
 
   const saveGitCheckpoint = async () => {
     if (!gitWorkspace.repository || checkpoint.requesting || isCheckpointPending(checkpoint.record)) return
-    const ambiguousIntent = checkpoint.error?.code === 'NETWORK_ERROR' ? checkpoint.intent : null
+    const ambiguousIntent = isUncertainWrite(checkpoint.error) ? checkpoint.intent : null
     let intent = ambiguousIntent
     setCheckpoint((current) => ({ ...current, record: null, requesting: true, bounded: false, error: null }))
     try {
@@ -591,8 +597,8 @@ export function StudentProgrammingWorkspace({
       )
       updateCheckpoint(response)
     } catch (error) {
-      if (error?.code !== 'NETWORK_ERROR') checkpointIntent.current = null
-      setCheckpoint((current) => ({ ...current, requesting: false, error, intent: error?.code === 'NETWORK_ERROR' ? intent : null }))
+      if (!isUncertainWrite(error)) checkpointIntent.current = null
+      setCheckpoint((current) => ({ ...current, requesting: false, error, intent: isUncertainWrite(error) ? intent : null }))
     }
   }
 
@@ -766,8 +772,8 @@ export function StudentProgrammingWorkspace({
       if (!mounted.current) return
       setConfirmMode(null)
       setSubmission({
-        status: error?.code === 'NETWORK_ERROR' ? 'ambiguous' : 'error',
-        intent: error?.code === 'NETWORK_ERROR' ? intent : null,
+        status: isUncertainWrite(error) ? 'ambiguous' : 'error',
+        intent: isUncertainWrite(error) ? intent : null,
         error,
       })
       if (['ATTEMPT_LIMIT_REACHED', 'ACTIVITY_NOT_ACCEPTING_SUBMISSIONS', 'EXECUTION_UNAVAILABLE', 'FORBIDDEN', 'ACTIVITY_NOT_FOUND'].includes(error?.code)) {
@@ -781,6 +787,7 @@ export function StudentProgrammingWorkspace({
       sendIntent(submission.intent)
       return
     }
+    if (source.value !== confirmSource) return
     sendIntent({
       idempotencyKey: createIdempotencyKey(),
       sourceSnapshot: source.value,
@@ -836,9 +843,9 @@ export function StudentProgrammingWorkspace({
             <ProjexIcon name="tests" />{practice.requesting || isPracticePending(practice.record) ? 'Running tests…' : 'Run Visible Tests'}
           </button>
           <button type="button" className="student-save-git" disabled={gitWorkspace.status !== 'ready' || !ordinaryOpen || archived || !(checkpoint.intent?.sourceCode || source.value).trim() || checkpoint.requesting || isCheckpointPending(checkpoint.record)} onClick={saveGitCheckpoint}>
-            <ProjexIcon name="save" />{checkpoint.requesting || isCheckpointPending(checkpoint.record) ? 'Saving…' : checkpoint.error?.code === 'NETWORK_ERROR' ? 'Retry Save to Git' : 'Save to Git'}
+            <ProjexIcon name="save" />{checkpoint.requesting || isCheckpointPending(checkpoint.record) ? 'Saving…' : isUncertainWrite(checkpoint.error) ? 'Retry Save to Git' : 'Save to Git'}
           </button>
-          <button type="button" className="student-submit-code" disabled={!capabilities.java.execution || !canSubmit || !source.value.trim() || submission.status === 'submitting' || submission.status === 'ambiguous'} onClick={() => setConfirmMode('new')}>
+          <button type="button" className="student-submit-code" disabled={!capabilities.java.execution || !canSubmit || !source.value.trim() || submission.status === 'submitting' || submission.status === 'ambiguous'} onClick={() => { setConfirmSource(source.value); setConfirmMode('new') }}>
             <ProjexIcon name="submission" />{submission.status === 'submitting' ? 'Submitting…' : attempt?.nextAllowedSubmissionKind === 'REPLACEMENT' ? 'Submit replacement' : 'Submit'}
           </button>
         </div>
@@ -948,8 +955,8 @@ export function StudentProgrammingWorkspace({
               {checkpoint.record?.status === 'CONFLICTED' && <small className="student-coding-failure">The Git branch changed before this save. Load the latest Git source, review it, then save again.</small>}
               {checkpoint.record?.status === 'FAILED' && <small className="student-coding-failure">The source could not be saved. Your browser source remains unchanged.</small>}
               {checkpoint.error && <small className="student-coding-failure">{describeApiError(checkpoint.error)}</small>}
-              {checkpoint.error?.code === 'NETWORK_ERROR' && <small>The save result is uncertain. Retry uses the exact same source and request key.</small>}
-              {checkpoint.error?.code === 'NETWORK_ERROR' && checkpoint.intent?.sourceCode !== source.value && <small>The editor changed after the uncertain request. Retry still sends the earlier source snapshot.</small>}
+              {isUncertainWrite(checkpoint.error) && <small>The save result is uncertain. Retry uses the exact same source and request key.</small>}
+              {isUncertainWrite(checkpoint.error) && checkpoint.intent?.sourceCode !== source.value && <small>The editor changed after the uncertain request. Retry still sends the earlier source snapshot.</small>}
               {checkpoint.bounded && <small>Automatic save-status refresh stopped.</small>}
               {gitSource.loadedCommitHash && <small>Loaded {workspace.activity.entryClassName}.java from commit {gitSource.loadedCommitHash.slice(0, 8)}. Review it before submitting.</small>}
               {gitSource.error && <small className="student-coding-failure">{describeApiError(gitSource.error)}</small>}
@@ -996,6 +1003,7 @@ export function StudentProgrammingWorkspace({
         <SubmitConfirmation
           mode={confirmMode}
           pending={submission.status === 'submitting'}
+          sourceChanged={confirmMode === 'new' && source.value !== confirmSource}
           onCancel={() => setConfirmMode(null)}
           onConfirm={confirmSubmission}
         />

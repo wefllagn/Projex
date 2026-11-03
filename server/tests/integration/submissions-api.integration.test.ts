@@ -199,6 +199,14 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
     })
     expect(JSON.stringify(initialAttemptState.body)).not.toContain(source)
 
+    for (const sourceCode of ['', ' \r\n\t', '\ud800', '\udc00', 'class Main {}\0']) {
+      await jsonMutation(studentAgent.post(`/api/v1/activities/${activity.id}/submissions`), studentCsrf)
+        .set('Idempotency-Key', crypto.randomUUID()).send({ sourceCode }).expect(400)
+    }
+    await jsonMutation(studentAgent.post(`/api/v1/activities/${activity.id}/submissions`), studentCsrf)
+      .set('Idempotency-Key', crypto.randomUUID()).send({ sourceCode: 'é'.repeat(50_001) }).expect(413)
+    expect(await prisma.activitySubmission.count()).toBe(0)
+
     await jsonMutation(
       studentAgent.post(`/api/v1/activities/${activity.id}/submissions`),
       studentCsrf,

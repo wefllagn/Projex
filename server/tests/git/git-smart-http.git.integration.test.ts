@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { javaSourceCases } from '../java/source-cases.js'
 import { createServer, type Server } from 'node:http'
 import { request as nodeRequest } from 'node:http'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
@@ -312,6 +313,27 @@ afterAll(async () => {
 })
 
 describe('authenticated Git Smart HTTP', () => {
+  it.each(javaSourceCases.filter(c => ['Unicode and comment-like strings', 'CRLF and tabs', 'missing final newline', 'markers inside comments'].includes(c.name)))('preserves $name through native push and explicit submission', async ({ source }) => {
+    const f = await provisionActivityWorkspace()
+    const authorization = await issue(f.owner, f.repository.id, ['READ', 'WRITE'])
+    const clients = path.join(storageRoot, 'clients', crypto.randomUUID()), work = path.join(clients, 'source-roundtrip')
+    await mkdir(clients, { recursive: true })
+    expect((await runGit(['clone', remoteUrl(f.repository.id), work], clients, authorization)).code).toBe(0)
+    expect((await runGit(['checkout', '-b', 'main'], work)).code).toBe(0)
+    await writeFile(path.join(work, 'Main.java'), source, 'utf8')
+    expect((await runGit(['add', 'Main.java'], work)).code).toBe(0)
+    expect((await runGit(['commit', '-m', 'Preserve submitted source'], work)).code).toBe(0)
+    expect((await runGit(['push', 'origin', 'main'], work, authorization)).code).toBe(0)
+    const loaded = await contentService.file(f.owner, f.repository.id, { path: 'Main.java' })
+    expect(loaded.content).toBe(source)
+    const submissions = createSubmissionService({ repository: createPrismaSubmissionRepository(prisma), logger,
+      config: { mode: 'local_process', sourceLimitBytes: 100_000, practiceRunTtlHours: 24, practiceRunsPerMinute: 5, practiceMaxActivePerActivity: 1 } })
+    const created = await submissions.create(f.owner, f.activity.id, loaded.content, crypto.randomUUID())
+    const id = (created.submission as { id: string }).id
+    expect((await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })).sourceCode).toBe(source)
+    expect(await submissions.get(f.primary, id)).toMatchObject({ sourceCode: source })
+  })
+
   it('rejects a browser checkpoint when a native push wins the race without merging or overwriting either source', async () => {
     const f = await provisionActivityWorkspace()
     const writer = createGitActivityCheckpointWriter({ git, resolveRepository: (id, locator) => storage.resolveManagedRepository(id, locator) })

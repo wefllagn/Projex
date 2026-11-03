@@ -5,6 +5,8 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 // UI-owned copy only. Keep the original error, details and requestId intact for
 // diagnostics; never pass arbitrary server/transport messages into the UI.
 const BUSINESS_MESSAGES = {
+  SUBMISSION_BUSY: 'Another request is processing. Check attempt history, then retry the same request.',
+  SOURCE_CODE_INVALID: 'Enter non-empty Java source saved as valid text, then try again.',
   SETUP_RESEND_COOLDOWN: 'A setup link was sent recently. Try again later.',
   VALIDATION_FAILED: 'Check the form details and try again.',
   EMAIL_ALREADY_EXISTS: 'An account with this email already exists. Use another email or manage the existing account.',
