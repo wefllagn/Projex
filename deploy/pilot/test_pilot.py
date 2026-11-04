@@ -5,6 +5,13 @@ from unittest.mock import patch
 spec=importlib.util.spec_from_file_location('origin_pilot',Path(__file__).with_name('pilot.py'))
 pilot=importlib.util.module_from_spec(spec);spec.loader.exec_module(pilot)
 class PilotGuards(unittest.TestCase):
+    def test_backup_quiescence_handles_pre_practice_schemas(self):
+        with tempfile.TemporaryDirectory() as directory,patch.object(pilot,'STATE',Path(directory)),patch.object(pilot,'sql',side_effect=lambda env,q:'f' if 'to_regclass' in q else '0') as query:
+            pilot.quiet({})
+            self.assertFalse(any('FROM activity_practice_git_jobs' in call.args[1] for call in query.call_args_list))
+    def test_backup_refuses_running_practice_jobs(self):
+        with patch.object(pilot,'sql',side_effect=['t','1']):
+            with self.assertRaises(RuntimeError):pilot.quiet({})
     def test_database_target_is_exact_loopback_role_and_recognized_name(self):
         cfg={'DATABASE_URL':'postgresql://origin_pilot:secret@127.0.0.1:5432/origin_pilot?schema=public'}
         env=pilot.pg_env(cfg);self.assertEqual(env['PGDATABASE'],'origin_pilot');self.assertEqual(env['PGPASSWORD'],'secret')

@@ -13,6 +13,22 @@ function setup(overrides = {}, value = initial) {
 }
 afterEach(cleanup)
 describe('activity-level Practice Again workspace', () => {
+  it('completes reset without a late read and permits immediate navigation without discarding a draft', async () => {
+    const value = { ...initial, sourceCode: 'class Main { int saved = 1; }', canStartOver: true }
+    const { api } = setup({}, value)
+    const editor = await screen.findByRole('textbox', { name: 'Java source code' })
+    expect(screen.getByRole('heading', { name: 'Loops · Practice Again' })).toBeVisible()
+    api.get.mockRejectedValue(new Error('Network unavailable after initial load'))
+    fireEvent.click(screen.getByRole('button', { name: 'Start Over' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm' }))
+    await screen.findByText('Practice restored to the starter code.')
+    expect(editor).toHaveValue(initial.starterCode)
+    expect(api.get).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'Start Over' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: 'Back to activity' }))
+    expect(await screen.findByText('Activity detail')).toBeVisible()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
   it('opens the starter workspace without official submission controls or Git jargon', async () => {
     const { api } = setup()
     expect(await screen.findByRole('textbox', { name: 'Java source code' })).toHaveValue(initial.starterCode)
@@ -44,6 +60,7 @@ describe('activity-level Practice Again workspace', () => {
     await act(async () => finish({ data: { id: 'save-1', status: 'SUCCEEDED', head: 'b'.repeat(40) } }))
     expect(editor).toHaveValue('class Main { int second = 2; }')
     expect(screen.getByText('Practice saved.')).toBeVisible()
+    expect(screen.getByText('Newer edits are unsaved.')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Save practice' }))
     await waitFor(() => expect(api.save).toHaveBeenCalledTimes(2))
     expect(api.save.mock.calls[1][1]).toMatchObject({ sourceCode: 'class Main { int second = 2; }', expectedHead: 'b'.repeat(40) })

@@ -41,6 +41,7 @@ export function createConsoleRepository(prisma: PrismaClient) {
           || record.practice.student.status !== 'ACTIVE' || record.practice.student.role !== 'STUDENT'
           || !record.practice.activity.class.members.some((m) => m.studentId === studentId && m.status === 'ACTIVE')) missing()
         const terminal = !activePhases.includes(record.phase) || !['QUEUED', 'RUNNING'].includes(record.practice.status)
+        if (record.practice.activityPracticeWorkspaceId && !await eligible(record, now, tx)) missing()
         if (action === 'stop') {
           if (!terminal) await tx.interactiveConsole.update({ where: { id }, data: { cancelRequested: true } })
         } else if (action === 'input' && input) {

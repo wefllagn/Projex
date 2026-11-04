@@ -1282,11 +1282,13 @@ export function createPrismaSubmissionRepository(
       )
     },
 
-    findPracticeById(runId) {
-      return prisma.practiceExecution.findUnique({
+    async findPracticeById(runId) {
+      const record = await prisma.practiceExecution.findUnique({
         where: { id: runId },
         include: practiceInclude,
       })
+      if (record?.activityPracticeWorkspaceId && !await practiceEligible(prisma, record.activityId, record.studentId)) return null
+      return record
     },
 
     findOwnCodeRun(runId, studentId) {

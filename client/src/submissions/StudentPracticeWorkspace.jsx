@@ -64,19 +64,11 @@ function PracticeEditor({ api, activityId, classId }) {
       const value = intent.current
       setPending(null); setRetryable(false)
       if (job.status !== 'SUCCEEDED') { intent.current = null; setError({ code: job.status === 'CONFLICTED' ? 'PRACTICE_HEAD_CHANGED' : 'PRACTICE_UNAVAILABLE' }); return false }
-      setWorkspace(current => ({ ...current, head: job.head, canStartOver: value.operation === 'SAVE' || current.canStartOver }))
+      setWorkspace(current => ({ ...current, head: job.head, canStartOver: value.operation === 'SAVE', entryMissing: false }))
       setSaved(value.operation === 'RESET' ? workspace.starterCode ?? '' : value.sourceCode)
       // Reset completion must not discard edits made while the worker was saving.
       if (value.operation === 'RESET') {
         if (sourceRef.current === value.editorSource) setSource(workspace.starterCode ?? '')
-        api.get(activityId).then(result => {
-          if (!live.current) return
-          const updated = accept(result)
-          if (updated.head !== job.head) { setNotice('Newer saved changes are available. Reload practice when you are ready.'); return }
-          setSaved(updated.sourceCode)
-          if (sourceRef.current === value.editorSource) setSource(updated.sourceCode)
-          setWorkspace(updated)
-        }).catch(failure => { if (live.current) setError(failure) })
       }
       intent.current = null; setNotice(value.operation === 'RESET' ? 'Practice restored to the starter code.' : 'Practice saved.')
       return false
@@ -117,7 +109,7 @@ function PracticeEditor({ api, activityId, classId }) {
   if (!workspace) return <RequestState kind={error ? 'unavailable' : 'loading'} error={error} message="Preparing your practice." action={error && <button className="student-outline-action" onClick={enter}>Try again</button>} />
   return <main className="student-practice">
     <NavLink className="student-back-link" to={classHref(`/student/activity/${activityId}`, classId)}>Back to activity</NavLink>
-    <header><div><h1>{workspace.title} · Practice</h1><p>Your official submissions and grades won’t change.</p></div>
+    <header><div><h1>{workspace.title} · Practice Again</h1><p>Your official submissions and grades won’t change.</p></div>
       <div className="student-practice-actions">
         <button className="student-primary-action" disabled={!workspace.ready || busy || Boolean(pending) || retryable && Boolean(error)} onClick={() => save()}>Save practice</button>
         {(workspace.canStartOver || dirty) && <button className="student-outline-action" disabled={busy || Boolean(pending) || retryable && Boolean(error)} onClick={() => save('RESET')}>Start Over</button>}
@@ -131,7 +123,7 @@ function PracticeEditor({ api, activityId, classId }) {
       {pending && <button className="student-outline-action" onClick={() => setError(null)}>Check save</button>}
       {!workspace.ready && <button className="student-outline-action" onClick={enter}>Check again</button>}
     </div>}
-    <p role="status">{pending || busy ? 'Saving practice…' : notice || (dirty ? 'Unsaved practice changes' : '')}</p>
+    <p role="status"><span>{pending || busy ? 'Saving practice…' : notice || (dirty ? 'Unsaved practice changes' : '')}</span>{!pending && !busy && dirty && notice && <span> Newer edits are unsaved.</span>}</p>
     {workspace.ready && <div className="student-practice-grid">
       <section className="student-practice-brief"><h2>Instructions</h2><p className="student-practice-instructions">{workspace.instructions}</p></section>
       <section className="student-practice-editor"><JavaSourceEditor value={source} onChange={setSource} entryClassName={workspace.entryClassName} editorRef={editor} />

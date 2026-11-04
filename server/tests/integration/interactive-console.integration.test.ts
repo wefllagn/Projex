@@ -144,6 +144,7 @@ describe('released practice API and safe Java execution', () => {
     await prisma.class.update({ where: { id: f.activity.classId }, data: { status: 'ARCHIVED' } })
     await second.done
     expect(await f.record(next.body.data.id)).toMatchObject({ phase: 'CANCELLED' })
+    await f.client.get(id).expect(404)
     await f.client.post(`/activities/${f.activity.id}/practice/interactive-code-runs`, { sourceCode: program, requestKey: randomUUID() }).expect(409)
   })
   it('queues only visible cases after the deadline and never consumes attempts or runs hidden tests', async () => {
@@ -159,6 +160,9 @@ describe('released practice API and safe Java execution', () => {
     await f.queue.complete(job!, result, new Date())
     expect(await prisma.practiceExecution.findUniqueOrThrow({ where: { id: response.body.data.id } })).toMatchObject({ compileStatus: 'SUCCESS', runtimeStatus: 'PASSED', activityPracticeWorkspaceId: f.workspaceId })
     expect(await prisma.activitySubmission.count()).toBe(1)
+    await prisma.classMember.update({ where: { classId_studentId: { classId: f.activity.classId, studentId: f.student.id } }, data: { status: 'REMOVED' } })
+    await expect(f.service.getPracticeRun(f.student, response.body.data.id)).rejects.toMatchObject({ code: 'PRACTICE_RUN_NOT_FOUND' })
+    await prisma.classMember.update({ where: { classId_studentId: { classId: f.activity.classId, studentId: f.student.id } }, data: { status: 'ACTIVE' } })
     await expect(f.service.create(f.student, f.activity.id, source(''), randomUUID())).rejects.toMatchObject({ code: 'ACTIVITY_NOT_ACCEPTING_SUBMISSIONS' })
   })
   it('requires session, CSRF, released feedback and current ownership for every practice mutation', async () => {
