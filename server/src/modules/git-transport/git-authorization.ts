@@ -32,7 +32,8 @@ export function evaluateGitPermission(access: GitTransportAccess, now: Date): Gi
       read && studentOwner && access.status === 'ACTIVE' && access.repositoryMember?.memberRole === 'OWNER' &&
       activity?.status === 'PUBLISHED' && activity.dueDate.getTime() > now.getTime(),
     )
-    return { read, write, canUpdateMain: write }
+    const practice = Boolean(read && studentOwner && access.status === 'ACTIVE' && access.repositoryMember?.memberRole === 'OWNER' && access.practice?.eligible)
+    return { read, write: write || practice, canUpdateMain: write, activityBranches: { ordinary: write, practice: practice ? access.practice!.branch : null } }
   }
 
   let read = false

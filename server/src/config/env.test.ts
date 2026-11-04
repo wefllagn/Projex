@@ -43,6 +43,14 @@ describe('execution environment boundaries', () => {
     expect(() => loadEnv(validEnvironment({ REFRESH_TOKEN_TTL_DAYS: '1', SESSION_IDLE_TTL_MINUTES: '1441' }))).toThrow(EnvironmentValidationError)
     expect(() => loadEnv(validEnvironment({ ACCESS_TOKEN_TTL_MINUTES: '30', SESSION_IDLE_TTL_MINUTES: '30' }))).toThrow(EnvironmentValidationError)
   })
+
+  it('allows hosted Smart HTTP only with isolated execution, a separate port, HTTPS and an absolute backend', () => {
+    const hosted = validEnvironment({ ...nativeGitPaths, NODE_ENV: 'production', FRONTEND_ORIGIN: 'https://origin.example.invalid', AUTH_COOKIE_SECURE: 'true', TRUST_PROXY_HOPS: '1', MAIL_TRANSPORT: 'smtp', SMTP_HOST: 'smtp.example.invalid', SMTP_USER: 'placeholder', SMTP_PASSWORD: 'placeholder', GIT_EXECUTION_MODE: 'service_isolated', GIT_SMART_HTTP_ENABLED: 'true' })
+    expect(loadEnv(hosted)).toMatchObject({ gitSmartHttpEnabled: true, gitHttpPort: 3001, gitExecutionMode: 'service_isolated' })
+    for (const unsafe of [{ GIT_EXECUTION_MODE: 'local_process' }, { GIT_EXECUTION_MODE: 'disabled' }, { GIT_HTTP_PORT: '3000' }, { GIT_HTTP_PORT: '80' }, { GIT_HTTP_PORT: '65536' }, { GIT_HTTP_BACKEND_EXECUTABLE: '' }, { HOST: '0.0.0.0' }, { FRONTEND_ORIGIN: 'http://origin.example.invalid' }]) {
+      expect(() => loadEnv({ ...hosted, ...unsafe })).toThrow(EnvironmentValidationError)
+    }
+  })
   it('keeps Java execution disabled by default', () => {
     expect(loadEnv(validEnvironment()).javaExecutionMode).toBe('disabled')
   })

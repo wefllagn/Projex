@@ -1,4 +1,6 @@
 import pino from 'pino'
+import { createHash } from 'node:crypto'
+import { javaSourceCases } from '../java/source-cases.js'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { createPostgresExecutionQueue } from '../../src/infrastructure/job-queue/execution-queue.js'
 import { createPrismaActivityRepository } from '../../src/modules/activities/activity.repository.js'
@@ -136,6 +138,107 @@ beforeEach(async () => {
 afterAll(async () => prisma.$disconnect())
 
 describe('Phase 6 PostgreSQL submissions and assessment', () => {
+  it.each([1, 2])('enforces a %s-attempt allowance across two simultaneous browser intents', async maxAttempts => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, classRecord.id, student.id)
+    const activity = await publishedActivity({ instructorId: instructor.id, classId: classRecord.id, maxAttempts })
+    const results = await Promise.allSettled(['first tab', 'second tab'].map(label => service().create(student, activity.id, `${source}\n// ${label}`, crypto.randomUUID())))
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(maxAttempts)
+    for (const result of results) if (result.status === 'rejected') expect(result.reason).toMatchObject({ code: 'ATTEMPT_LIMIT_REACHED' })
+    const records = await prisma.activitySubmission.findMany({ orderBy: { attemptNumber: 'asc' } })
+    expect(records.map(record => record.attemptNumber)).toEqual(maxAttempts === 1 ? [1] : [1, 2])
+    expect(await prisma.executionJob.count()).toBe(maxAttempts)
+  })
+
+  it.each(javaSourceCases)('preserves $name exactly through official snapshots and Instructor viewing', async ({ source: submittedSource }) => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, classRecord.id, student.id)
+    const activity = await publishedActivity({ instructorId: instructor.id, classId: classRecord.id })
+    const created = await service().create(student, activity.id, submittedSource, crypto.randomUUID())
+    const id = (created.submission as { id: string }).id
+    const saved = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
+    expect(saved.sourceCode).toBe(submittedSource)
+    expect(saved.sourceHash).toBe(createHash('sha256').update(submittedSource, 'utf8').digest('hex'))
+    expect(await service().get(instructor, id)).toMatchObject({ sourceCode: submittedSource })
+    const claimed = await createPostgresExecutionQueue(prisma).claimNext({ workerId: crypto.randomUUID(), now: currentNow, leaseMs: 60_000 })
+    expect(claimed?.sourceCode).toBe(submittedSource)
+    expect(await prisma.activitySubmission.count()).toBe(1)
+  })
+
+  it('replays simultaneous identical submission requests as one immutable attempt', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, classRecord.id, student.id)
+    const activity = await publishedActivity({ instructorId: instructor.id, classId: classRecord.id })
+    const key = crypto.randomUUID()
+    const results = await Promise.all([service().create(student, activity.id, source, key), service().create(student, activity.id, source, key)])
+    expect((results[0]!.submission as { id: string }).id).toBe((results[1]!.submission as { id: string }).id)
+    expect(results.map(result => result.idempotentReplay).sort()).toEqual([false, true])
+    expect(await prisma.activitySubmission.count()).toBe(1)
+    expect(await prisma.executionJob.count()).toBe(1)
+  })
+
+  it('does not reveal draft feedback even if a released result has an unreleased feedback row', async () => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, classRecord.id, student.id)
+    const activity = await publishedActivity({ instructorId: instructor.id, classId: classRecord.id })
+    const submissionId = await createReleasedAttempt({ submissions: service(), student, activityId: activity.id, key: crypto.randomUUID(), score: 70, releasedAt: currentNow })
+    await prisma.submissionFeedback.create({ data: { submissionId, instructorId: instructor.id, feedbackText: 'PRIVATE_DRAFT_NOT_RELEASED' } })
+    const response = await service().get(student, submissionId)
+    expect(response).toMatchObject({ finalScore: 70, feedback: null })
+    expect(JSON.stringify(response)).not.toContain('PRIVATE_DRAFT_NOT_RELEASED')
+  })
+
+  it.each(['', 'Review\n\t// code example: value < 3 && value > 0;\nUnicode: José'])('publishes an intentional empty or written review in the existing result release transaction', async (feedbackText) => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, classRecord.id, student.id)
+    const activity = await publishedActivity({ instructorId: instructor.id, classId: classRecord.id })
+    const created = await service().create(student, activity.id, source, crypto.randomUUID())
+    const id = (created.submission as { id: string }).id
+    const queue = createPostgresExecutionQueue(prisma)
+    const job = await queue.claimNext({ workerId: crypto.randomUUID(), now: currentNow, leaseMs: 60_000 })
+    expect(job?.sourceCode).toBe(source)
+    await queue.complete(job!, { compileStatus: 'SUCCESS', runtimeStatus: 'PASSED', compilerOutput: null,
+      cases: job!.cases.map(c => ({ id: c.id, status: 'PASSED', actualOutput: c.expectedOutput, errorMessage: null, executionTimeMs: 1, automatedPoints: c.maximumPoints ?? 0 })) }, currentNow)
+    let record = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
+    await service().review(instructor, id, { expectedUpdatedAt: record.updatedAt, instructorPoints: 20, feedbackText: 'First saved draft' })
+    record = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
+    await service().review(instructor, id, { expectedUpdatedAt: record.updatedAt, instructorPoints: 20, feedbackText })
+    const beforeRelease = await service().get(student, id)
+    expect(beforeRelease).not.toHaveProperty('feedback')
+    expect(beforeRelease).not.toHaveProperty('finalScore')
+    record = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
+    await service().release(instructor, id, { expectedUpdatedAt: record.updatedAt })
+    const after = await prisma.activitySubmission.findUniqueOrThrow({ where: { id }, include: { feedback: true } })
+    expect(after.submissionStatus).toBe('RELEASED')
+    expect(after.releasedAt).not.toBeNull()
+    expect(after.sourceCode).toBe(source)
+    expect(after.feedback).toMatchObject({ feedbackText, releasedAt: after.releasedAt, releasedById: instructor.id })
+    expect(await service().get(student, id)).toMatchObject({ finalScore: 90, feedback: feedbackText || null })
+    await expect(service().release(instructor, id, { expectedUpdatedAt: record.updatedAt })).rejects.toMatchObject({ code: 'STALE_SUBMISSION_VERSION' })
+    expect(await prisma.activitySubmission.findUniqueOrThrow({ where: { id }, include: { feedback: true } })).toEqual(after)
+  })
+
+  it.each([' \r\n\t', 'class Main { String value = "\ud800"; }', '\udc00'])('rejects blank or malformed Unicode source without consuming an attempt', async (invalidSource) => {
+    const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
+    const student = await createActiveUser(prisma, 'STUDENT')
+    const classRecord = await createActiveClass(prisma, instructor.id)
+    await createActiveMembership(prisma, classRecord.id, student.id)
+    const activity = await publishedActivity({ instructorId: instructor.id, classId: classRecord.id })
+    await expect(service().create(student, activity.id, invalidSource, crypto.randomUUID())).rejects.toMatchObject({ code: 'SOURCE_CODE_INVALID' })
+    expect(await prisma.activitySubmission.count()).toBe(0)
+    expect(await prisma.executionJob.count()).toBe(0)
+  })
+
   it('recalculates ordinary eligibility from lifecycle and deadline after reopen', async () => {
     const instructor = await createActiveUser(prisma, 'INSTRUCTOR')
     const student = await createActiveUser(prisma, 'STUDENT')

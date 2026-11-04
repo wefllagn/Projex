@@ -5,6 +5,27 @@ from unittest.mock import patch
 spec=importlib.util.spec_from_file_location('origin_pilot',Path(__file__).with_name('pilot.py'))
 pilot=importlib.util.module_from_spec(spec);spec.loader.exec_module(pilot)
 class PilotGuards(unittest.TestCase):
+    def test_backup_quiescence_handles_pre_practice_schemas(self):
+        with tempfile.TemporaryDirectory() as directory,patch.object(pilot,'STATE',Path(directory)),patch.object(pilot,'sql',side_effect=lambda env,q:'f' if 'to_regclass' in q else '0') as query:
+            pilot.quiet({})
+            self.assertFalse(any('FROM activity_practice_git_jobs' in call.args[1] for call in query.call_args_list))
+    def test_backup_refuses_running_practice_jobs(self):
+        with patch.object(pilot,'sql',side_effect=['t','1']):
+            with self.assertRaises(RuntimeError):pilot.quiet({})
+    def test_git_http_cannot_silently_disagree_with_proxy_target(self):
+        pilot.validate_git_http_config({'GIT_SMART_HTTP_ENABLED':'false'})
+        good={'GIT_SMART_HTTP_ENABLED':'true','GIT_HTTP_PORT':'3001','GIT_HTTP_BACKEND_EXECUTABLE':'/usr/lib/git-core/git-http-backend'}
+        pilot.validate_git_http_config(good)
+        for change in [{'GIT_HTTP_PORT':'3000'},{'GIT_HTTP_BACKEND_EXECUTABLE':'git-http-backend'},{'GIT_SMART_HTTP_ENABLED':'yes'}]:
+            with self.assertRaises(RuntimeError):pilot.validate_git_http_config({**good,**change})
+    def test_git_https_routes_only_to_confined_worker_without_browser_cookie_or_retry(self):
+        text=(Path(__file__).parent/'nginx/origin.conf.example').read_text()
+        protocol=text.split('location ^~ /api/v1/git/ {',1)[1].split('    }',1)[0]
+        for guard in ['proxy_pass http://127.0.0.1:3001;','proxy_set_header X-Forwarded-Proto https;','proxy_set_header Cookie "";','client_max_body_size 25m;','proxy_request_buffering off;','proxy_next_upstream off;','proxy_cache off;','limit_req zone=origin_git_requests','limit_conn origin_git_connections']:
+            self.assertIn(guard,protocol)
+        self.assertIn('proxy_pass http://127.0.0.1:3000;',text)
+        self.assertIn('location /git/ { return 404; }',text)
+        self.assertIn('location /api/v1/git/ { return 404; }',text)
     def test_database_target_is_exact_loopback_role_and_recognized_name(self):
         cfg={'DATABASE_URL':'postgresql://origin_pilot:secret@127.0.0.1:5432/origin_pilot?schema=public'}
         env=pilot.pg_env(cfg);self.assertEqual(env['PGDATABASE'],'origin_pilot');self.assertEqual(env['PGPASSWORD'],'secret')

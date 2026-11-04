@@ -231,6 +231,8 @@ describe('API client', () => {
 
   it.each([
     ['SETUP_RESEND_COOLDOWN', 429, 'A setup link was sent recently. Try again later.'],
+    ['SUBMISSION_BUSY', 409, 'Another request is processing. Check attempt history, then retry the same request.'],
+    ['SOURCE_CODE_INVALID', 400, 'Enter non-empty Java source saved as valid text, then try again.'],
     ['VALIDATION_FAILED', 400, 'Check the form details and try again.'],
     ['VALIDATION_FAILED', 422, 'Check the form details and try again.'],
     ['EMAIL_ALREADY_EXISTS', 409, 'An account with this email already exists. Use another email or manage the existing account.'],

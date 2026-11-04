@@ -184,7 +184,9 @@ export function createGitSmartHttpBackend(options: {
         stdio: 'ignore',
       })
       killer.unref()
-    } else child.kill('SIGKILL')
+    } else if (child.pid) {
+      try { process.kill(-child.pid, 'SIGKILL') } catch { child.kill('SIGKILL') }
+    }
   }
 
   async function removeVerifiedRequestDirectory(requestDirectory: string, operationId: string): Promise<void> {
@@ -237,9 +239,15 @@ export function createGitSmartHttpBackend(options: {
   }
 
   async function execute(input: SmartHttpInput): Promise<void> {
+    // Reserve synchronously before any filesystem/authenticated recovery awaits.
     if (active >= options.limits.maxConcurrent) {
       throw transportError(503, 'GIT_TRANSPORT_BUSY', 'Git transport capacity is temporarily unavailable.')
     }
+    active += 1
+    try { await executeReserved(input) } finally { active -= 1 }
+  }
+
+  async function executeReserved(input: SmartHttpInput): Promise<void> {
     await recover(input.onAcceptedPush)
     const [canonicalRepositoryPath, canonicalBackendPath] = await Promise.all([
       realpath(input.repositoryPath),
@@ -261,7 +269,6 @@ export function createGitSmartHttpBackend(options: {
         throw transportError(413, 'GIT_REQUEST_LIMIT_EXCEEDED', 'Git transport request exceeded its limit.')
       }
     }
-    active += 1
     const writeOperation = input.routeSuffix === 'git-receive-pack'
     const requestDirectory = path.join(requestRoot, input.operationId)
     const receiptPath = path.join(requestDirectory, 'accepted-push.json')
@@ -283,6 +290,7 @@ export function createGitSmartHttpBackend(options: {
         repositoryId: input.authentication.repositoryId,
         userId: input.authentication.userId,
         canUpdateMain: input.authentication.permission.canUpdateMain,
+        activityBranches: input.authentication.permission.activityBranches,
         maxBranches: options.limits.maxBranches,
         maxRefUpdates: options.limits.maxRefUpdates,
         maxNewCommits: options.limits.maxNewCommits,
@@ -324,6 +332,7 @@ export function createGitSmartHttpBackend(options: {
           env: environment,
           shell: false,
           windowsHide: true,
+          detached: process.platform !== 'win32',
           stdio: ['pipe', 'pipe', 'pipe'],
         })
         let headerBuffer = Buffer.alloc(0)
@@ -447,7 +456,6 @@ export function createGitSmartHttpBackend(options: {
       }
       input.response.end()
     } finally {
-      active -= 1
       if (writeOperation) {
         activeOperationIds.delete(input.operationId)
         const receiptExists = await lstat(receiptPath).then(() => true, () => false)

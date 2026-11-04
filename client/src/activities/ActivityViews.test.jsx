@@ -181,6 +181,19 @@ describe('student activity integration', () => {
     expect(screen.queryByText('View Git')).not.toBeInTheDocument()
   })
 
+  it.each([true, false])('shows one activity-level Practice Again action only when availability is %s', async practiceAvailable => {
+    const submissions = submissionApiMock()
+    const original = await submissions.getAttemptState()
+    submissions.getAttemptState.mockResolvedValue({ data: { ...original.data, practiceAvailable } })
+    const repositories = { getActivityWorkspace: vi.fn(), createActivityWorkspace: vi.fn() }
+    renderView(<StudentActivityDetail api={studentActivityApi()} submissions={submissions} repositories={repositories} />, { entry: `/student/activity/${activityId}?classId=${classId}`, path: '/student/activity/:activityId' })
+    await screen.findByText('Your work')
+    const actions = screen.queryAllByRole('link', { name: 'Practice Again' })
+    expect(actions).toHaveLength(practiceAvailable ? 1 : 0)
+    if (practiceAvailable) expect(actions[0]).toHaveAttribute('href', `/student/activity/${activityId}/practice?classId=${classId}`)
+    expect(repositories.createActivityWorkspace).not.toHaveBeenCalled()
+  })
+
   it.each([['Open workspace', `/student/activity/${activityId}/workspace`], ['View repository', `/student/repositories/${activityWorkspace.id}`]])('ensures a missing workspace on %s and navigates directly with Class context', async (action, path) => {
     const repositories = { getActivityWorkspace: vi.fn().mockRejectedValue(new ApiError({ status: 404 })), createActivityWorkspace: vi.fn().mockResolvedValue({ data: activityWorkspace }) }
     const submissions = submissionApiMock()

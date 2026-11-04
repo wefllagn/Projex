@@ -1,5 +1,37 @@
 # Authenticated Git Smart HTTP Transport
 
+## Activity practice branch scope (2026-11-04)
+
+Activity write permissions carry separate ordinary-branch authority and an optional exact practice branch. Practice requires exhausted attempts, the final released graded score and an explicitly released feedback record, no pending official work and no valid replacement. Empty written feedback is supported by the authoritative instructor release transaction; a missing record never qualifies. The receive hook reserves practice refs, prohibits their creation/deletion by clients, and retains normal fast-forward/object/size checks. Practice authority never grants main checkpoint permission. API/worker/native publication recheck current authority; lifecycle/attempt/replacement/credential locks fence native activity receives in both local and isolated transports. See [verification](../ACTIVITY_PRACTICE_VERIFICATION.md).
+
+## Hosted isolated transport extension
+
+The Azure pilot extension permits `GIT_SMART_HTTP_ENABLED=true` with
+`GIT_EXECUTION_MODE=service_isolated`. Production still forbids `local_process`.
+The existing `origin-git` process hosts a protocol-only listener on
+`127.0.0.1:GIT_HTTP_PORT` (pilot: 3001), under the unchanged hosted-service guard
+and systemd filesystem/capability restrictions. The API never executes hosted
+Git HTTP; it retains cookie/CSRF-protected credential management. Existing
+credential expiry, repository scope, current membership and receive-hook policies
+apply to every transport request without a privileged internal bypass.
+
+Nginx terminates HTTPS and streams `/api/v1/git/` to this listener; `/api/`
+otherwise continues to port 3000. `/git/`, dumb filesystem routes and internal
+readiness are not exposed. Plaintext Git requests are rejected, worker ports stay
+private, and proxy retries/caching are disabled. Request, process, connection,
+time and byte limits remain bounded. The pilot template adds per-IP rate limits.
+
+The API probes bounded loopback worker readiness before credential issuance and
+capability reporting. The existing Code menu follows `capabilities.git.smartHttp`;
+the provider refreshes on focus/visibility and every 15 seconds while visible.
+The public clone URL remains the existing credential-free
+`https://HOST/api/v1/git/repositories/REPOSITORY_UUID`. The transport itself adds no schema or Java changes; the combined Practice Again release requires its additive migration. Deployment requires the actual host's verified configuration backup,
+reviewed immutable source release and successful confined/TLS acceptance; local
+test success is not evidence of an Azure deployment.
+
+The Phase 8B loopback/local-process description below remains the development
+contract; its earlier exclusion of hosted transport is superseded by this section.
+
 ## Scope and deployment boundary
 
 Phase 8B adds backend-only authenticated Git Smart HTTP for controlled loopback development and tests. It uses the validated local `git-http-backend` executable and supports clone/fetch for authorized readers and push for authorized writers. Browsing/history/diff REST APIs are a separate read-only Phase 8C boundary documented in `GIT_REPOSITORY_INSPECTION.md`. SSH, anonymous/public access, external Git APIs, frontend integration, server-created commits, merge/conflict APIs, LFS, CI/CD, physical deletion, production deployment, and external exposure remain excluded from Phase 8B.

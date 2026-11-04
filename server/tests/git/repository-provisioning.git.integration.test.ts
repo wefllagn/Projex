@@ -39,7 +39,7 @@ describe('real Git repository provisioning', () => {
       expect(version.raw).toMatch(/^\d+\.\d+\.\d+\.windows\.\d+$/)
       expect(version.windowsBuild).not.toBeNull()
     } else {
-      expect(process.platform).toBe('darwin')
+      expect(['darwin', 'linux']).toContain(process.platform)
       expect(version.raw).toMatch(/^\d+\.\d+\.\d+$/)
       expect(version.windowsBuild).toBeNull()
     }

@@ -99,6 +99,15 @@ function projection() {
 }
 
 describe('Git credential issuance availability', () => {
+  it('fails closed before issuing credentials when the isolated listener is unavailable', async () => {
+    const repository = { findAccess: vi.fn(), createCredential: vi.fn() } as unknown as GitTransportRepository
+    const readiness = vi.fn().mockResolvedValue(false)
+    const service = createGitCredentialService({ issuanceEnabled: readiness, repository, logger: pino({ level: 'silent' }), credentialTtlMinutes: 15 })
+    await expect(service.issue(caller, repositoryId, ['READ'])).rejects.toMatchObject({ code: 'GIT_SMART_HTTP_UNAVAILABLE' })
+    expect(readiness).toHaveBeenCalledOnce()
+    expect(repository.findAccess).not.toHaveBeenCalled()
+    expect(repository.createCredential).not.toHaveBeenCalled()
+  })
   it('rejects before repository access or persistence when Smart HTTP is disabled', async () => {
     const repository = {
       findAccess: vi.fn(),

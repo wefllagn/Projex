@@ -66,6 +66,7 @@ const envSchema = z
     GIT_PROVISIONING_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
     GIT_SMART_HTTP_ENABLED: booleanString.default(false),
     GIT_HTTP_BACKEND_EXECUTABLE: z.string().default(''),
+    GIT_HTTP_PORT: z.coerce.number().int().min(1024).max(65_535).default(3001),
     GIT_CREDENTIAL_TTL_MINUTES: z.coerce.number().int().min(1).max(15).default(15),
     GIT_HTTP_REQUEST_LIMIT_BYTES: z.coerce.number().int().min(1_048_576).max(104_857_600).default(26_214_400),
     GIT_HTTP_RESPONSE_LIMIT_BYTES: z.coerce.number().int().min(1_048_576).max(536_870_912).default(115_343_360),
@@ -149,14 +150,14 @@ const envSchema = z
       }
     }
 
-    if (value.GIT_EXECUTION_MODE === 'service_isolated' && (!['127.0.0.1', '::1', 'localhost'].includes(value.HOST.toLowerCase()) || value.GIT_SMART_HTTP_ENABLED)) context.addIssue({ code: 'custom', path: ['GIT_EXECUTION_MODE'], message: 'Hosted browser Git requires a loopback API and disabled native Smart HTTP.' })
+    if (value.GIT_EXECUTION_MODE === 'service_isolated' && !['127.0.0.1', '::1', 'localhost'].includes(value.HOST.toLowerCase())) context.addIssue({ code: 'custom', path: ['GIT_EXECUTION_MODE'], message: 'Isolated Git requires a loopback API.' })
 
     if (value.GIT_SMART_HTTP_ENABLED) {
-      if (value.GIT_EXECUTION_MODE !== 'local_process') {
+      if (value.GIT_EXECUTION_MODE === 'disabled') {
         context.addIssue({
           code: 'custom',
           path: ['GIT_SMART_HTTP_ENABLED'],
-          message: 'Git Smart HTTP requires local_process Git execution',
+          message: 'Git Smart HTTP requires enabled Git execution',
         })
       }
       if (!value.GIT_HTTP_BACKEND_EXECUTABLE || !path.isAbsolute(value.GIT_HTTP_BACKEND_EXECUTABLE)) {
@@ -165,6 +166,9 @@ const envSchema = z
           path: ['GIT_HTTP_BACKEND_EXECUTABLE'],
           message: 'GIT_HTTP_BACKEND_EXECUTABLE must be an absolute path',
         })
+      }
+      if (value.GIT_EXECUTION_MODE === 'service_isolated' && value.GIT_HTTP_PORT === value.PORT) {
+        context.addIssue({ code: 'custom', path: ['GIT_HTTP_PORT'], message: 'The isolated Git listener must use a separate port.' })
       }
       if (!['127.0.0.1', '::1', 'localhost'].includes(value.HOST.toLowerCase())) {
         context.addIssue({
@@ -241,6 +245,7 @@ export interface AppEnv {
   gitProvisioningMaxAttempts: number
   gitSmartHttpEnabled: boolean
   gitHttpBackendExecutable: string
+  gitHttpPort: number
   gitCredentialTtlMinutes: number
   gitHttpRequestLimitBytes: number
   gitHttpResponseLimitBytes: number
@@ -326,6 +331,7 @@ export function loadEnv(input: NodeJS.ProcessEnv = process.env): AppEnv {
     gitProvisioningMaxAttempts: result.data.GIT_PROVISIONING_MAX_ATTEMPTS,
     gitSmartHttpEnabled: result.data.GIT_SMART_HTTP_ENABLED,
     gitHttpBackendExecutable: result.data.GIT_HTTP_BACKEND_EXECUTABLE,
+    gitHttpPort: result.data.GIT_HTTP_PORT,
     gitCredentialTtlMinutes: result.data.GIT_CREDENTIAL_TTL_MINUTES,
     gitHttpRequestLimitBytes: result.data.GIT_HTTP_REQUEST_LIMIT_BYTES,
     gitHttpResponseLimitBytes: result.data.GIT_HTTP_RESPONSE_LIMIT_BYTES,

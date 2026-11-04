@@ -1,3 +1,5 @@
+import { createActivityPracticeService } from './modules/activity-practice/practice.service.js'
+import { createActivityPracticeRouter } from './modules/activity-practice/practice.routes.js'
 import { assertHostedGitService } from './infrastructure/preflight/hosted-service.js'
 import { createPasswordRecoveryRouter } from './modules/password-recovery/password-recovery.js'
 import { createGradebookRouter } from './modules/gradebook/gradebook.js'
@@ -9,7 +11,6 @@ import { createGroupBrowserCommitRouter } from './modules/group-browser-commits/
 import { createTopicService } from './modules/activities/topic.service.js'
 import 'dotenv/config'
 import { createServer, type Server } from 'node:http'
-import { fileURLToPath } from 'node:url'
 import { createApp } from './app.js'
 import { createWorkHubRouter } from './modules/work-hub/work-hub.routes.js'
 import { EnvironmentValidationError, loadEnv } from './config/env.js'
@@ -64,7 +65,8 @@ import { createPrismaRepositoryRepository } from './modules/repositories/reposit
 import { createRepositoryService } from './modules/repositories/repository.service.js'
 import { createRepositoryRouter } from './modules/repositories/repository.routes.js'
 import { createRepositoryStorage } from './infrastructure/storage/repository-storage.js'
-import { createGitSmartHttpBackend } from './infrastructure/git/git-smart-http.js'
+import { configuredGitHttpBackend } from './infrastructure/git/git-http-worker.js'
+import { createIsolatedGitAvailability } from './infrastructure/git/git-http-availability.js'
 import { createPrismaGitTransportRepository } from './modules/git-transport/git-transport.repository.js'
 import { createGitCredentialService } from './modules/git-transport/git-credential.service.js'
 import { createGitTransportService } from './modules/git-transport/git-transport.service.js'
@@ -188,6 +190,7 @@ async function bootstrap(): Promise<void> {
     repository: createPrismaSubmissionRepository(prisma),
     logger,
     config: {
+      practiceWorkspaceEnabled: env.gitExecutionMode !== 'disabled',
       mode: env.javaExecutionMode,
       sourceLimitBytes: env.javaSourceLimitBytes,
       practiceRunTtlHours: env.practiceRunTtlHours,
@@ -209,8 +212,11 @@ async function bootstrap(): Promise<void> {
     logger,
     provisioningEnabled: env.gitExecutionMode !== 'disabled',
   })
+  const smartHttpReady = env.gitExecutionMode === 'service_isolated'
+    ? createIsolatedGitAvailability(env.gitSmartHttpEnabled, env.gitHttpPort)
+    : async () => env.gitSmartHttpEnabled
   const gitCredentialService = createGitCredentialService({
-    issuanceEnabled: env.gitSmartHttpEnabled,
+    issuanceEnabled: smartHttpReady,
     repository: gitTransportRepository,
     logger,
     credentialTtlMinutes: env.gitCredentialTtlMinutes,
@@ -243,29 +249,13 @@ async function bootstrap(): Promise<void> {
     accessRepository: gitTransportRepository,
     logger,
   })
-  const gitSmartHttpBackend = createGitSmartHttpBackend({
-    executable: env.gitHttpBackendExecutable || process.execPath,
-    gitExecutable: env.gitExecutable || process.execPath,
-    storageRoot: env.gitStorageRoot || process.cwd(),
-    hookScript: fileURLToPath(new URL('./infrastructure/git/git-transport-hook.js', import.meta.url)),
-    limits: {
-      requestBytes: env.gitHttpRequestLimitBytes,
-      responseBytes: env.gitHttpResponseLimitBytes,
-      timeoutMs: env.gitHttpTimeoutMs,
-      maxConcurrent: env.gitHttpMaxConcurrent,
-      maxBranches: env.gitMaxBranches,
-      maxRefUpdates: env.gitMaxRefUpdates,
-      maxNewCommits: env.gitMaxNewCommits,
-      blobLimitBytes: env.gitBlobLimitBytes,
-      repositoryLimitBytes: env.gitRepositorySizeLimitBytes,
-    },
-  })
   const gitTransportService = createGitTransportService({
-    enabled: env.gitSmartHttpEnabled,
+    // Hosted protocol traffic goes directly to origin-git. Never execute CGI here.
+    enabled: env.gitSmartHttpEnabled && env.gitExecutionMode === 'local_process',
     credentialService: gitCredentialService,
     repository: gitTransportRepository,
     storage: gitStorage,
-    backend: gitSmartHttpBackend,
+    backend: configuredGitHttpBackend(env),
     logger,
   })
   await gitTransportService.initialize()
@@ -287,7 +277,7 @@ async function bootstrap(): Promise<void> {
           inspection: env.gitExecutionMode !== 'disabled',
           smartHttp: env.gitSmartHttpEnabled,
         },
-      })),
+      }, smartHttpReady)),
       auth: createAuthRouter({
         authService,
         cookieConfig,
@@ -339,6 +329,9 @@ async function bootstrap(): Promise<void> {
         practiceRunTtlHours: env.practiceRunTtlHours, practiceRunsPerMinute: env.practiceRunsPerMinute,
         practiceMaxActivePerActivity: env.practiceMaxActivePerActivity,
       } }),
+      activityPractice: createActivityPracticeRouter({ prisma, requireAuthentication, requireCsrf,
+        service: createActivityPracticeService({ prisma, content: repositoryContentService, enabled: env.gitExecutionMode !== 'disabled' }),
+        config: { mode: env.javaExecutionMode, sourceLimitBytes: env.javaSourceLimitBytes, practiceRunTtlHours: env.practiceRunTtlHours, practiceRunsPerMinute: env.practiceRunsPerMinute, practiceMaxActivePerActivity: env.practiceMaxActivePerActivity } }),
       submissions: createSubmissionRouter({
         service: submissionService,
         requireAuthentication,

@@ -6,6 +6,7 @@ import { AppError } from '../../shared/errors/app-error.js'
 import type { GitCredentialService } from './git-credential.service.js'
 import type { GitTransportRepository } from './git-transport.repository.js'
 import type { AcceptedPushReceipt } from './git-transport.types.js'
+import { evaluateGitPermission } from './git-authorization.js'
 
 interface StorageResolver {
   resolveManagedRepositoryLocation(
@@ -121,6 +122,10 @@ export function createGitTransportService(dependencies: {
         persistedLocator,
       )
       const operationId = randomUUID()
+      const execute = async () => {
+      // A lifecycle/member/credential change which won the lock must be observed.
+      const current = await credentialService.authenticate({ authorization: input.request.header('authorization'), repositoryId: input.repositoryId, operation, touchLastUsed: false })
+      current.permission = evaluateGitPermission(current.access, new Date())
       await backend.execute({
         request: input.request,
         response: input.response,
@@ -128,10 +133,13 @@ export function createGitTransportService(dependencies: {
         relativeRepositoryPath: canonicalLocator,
         routeSuffix: input.routeSuffix,
         queryString: input.service ? `service=${input.service}` : '',
-        authentication,
+        authentication: current,
         operationId,
         onAcceptedPush: recordAcceptedPush,
       })
+      }
+      if (input.routeSuffix === 'git-receive-pack' && repository.withActivityWriteFence) await repository.withActivityWriteFence(input.repositoryId, authentication.userId, authentication.credentialId, execute)
+      else await execute()
     },
   }
 }

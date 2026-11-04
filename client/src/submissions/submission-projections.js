@@ -107,6 +107,7 @@ export function projectStudentAttemptState(value = {}) {
     ? value.replacement
     : null
   return {
+    practiceAvailable: value.practiceAvailable === true,
     activityId: nullableString(value.activityId),
     gradingMode: value.gradingMode === 'COMPLETION' ? 'COMPLETION' : 'GRADED',
     completionState: value.gradingMode === 'COMPLETION' ? (value.completionState === 'COMPLETE' ? 'COMPLETE' : 'NOT_SUBMITTED') : null,

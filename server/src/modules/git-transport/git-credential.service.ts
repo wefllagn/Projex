@@ -70,6 +70,7 @@ export interface GitCredentialService {
   list(caller: SafeUserProfile, repositoryId: string): Promise<GitCredentialProjection[]>
   revoke(caller: SafeUserProfile, credentialId: string): Promise<GitCredentialProjection>
   authenticate(input: {
+    touchLastUsed?: boolean
     authorization: string | undefined
     repositoryId: string
     operation: GitCredentialOperation
@@ -77,7 +78,7 @@ export interface GitCredentialService {
 }
 
 export function createGitCredentialService(dependencies: {
-  issuanceEnabled: boolean
+  issuanceEnabled: boolean | (() => Promise<boolean>)
   repository: GitTransportRepository
   logger: Logger
   credentialTtlMinutes: number
@@ -95,7 +96,10 @@ export function createGitCredentialService(dependencies: {
 
   return {
     async issue(caller, repositoryId, operations) {
-      if (!dependencies.issuanceEnabled) throw smartHttpUnavailable()
+      const available = typeof dependencies.issuanceEnabled === 'function'
+        ? await dependencies.issuanceEnabled()
+        : dependencies.issuanceEnabled
+      if (!available) throw smartHttpUnavailable()
       const current = now()
       const { permission } = await currentAccess(caller, repositoryId)
       for (const operation of operations) {
@@ -162,7 +166,7 @@ export function createGitCredentialService(dependencies: {
       if ((input.operation === 'READ' && !permission.read) || (input.operation === 'WRITE' && !permission.write)) {
         throw authenticationFailed()
       }
-      await repository.touchCredential(credential.credentialId, current)
+      if (input.touchLastUsed !== false) await repository.touchCredential(credential.credentialId, current)
       return {
         credentialId: credential.credentialId,
         userId: credential.userId,

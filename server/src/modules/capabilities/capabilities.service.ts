@@ -4,7 +4,7 @@ export interface PublicCapabilities {
   git: { provisioning: boolean; inspection: boolean; smartHttp: boolean }
 }
 
-export function createCapabilitiesService(capabilities: PublicCapabilities) {
+export function createCapabilitiesService(capabilities: PublicCapabilities, smartHttpReady?: () => Promise<boolean>) {
   const snapshot = Object.freeze({
     profile: capabilities.profile,
     java: Object.freeze({ execution: capabilities.java.execution }),
@@ -14,5 +14,7 @@ export function createCapabilitiesService(capabilities: PublicCapabilities) {
       smartHttp: capabilities.git.smartHttp,
     }),
   })
-  return { get: () => snapshot }
+  return { get: () => smartHttpReady
+    ? smartHttpReady().catch(() => false).then(ready => ({ ...snapshot, git: { ...snapshot.git, smartHttp: snapshot.git.smartHttp && ready } }))
+    : snapshot }
 }

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { isWellFormedText } from '../../shared/source-text.js'
 import type { Logger } from 'pino'
 import { AppError } from '../../shared/errors/app-error.js'
 import type { PaginationMeta } from '../../shared/http/response.js'
@@ -26,6 +27,7 @@ import {
 import { isOrdinarySubmissionOpen } from '../activities/activity.types.js'
 
 export interface ExecutionFeatureConfig {
+  practiceWorkspaceEnabled?: boolean
   mode: 'disabled' | 'local_process' | 'container'
   sourceLimitBytes: number
   practiceRunTtlHours: number
@@ -104,7 +106,7 @@ function validateSource(sourceCode: string, limit: number): void {
   if (Buffer.byteLength(sourceCode, 'utf8') > limit) {
     throw error(413, 'SOURCE_CODE_TOO_LARGE', 'The source code exceeds the allowed size.')
   }
-  if (sourceCode.includes('\0')) {
+  if (!sourceCode.trim() || sourceCode.includes('\0') || !isWellFormedText(sourceCode)) {
     throw error(400, 'SOURCE_CODE_INVALID', 'The source code contains unsupported characters.')
   }
 }
@@ -204,7 +206,7 @@ function studentProjection(record: SubmissionRecord, isCreditedResult = false) {
     ...(released
       ? {
           ...(record.gradingModeSnapshot === 'COMPLETION' ? {} : { finalScore: Number(record.releasedFinalScore), totalPoints: Number(record.totalPointsSnapshot) }),
-          feedback: record.feedback?.feedbackText ?? null,
+          feedback: record.feedback?.releasedAt ? record.feedback.feedbackText || null : null,
         }
       : {}),
     failureResolution: record.failureResolution
@@ -417,6 +419,7 @@ function attemptStateProjection(
 
   return {
     activityId: record.activity.id,
+    practiceAvailable: record.practiceAvailable === true,
     gradingMode: record.activity.gradingMode ?? 'GRADED',
     ...(record.activity.gradingMode === 'COMPLETION' ? { completionState: (record.acceptedAttempts ?? record.countingAttemptsUsed) > 0 ? 'COMPLETE' : 'NOT_SUBMITTED' } : {}),
     activityStatus: record.activity.status,
@@ -457,7 +460,7 @@ function attemptStateProjection(
   }
 }
 
-function practiceProjection(record: PracticeRecord) {
+export function practiceProjection(record: PracticeRecord) {
   return {
     id: record.id,
     activityId: record.activityId,
@@ -562,6 +565,9 @@ export function createSubmissionService(dependencies: {
       if (result.kind === 'attempt_limit_reached') {
         throw error(409, 'ATTEMPT_LIMIT_REACHED', "This activity's usable attempt limit has been reached.")
       }
+      if (result.kind === 'concurrent_conflict') {
+        throw error(409, 'SUBMISSION_BUSY', 'Another submission request is processing. Check attempt history before trying again.')
+      }
       if (result.kind === 'created') {
         logger.info(
           {
@@ -647,7 +653,7 @@ export function createSubmissionService(dependencies: {
         throw error(404, 'ACTIVITY_NOT_FOUND', 'Programming activity not found.')
       }
       return attemptStateProjection(
-        record,
+        { ...record, practiceAvailable: config.practiceWorkspaceEnabled !== false && record.practiceAvailable },
         config.mode !== 'disabled',
         observedAt,
       )

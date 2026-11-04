@@ -147,6 +147,13 @@ export const routeCatalog = [
           'Real activity-backed source editing, visible-test practice, and immutable official submission.',
       },
       {
+        path: 'activity/:activityId/practice',
+        label: 'Practice Again',
+        group: 'Activity Mode',
+        status: 'Backend connected',
+        summary: 'An isolated activity-level practice workspace after results and feedback are released.',
+      },
+      {
         path: 'activity/:activityId/submissions',
         label: 'Activity Submissions',
         group: 'Activity Mode',

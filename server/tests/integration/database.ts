@@ -19,6 +19,8 @@ export async function cleanIntegrationDatabase(
   await prisma.reviewExecution.deleteMany()
   await prisma.practiceExecutionCase.deleteMany()
   await prisma.practiceExecution.deleteMany()
+  await prisma.activityPracticeGitJob.deleteMany()
+  await prisma.activityPracticeWorkspace.deleteMany()
   await prisma.testCaseResult.deleteMany()
   await prisma.submissionFeedback.deleteMany()
   await prisma.submissionScoreCorrection.deleteMany()

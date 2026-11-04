@@ -10,6 +10,7 @@ import { createGitCommandRunner } from '../infrastructure/git/git-command-runner
 import { runDeploymentPreflight } from '../infrastructure/preflight/deployment-preflight.js'
 import { verifyJavaContainerHost } from '../infrastructure/java/java-container.js'
 import { assertHostedGitService } from '../infrastructure/preflight/hosted-service.js'
+import { configuredGitHttpBackend } from '../infrastructure/git/git-http-worker.js'
 
 function checkExecutable(executable: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -51,6 +52,7 @@ async function main(): Promise<void> {
         if (env.gitExecutionMode === 'service_isolated') await assertHostedGitService(env.gitStorageRoot)
         await access(env.gitStorageRoot, constants.R_OK | constants.W_OK)
         await createGitCommandRunner({ executable: env.gitExecutable, timeoutMs: env.gitCommandTimeoutMs, outputLimitBytes: env.gitOutputLimitBytes }).detectVersion()
+        if (env.gitSmartHttpEnabled && (scope === 'all' || scope === 'git')) await configuredGitHttpBackend(env).initialize()
       },
       java: async () => {
         await access(env.javaJobRoot, constants.R_OK | constants.W_OK)

@@ -1,4 +1,7 @@
+import { createActivityPracticeWorker } from './modules/activity-practice/practice.worker.js'
+import { createGitPracticeWriter, PracticeWriteError } from './infrastructure/git/git-practice-writer.js'
 import { assertHostedGitService } from './infrastructure/preflight/hosted-service.js'
+import { startIsolatedGitHttpWorker } from './infrastructure/git/git-http-worker.js'
 import { createGroupBrowserRefWorker } from './modules/group-browser-refs/group-browser-ref-worker.js'
 import { createGitGroupBrowserRefWriter } from './infrastructure/git/git-group-browser-ref-writer.js'
 import { createGroupBrowserCommitWorker } from './modules/group-browser-commits/group-browser-commit-worker.js'
@@ -52,10 +55,13 @@ async function bootstrap(): Promise<void> {
   })
   const groupBrowserWorker = createGroupBrowserCommitWorker({ prisma, logger, writer: createGitGroupBrowserWriter({ git, checkSize: async root => { if (await storage.measure(root) + 8192 > env.gitRepositorySizeLimitBytes) throw new BrowserCommitError('BROWSER_STORAGE_LIMIT') }, resolveRepository: (id, storagePath) => storage.resolveManagedRepository(id,storagePath) }) })
   const groupRefWorker = createGroupBrowserRefWorker({prisma,logger,writer:createGitGroupBrowserRefWriter({git,maxBranches:env.gitMaxBranches,resolveRepository:(id,locator)=>storage.resolveManagedRepository(id,locator)})})
+  const httpServer = await startIsolatedGitHttpWorker(env, prisma, logger)
   const workerId = randomUUID()
+  const practiceWorker = createActivityPracticeWorker({ prisma, logger, writer: createGitPracticeWriter({ git, resolveRepository: (id, locator) => storage.resolveManagedRepository(id, locator), checkSize: async root => { if (await storage.measure(root) + 8192 > env.gitRepositorySizeLimitBytes) throw new PracticeWriteError('PRACTICE_STORAGE_LIMIT') } }) })
   let stopping = false
   const stop = () => {
     stopping = true
+    httpServer?.close()
   }
   process.on('SIGINT', stop)
   process.on('SIGTERM', stop)
@@ -65,6 +71,7 @@ async function bootstrap(): Promise<void> {
   )
   try {
     while (!stopping) {
+      const practiceWork = await practiceWorker.processNext(workerId)
       const refWork = await groupRefWorker.processNext(workerId)
       const browserWork = await groupBrowserWorker.processNext(workerId)
       const job = await queue.claimNext({
@@ -83,7 +90,7 @@ async function bootstrap(): Promise<void> {
           await checkpointService.process(checkpoint)
           continue
         }
-        if (!browserWork && !refWork) await delay(env.gitProvisioningWorkerPollMs)
+        if (!browserWork && !refWork && !practiceWork) await delay(env.gitProvisioningWorkerPollMs)
         continue
       }
       logger.info(
@@ -108,6 +115,7 @@ async function bootstrap(): Promise<void> {
       }
     }
   } finally {
+    if (httpServer) await new Promise<void>(resolve => httpServer.close(() => resolve()))
     await prisma.$disconnect()
     logger.info({ event: 'git_worker.stopped', workerId }, 'Git provisioning worker stopped')
   }
