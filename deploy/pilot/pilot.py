@@ -26,8 +26,15 @@ def read_config():
     need(cfg.get('NODE_ENV')=='production' and cfg.get('HOST')=='127.0.0.1' and cfg.get('PORT')=='3000','Unexpected runtime target')
     need(cfg.get('GIT_STORAGE_ROOT')==str(STATE/'git') and cfg.get('JAVA_JOB_ROOT')==str(JAVA),'Unexpected storage target')
     need(cfg.get('JAVA_EXECUTION_MODE')=='container' and cfg.get('GIT_EXECUTION_MODE')=='service_isolated','Isolated execution required')
+    validate_git_http_config(cfg)
     need(not any('REPLACE_WITH' in v for v in cfg.values()),'Replace all environment placeholders first')
     return cfg
+
+def validate_git_http_config(cfg):
+    need(cfg.get('GIT_SMART_HTTP_ENABLED') in ['true','false'],'Explicit Smart HTTP mode required')
+    if cfg.get('GIT_SMART_HTTP_ENABLED')=='true':
+        need(cfg.get('GIT_HTTP_PORT')=='3001','Git listener must match the reviewed proxy port')
+        need(cfg.get('GIT_HTTP_BACKEND_EXECUTABLE')=='/usr/lib/git-core/git-http-backend','Unexpected Ubuntu Git HTTP backend')
 def pg_env(cfg,database=None):
     u=urlparse(cfg['DATABASE_URL']); db=unquote(u.path[1:])
     need(u.scheme in ['postgres','postgresql'] and u.hostname=='127.0.0.1' and (u.port or 5432)==5432 and unquote(u.username or '')=='origin_pilot','Unexpected database role/server')

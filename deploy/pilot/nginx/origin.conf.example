@@ -1,9 +1,14 @@
 # Install only after replacing domain and certificate paths and configuring pilot-access.conf.
 # No default public exposure. Azure NSG/host firewall are configured by the operator.
+limit_req_zone $binary_remote_addr zone=origin_git_requests:1m rate=10r/s;
+limit_conn_zone $binary_remote_addr zone=origin_git_connections:1m;
 server {
     listen 80;
     server_name REPLACE_WITH_YOUR_DOMAIN;
-    return 301 https://$host$request_uri;
+    # Never redirect Git Basic credentials from plaintext HTTP. Start with HTTPS.
+    location /api/v1/git/ { return 404; }
+    location /git/ { return 404; }
+    location / { return 301 https://$host$request_uri; }
 }
 server {
     listen 443 ssl;
@@ -23,6 +28,30 @@ server {
     # Do not record setup/recovery credentials or request bodies in proxy logs.
     access_log off;
     error_log /var/log/nginx/origin-error.log warn;
+    # Canonical Code URLs only. No filesystem/dumb HTTP routes or API on this port.
+    location ^~ /api/v1/git/ {
+        limit_req zone=origin_git_requests burst=20 nodelay;
+        limit_req_status 429;
+        limit_conn origin_git_connections 8;
+        limit_conn_status 429;
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Cookie "";
+        proxy_set_header Connection "";
+        client_max_body_size 25m;
+        client_body_timeout 70s;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 70s;
+        proxy_send_timeout 70s;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_next_upstream off;
+        add_header Cache-Control 'no-store' always;
+    }
     location /api/ {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;

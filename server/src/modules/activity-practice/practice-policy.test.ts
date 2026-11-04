@@ -13,7 +13,7 @@ describe('final activity practice eligibility', () => {
   it('requires final released score and feedback, accepts authoritative empty feedback, and ignores credit ranking',()=>{
     expect(officialPracticeComplete(2,[{...released,releasedFinalScore:10},{...released,releasedFinalScore:100}],false)).toBe(true)
     for(const changes of [{releasedAt:null},{releasedFinalScore:null},{feedback:{releasedAt:null}},{gradingModeSnapshot:'COMPLETION'},{submissionStatus:'FAILED_RESOLVED'}]) expect(officialPracticeComplete(1,[{...released,...changes}],false)).toBe(false)
-    expect(officialPracticeComplete(1,[{...released,feedback:null}],false)).toBe(true)
+    expect(officialPracticeComplete(1,[{...released,feedback:null}],false)).toBe(false)
   })
   it('suspends for valid replacements and requires the replacement final result before resuming',()=>{
     expect(officialPracticeComplete(1,[released],true)).toBe(false)

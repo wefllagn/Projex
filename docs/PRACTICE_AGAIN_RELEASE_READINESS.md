@@ -1,5 +1,7 @@
 # Practice Again acceptance and release readiness
 
+Historical component acceptance. The combined release and corrected explicit-feedback policy are documented in [Origin integration release candidate](ORIGIN_INTEGRATION_RELEASE_CANDIDATE.md); its newer verification and platform/deployment gates supersede this component's release conclusions.
+
 Review date: 2026-11-04, Asia/Manila. Isolated branch `feature/released-practice-mode`. Scope: all 48 files introduced by `19b53df`, additive migration, and the bounded acceptance fixes in this review. Live Windows and Azure were neither inspected for private configuration nor changed.
 
 ## Ancestry and policy

@@ -7,7 +7,7 @@ export function officialPracticeComplete(maxAttempts: number, attempts: Array<{ 
   return !replacementAvailable && attempts.filter(a => a.countsTowardAttemptLimit).length >= maxAttempts
     && attempts.every(a => ['RELEASED', 'FAILED_RESOLVED'].includes(a.submissionStatus))
     && Boolean(final && final.gradingModeSnapshot === 'GRADED' && final.submissionStatus === 'RELEASED'
-      && final.releasedAt && final.releasedFinalScore !== null && (!final.feedback || final.feedback.releasedAt))
+      && final.releasedAt && final.releasedFinalScore !== null && final.feedback?.releasedAt)
 }
 
 export async function practiceEligible(tx: Prisma.TransactionClient, activityId: string, studentId: string) {

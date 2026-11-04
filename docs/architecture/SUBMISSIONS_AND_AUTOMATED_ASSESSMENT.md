@@ -2,7 +2,7 @@
 
 ## Activity Practice Again (2026-11-04)
 
-Practice requires exhausted counting attempts, a fully released latest graded attempt and optional feedback, no pending official work and no valid replacement opportunity. It is independent of LATEST/HIGHEST credit selection. One student/activity starter-based workspace persists across temporary suspension. Practice runs use ungraded visible-only execution; official evidence remains immutable. See [implementation and verification](../ACTIVITY_PRACTICE_VERIFICATION.md).
+Practice requires exhausted counting attempts, the latest applicable graded attempt's released score and an explicitly released feedback record, no pending official work and no valid replacement opportunity. Written comments may be empty: the instructor release transaction persists their release state atomically with the result. Missing or draft feedback never qualifies; historical absent records are not backfilled implicitly. This gate is independent of LATEST/HIGHEST credit selection. One student/activity starter-based workspace persists across temporary suspension. Practice runs use ungraded visible-only execution; official evidence remains immutable. See [implementation and verification](../ACTIVITY_PRACTICE_VERIFICATION.md).
 
 ## Status and scope
 

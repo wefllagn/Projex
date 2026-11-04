@@ -906,12 +906,25 @@ export function createPrismaSubmissionRepository(
             updatedAt: nextUpdatedAt(input.expectedUpdatedAt, input.now),
           },
         })
+        // A deliberate empty-comment release is authoritative feedback too.
+        // Persist its release state atomically with the score; absence is never
+        // evidence that feedback was released (including for historical rows).
         if (record.feedback) {
           await transaction.submissionFeedback.update({
             where: { submissionId: record.id },
             data: { releasedAt: input.now, releasedById: input.instructorId },
           })
-        }
+        } else if (!completion) await transaction.submissionFeedback.create({
+          data: {
+            submissionId: record.id,
+            instructorId: input.instructorId,
+            feedbackText: '',
+            createdAt: input.now,
+            updatedAt: input.now,
+            releasedAt: input.now,
+            releasedById: input.instructorId,
+          },
+        })
         return {
           kind: 'updated',
           submission: (await loadSubmission(transaction, record.id))!,

@@ -78,7 +78,7 @@ export interface GitCredentialService {
 }
 
 export function createGitCredentialService(dependencies: {
-  issuanceEnabled: boolean
+  issuanceEnabled: boolean | (() => Promise<boolean>)
   repository: GitTransportRepository
   logger: Logger
   credentialTtlMinutes: number
@@ -96,7 +96,10 @@ export function createGitCredentialService(dependencies: {
 
   return {
     async issue(caller, repositoryId, operations) {
-      if (!dependencies.issuanceEnabled) throw smartHttpUnavailable()
+      const available = typeof dependencies.issuanceEnabled === 'function'
+        ? await dependencies.issuanceEnabled()
+        : dependencies.issuanceEnabled
+      if (!available) throw smartHttpUnavailable()
       const current = now()
       const { permission } = await currentAccess(caller, repositoryId)
       for (const operation of operations) {

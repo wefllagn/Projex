@@ -17,24 +17,31 @@ export function CapabilityProvider({ children, client = apiClient }) {
     setState((current) => ({ ...current, status: 'loading' }))
     try {
       const response = await client.get('/capabilities', { signal, allowRefresh: false })
+      if (signal?.aborted) return
       setState({ status: 'ready', ...safeProjection(response.data) })
     } catch (error) {
-      if (error?.name !== 'AbortError') setState({ ...DISABLED_CAPABILITIES, status: 'error' })
+      if (!signal?.aborted && error?.name !== 'AbortError') setState({ ...DISABLED_CAPABILITIES, status: 'error' })
     }
   }, [client])
   useEffect(() => {
-    const controller = new AbortController()
-    const load = async () => {
-      try {
-        const response = await client.get('/capabilities', { signal: controller.signal, allowRefresh: false })
-        setState({ status: 'ready', ...safeProjection(response.data) })
-      } catch (error) {
-        if (error?.name !== 'AbortError') setState({ ...DISABLED_CAPABILITIES, status: 'error' })
-      }
+    let controller
+    const load = () => {
+      controller?.abort()
+      controller = new AbortController()
+      void refresh({ signal: controller.signal })
     }
     load()
-    return () => controller.abort()
-  }, [client])
+    const visible = () => { if (document.visibilityState === 'visible') load() }
+    window.addEventListener('focus', load)
+    document.addEventListener('visibilitychange', visible)
+    const timer = window.setInterval(visible, 15000)
+    return () => {
+      controller.abort()
+      window.clearInterval(timer)
+      window.removeEventListener('focus', load)
+      document.removeEventListener('visibilitychange', visible)
+    }
+  }, [refresh])
   const value = useMemo(() => ({ ...state, refresh }), [refresh, state])
   return <CapabilityContext.Provider value={value}>{children}</CapabilityContext.Provider>
 }

@@ -1,6 +1,6 @@
 [Unit]
 Description=Origin api pilot service
-After=network-online.target postgresql.service
+After=network-online.target postgresql.service origin-git.service
 Wants=network-online.target
 StartLimitIntervalSec=300
 StartLimitBurst=3

@@ -1,14 +1,14 @@
-import { spawn } from 'node:child_process'
+import { spawn, execFileSync } from 'node:child_process'
 import { createActivityPracticeService } from '../../src/modules/activity-practice/practice.service.js'
 import { createActivityPracticeWorker } from '../../src/modules/activity-practice/practice.worker.js'
 import { createGitPracticeWriter } from '../../src/infrastructure/git/git-practice-writer.js'
 import { evaluateGitPermission } from '../../src/modules/git-transport/git-authorization.js'
 import { javaSourceCases } from '../java/source-cases.js'
-import { createServer, type Server } from 'node:http'
+import { createServer, type Server, type RequestListener } from 'node:http'
+import { createServer as createHttpsServer, type Server as HttpsServer, type ServerOptions as HttpsOptions } from 'node:https'
 import { request as nodeRequest } from 'node:http'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import express, { type RequestHandler } from 'express'
 import pino from 'pino'
 import type { PrismaClient } from '@prisma/client'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
@@ -16,15 +16,13 @@ import { createGitCommandRunner } from '../../src/infrastructure/git/git-command
 import { createGitActivityCheckpointWriter } from '../../src/infrastructure/git/git-activity-checkpoint-writer.js'
 import { createGitRepositoryReader } from '../../src/infrastructure/git/git-repository-reader.js'
 import { createGitSmartHttpBackend } from '../../src/infrastructure/git/git-smart-http.js'
+import { createGitHttpWorkerServer } from '../../src/infrastructure/git/git-http-worker.js'
 import { createPostgresRepositoryProvisioningQueue } from '../../src/infrastructure/job-queue/repository-provisioning-queue.js'
-import { createErrorHandler } from '../../src/middleware/error-handler.js'
-import { requestIdMiddleware } from '../../src/middleware/request-id.js'
 import { createRepositoryStorage } from '../../src/infrastructure/storage/repository-storage.js'
 import { createPrismaAdminRepository } from '../../src/modules/admin/admin.repository.js'
 import { createAdminService } from '../../src/modules/admin/admin.service.js'
 import { createGitCredentialService } from '../../src/modules/git-transport/git-credential.service.js'
 import { createPrismaGitTransportRepository } from '../../src/modules/git-transport/git-transport.repository.js'
-import { createGitTransportRouter } from '../../src/modules/git-transport/git-transport.routes.js'
 import { createGitTransportService } from '../../src/modules/git-transport/git-transport.service.js'
 import { createRepositoryContentService } from '../../src/modules/repository-content/repository-content.service.js'
 import { createRepositoryProvisioningService } from '../../src/modules/repositories/repository-provisioning.service.js'
@@ -97,21 +95,37 @@ const transportService = createGitTransportService({ enabled: true, credentialSe
 const practiceService = createActivityPracticeService({ prisma, content: contentService, enabled: true })
 const practiceWriter = createGitPracticeWriter({ git, resolveRepository: (id, locator) => storage.resolveManagedRepository(id, locator), checkSize: async root => { if (await storage.measure(root) > 104857600) throw new Error('TEST_SIZE_LIMIT') } })
 const practiceWorker = createActivityPracticeWorker({ prisma, writer: practiceWriter, logger })
-let server: Server
+type TestServer = Server | HttpsServer
+let server: TestServer
 let origin: string
+const upstreams = new Map<TestServer, Server>()
 
-async function startLoopbackServer(service = transportService): Promise<{ server: Server; origin: string }> {
-  const app = express()
-  app.use(requestIdMiddleware)
-  app.use(express.json({ limit: '1mb' }))
-  const pass: RequestHandler = (_request, _response, next) => next()
-  app.use('/api/v1', createGitTransportRouter({ credentialService, transportService: service, requireAuthentication: pass, requireCsrf: pass }))
-  app.use(createErrorHandler(logger))
-  const instance = createServer(app)
+async function startLoopbackServer(service = transportService, tls?: HttpsOptions): Promise<{ server: TestServer; origin: string }> {
+  const upstream = createGitHttpWorkerServer({ enabled: true, credentialService, transportService: service, logger, timeoutMs: 60_000, databaseReady: async () => { await prisma.$queryRaw`SELECT 1` } })
+  await new Promise<void>(resolve => upstream.listen(0, '127.0.0.1', resolve))
+  const port = (upstream.address() as { port: number }).port
+  // Loopback proxy models TLS termination, header replacement and streaming.
+  // Real Nginx/TLS acceptance is a separate disposable-host check.
+  const forward: RequestListener = (req, res) => {
+    if (!req.url?.startsWith('/api/v1/git/')) { res.writeHead(404); res.end(); return }
+    const forwarded = nodeRequest({ hostname: '127.0.0.1', port, path: req.url, method: req.method, headers: { ...req.headers, 'x-forwarded-proto': 'https', cookie: '' } }, response => {
+      res.writeHead(response.statusCode ?? 502, response.headers)
+      response.on('aborted', () => res.destroy())
+      response.on('error', () => res.destroy())
+      response.pipe(res)
+    })
+    forwarded.on('error', () => { if (!res.headersSent) res.writeHead(502); res.end() })
+    req.once('aborted', () => forwarded.destroy())
+    res.once('close', () => { if (!res.writableEnded) forwarded.destroy() })
+    forwarded.flushHeaders()
+    req.pipe(forwarded)
+  }
+  const instance = tls ? createHttpsServer(tls, forward) : createServer(forward)
+  upstreams.set(instance, upstream)
   await new Promise<void>((resolve) => instance.listen(0, '127.0.0.1', resolve))
   const address = instance.address()
   if (!address || typeof address === 'string') throw new Error('TEST_SERVER_ADDRESS_INVALID')
-  return { server: instance, origin: `http://127.0.0.1:${address.port}` }
+  return { server: instance, origin: `${tls ? 'https' : 'http'}://127.0.0.1:${address.port}` }
 }
 
 function customTransport(overrides: Partial<Parameters<typeof createGitSmartHttpBackend>[0]['limits']>) {
@@ -138,7 +152,15 @@ function customTransport(overrides: Partial<Parameters<typeof createGitSmartHttp
 
 function closeServer(): Promise<void> {
   if (!server) return Promise.resolve()
-  return new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
+  return closeLoopbackServer(server)
+}
+
+async function closeLoopbackServer(instance: TestServer): Promise<void> {
+  instance.closeAllConnections()
+  await new Promise<void>((resolve, reject) => instance.close(error => error ? reject(error) : resolve()))
+  const upstream = upstreams.get(instance)
+  if (upstream) { upstream.closeAllConnections(); await new Promise<void>(resolve => upstream.close(() => resolve())) }
+  upstreams.delete(instance)
 }
 
 function clientEnvironment(authorization?: string): NodeJS.ProcessEnv {
@@ -444,7 +466,11 @@ describe('released activity practice with native Git', () => {
 
   it('rejects pre-release, draft feedback and ungraded results, while an explicitly released empty feedback unlocks practice', async () => {
     const f = await practiceFixture('')
+    expect(await prisma.submissionFeedback.findUniqueOrThrow({ where: { submissionId: f.submissionId } })).toMatchObject({ feedbackText: '', releasedById: f.primary.id, releasedAt: expect.any(Date) })
     expect(await practiceService.availability(f.owner, f.activity.id)).toEqual({ available: true })
+    await prisma.submissionFeedback.delete({ where: { submissionId: f.submissionId } })
+    expect(await practiceService.availability(f.owner, f.activity.id)).toEqual({ available: false })
+    await expect(practiceService.enter(f.owner, f.activity.id)).rejects.toMatchObject({ statusCode: 404 })
     await prisma.submissionFeedback.create({ data: { submissionId: f.submissionId, instructorId: f.primary.id, feedbackText: 'Draft only' } })
     expect(await practiceService.availability(f.owner, f.activity.id)).toEqual({ available: false })
     await expect(practiceService.enter(f.owner, f.activity.id)).rejects.toMatchObject({ statusCode: 404 })
@@ -542,7 +568,7 @@ describe('released activity practice with native Git', () => {
       expect(result.code, result.stderr).toBe(0)
       await archive
       expect((await runGit(['push', 'origin', initial.branchName], work, auth)).code).not.toBe(0)
-    } finally { release(); await new Promise<void>(resolve => endpoint.server.close(() => resolve())) }
+    } finally { release(); await closeLoopbackServer(endpoint.server) }
   })
 })
 
@@ -564,6 +590,30 @@ afterAll(async () => {
 })
 
 describe('authenticated Git Smart HTTP', () => {
+  it('clones and pushes over verified HTTPS to the isolated listener, rejecting untrusted TLS and unauthorized writes', async () => {
+    const f = await provisionPersonal()
+    const auth = await issue(f.owner, f.repository.id, ['READ', 'WRITE'])
+    const reader = await issue(f.owner, f.repository.id, ['READ'])
+    const clients = path.join(storageRoot, 'clients', crypto.randomUUID()), work = path.join(clients, 'tls')
+    await mkdir(clients, { recursive: true })
+    const key = path.join(clients, 'test-key.pem'), cert = path.join(clients, 'test-cert.pem')
+    const openssl = process.platform === 'win32' ? path.resolve(gitExecutable, '../../usr/bin/openssl.exe') : '/usr/bin/openssl'
+    execFileSync(openssl, ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=127.0.0.1', '-addext', 'subjectAltName=IP:127.0.0.1', '-keyout', key, '-out', cert], { stdio: 'ignore', windowsHide: true })
+    const endpoint = await startLoopbackServer(transportService, { key: await readFile(key), cert: await readFile(cert), minVersion: 'TLSv1.2' })
+    try {
+      const url = `${endpoint.origin}/api/v1/git/repositories/${f.repository.id}`
+      const trust = [...(process.platform === 'win32' ? ['-c', 'http.sslBackend=openssl'] : []), '-c', `http.sslCAInfo=${cert}`]
+      expect((await runGit(['ls-remote', url], clients, auth)).code).not.toBe(0)
+      expect((await runGit([...trust, 'ls-remote', url], clients)).code).not.toBe(0)
+      expect((await runGit([...trust, 'clone', url, work], clients, auth)).code).toBe(0)
+      await runGit(['checkout', '-b', 'main'], work)
+      await clientCommit(work, 'class Main { int secureTransport = 1; }\n')
+      expect((await runGit([...trust, 'push', '-u', 'origin', 'main'], work, reader)).code).not.toBe(0)
+      expect((await runGit([...trust, 'push', '-u', 'origin', 'main'], work, auth)).code).toBe(0)
+      expect((await runGit([...trust, 'fetch', 'origin'], work, auth)).code).toBe(0)
+      expect((await contentService.file(f.owner, f.repository.id, { path: 'Main.java' })).content).toContain('secureTransport = 1')
+    } finally { await closeLoopbackServer(endpoint.server) }
+  })
   it.each(javaSourceCases.filter(c => ['Unicode and comment-like strings', 'CRLF and tabs', 'missing final newline', 'markers inside comments'].includes(c.name)))('preserves $name through native push and explicit submission', async ({ source }) => {
     const f = await provisionActivityWorkspace()
     const authorization = await issue(f.owner, f.repository.id, ['READ', 'WRITE'])
@@ -955,7 +1005,7 @@ describe('authenticated Git Smart HTTP', () => {
       expect(backendLocator).toBe(repository.storagePath)
       expect(backendLocator).not.toContain('\\')
     } finally {
-      await new Promise<void>((resolve) => local.server.close(() => resolve()))
+      await closeLoopbackServer(local.server)
     }
   })
 
@@ -1261,7 +1311,7 @@ describe('authenticated Git Smart HTTP', () => {
       request.flushHeaders()
     })
     expect(timeoutStatus).toBe(504)
-    await new Promise<void>((resolve) => timeoutServer.server.close(() => resolve()))
+    await closeLoopbackServer(timeoutServer.server)
 
     const requestLimitServer = await startLoopbackServer(customTransport({ requestBytes: 1_024 }))
     const requestLimitStatus = await new Promise<number>((resolve) => {
@@ -1274,13 +1324,13 @@ describe('authenticated Git Smart HTTP', () => {
       request.end(Buffer.alloc(2_048))
     })
     expect(requestLimitStatus).toBe(413)
-    await new Promise<void>((resolve) => requestLimitServer.server.close(() => resolve()))
+    await closeLoopbackServer(requestLimitServer.server)
 
     const outputLimitServer = await startLoopbackServer(customTransport({ responseBytes: 64 }))
     const clients = path.join(storageRoot, 'clients', crypto.randomUUID())
     await mkdir(clients, { recursive: true })
     expect((await runGit(['clone', `${outputLimitServer.origin}/api/v1/git/repositories/${repository.id}`, path.join(clients, 'limited')], clients, authorization)).code).not.toBe(0)
-    await new Promise<void>((resolve) => outputLimitServer.server.close(() => resolve()))
+    await closeLoopbackServer(outputLimitServer.server)
 
     const disconnectServer = await startLoopbackServer(customTransport({ timeoutMs: 5_000 }))
     await new Promise<void>((resolve) => {
@@ -1294,6 +1344,6 @@ describe('authenticated Git Smart HTTP', () => {
     })
     await new Promise((resolve) => setTimeout(resolve, 500))
     expect(await readdir(path.join(storageRoot, 'transport', 'requests'))).toEqual([])
-    await new Promise<void>((resolve) => disconnectServer.server.close(() => resolve()))
+    await closeLoopbackServer(disconnectServer.server)
   }, 30_000)
 })

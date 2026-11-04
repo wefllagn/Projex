@@ -206,7 +206,7 @@ function studentProjection(record: SubmissionRecord, isCreditedResult = false) {
     ...(released
       ? {
           ...(record.gradingModeSnapshot === 'COMPLETION' ? {} : { finalScore: Number(record.releasedFinalScore), totalPoints: Number(record.totalPointsSnapshot) }),
-          feedback: record.feedback?.releasedAt ? record.feedback.feedbackText : null,
+          feedback: record.feedback?.releasedAt ? record.feedback.feedbackText || null : null,
         }
       : {}),
     failureResolution: record.failureResolution
