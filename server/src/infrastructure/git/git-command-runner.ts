@@ -46,6 +46,15 @@ export function assertSupportedGitVersion(
   platform: NodeJS.Platform = process.platform,
 ): void {
   if (platform === 'win32') return assertSupportedGitForWindows(version)
+  // Ubuntu 24.04 retains 2.43.0 in --version while backporting security fixes.
+  // This is a command-compatibility floor, not a package authenticity/patch check.
+  if (platform === 'linux') {
+    if (version.windowsBuild !== null || version.major < 2 ||
+      (version.major === 2 && version.minor < 43)) {
+      throw new GitInfrastructureError('GIT_VERSION_UNSUPPORTED')
+    }
+    return
+  }
   // Verified macOS profile: upstream release output, as emitted by Homebrew Git.
   // Other vendor formats and other operating systems remain unsupported.
   if (platform !== 'darwin' || version.windowsBuild !== null || !meetsMinimumGitVersion(version)) {
