@@ -214,7 +214,7 @@ describe('PostgreSQL repository collaboration', () => {
     for (const [caller, expected] of expectedSourcePermissions) {
       const access = await gitAccessRepository.findAccess(created.id, caller.id)
       expect(access?.activityWorkspace).not.toBeNull()
-      expect(evaluateGitPermission({ ...access!, storageStatus: 'READY' }, currentTime)).toEqual(expected)
+      expect(evaluateGitPermission({ ...access!, storageStatus: 'READY' }, currentTime)).toEqual({ ...expected, activityBranches: { ordinary: expected.write, practice: null } })
     }
     await expect(repositories.createActivityWorkspace(removedStudent, firstActivity.id)).rejects.toMatchObject({ code: 'REPOSITORY_NOT_FOUND' })
     await expect(repositories.createActivityWorkspace(outsideStudent, firstActivity.id)).rejects.toMatchObject({ code: 'REPOSITORY_NOT_FOUND' })

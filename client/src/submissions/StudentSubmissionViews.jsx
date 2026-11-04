@@ -281,7 +281,7 @@ function isCheckpointPending(record) {
   return ['PENDING', 'RUNNING'].includes(record?.status)
 }
 
-function VisibleOutcomeList({ outcomes, emptyMessage = 'No visible-test outcomes are available yet.', hideHeading = false }) {
+export function VisibleOutcomeList({ outcomes, emptyMessage = 'No visible-test outcomes are available yet.', hideHeading = false }) {
   if (!outcomes.length) return <p className="submission-muted-copy">{emptyMessage}</p>
   return (
     <div className="submission-outcome-list">

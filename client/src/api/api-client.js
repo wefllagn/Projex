@@ -5,6 +5,10 @@ const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 // UI-owned copy only. Keep the original error, details and requestId intact for
 // diagnostics; never pass arbitrary server/transport messages into the UI.
 const BUSINESS_MESSAGES = {
+    PRACTICE_UNAVAILABLE: 'Practice is unavailable. Return to the activity and check your access, then try again.',
+    PRACTICE_HEAD_CHANGED: 'Your saved practice changed elsewhere. Your editor is preserved. Reload saved practice before saving again.',
+    PRACTICE_SAVE_PENDING: 'A practice save is still processing. Check its result before saving again.',
+    PRACTICE_REQUEST_CONFLICT: 'This save request changed. Reload saved practice before trying again.',
   SUBMISSION_BUSY: 'Another request is processing. Check attempt history, then retry the same request.',
   SOURCE_CODE_INVALID: 'Enter non-empty Java source saved as valid text, then try again.',
   SETUP_RESEND_COOLDOWN: 'A setup link was sent recently. Try again later.',

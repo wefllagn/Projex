@@ -27,6 +27,7 @@ import {
 import { isOrdinarySubmissionOpen } from '../activities/activity.types.js'
 
 export interface ExecutionFeatureConfig {
+  practiceWorkspaceEnabled?: boolean
   mode: 'disabled' | 'local_process' | 'container'
   sourceLimitBytes: number
   practiceRunTtlHours: number
@@ -418,6 +419,7 @@ function attemptStateProjection(
 
   return {
     activityId: record.activity.id,
+    practiceAvailable: record.practiceAvailable === true,
     gradingMode: record.activity.gradingMode ?? 'GRADED',
     ...(record.activity.gradingMode === 'COMPLETION' ? { completionState: (record.acceptedAttempts ?? record.countingAttemptsUsed) > 0 ? 'COMPLETE' : 'NOT_SUBMITTED' } : {}),
     activityStatus: record.activity.status,
@@ -458,7 +460,7 @@ function attemptStateProjection(
   }
 }
 
-function practiceProjection(record: PracticeRecord) {
+export function practiceProjection(record: PracticeRecord) {
   return {
     id: record.id,
     activityId: record.activityId,
@@ -651,7 +653,7 @@ export function createSubmissionService(dependencies: {
         throw error(404, 'ACTIVITY_NOT_FOUND', 'Programming activity not found.')
       }
       return attemptStateProjection(
-        record,
+        { ...record, practiceAvailable: config.practiceWorkspaceEnabled !== false && record.practiceAvailable },
         config.mode !== 'disabled',
         observedAt,
       )

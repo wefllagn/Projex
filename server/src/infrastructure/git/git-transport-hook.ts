@@ -7,6 +7,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const HEAD_REF = /^refs\/heads\/(.+)$/
 
 interface Policy {
+  activityBranches?: { ordinary: boolean; practice: string | null }
   operationId: string
   repositoryId: string
   userId: string
@@ -47,6 +48,7 @@ function parsePolicy(): Policy {
       !UUID.test(policy.repositoryId) ||
       !UUID.test(policy.userId) ||
       typeof policy.canUpdateMain !== 'boolean' ||
+      (policy.activityBranches !== undefined && (typeof policy.activityBranches.ordinary !== 'boolean' || (policy.activityBranches.practice !== null && !/^practice\/[0-9a-f-]{36}$/.test(policy.activityBranches.practice)))) ||
       !Number.isInteger(policy.maxBranches) ||
       !Number.isInteger(policy.maxRefUpdates) ||
       !Number.isInteger(policy.maxNewCommits) ||
@@ -183,6 +185,12 @@ async function validatePreReceive(policy: Policy, updates: RefUpdate[]): Promise
 
   for (const update of updates) {
     await runGit(['check-ref-format', update.refName])
+    if (policy.activityBranches) {
+      const scope = policy.activityBranches
+      const reserved = update.branchName.toLowerCase() === 'practice' || update.branchName.toLowerCase().startsWith('practice/')
+      if (reserved ? update.branchName !== scope.practice : !scope.ordinary) reject('ACTIVITY_BRANCH_NOT_WRITABLE')
+      if (reserved && (update.oldObjectId === ZERO || update.newObjectId === ZERO)) reject('PRACTICE_BRANCH_PROTECTED')
+    }
     if (update.branchName.toLowerCase() === 'main' && !policy.canUpdateMain) {
       reject('MAIN_BRANCH_PROTECTED')
     }

@@ -1,4 +1,5 @@
 import Gradebook from '../gradebook/Gradebook.jsx'
+import StudentPracticeWorkspace from '../submissions/StudentPracticeWorkspace.jsx'
 import ClassIdentityBadge from '../classes/ClassIdentityBadge.jsx'
 import GroupBrowserEditor from '../repositories/GroupBrowserEditor.jsx'
 import ClassCardGrid from '../classes/ClassCardGrid.jsx'
@@ -453,6 +454,7 @@ export function StudentRoutePage({ pagePath }) {
     submissions: <Navigate to="/student/todo?tab=done" replace />,
     'activity/:activityId': <ActivityDetailPage />,
     'activity/:activityId/workspace': <StudentProgrammingWorkspace />,
+    'activity/:activityId/practice': <StudentPracticeWorkspace />,
     'activity/:activityId/submissions': <SubmissionHistoryPage />,
     'activity/:activityId/submissions/:submissionId': <SubmissionDetailPage />,
     'activity/:activityId/submission-record': <LegacySubmissionRoute />,

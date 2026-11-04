@@ -16,6 +16,7 @@ import type {
 } from '@prisma/client'
 
 export interface GitTransportAccess {
+  practice?: { branch: string; eligible: boolean }
   repositoryId: string
   repositoryType: RepositoryType
   ownerId: string
@@ -60,6 +61,7 @@ export interface GitTransportAccess {
 }
 
 export interface GitPermission {
+  activityBranches?: { ordinary: boolean; practice: string | null }
   read: boolean
   write: boolean
   canUpdateMain: boolean

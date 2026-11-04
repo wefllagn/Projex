@@ -42,7 +42,7 @@ export function createActivityWorkspaceCheckpointService(dependencies: {
     const workspace = await dependencies.repository.findWorkspace(activityId, caller.id)
     if (!workspace) throw new AppError({ statusCode: 404, code: 'ACTIVITY_WORKSPACE_NOT_FOUND', message: 'Activity Workspace was not found.' })
     const access = await dependencies.accessRepository.findAccess(workspace.repositoryId, caller.id)
-    if (!access || access.repositoryType !== 'ACTIVITY_WORKSPACE' || !evaluateGitPermission(access, now()).write) {
+    if (!access || access.repositoryType !== 'ACTIVITY_WORKSPACE' || !evaluateGitPermission(access, now()).canUpdateMain) {
       throw new AppError({ statusCode: 409, code: 'ACTIVITY_WORKSPACE_NOT_WRITABLE', message: 'The Activity Workspace is not accepting checkpoints.' })
     }
     return workspace

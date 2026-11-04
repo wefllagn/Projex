@@ -1,4 +1,5 @@
 import type { GitCredentialOperation, PrismaClient, Prisma } from '@prisma/client'
+import { lockPracticePolicy, practiceBranch, practiceEligible } from '../activity-practice/practice-policy.js'
 import type {
   AcceptedPushReceipt,
   GitCredentialProjection,
@@ -11,6 +12,7 @@ interface StoredGitCredential extends GitCredentialProjection {
 }
 
 export interface GitTransportRepository {
+  withActivityWriteFence?<T>(repositoryId: string, userId: string, credentialId: string, action: () => Promise<T>): Promise<T>
   findAccess(repositoryId: string, userId: string): Promise<GitTransportAccess | null>
   createCredential(input: {
     userId: string
@@ -47,8 +49,17 @@ function credentialProjection(record: {
   }
 }
 
-export function createPrismaGitTransportRepository(prisma: PrismaClient, accessClient: Pick<Prisma.TransactionClient, 'user' | 'repository'> = prisma): GitTransportRepository {
+export function createPrismaGitTransportRepository(prisma: PrismaClient, accessClient: Prisma.TransactionClient = prisma): GitTransportRepository {
   return {
+    async withActivityWriteFence(repositoryId, userId, credentialId, action) {
+      const repository = await prisma.repository.findUnique({ where: { id: repositoryId }, select: { activityId: true, repositoryType: true } })
+      if (repository?.repositoryType !== 'ACTIVITY_WORKSPACE' || !repository.activityId) return action()
+      return prisma.$transaction(async tx => {
+        await lockPracticePolicy(tx, repository.activityId!, userId)
+        await tx.$queryRaw`SELECT git_credential_id FROM git_credentials WHERE git_credential_id = ${credentialId}::uuid FOR SHARE`
+        return action()
+      }, { timeout: 600000, maxWait: 10000 })
+    },
     async findAccess(repositoryId, userId) {
       const [user, repository] = await Promise.all([
         accessClient.user.findUnique({
@@ -66,6 +77,7 @@ export function createPrismaGitTransportRepository(prisma: PrismaClient, accessC
             storagePath: true,
             defaultBranch: true,
             reviewStatus: true,
+            activityPracticeWorkspace: { select: { id: true, initializedAt: true, activityId: true, studentId: true } },
             members: {
               where: { studentId: userId },
               select: { memberRole: true, status: true },
@@ -124,7 +136,9 @@ export function createPrismaGitTransportRepository(prisma: PrismaClient, accessC
         }),
       ])
       if (!user || !repository) return null
+      const practice = repository.activityPracticeWorkspace
       return {
+        ...(practice && practice.studentId === userId ? { practice: { branch: practiceBranch(practice.id), eligible: Boolean(practice.initializedAt && await practiceEligible(accessClient, practice.activityId, userId)) } } : {}),
         repositoryId: repository.id,
         repositoryType: repository.repositoryType,
         ownerId: repository.ownerId,

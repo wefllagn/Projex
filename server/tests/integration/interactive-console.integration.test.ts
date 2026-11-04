@@ -17,6 +17,11 @@ import { createPrismaAuthRepository } from '../../src/modules/auth/auth.reposito
 import { createAuthService } from '../../src/modules/auth/auth.service.js'
 import { createTokenService } from '../../src/modules/auth/auth.tokens.js'
 import { createConsoleRouter } from '../../src/modules/interactive-console/console.routes.js'
+import { createActivityPracticeRouter } from '../../src/modules/activity-practice/practice.routes.js'
+import { createActivityPracticeService } from '../../src/modules/activity-practice/practice.service.js'
+import type { RepositoryContentService } from '../../src/modules/repository-content/repository-content.service.js'
+import { createPrismaSubmissionRepository } from '../../src/modules/submissions/submission.repository.js'
+import { createSubmissionService } from '../../src/modules/submissions/submission.service.js'
 import { executeConsoleJob } from '../../src/modules/interactive-console/console.worker.js'
 import { cleanIntegrationDatabase, createActiveClass, createActiveMembership, createActiveUser, createIntegrationPrisma } from './database.js'
 
@@ -56,6 +61,10 @@ async function fixture() {
       auth: createAuthRouter({ authService, cookieConfig: { secure: false, sameSite: 'lax', accessMaxAgeMs: 900000, refreshMaxAgeMs: 86400000 }, requireAuthentication, requireLogoutAuthentication: requireAuthentication, requireCsrf }),
       accountSetup: Router(), users: Router(), classes: Router(), activities: Router(), submissions: Router(),
       interactiveConsole: createConsoleRouter({ prisma, config, requireAuthentication, requireCsrf }),
+      activityPractice: createActivityPracticeRouter({ prisma, config, requireAuthentication, requireCsrf, service: createActivityPracticeService({ prisma, enabled: true,
+        // These API/execution tests do not inspect Git content. Native Git tests
+        // separately exercise the real reader, initialization and publication.
+        content: { file: async () => { throw new Error('UNEXPECTED_GIT_READ') } } as unknown as RepositoryContentService }) }),
     } })
   async function login(email: string) {
     const agent = request.agent(app)
@@ -84,8 +93,91 @@ async function fixture() {
     return { done: executeConsoleJob(prisma, runner, job!, { leaseMs: 5000, stopping: () => false }), job: job! }
   }
   const record = (id: string) => prisma.interactiveConsole.findUniqueOrThrow({ where: { id } })
-  return { app, client, create, work, record, activity, student, outsider, instructor, login }
+  return { app, client, create, work, record, activity, student, outsider, instructor, login, runner }
 }
+
+async function releasedPracticeFixture() {
+  const f = await fixture()
+  await prisma.programmingActivity.update({ where: { id: f.activity.id }, data: { maxAttempts: 1 } })
+  const service = createSubmissionService({ repository: createPrismaSubmissionRepository(prisma), logger, config })
+  const created = await service.create(f.student, f.activity.id, source('System.out.print("official");'), randomUUID())
+  const submissionId = (created.submission as { id: string }).id
+  const queue = createPostgresExecutionQueue(prisma)
+  await prisma.executionJob.updateMany({ where: { status: 'QUEUED', claimAttempt: 0 }, data: { availableAt: new Date(0) } })
+  const job = await queue.claimNext({ workerId: randomUUID(), now: new Date(), leaseMs: 60000 })
+  if (!job) throw new Error('MISSING_OFFICIAL_JOB')
+  await queue.complete(job, { compileStatus: 'SUCCESS', runtimeStatus: 'PASSED', compilerOutput: null,
+    cases: job.cases.map(c => ({ id: c.id, status: 'PASSED', actualOutput: 'ok', errorMessage: null, executionTimeMs: 1, automatedPoints: c.maximumPoints ?? 0 })) }, new Date())
+  const assessed = await prisma.activitySubmission.findUniqueOrThrow({ where: { id: submissionId } })
+  await service.review(f.instructor, submissionId, { expectedUpdatedAt: assessed.updatedAt, instructorPoints: 0, feedbackText: 'Try another solution.' })
+  const reviewed = await prisma.activitySubmission.findUniqueOrThrow({ where: { id: submissionId } })
+  await service.release(f.instructor, submissionId, { expectedUpdatedAt: reviewed.updatedAt })
+  const entered = await f.client.post(`/activities/${f.activity.id}/practice`, {}).expect(202)
+  const workspaceId = entered.body.data.workspaceId as string
+  const workspace = await prisma.activityPracticeWorkspace.findUniqueOrThrow({ where: { id: workspaceId } })
+  // Metadata-only fixture for Java admission. No Git command uses this locator.
+  await prisma.repository.update({ where: { id: workspace.repositoryId }, data: { storageStatus: 'READY', storagePath: `repositories/${workspace.repositoryId.slice(0,2)}/${workspace.repositoryId}.git`, provisionedAt: new Date(), storageVerifiedAt: new Date(), storageSizeBytes: 0 } })
+  await prisma.activityPracticeWorkspace.update({ where: { id: workspaceId }, data: { initializedAt: new Date() } })
+  await prisma.programmingActivity.update({ where: { id: f.activity.id }, data: { dueDate: new Date(0) } })
+  return { ...f, workspaceId, submissionId, queue, service }
+}
+
+describe('released practice API and safe Java execution', () => {
+  it('runs real interactive Java after the deadline, preserves official evidence, and cancels on archival', async () => {
+    const f = await releasedPracticeFixture()
+    const evidence = await prisma.activitySubmission.findUniqueOrThrow({ where: { id: f.submissionId }, include: { feedback: true, execution: true } })
+    const requestKey = randomUUID(), program = source('System.out.print("practice:"); System.out.println(new java.util.Scanner(System.in).nextLine());')
+    const response = await f.client.post(`/activities/${f.activity.id}/practice/interactive-code-runs`, { sourceCode: program, requestKey }).expect(202)
+    const id = response.body.data.id
+    await f.client.post(`/activities/${f.activity.id}/interactive-code-runs`, { sourceCode: program, requestKey }).expect(409)
+    const { done } = await f.work()
+    await until(() => f.record(id), r => r.phase === 'RUNNING')
+    await f.client.post(`/interactive-code-runs/${id}/input`, { sequence: 1, text: 'hello', eof: false }).expect(200)
+    await done
+    expect((await f.record(id)).phase).toBe('COMPLETED')
+    expect((await f.record(id)).stdout.replaceAll('\r\n', '\n')).toBe('practice:hello\n')
+    expect(await prisma.practiceExecution.findUniqueOrThrow({ where: { id } })).toMatchObject({ activityPracticeWorkspaceId: f.workspaceId })
+    expect(await prisma.activitySubmission.findUniqueOrThrow({ where: { id: f.submissionId }, include: { feedback: true, execution: true } })).toEqual(evidence)
+    const next = await f.client.post(`/activities/${f.activity.id}/practice/interactive-code-runs`, { sourceCode: source('Thread.sleep(20000);'), requestKey: randomUUID() }).expect(202)
+    const second = await f.work()
+    await until(() => f.record(next.body.data.id), r => r.phase === 'RUNNING')
+    await prisma.class.update({ where: { id: f.activity.classId }, data: { status: 'ARCHIVED' } })
+    await second.done
+    expect(await f.record(next.body.data.id)).toMatchObject({ phase: 'CANCELLED' })
+    await f.client.post(`/activities/${f.activity.id}/practice/interactive-code-runs`, { sourceCode: program, requestKey: randomUUID() }).expect(409)
+  })
+  it('queues only visible cases after the deadline and never consumes attempts or runs hidden tests', async () => {
+    const f = await releasedPracticeFixture()
+    await prisma.testCase.create({ data: { activityId: f.activity.id, name: 'Hidden private', testCaseOrder: 2, isHidden: true, expectedOutput: 'SECRET_EXPECTED', inputData: 'SECRET_INPUT', points: 0 } })
+    const response = await f.client.post(`/activities/${f.activity.id}/practice/visible-test-runs`, { sourceCode: source('System.out.print("ok");') }).expect(202)
+    expect(JSON.stringify(response.body)).not.toMatch(/SECRET_|Hidden private/)
+    expect(response.body.data.visibleTestOutcomes).toHaveLength(1)
+    const job = await until(() => f.queue.claimNext({ workerId: randomUUID(), now: new Date(), leaseMs: 60000 }), value => value !== null)
+    expect(job!.submissionId).toBeNull()
+    expect(job!.cases).toHaveLength(1)
+    const result = await f.runner.execute({ sourceCode: job!.sourceCode, entryClassName: job!.entryClassName, cases: job!.cases })
+    await f.queue.complete(job!, result, new Date())
+    expect(await prisma.practiceExecution.findUniqueOrThrow({ where: { id: response.body.data.id } })).toMatchObject({ compileStatus: 'SUCCESS', runtimeStatus: 'PASSED', activityPracticeWorkspaceId: f.workspaceId })
+    expect(await prisma.activitySubmission.count()).toBe(1)
+    await expect(f.service.create(f.student, f.activity.id, source(''), randomUUID())).rejects.toMatchObject({ code: 'ACTIVITY_NOT_ACCEPTING_SUBMISSIONS' })
+  })
+  it('requires session, CSRF, released feedback and current ownership for every practice mutation', async () => {
+    const f = await releasedPracticeFixture(), base = `/activities/${f.activity.id}/practice`
+    await request(f.app).post('/api/v1' + base).send({}).expect(401)
+    await f.client.agent.post('/api/v1' + base).send({}).expect(403)
+    const outsider = await f.login(f.outsider.email), instructor = await f.login(f.instructor.email)
+    await outsider.post(base, {}).expect(404)
+    await instructor.post(base, {}).expect(403)
+    await f.client.post(base + '/saves', { operation: 'SAVE', sourceCode: source(''), expectedHead: 'a'.repeat(40), requestKey: randomUUID(), branchName: 'main' }).expect(400)
+    await f.client.post(base + '/saves', { operation: 'RESET', expectedHead: '../main', requestKey: randomUUID() }).expect(400)
+    const first = await f.client.post(base + '/saves', { operation: 'SAVE', sourceCode: source(''), expectedHead: 'a'.repeat(40), requestKey: randomUUID() }).expect(409)
+    expect(JSON.stringify(first.body)).not.toContain('source_code')
+    await prisma.submissionFeedback.update({ where: { submissionId: f.submissionId }, data: { releasedAt: null, releasedById: null } })
+    await f.client.post(base, {}).expect(404)
+    await f.client.post(base + '/interactive-code-runs', { sourceCode: source(''), requestKey: randomUUID() }).expect(409)
+    await f.client.post(base + '/visible-test-runs', { sourceCode: source('') }).expect(409)
+  })
+})
 
 describe('authenticated durable interactive console with real Java', () => {
   it('streams Scanner prompts, deduplicates input and never creates academic or Git records', async () => {

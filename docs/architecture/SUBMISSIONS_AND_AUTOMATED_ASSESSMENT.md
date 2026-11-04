@@ -1,5 +1,9 @@
 # Projex Submissions and Automated Assessment
 
+## Activity Practice Again (2026-11-04)
+
+Practice requires exhausted counting attempts, a fully released latest graded attempt and optional feedback, no pending official work and no valid replacement opportunity. It is independent of LATEST/HIGHEST credit selection. One student/activity starter-based workspace persists across temporary suspension. Practice runs use ungraded visible-only execution; official evidence remains immutable. See [implementation and verification](../ACTIVITY_PRACTICE_VERIFICATION.md).
+
 ## Status and scope
 
 This document records the Phase 6 submission/assessment contract and the bounded Iteration 2 Instructor review-rerun extension. The original submission, score, and release contract remains unchanged.

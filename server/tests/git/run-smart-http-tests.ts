@@ -62,7 +62,7 @@ async function main(): Promise<void> {
     )
     runNode(
       vitestCli,
-      ['run', '--config', 'vitest.smart-http.config.ts'],
+      ['run', '--config', 'vitest.smart-http.config.ts', ...process.argv.slice(2)],
       environment,
       'Smart HTTP end-to-end tests failed.',
     )

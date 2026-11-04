@@ -344,6 +344,7 @@ enum RepositoryFeedbackStatus {
 }
 
 model User {
+  activityPracticeWorkspaces ActivityPracticeWorkspace[]
   id                            String                        @id @default(uuid()) @map("user_id") @db.Uuid
   fullName                      String                        @map("full_name")
   email                         String                        @unique
@@ -603,6 +604,7 @@ model ClassTopic {
 }
 
 model ProgrammingActivity {
+  activityPracticeWorkspaces ActivityPracticeWorkspace[]
   gradingConfiguration Json? @map("grading_configuration")
   gradingPeriod String? @map("grading_period") @db.VarChar(16)
   rubricCriteria Json? @map("rubric_criteria")
@@ -916,6 +918,8 @@ model InteractiveConsole {
 }
 
 model PracticeExecution {
+  activityPracticeWorkspaceId String? @map("activity_practice_workspace_id") @db.Uuid
+  activityPracticeWorkspace ActivityPracticeWorkspace? @relation(fields: [activityPracticeWorkspaceId], references: [id], onDelete: Restrict)
   id             String                  @id @default(uuid()) @map("practice_execution_id") @db.Uuid
   activityId     String                  @map("activity_id") @db.Uuid
   studentId      String                  @map("student_id") @db.Uuid
@@ -1032,6 +1036,7 @@ model TeamMember {
 }
 
 model Repository {
+  activityPracticeWorkspace ActivityPracticeWorkspace?
   id                 String                     @id @default(uuid()) @map("repository_id") @db.Uuid
   projectTaskId      String?                    @map("project_task_id") @db.Uuid
   classId            String?                    @map("class_id") @db.Uuid
@@ -1242,6 +1247,50 @@ model RepositoryFeedback {
   @@map("repository_feedback")
 }
 
+
+model ActivityPracticeWorkspace {
+  id String @id @default(uuid()) @map("practice_workspace_id") @db.Uuid
+  activityId String @map("activity_id") @db.Uuid
+  studentId String @map("student_id") @db.Uuid
+  repositoryId String @unique @map("repository_id") @db.Uuid
+  title String
+  instructions String @db.Text
+  starterCode String @map("starter_code") @db.Text
+  entryClassName String @map("entry_class_name")
+  initializedAt DateTime? @map("initialized_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  activity ProgrammingActivity @relation(fields: [activityId], references: [id], onDelete: Restrict)
+  student User @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Restrict)
+  jobs ActivityPracticeGitJob[]
+  executions PracticeExecution[]
+  @@unique([activityId, studentId])
+  @@map("activity_practice_workspaces")
+}
+
+model ActivityPracticeGitJob {
+  id String @id @default(uuid()) @map("practice_git_job_id") @db.Uuid
+  workspaceId String @map("workspace_id") @db.Uuid
+  operation String
+  content String @db.Text
+  expectedHead String? @map("expected_head")
+  resultingHead String? @map("resulting_head")
+  keyHash String @map("key_hash")
+  payloadHash String @map("payload_hash")
+  status RepositoryCheckpointJobStatus @default(PENDING)
+  publishStarted Boolean @default(false) @map("publish_started")
+  claimAttempt Int @default(0) @map("claim_attempt")
+  availableAt DateTime @default(now()) @map("available_at") @db.Timestamptz(3)
+  leaseExpiresAt DateTime? @map("lease_expires_at") @db.Timestamptz(3)
+  workerId String? @map("worker_id")
+  failureCode String? @map("failure_code")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+  workspace ActivityPracticeWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  @@unique([workspaceId, keyHash])
+  @@index([status, availableAt])
+  @@map("activity_practice_git_jobs")
+}
 
 model GroupBrowserRefJob {
   id String @id @default(uuid()) @map("browser_ref_id") @db.Uuid

@@ -1,5 +1,7 @@
 # Released Practice Mode and workflow hardening
 
+Historical checkpoint: practice status and proposed policy below are superseded by [ACTIVITY_PRACTICE_VERIFICATION.md](ACTIVITY_PRACTICE_VERIFICATION.md) and the final 2026-11-04 product decision. Earlier independent-fix evidence remains valid.
+
 2026-11-04, Asia/Manila.
 
 STATUS: PARTIAL. Confirmed independent workflow defects are fixed and tested.

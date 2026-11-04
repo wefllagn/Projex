@@ -24,7 +24,7 @@ export async function executeConsoleJob(prisma: PrismaClient, runner: JavaRunner
     if (options.stopping()) terminate('CANCELLED')
     else if (record.cancelRequested) terminate('CANCELLED')
     else if (now.getTime() - record.lastSeenAt.getTime() > 30_000 || now.getTime() - record.practice.createdAt.getTime() > 150_000) terminate('EXPIRED')
-    else if (!eligible(record, now)) terminate('CANCELLED')
+    else if (!await eligible(record, now, prisma)) terminate('CANCELLED')
     const owned = await prisma.executionJob.updateMany({ where: { id: job.id, workerId: job.workerId, status: 'RUNNING' },
       data: { leaseExpiresAt: new Date(now.getTime() + options.leaseMs) } })
     if (!owned.count) terminate('FAILED')

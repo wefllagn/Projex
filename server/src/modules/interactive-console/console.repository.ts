@@ -1,20 +1,28 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
+import { practiceEligible } from '../activity-practice/practice-policy.js'
 import { AppError } from '../../shared/errors/app-error.js'
 import { isOrdinarySubmissionOpen } from '../activities/activity.types.js'
 
 export const consoleInclude = {
   practice: { include: { student: { select: { role: true, status: true } }, executionJob: true,
+    activityPracticeWorkspace: { include: { repository: { include: { members: true } } } },
     activity: { include: { class: { include: { members: { select: { studentId: true, status: true } } } } } } } },
 } as const
 export type ConsoleRecord = Prisma.InteractiveConsoleGetPayload<{ include: typeof consoleInclude }>
 export interface ConsoleInput { sequence: number; text: string; eof: boolean }
 export const activePhases = ['QUEUED', 'COMPILING', 'RUNNING']
-export function eligible(record: ConsoleRecord, now: Date): boolean {
+export async function eligible(record: ConsoleRecord, now: Date, client: Prisma.TransactionClient): Promise<boolean> {
   const { practice } = record
   return practice.student.role === 'STUDENT' && practice.student.status === 'ACTIVE'
     && practice.activity.class.status === 'ACTIVE'
     && practice.activity.class.members.some((m) => m.studentId === practice.studentId && m.status === 'ACTIVE')
-    && isOrdinarySubmissionOpen(practice.activity.status, practice.activity.dueDate, now)
+    && (practice.activityPracticeWorkspaceId ? Boolean(practice.activityPracticeWorkspace?.initializedAt
+      && practice.activityPracticeWorkspace.studentId === practice.studentId && practice.activityPracticeWorkspace.activityId === practice.activityId
+      && practice.activityPracticeWorkspace.repository.status === 'ACTIVE' && practice.activityPracticeWorkspace.repository.storageStatus === 'READY'
+      && practice.activityPracticeWorkspace.repository.members.some(m => m.studentId === practice.studentId && m.status === 'ACTIVE' && m.memberRole === 'OWNER')
+      && ['PUBLISHED', 'CLOSED'].includes(practice.activity.status)
+      && await practiceEligible(client, practice.activityId, practice.studentId))
+      : isOrdinarySubmissionOpen(practice.activity.status, practice.activity.dueDate, now))
 }
 function missing(): never {
   throw new AppError({ statusCode: 404, code: 'CODE_RUN_NOT_FOUND', message: 'Code run not found.' })
@@ -36,7 +44,7 @@ export function createConsoleRepository(prisma: PrismaClient) {
         if (action === 'stop') {
           if (!terminal) await tx.interactiveConsole.update({ where: { id }, data: { cancelRequested: true } })
         } else if (action === 'input' && input) {
-          if (!eligible(record, now)) missing()
+          if (!await eligible(record, now, tx)) missing()
           const inputs = record.inputs as unknown as ConsoleInput[]
           const prior = inputs[input.sequence - 1]
           if (prior) {

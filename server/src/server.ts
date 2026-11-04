@@ -1,3 +1,5 @@
+import { createActivityPracticeService } from './modules/activity-practice/practice.service.js'
+import { createActivityPracticeRouter } from './modules/activity-practice/practice.routes.js'
 import { assertHostedGitService } from './infrastructure/preflight/hosted-service.js'
 import { createPasswordRecoveryRouter } from './modules/password-recovery/password-recovery.js'
 import { createGradebookRouter } from './modules/gradebook/gradebook.js'
@@ -188,6 +190,7 @@ async function bootstrap(): Promise<void> {
     repository: createPrismaSubmissionRepository(prisma),
     logger,
     config: {
+      practiceWorkspaceEnabled: env.gitExecutionMode !== 'disabled',
       mode: env.javaExecutionMode,
       sourceLimitBytes: env.javaSourceLimitBytes,
       practiceRunTtlHours: env.practiceRunTtlHours,
@@ -339,6 +342,9 @@ async function bootstrap(): Promise<void> {
         practiceRunTtlHours: env.practiceRunTtlHours, practiceRunsPerMinute: env.practiceRunsPerMinute,
         practiceMaxActivePerActivity: env.practiceMaxActivePerActivity,
       } }),
+      activityPractice: createActivityPracticeRouter({ prisma, requireAuthentication, requireCsrf,
+        service: createActivityPracticeService({ prisma, content: repositoryContentService, enabled: env.gitExecutionMode !== 'disabled' }),
+        config: { mode: env.javaExecutionMode, sourceLimitBytes: env.javaSourceLimitBytes, practiceRunTtlHours: env.practiceRunTtlHours, practiceRunsPerMinute: env.practiceRunsPerMinute, practiceMaxActivePerActivity: env.practiceMaxActivePerActivity } }),
       submissions: createSubmissionRouter({
         service: submissionService,
         requireAuthentication,

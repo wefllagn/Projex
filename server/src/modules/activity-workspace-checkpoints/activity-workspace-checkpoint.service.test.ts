@@ -74,6 +74,12 @@ function fixture(activityStatus: 'PUBLISHED' | 'CLOSED' = 'PUBLISHED') {
 }
 
 describe('Activity Workspace browser checkpoints', () => {
+  it('does not use post-release practice permission to write an ordinary main checkpoint', async () => {
+    const { service, repository, accessRepository } = fixture('CLOSED')
+    accessRepository.findAccess.mockResolvedValue({ ...access('CLOSED'), practice: { branch: 'practice/11111111-1111-4111-8111-111111111111', eligible: true } })
+    await expect(service.create(student, activityId, { sourceCode: 'class Main {}', expectedHeadCommitHash: null }, 'checkpoint:practice-denied')).rejects.toMatchObject({ code: 'ACTIVITY_WORKSPACE_NOT_WRITABLE' })
+    expect(repository.createCheckpoint).not.toHaveBeenCalled()
+  })
   it('queues an idempotent checkpoint without creating an academic submission', async () => {
     const { service, repository } = fixture()
     const result = await service.create(student, activityId, {

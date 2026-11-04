@@ -283,6 +283,7 @@ export function createGitSmartHttpBackend(options: {
         repositoryId: input.authentication.repositoryId,
         userId: input.authentication.userId,
         canUpdateMain: input.authentication.permission.canUpdateMain,
+        activityBranches: input.authentication.permission.activityBranches,
         maxBranches: options.limits.maxBranches,
         maxRefUpdates: options.limits.maxRefUpdates,
         maxNewCommits: options.limits.maxNewCommits,
