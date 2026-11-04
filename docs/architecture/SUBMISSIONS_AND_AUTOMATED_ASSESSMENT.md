@@ -1,5 +1,9 @@
 # Projex Submissions and Automated Assessment
 
+## Activity Practice Again (2026-11-04)
+
+Practice requires exhausted counting attempts, a fully released latest graded attempt and optional feedback, no pending official work and no valid replacement opportunity. It is independent of LATEST/HIGHEST credit selection. One student/activity starter-based workspace persists across temporary suspension. Practice runs use ungraded visible-only execution; official evidence remains immutable. See [implementation and verification](../ACTIVITY_PRACTICE_VERIFICATION.md).
+
 ## Status and scope
 
 This document records the Phase 6 submission/assessment contract and the bounded Iteration 2 Instructor review-rerun extension. The original submission, score, and release contract remains unchanged.
@@ -50,7 +54,27 @@ The serializable creation transaction:
 
 I2.3 Activity Git Workspace saves are explicitly outside this transaction. A browser checkpoint or native Git push creates no `ActivitySubmission`, consumes no attempt, queues no Java assessment, and produces no score. Loading the latest pushed/checkpointed entry file only replaces the editable browser source. The Student must still review that source and use the existing explicit Submit confirmation; submission continues to persist its own immutable source snapshot.
 
+Background Git observation does not adopt a new checkpoint base. The editor keeps
+its initial observed base until an explicit source load or a confirmed successful
+checkpoint; repeated saves after a newer push remain conflicts. Loading source
+must preserve any edits made while the request or confirmation was pending.
+Literal merge markers are source data: transport, submission snapshots and the
+Instructor viewer must neither insert nor strip them. See
+`../SUBMISSION_GIT_LIFECYCLE_AUDIT.md` for the 2026-11-03 regression evidence and
+the distinction between Activity attempt rules and Group review freezes.
+
 A new attempt returns `201`. An exact replay returns the original response with `200` and `meta.idempotentReplay=true`. Reusing the same scoped key with different source returns `DUPLICATE_SUBMISSION_REQUEST`. Another student has a separate scope.
+
+Blank-only or malformed Unicode source is rejected before allocating an attempt.
+Valid comments, Unicode and line endings are preserved. Submission creation may
+restart a rolled-back serializable transaction up to three total attempts with
+the same source and idempotency key. Each transaction repeats the authoritative
+checks; unknown database/connection failures are not automatically replayed.
+Exhausted serialization contention returns `SUBMISSION_BUSY` rather than exposing
+a database exception. The browser retains the original intent for this outcome,
+timeouts and ambiguous server failures, and offers the existing history/exact
+retry workflow. A source change during the Submit confirmation requires cancel
+and review before confirmation can proceed.
 
 ## Attempt allowance and replacement grants
 
@@ -91,6 +115,14 @@ stateDiagram-v2
 - `instructorPoints` remains within `0..instructorMaximum`.
 - `finalScore = effectiveAutomatedScore + instructorPoints` and remains within `0..totalPointsSnapshot`.
 - Release snapshots `releasedFinalScore` and makes the submission immutable during Phase 6.
+
+The release transaction also publishes any written feedback with `releasedAt`
+and `releasedById`. Saving an explicitly empty review removes its draft feedback
+row; releasing that reviewed submission therefore represents an intentional
+published result without written comments. Student projections never return a
+feedback row lacking its own release timestamp, even if a legacy/inconsistent
+submission is marked RELEASED. This visibility rule does not create a new release
+process or define a post-release Practice Mode policy.
 
 Every score correction is append-only and preserves correction order, original automated score, previous effective score, new effective score, mandatory reason, instructor identity, and timestamp.
 

@@ -60,6 +60,9 @@ def fingerprints(env):
         result[table]=sql(env,query)
     return result
 def quiet(env):
+    # Older demo schemas do not have this additive table yet.
+    if sql(env,"SELECT to_regclass('public.activity_practice_git_jobs') IS NOT NULL")=='t':
+        need(sql(env,"SELECT count(*) FROM activity_practice_git_jobs WHERE status='RUNNING'")=='0','Practice work is still running; recover its receipt before backup')
     for table,field in [('execution_jobs','status'),('repository_provisioning_jobs','status'),('repository_checkpoint_jobs','status'),('group_browser_ref_jobs','status'),('group_browser_commit_jobs','status')]:
         need(sql(env,f"SELECT count(*) FROM {table} WHERE {field}='RUNNING'")=='0','A job is still running; let it finish or use documented recovery, never edit its status manually')
     need(sql(env,"SELECT count(*) FROM repositories WHERE storage_status='PROVISIONING'")=='0','Repository provisioning not quiescent')

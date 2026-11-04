@@ -32,7 +32,7 @@ export function createActivityWorkspaceCheckpointWorkerService(dependencies: {
     async process(job: ClaimedRepositoryCheckpointJob): Promise<void> {
       try {
         const access = await dependencies.accessRepository.findAccess(job.repositoryId, job.studentId)
-        if (!access || access.repositoryType !== 'ACTIVITY_WORKSPACE' || !evaluateGitPermission(access, now()).write) {
+        if (!access || access.repositoryType !== 'ACTIVITY_WORKSPACE' || !evaluateGitPermission(access, now()).canUpdateMain) {
           await dependencies.queue.fail({ job, failureCode: 'CHECKPOINT_ACCESS_REVOKED', retryable: false, now: now() })
           return
         }
@@ -41,7 +41,7 @@ export function createActivityWorkspaceCheckpointWorkerService(dependencies: {
           checkpointId: job.id,
           beforePush: async () => {
             const currentAccess = await dependencies.accessRepository.findAccess(job.repositoryId, job.studentId)
-            if (!currentAccess || currentAccess.repositoryType !== 'ACTIVITY_WORKSPACE' || !evaluateGitPermission(currentAccess, now()).write) {
+            if (!currentAccess || currentAccess.repositoryType !== 'ACTIVITY_WORKSPACE' || !evaluateGitPermission(currentAccess, now()).canUpdateMain) {
               throw new GitCheckpointError('CHECKPOINT_ACCESS_REVOKED')
             }
           },

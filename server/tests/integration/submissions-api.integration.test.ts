@@ -25,7 +25,7 @@ const prisma = createIntegrationPrisma()
 const logger = pino({ level: 'silent' })
 const password = 'Phase6Integration1!'
 const source =
-  'public class Main { public static void main(String[] args) { java.util.Scanner s = new java.util.Scanner(System.in); System.out.println(s.nextInt() * 2); } }'
+  '/*\n<<<<<<< HEAD\nleft\n=======\nright\n>>>>>>> student\n*/\npublic class Main { public static void main(String[] args) { java.util.Scanner s = new java.util.Scanner(System.in); System.out.println(s.nextInt() * 2); } }'
 
 function csrfFrom(response: Response): string {
   const cookies = response.headers['set-cookie'] as unknown as string[]
@@ -199,6 +199,14 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
     })
     expect(JSON.stringify(initialAttemptState.body)).not.toContain(source)
 
+    for (const sourceCode of ['', ' \r\n\t', '\ud800', '\udc00', 'class Main {}\0']) {
+      await jsonMutation(studentAgent.post(`/api/v1/activities/${activity.id}/submissions`), studentCsrf)
+        .set('Idempotency-Key', crypto.randomUUID()).send({ sourceCode }).expect(400)
+    }
+    await jsonMutation(studentAgent.post(`/api/v1/activities/${activity.id}/submissions`), studentCsrf)
+      .set('Idempotency-Key', crypto.randomUUID()).send({ sourceCode: 'é'.repeat(50_001) }).expect(413)
+    expect(await prisma.activitySubmission.count()).toBe(0)
+
     await jsonMutation(
       studentAgent.post(`/api/v1/activities/${activity.id}/submissions`),
       studentCsrf,
@@ -221,6 +229,7 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
       .expect(200)
     expect(replay.body.meta.idempotentReplay).toBe(true)
     const submissionId = replay.body.data.id as string
+    expect((await prisma.activitySubmission.findUniqueOrThrow({ where: { id: submissionId } })).sourceCode).toBe(source)
 
     const queue = createPostgresExecutionQueue(prisma)
     const claimed = await queue.claimNext({
@@ -229,6 +238,7 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
       leaseMs: 60_000,
     })
     expect(claimed?.submissionId).toBe(submissionId)
+    expect(claimed?.sourceCode).toBe(source)
     await queue.complete(
       claimed!,
       {
@@ -307,6 +317,7 @@ describe('Phase 6 HTTP and PostgreSQL workflow', () => {
       .get(`/api/v1/submissions/${submissionId}`)
       .expect(200)
     expect(instructorView.body.data.assessment.testResults).toHaveLength(2)
+    expect(instructorView.body.data.sourceCode).toBe(source)
 
     await jsonMutation(
       instructorAgent.post(

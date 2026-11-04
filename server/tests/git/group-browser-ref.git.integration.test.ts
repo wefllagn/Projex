@@ -1,4 +1,5 @@
 import { createGitGroupBrowserRefWriter } from '../../src/infrastructure/git/git-group-browser-ref-writer.js'
+import { availableBrowserWorker } from './browser-worker-fixture.js'
 import { createGroupBrowserRefService } from '../../src/modules/group-browser-refs/group-browser-ref.service.js'
 import { createGroupBrowserRefWorker } from '../../src/modules/group-browser-refs/group-browser-ref-worker.js'
 import { randomUUID } from 'node:crypto'
@@ -22,7 +23,7 @@ const prisma = createIntegrationPrisma(), logger = pino({ level: 'silent' })
 const git = createGitCommandRunner({ executable: process.env.GIT_EXECUTABLE!, timeoutMs: 30000, outputLimitBytes: 4194304 })
 const storage = createRepositoryStorage({ root: process.env.GIT_STORAGE_ROOT!, repositorySizeLimitBytes: 104857600 })
 const writer = createGitGroupBrowserWriter({ git, resolveRepository: (id,locator) => storage.resolveManagedRepository(id,locator), checkSize: async root => { await storage.measure(root) } })
-const worker = createGroupBrowserCommitWorker({ prisma,writer,logger })
+const worker = availableBrowserWorker(prisma, createGroupBrowserCommitWorker({ prisma,writer,logger }))
 const service = createGroupBrowserCommitService({ prisma, accessRepository: createPrismaGitTransportRepository(prisma), enabled: true })
 const content = createRepositoryContentService({ enabled: true, accessRepository: createPrismaGitTransportRepository(prisma), storage, logger, reader: createGitRepositoryReader({ executable: process.env.GIT_EXECUTABLE!, timeoutMs:30000, commandOutputLimitBytes:4194304, fileLimitBytes:262144, diffLimitBytes:524288, maxChangedFiles:500, maxBranches:100, maxConcurrent:4 }) })
 async function fixture() {
@@ -53,7 +54,7 @@ async function commit(f:Awaited<ReturnType<typeof fixture>>, overrides = {}) {
 
 const reader=createGitRepositoryReader({ executable:process.env.GIT_EXECUTABLE!,timeoutMs:30000,commandOutputLimitBytes:4194304,fileLimitBytes:262144,diffLimitBytes:524288,maxChangedFiles:500,maxBranches:100,maxConcurrent:4 })
 const refWriter=createGitGroupBrowserRefWriter({git,maxBranches:100,resolveRepository:(id,locator)=>storage.resolveManagedRepository(id,locator)})
-const refWorker=createGroupBrowserRefWorker({prisma,writer:refWriter,logger})
+const refWorker=availableBrowserWorker(prisma, createGroupBrowserRefWorker({prisma,writer:refWriter,logger}))
 const refs=createGroupBrowserRefService({prisma,enabled:true,accessRepository:createPrismaGitTransportRepository(prisma),reader,storage})
 type Fixture=Awaited<ReturnType<typeof fixture>>
 async function revision(f:Fixture,name:string){return (await git.run(['--git-dir','.','rev-parse','refs/heads/'+name],f.root)).stdout.trim()}
@@ -146,7 +147,7 @@ describe('real Group branch creation and fast-forward merges',()=>{
     const input=await mergeInput(f,'feature/race'),queued=await refs.create(f.lead,f.repository.id,input,randomUUID())
     let advanced=''
     const racing={...refWriter,publish:async(...args:Parameters<typeof refWriter.publish>)=>{advanced=await advance(f,side==='source'?'feature/race':'main');return refWriter.publish(...args)}}
-    await createGroupBrowserRefWorker({prisma,writer:racing,logger}).processNext(randomUUID())
+    await availableBrowserWorker(prisma, createGroupBrowserRefWorker({prisma,writer:racing,logger})).processNext(randomUUID())
     expect(await refs.get(f.lead,f.repository.id,queued.jobId)).toMatchObject({status:'CONFLICTED',failureCode:'BROWSER_REF_CHANGED'})
     expect(await revision(f,'main')).toBe(side==='target'?advanced:input.expectedTargetCommitHash)
     expect(await revision(f,'feature/race')).toBe(side==='source'?advanced:input.expectedSourceCommitHash)
@@ -171,14 +172,14 @@ describe('real Group branch creation and fast-forward merges',()=>{
     const f=await fixture();await commit(f)
     const queued=await refs.create(f.developer,f.repository.id,{operation:'CREATE_BRANCH',sourceBranchName:'main',targetBranchName:'feature/late-revoke',expectedSourceCommitHash:await revision(f,'main'),expectedTargetCommitHash:null},randomUUID())
     const revoking={...refWriter,prepare:async(...args:Parameters<typeof refWriter.prepare>)=>{const value=await refWriter.prepare(...args);await prisma.$transaction(async tx=>{await tx.teamMember.updateMany({where:{teamId:f.team.id,studentId:f.developer.id},data:{status:'REMOVED',removedAt:new Date()}});await tx.repositoryMember.updateMany({where:{repositoryId:f.repository.id,studentId:f.developer.id},data:{status:'REMOVED',removedAt:new Date()}})});return value}}
-    await createGroupBrowserRefWorker({prisma,writer:revoking,logger}).processNext(randomUUID())
+    await availableBrowserWorker(prisma, createGroupBrowserRefWorker({prisma,writer:revoking,logger})).processNext(randomUUID())
     expect(await prisma.groupBrowserRefJob.findUnique({where:{id:queued.jobId}})).toMatchObject({status:'FAILED',failureCode:'BROWSER_ACCESS_REVOKED'})
   })
   it('recovers an interrupted published merge exactly once even after target advances or freezes',async()=>{
     const f=await fixture();await commit(f);await createBranch(f,f.lead,'feature/recovery');await advance(f,'feature/recovery')
     const input=await mergeInput(f,'feature/recovery'),key=randomUUID(),queued=await refs.create(f.lead,f.repository.id,input,key)
     const interrupted={...refWriter,publish:async(...args:Parameters<typeof refWriter.publish>)=>{await refWriter.publish(...args);throw Error('QA interruption after atomic publication')}}
-    await createGroupBrowserRefWorker({prisma,writer:interrupted,logger}).processNext(randomUUID())
+    await availableBrowserWorker(prisma, createGroupBrowserRefWorker({prisma,writer:interrupted,logger})).processNext(randomUUID())
     expect(await refs.get(f.lead,f.repository.id,queued.jobId)).toMatchObject({status:'PENDING'})
     const later=await advance(f,'main')
     await prisma.repository.update({where:{id:f.repository.id},data:{reviewStatus:'READY_FOR_REVIEW',readyForReviewAt:new Date()}})

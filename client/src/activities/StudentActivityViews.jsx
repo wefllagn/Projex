@@ -88,6 +88,7 @@ function StudentActivityReady({ activity, attemptState, testCases, classId, repo
           <button type="button" className="student-primary-action" disabled={repositoryAction.busy} onClick={() => repositoryAction.start('workspace')}>Open workspace</button>
           <button type="button" className="student-outline-action" disabled={repositoryAction.busy} onClick={() => repositoryAction.start('repository')}><ProjexIcon name="repository" size={18} />View repository</button>
           <button type="button" className="student-outline-action" onClick={() => setHistoryOpen(true)} aria-haspopup="dialog">Attempt history</button>
+          {attemptState.practiceAvailable && <NavLink className="student-outline-action" to={classHref(`/student/activity/${activity.id}/practice`, classId)}>Practice Again</NavLink>}
           {repositoryAction.busy && <p role="status">Preparing your repository…</p>}
           {repositoryAction.error && <p role="alert" className="activity-action-error">{describeApiError(repositoryAction.error)}</p>}
           {repositoryAction.stopped && <><small>Repository preparation is taking longer than expected.</small><button type="button" className="student-outline-action" onClick={repositoryAction.retry}>Check again</button></>}

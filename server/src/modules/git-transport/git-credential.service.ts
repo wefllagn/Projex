@@ -70,6 +70,7 @@ export interface GitCredentialService {
   list(caller: SafeUserProfile, repositoryId: string): Promise<GitCredentialProjection[]>
   revoke(caller: SafeUserProfile, credentialId: string): Promise<GitCredentialProjection>
   authenticate(input: {
+    touchLastUsed?: boolean
     authorization: string | undefined
     repositoryId: string
     operation: GitCredentialOperation
@@ -162,7 +163,7 @@ export function createGitCredentialService(dependencies: {
       if ((input.operation === 'READ' && !permission.read) || (input.operation === 'WRITE' && !permission.write)) {
         throw authenticationFailed()
       }
-      await repository.touchCredential(credential.credentialId, current)
+      if (input.touchLastUsed !== false) await repository.touchCredential(credential.credentialId, current)
       return {
         credentialId: credential.credentialId,
         userId: credential.userId,

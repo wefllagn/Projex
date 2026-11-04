@@ -138,6 +138,14 @@ describe('instructor submission queue', () => {
 })
 
 describe('instructor submission review', () => {
+  it.each(['class Main {}\n', '/*\n<<<<<<< HEAD\nleft\n=======\nright\n>>>>>>> student\n*/\nclass Main {}\n'])('renders the exact immutable source without inserting or stripping markers', async (sourceCode) => {
+    const submissions = submissionTransport({ getSubmission: vi.fn().mockResolvedValue({ data: record({ sourceCode }) }) })
+    const { container } = renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
+    await screen.findByText('Immutable submitted source')
+    await userEvent.click(screen.getByRole('tab', { name: 'Submitted code' }))
+    expect(container.querySelector('.instructor-code-card pre').textContent).toBe(sourceCode)
+  })
+
   it('saves each rubric criterion with the version and blocks release of unsaved criterion changes', async () => {
     const criteria = [{ id: 'readability', name: 'Readability', maximumPoints: 10 }, { id: 'organization', name: 'Organization', maximumPoints: 10 }]
     const saved = record({ status: 'reviewed', rubricCriteria: criteria, rubricScores: criteria.map(row => ({ criterionId: row.id, points: 0 })) })

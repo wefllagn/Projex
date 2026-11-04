@@ -1,4 +1,5 @@
 import { Router, type RequestHandler } from 'express'
+import { isWellFormedText } from '../../shared/source-text.js'
 import type { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
 import { parseRequest } from '../../shared/http/validation.js'
@@ -12,7 +13,7 @@ import type { ExecutionFeatureConfig } from '../submissions/submission.service.j
 import { createConsoleRepository, activePhases, type ConsoleRecord } from './console.repository.js'
 
 const parameters = z.object({ runId: z.uuid() })
-const startInput = z.object({ sourceCode: z.string().min(1), requestKey: z.uuid() }).strict()
+const startInput = z.object({ sourceCode: z.string().min(1).refine(isWellFormedText), requestKey: z.uuid() }).strict()
 const lineInput = z.object({ sequence: z.number().int().min(1).max(256), text: z.string().max(4000).refine((s) => !s.includes('\0') && !s.includes('\n') && !s.includes('\r')), eof: z.boolean().default(false) }).strict().refine((line) => !line.eof || line.text === '', { path: ['text'] })
 export function consoleProjection(record: ConsoleRecord) {
   const failed = record.practice.status === 'FAILED' && activePhases.includes(record.phase)
@@ -34,7 +35,7 @@ export function createConsoleRouter(deps: { prisma: PrismaClient; config: Execut
   const repository = createConsoleRepository(deps.prisma)
   const submissions = createPrismaSubmissionRepository(deps.prisma)
   const mutations = [noStore, requireJson, deps.requireAuthentication, deps.requireCsrf, requireAnyRole(['STUDENT'])]
-  router.post('/activities/:activityId/interactive-code-runs', ...mutations, async (req, res, next) => {
+  router.post(['/activities/:activityId/interactive-code-runs', '/activities/:activityId/practice/interactive-code-runs'], ...mutations, async (req, res, next) => {
     try {
       if (deps.config.mode === 'disabled') throw new AppError({ statusCode: 503, code: 'EXECUTION_UNAVAILABLE', message: 'Java execution is unavailable.' })
       const { activityId } = parseRequest(z.object({ activityId: z.uuid() }), req.params)
@@ -43,7 +44,10 @@ export function createConsoleRouter(deps: { prisma: PrismaClient; config: Execut
         throw new AppError({ statusCode: 413, code: 'SOURCE_CODE_TOO_LARGE', message: 'Source exceeds the allowed size.' })
       }
       const now = new Date()
+      const practice = req.path.endsWith('/practice/interactive-code-runs') ? await deps.prisma.activityPracticeWorkspace.findUnique({ where: { activityId_studentId: { activityId, studentId: req.auth!.user.id } } }) : null
+      if (req.path.endsWith('/practice/interactive-code-runs') && !practice) throw new AppError({ statusCode: 404, code: 'PRACTICE_UNAVAILABLE', message: 'Practice is unavailable.' })
       const result = await retrySerialization(() => submissions.createCodeRun({ activityId, studentId: req.auth!.user.id,
+        activityPracticeWorkspaceId: practice?.id,
         sourceCode: input.sourceCode, sourceHash: codeRunSourceHash(input.sourceCode), stdin: '',
         consoleRequestKey: input.requestKey, now, expiresAt: new Date(now.getTime() + deps.config.practiceRunTtlHours * 3600000),
         runsPerMinute: deps.config.practiceRunsPerMinute, maxActivePerActivity: deps.config.practiceMaxActivePerActivity }))

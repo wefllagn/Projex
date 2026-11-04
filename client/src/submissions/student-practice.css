@@ -1,0 +1,11 @@
+.student-practice { padding: 24px; min-width: 0; }
+.student-practice header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin: 16px 0; }
+.student-practice h1 { font-size: 24px; }
+.student-practice-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.student-practice-grid { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 3fr); gap: 16px; align-items: start; }
+.student-practice-editor { min-width: 0; }
+.student-practice-brief { padding: 20px; border: 1px solid var(--origin-border); border-radius: 10px; background: var(--origin-surface); }
+.student-practice-brief h2 { margin: 0 0 12px; font-size: 16px; }
+.student-practice-actions button { min-height: 40px; align-self: start; }
+.student-practice-instructions { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 900px) { .student-practice-grid { grid-template-columns: minmax(0, 1fr); } .student-practice { padding: 16px; } }

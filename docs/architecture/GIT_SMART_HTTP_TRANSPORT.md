@@ -1,5 +1,9 @@
 # Authenticated Git Smart HTTP Transport
 
+## Activity practice branch scope (2026-11-04)
+
+Activity write permissions carry separate ordinary-branch authority and an optional exact practice branch. Practice requires exhausted attempts, the final released graded score/feedback, no pending official work and no valid replacement. The receive hook reserves practice refs, prohibits their creation/deletion by clients, and retains normal fast-forward/object/size checks. Practice authority never grants main checkpoint permission. API/worker/native publication recheck current authority; lifecycle/attempt/replacement/credential locks fence native activity receives. This does not activate hosted Smart HTTP or change its production validation. See [verification](../ACTIVITY_PRACTICE_VERIFICATION.md).
+
 ## Scope and deployment boundary
 
 Phase 8B adds backend-only authenticated Git Smart HTTP for controlled loopback development and tests. It uses the validated local `git-http-backend` executable and supports clone/fetch for authorized readers and push for authorized writers. Browsing/history/diff REST APIs are a separate read-only Phase 8C boundary documented in `GIT_REPOSITORY_INSPECTION.md`. SSH, anonymous/public access, external Git APIs, frontend integration, server-created commits, merge/conflict APIs, LFS, CI/CD, physical deletion, production deployment, and external exposure remain excluded from Phase 8B.

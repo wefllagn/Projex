@@ -58,14 +58,18 @@ describe('Git authorization', () => {
         },
       },
     })
-    expect(evaluateGitPermission(workspace, now)).toEqual({ read: true, write: true, canUpdateMain: true })
+    expect(evaluateGitPermission(workspace, now)).toEqual({ read: true, write: true, canUpdateMain: true, activityBranches: { ordinary: true, practice: null } })
     for (const instructorId of ['33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444']) {
-      expect(evaluateGitPermission({ ...workspace, user: { id: instructorId, role: 'INSTRUCTOR', status: 'ACTIVE' }, repositoryMember: null }, now)).toEqual({ read: true, write: false, canUpdateMain: false })
+      expect(evaluateGitPermission({ ...workspace, user: { id: instructorId, role: 'INSTRUCTOR', status: 'ACTIVE' }, repositoryMember: null }, now)).toEqual({ read: true, write: false, canUpdateMain: false, activityBranches: { ordinary: false, practice: null } })
     }
     expect(evaluateGitPermission({ ...workspace, user: { id: '55555555-5555-4555-8555-555555555555', role: 'INSTRUCTOR', status: 'ACTIVE' }, repositoryMember: null }, now).read).toBe(false)
     expect(evaluateGitPermission({ ...workspace, user: { id: '66666666-6666-4666-8666-666666666666', role: 'STUDENT', status: 'ACTIVE' }, repositoryMember: null }, now).read).toBe(false)
     expect(evaluateGitPermission({ ...workspace, user: { id: '77777777-7777-4777-8777-777777777777', role: 'ADMIN', status: 'ACTIVE' }, repositoryMember: null }, now).read).toBe(false)
-    expect(evaluateGitPermission({ ...workspace, activityWorkspace: { ...workspace.activityWorkspace!, status: 'CLOSED' } }, now)).toEqual({ read: true, write: false, canUpdateMain: false })
+    expect(evaluateGitPermission({ ...workspace, activityWorkspace: { ...workspace.activityWorkspace!, status: 'CLOSED' } }, now)).toEqual({ read: true, write: false, canUpdateMain: false, activityBranches: { ordinary: false, practice: null } })
+    const practice = { ...workspace, practice: { branch: 'practice/11111111-1111-4111-8111-111111111111', eligible: true }, activityWorkspace: { ...workspace.activityWorkspace!, status: 'CLOSED' as const } }
+    expect(evaluateGitPermission(practice, now)).toEqual({ read: true, write: true, canUpdateMain: false, activityBranches: { ordinary: false, practice: practice.practice.branch } })
+    expect(evaluateGitPermission({ ...practice, status: 'ARCHIVED' }, now).write).toBe(false)
+    expect(evaluateGitPermission({ ...practice, practice: { ...practice.practice, eligible: false } }, now).write).toBe(false)
     expect(evaluateGitPermission({ ...workspace, activityWorkspace: { ...workspace.activityWorkspace!, class: { ...workspace.activityWorkspace!.class, membership: { status: 'REMOVED' } } } }, now).read).toBe(false)
   })
 
@@ -103,5 +107,12 @@ describe('Git authorization', () => {
   it('makes class repositories read-only after cutoff or review submission', () => {
     expect(evaluateGitPermission(access({ projectTask: { ...access().projectTask!, dueDate: now } }), now).write).toBe(false)
     expect(evaluateGitPermission(access({ reviewStatus: 'READY_FOR_REVIEW' }), now).write).toBe(false)
+  })
+
+  it.each(['WORKING', 'CHANGES_REQUESTED', 'READY_FOR_REVIEW', 'APPROVED'] as const)('enforces Group %s independently of task cutoff', reviewStatus => {
+    const permission = evaluateGitPermission(access({ reviewStatus }), now)
+    expect(permission).toEqual({ read: true, write: ['WORKING', 'CHANGES_REQUESTED'].includes(reviewStatus), canUpdateMain: ['WORKING', 'CHANGES_REQUESTED'].includes(reviewStatus) })
+    expect(evaluateGitPermission(access({ reviewStatus, status: 'ARCHIVED' }), now)).toEqual({ read: true, write: false, canUpdateMain: false })
+    expect(evaluateGitPermission(access({ reviewStatus, projectTask: { ...access().projectTask!, status: 'CLOSED' } }), now)).toEqual({ read: true, write: false, canUpdateMain: false })
   })
 })

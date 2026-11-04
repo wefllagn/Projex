@@ -11,6 +11,7 @@ import type {
   SubmissionListQuery,
 } from './submission.schemas.js'
 import { isOrdinarySubmissionOpen } from '../activities/activity.types.js'
+import { lockPracticePolicy, practiceEligible } from '../activity-practice/practice-policy.js'
 import { CODE_RUN_TEST_NAME } from '../../shared/code-run.js'
 import {
   selectCreditedReleasedAttempt,
@@ -104,6 +105,7 @@ export type ReleasedAttemptRecord = Prisma.ActivitySubmissionGetPayload<{
 }>
 
 export interface StudentAttemptStateRecord {
+  practiceAvailable?: boolean
   activity: {
     id: string
     status: 'PUBLISHED' | 'CLOSED'
@@ -130,6 +132,7 @@ export type CreateSubmissionResult =
   | { kind: 'forbidden' }
   | { kind: 'activity_not_accepting' }
   | { kind: 'attempt_limit_reached' }
+  | { kind: 'concurrent_conflict' }
 
 export type CreatePracticeResult =
   | { kind: 'created'; practice: PracticeRecord }
@@ -216,6 +219,7 @@ export interface SubmissionRepository {
     now: Date
   }): Promise<SubmissionMutationResult>
   createPractice(input: {
+    activityPracticeWorkspaceId?: string
     activityId: string
     studentId: string
     sourceCode: string
@@ -226,6 +230,7 @@ export interface SubmissionRepository {
     maxActivePerActivity: number
   }): Promise<CreatePracticeResult>
   createCodeRun(input: {
+    activityPracticeWorkspaceId?: string
     activityId: string
     studentId: string
     sourceCode: string
@@ -329,9 +334,21 @@ async function loadSubmission(
 export function createPrismaSubmissionRepository(
   prisma: PrismaClient,
 ): SubmissionRepository {
+  // A waiting serializable transaction can retain a snapshot from before the
+  // allocation lock. Restart only rolled-back database work, with the same intent.
+  async function retrySubmissionCreation(work: () => Promise<CreateSubmissionResult>): Promise<CreateSubmissionResult> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try { return await work() }
+      catch (error) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2034') throw error
+        if (attempt === 2) return { kind: 'concurrent_conflict' }
+      }
+    }
+    return { kind: 'concurrent_conflict' }
+  }
   return {
     createSubmission(input) {
-      return prisma.$transaction(
+      return retrySubmissionCreation(() => prisma.$transaction(
         async (transaction) => {
           await lockScope(
             transaction,
@@ -521,7 +538,7 @@ export function createPrismaSubmissionRepository(
           } as const
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      )
+      ))
     },
 
     async list(input) {
@@ -711,6 +728,7 @@ export function createPrismaSubmissionRepository(
             ])
 
           return {
+            practiceAvailable: await practiceEligible(transaction, input.activityId, input.studentId),
             activity: {
               id: activity.id,
               status: activity.status,
@@ -1069,10 +1087,9 @@ export function createPrismaSubmissionRepository(
           ) {
             return { kind: 'forbidden' } as const
           }
-          if (
-            activity.class.status !== 'ACTIVE' ||
-            !isOrdinarySubmissionOpen(activity.status, activity.dueDate, input.now)
-          ) {
+          if (input.activityPracticeWorkspaceId) await lockPracticePolicy(transaction, input.activityId, input.studentId)
+          const releasedPractice = input.activityPracticeWorkspaceId && await transaction.activityPracticeWorkspace.findFirst({ where: { id: input.activityPracticeWorkspaceId, activityId: input.activityId, studentId: input.studentId, initializedAt: { not: null }, repository: { storageStatus: 'READY' } } }) && await practiceEligible(transaction, input.activityId, input.studentId)
+          if (activity.class.status !== 'ACTIVE' || (input.activityPracticeWorkspaceId ? !releasedPractice : !isOrdinarySubmissionOpen(activity.status, activity.dueDate, input.now))) {
             return { kind: 'activity_not_accepting' } as const
           }
           const minuteAgo = new Date(input.now.getTime() - 60_000)
@@ -1102,6 +1119,7 @@ export function createPrismaSubmissionRepository(
           }
           const practice = await transaction.practiceExecution.create({
             data: {
+              activityPracticeWorkspaceId: input.activityPracticeWorkspaceId,
               activityId: activity.id,
               studentId: input.studentId,
               sourceCode: input.sourceCode,
@@ -1181,9 +1199,11 @@ export function createPrismaSubmissionRepository(
           ) {
             return { kind: 'forbidden' } as const
           }
+          if (input.activityPracticeWorkspaceId) await lockPracticePolicy(transaction, input.activityId, input.studentId)
+          const releasedPractice = input.activityPracticeWorkspaceId && await transaction.activityPracticeWorkspace.findFirst({ where: { id: input.activityPracticeWorkspaceId, activityId: input.activityId, studentId: input.studentId, initializedAt: { not: null }, repository: { storageStatus: 'READY' } } }) && await practiceEligible(transaction, input.activityId, input.studentId)
           if (
             activity.class.status !== 'ACTIVE'
-            || !isOrdinarySubmissionOpen(activity.status, activity.dueDate, input.now)
+            || (input.activityPracticeWorkspaceId ? !releasedPractice : !isOrdinarySubmissionOpen(activity.status, activity.dueDate, input.now))
             || activity.testCases.length === 0
           ) {
             return { kind: 'activity_not_accepting' } as const
@@ -1194,6 +1214,7 @@ export function createPrismaSubmissionRepository(
             })
             if (replay) {
               if (replay.practice.studentId !== input.studentId || replay.practice.activityId !== input.activityId
+                || replay.practice.activityPracticeWorkspaceId !== (input.activityPracticeWorkspaceId ?? null)
                 || replay.practice.sourceCode !== input.sourceCode) return { kind: 'forbidden' } as const
               return { kind: 'created', practice: replay.practice } as const
             }
@@ -1227,6 +1248,7 @@ export function createPrismaSubmissionRepository(
           const anchor = activity.testCases[0]!
           const practice = await transaction.practiceExecution.create({
             data: {
+              activityPracticeWorkspaceId: input.activityPracticeWorkspaceId,
               activityId: activity.id,
               studentId: input.studentId,
               sourceCode: input.sourceCode,
@@ -1260,11 +1282,13 @@ export function createPrismaSubmissionRepository(
       )
     },
 
-    findPracticeById(runId) {
-      return prisma.practiceExecution.findUnique({
+    async findPracticeById(runId) {
+      const record = await prisma.practiceExecution.findUnique({
         where: { id: runId },
         include: practiceInclude,
       })
+      if (record?.activityPracticeWorkspaceId && !await practiceEligible(prisma, record.activityId, record.studentId)) return null
+      return record
     },
 
     findOwnCodeRun(runId, studentId) {

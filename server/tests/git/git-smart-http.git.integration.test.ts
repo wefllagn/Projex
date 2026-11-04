@@ -1,4 +1,9 @@
 import { spawn } from 'node:child_process'
+import { createActivityPracticeService } from '../../src/modules/activity-practice/practice.service.js'
+import { createActivityPracticeWorker } from '../../src/modules/activity-practice/practice.worker.js'
+import { createGitPracticeWriter } from '../../src/infrastructure/git/git-practice-writer.js'
+import { evaluateGitPermission } from '../../src/modules/git-transport/git-authorization.js'
+import { javaSourceCases } from '../java/source-cases.js'
 import { createServer, type Server } from 'node:http'
 import { request as nodeRequest } from 'node:http'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
@@ -8,6 +13,7 @@ import pino from 'pino'
 import type { PrismaClient } from '@prisma/client'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { createGitCommandRunner } from '../../src/infrastructure/git/git-command-runner.js'
+import { createGitActivityCheckpointWriter } from '../../src/infrastructure/git/git-activity-checkpoint-writer.js'
 import { createGitRepositoryReader } from '../../src/infrastructure/git/git-repository-reader.js'
 import { createGitSmartHttpBackend } from '../../src/infrastructure/git/git-smart-http.js'
 import { createPostgresRepositoryProvisioningQueue } from '../../src/infrastructure/job-queue/repository-provisioning-queue.js'
@@ -27,6 +33,10 @@ import { createRepositoryService } from '../../src/modules/repositories/reposito
 import { createPrismaClassRepository } from '../../src/modules/classes/class.repository.js'
 import { createPrismaProjectTaskRepository } from '../../src/modules/project-tasks/project-task.repository.js'
 import { createProjectTaskService } from '../../src/modules/project-tasks/project-task.service.js'
+import { createSubmissionService } from '../../src/modules/submissions/submission.service.js'
+import { createPrismaSubmissionRepository } from '../../src/modules/submissions/submission.repository.js'
+import { createSubmissionSchema } from '../../src/modules/submissions/submission.schemas.js'
+import { createPostgresExecutionQueue } from '../../src/infrastructure/job-queue/execution-queue.js'
 import {
   cleanIntegrationDatabase,
   createActiveClass,
@@ -84,6 +94,9 @@ const backend = createGitSmartHttpBackend({
   },
 })
 const transportService = createGitTransportService({ enabled: true, credentialService, repository: transportRepository, storage, backend, logger })
+const practiceService = createActivityPracticeService({ prisma, content: contentService, enabled: true })
+const practiceWriter = createGitPracticeWriter({ git, resolveRepository: (id, locator) => storage.resolveManagedRepository(id, locator), checkSize: async root => { if (await storage.measure(root) > 104857600) throw new Error('TEST_SIZE_LIMIT') } })
+const practiceWorker = createActivityPracticeWorker({ prisma, writer: practiceWriter, logger })
 let server: Server
 let origin: string
 
@@ -289,6 +302,250 @@ function remoteUrl(repositoryId: string): string {
   return `${origin}/api/v1/git/repositories/${repositoryId}`
 }
 
+async function practiceFixture(feedbackText = 'Try again using the starter.') {
+  const f = await provisionActivityWorkspace()
+  await prisma.programmingActivity.update({ where: { id: f.activity.id }, data: { maxAttempts: 1 } })
+  await prisma.testCase.createMany({ data: [
+    { activityId: f.activity.id, name: 'Public example', testCaseOrder: 1, expectedOutput: '', isHidden: false, points: 70 },
+    { activityId: f.activity.id, name: 'Private example', testCaseOrder: 2, inputData: 'PRIVATE_INPUT', expectedOutput: 'PRIVATE_OUTPUT', isHidden: true, points: 0 },
+  ] })
+  const submissions = createSubmissionService({ repository: createPrismaSubmissionRepository(prisma), logger,
+    config: { mode: 'local_process', sourceLimitBytes: 100000, practiceRunTtlHours: 24, practiceRunsPerMinute: 20, practiceMaxActivePerActivity: 5 } })
+  const created = await submissions.create(f.owner, f.activity.id, 'class Main { int officialAnswer = 42; }', crypto.randomUUID())
+  const id = (created.submission as { id: string }).id
+  const queue = createPostgresExecutionQueue(prisma)
+  await prisma.executionJob.updateMany({ where: { status: 'QUEUED', claimAttempt: 0 }, data: { availableAt: new Date(0) } })
+  const claimedAt = new Date()
+  const job = await queue.claimNext({ workerId: crypto.randomUUID(), now: claimedAt, leaseMs: 60000 })
+  if (!job) throw new Error('PRACTICE_ASSESSMENT_NOT_CLAIMED')
+  await queue.complete(job, { compileStatus: 'SUCCESS', runtimeStatus: 'PASSED', compilerOutput: null, cases: job.cases.map(c => ({ id: c.id, status: 'PASSED', actualOutput: '', errorMessage: null, executionTimeMs: 1, automatedPoints: c.maximumPoints ?? 0 })) }, new Date(Math.max(Date.now(), claimedAt.getTime() + 1)))
+  const assessed = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
+  await submissions.review(f.primary, id, { expectedUpdatedAt: assessed.updatedAt, instructorPoints: 20, feedbackText })
+  const reviewed = await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })
+  await submissions.release(f.primary, id, { expectedUpdatedAt: reviewed.updatedAt })
+  return { ...f, submissions, submissionId: id }
+}
+async function processPractice(worker = practiceWorker) {
+  await prisma.activityPracticeGitJob.updateMany({ where: { status: 'PENDING', claimAttempt: 0 }, data: { availableAt: new Date(0) } })
+  expect(await worker.processNext(crypto.randomUUID())).toBe(true)
+}
+async function enterPractice(f: Awaited<ReturnType<typeof practiceFixture>>) {
+  await practiceService.enter(f.owner, f.activity.id)
+  await processPractice()
+  const value = await practiceService.get(f.owner, f.activity.id)
+  expect(value.ready).toBe(true)
+  return value
+}
+async function practiceClient(f: Awaited<ReturnType<typeof practiceFixture>>, branch: string, authorization: string) {
+  const root = path.join(storageRoot, 'clients', crypto.randomUUID()), work = path.join(root, 'clone')
+  await mkdir(root, { recursive: true })
+  const cloned = await runGit(['clone', '--branch', branch, remoteUrl(f.repository.id), work], root, authorization)
+  expect(cloned.code, cloned.stderr).toBe(0)
+  return work
+}
+async function clientCommit(work: string, source: string) {
+  await writeFile(path.join(work, 'Main.java'), source)
+  expect((await runGit(['add', 'Main.java'], work)).code).toBe(0)
+  expect((await runGit(['commit', '-m', 'Practice edit'], work)).code).toBe(0)
+}
+
+describe('released activity practice with native Git', () => {
+  it('suspends existing practice for remaining attempts, pending final feedback, and valid replacement grants without losing progress', async () => {
+    const f = await practiceFixture(), initial = await enterPractice(f)
+    await prisma.programmingActivity.update({where:{id:f.activity.id},data:{maxAttempts:3}})
+    expect(await practiceService.availability(f.owner,f.activity.id)).toEqual({available:false})
+    await expect(issue(f.owner,f.repository.id,['WRITE'])).resolves.toBeDefined() // ordinary deadline policy stays independent
+    const denied = evaluateGitPermission((await transportRepository.findAccess(f.repository.id,f.owner.id))!,new Date())
+    expect(denied.activityBranches?.practice).toBeNull()
+    await prisma.programmingActivity.update({where:{id:f.activity.id},data:{maxAttempts:1,dueDate:new Date(0)}})
+    await prisma.submissionFeedback.update({where:{submissionId:f.submissionId},data:{releasedAt:null,releasedById:null}})
+    await expect(issue(f.owner,f.repository.id,['WRITE'])).rejects.toBeDefined()
+    await prisma.submissionFeedback.update({where:{submissionId:f.submissionId},data:{releasedAt:new Date(),releasedById:f.primary.id}})
+    await prisma.activitySubmission.update({where:{id:f.submissionId},data:{attemptNumber:2}})
+    const failed=await prisma.activitySubmission.create({data:{activityId:f.activity.id,studentId:f.owner.id,attemptNumber:1,sourceCode:'class Main {}',sourceHash:'a'.repeat(64),activityTitleSnapshot:f.activity.title,dueDateSnapshot:f.activity.dueDate,totalPointsSnapshot:100,automatedMaximum:70,instructorMaximum:30,instructorPoints:0,countsTowardAttemptLimit:false,submissionStatus:'FAILED_RESOLVED'}})
+    const replacement=await prisma.submissionFailureResolution.create({data:{failedSubmissionId:failed.id,resolutionType:'REPLACEMENT_GRANTED',reason:'Disposable replacement policy test',resolvedById:f.primary.id,replacementExpiresAt:new Date(Date.now()+60000)}})
+    expect(await practiceService.availability(f.owner,f.activity.id)).toEqual({available:false})
+    await expect(issue(f.owner,f.repository.id,['WRITE'])).rejects.toBeDefined()
+    expect(await prisma.activityPracticeWorkspace.count()).toBe(1)
+    await prisma.submissionFailureResolution.update({where:{id:replacement.id},data:{resolvedAt:new Date(0),replacementExpiresAt:new Date(1)}})
+    expect(await practiceService.availability(f.owner,f.activity.id)).toEqual({available:true})
+    expect((await practiceService.get(f.owner,f.activity.id)).head).toBe(initial.head)
+  })
+  it('starts once from the original starter, preserves progress, and resets with compare-and-swap without changing academic evidence', async () => {
+    const f = await practiceFixture()
+    const auth = await issue(f.owner, f.repository.id, ['READ','WRITE'])
+    const clients = path.join(storageRoot,'clients',crypto.randomUUID()), work = path.join(clients,'official')
+    await mkdir(clients,{recursive:true})
+    expect((await runGit(['clone',remoteUrl(f.repository.id),work],clients,auth)).code).toBe(0)
+    await clientCommit(work,'class Main { int originalGitAnswer = 9; }')
+    expect((await runGit(['push','origin','HEAD:main'],work,auth)).code).toBe(0)
+    const officialGit = await contentService.file(f.owner,f.repository.id,{path:'Main.java'})
+    const evidence = await prisma.activitySubmission.findUniqueOrThrow({ where: { id: f.submissionId }, include: { execution: true, feedback: true } })
+    const [a, b] = await Promise.all([practiceService.enter(f.owner, f.activity.id), practiceService.enter(f.owner, f.activity.id)])
+    expect(a.workspaceId).toBe(b.workspaceId)
+    await processPractice()
+    const initial = await practiceService.get(f.owner, f.activity.id)
+    expect(initial.sourceCode).toBe(f.activity.starterCode)
+    expect(initial.sourceCode).not.toContain('officialAnswer')
+    expect(await prisma.activityPracticeWorkspace.count()).toBe(1)
+    expect(await prisma.activityPracticeGitJob.count()).toBe(1)
+    const root = await storage.resolveManagedRepository(f.repository.id, f.repository.storagePath!)
+    expect((await git.run(['--git-dir', '.', 'rev-list', '--parents', '-1', initial.head!], root)).stdout.trim()).toBe(initial.head)
+    const sourceCode = '/* saved practice */\r\nclass Main { int practice = 1; }\r\n'
+    const input = { operation: 'SAVE' as const, sourceCode, expectedHead: initial.head!, requestKey: crypto.randomUUID() }
+    const [save, replay] = await Promise.all([practiceService.save(f.owner, f.activity.id, input), practiceService.save(f.owner, f.activity.id, input)])
+    expect(save.id).toBe(replay.id)
+    await expect(practiceService.save(f.owner, f.activity.id, { ...input, sourceCode: 'different' })).rejects.toMatchObject({ code: 'PRACTICE_REQUEST_CONFLICT' })
+    await processPractice()
+    await practiceService.enter(f.owner, f.activity.id)
+    const saved = await practiceService.get(f.owner, f.activity.id)
+    expect(saved.sourceCode).toBe(sourceCode)
+    expect(saved.canStartOver).toBe(true)
+    const stale = await practiceService.save(f.owner, f.activity.id, { operation: 'RESET', expectedHead: initial.head!, requestKey: crypto.randomUUID() })
+    await processPractice()
+    expect(await practiceService.getJob(f.owner, f.activity.id, stale.id)).toMatchObject({ status: 'CONFLICTED' })
+    expect((await practiceService.get(f.owner, f.activity.id)).sourceCode).toBe(sourceCode)
+    await practiceService.save(f.owner, f.activity.id, { operation: 'RESET', expectedHead: saved.head!, requestKey: crypto.randomUUID() })
+    await processPractice()
+    const reset = await practiceService.get(f.owner, f.activity.id)
+    expect(reset.sourceCode).toBe(f.activity.starterCode)
+    expect((await git.run(['--git-dir', '.', 'merge-base', '--is-ancestor', saved.head!, reset.head!], root)).stderr).toBe('')
+    expect(await prisma.activitySubmission.findUniqueOrThrow({ where: { id: f.submissionId }, include: { execution: true, feedback: true } })).toEqual(evidence)
+    expect(await prisma.executionJob.count()).toBe(1)
+    expect(await contentService.file(f.owner,f.repository.id,{path:'Main.java'})).toEqual(officialGit)
+  })
+
+  it('allows authenticated clone/push/fetch/pull only to the initialized practice branch after the deadline', async () => {
+    const f = await practiceFixture(), initial = await enterPractice(f)
+    await prisma.programmingActivity.update({ where: { id: f.activity.id }, data: { dueDate: new Date(0), status: 'CLOSED', closedAt: new Date() } })
+    const authorization = await issue(f.owner, f.repository.id, ['READ', 'WRITE'])
+    const work = await practiceClient(f, initial.branchName, authorization)
+    const other = await practiceClient(f, initial.branchName, authorization)
+    await clientCommit(work, 'class Main { int externalPractice = 3; }\n')
+    const pushed = await runGit(['push', 'origin', initial.branchName], work, authorization)
+    expect(pushed.code, pushed.stderr).toBe(0)
+    expect((await practiceService.get(f.owner, f.activity.id)).sourceCode).toContain('externalPractice')
+    expect((await runGit(['fetch', 'origin'], other, authorization)).code).toBe(0)
+    expect((await runGit(['pull', '--ff-only'], other, authorization)).code).toBe(0)
+    expect(await readFile(path.join(other, 'Main.java'), 'utf8')).toContain('externalPractice')
+    for (const target of ['main', 'feature/late', 'practice/other', 'Practice/Other']) expect((await runGit(['push', 'origin', `HEAD:${target}`], work, authorization)).code, target).not.toBe(0)
+    expect((await runGit(['push', 'origin', `:${initial.branchName}`], work, authorization)).code).not.toBe(0)
+    const readonly = await issue(f.owner, f.repository.id, ['READ'])
+    await clientCommit(other, 'class Main { int denied = 4; }')
+    expect((await runGit(['push', 'origin', initial.branchName], other, readonly)).code).not.toBe(0)
+    await expect(issue(f.otherStudent, f.repository.id, ['READ'])).rejects.toBeDefined()
+    expect((await runGit(['ls-remote', remoteUrl(f.repository.id)], work)).code).not.toBe(0)
+    const permission = evaluateGitPermission((await transportRepository.findAccess(f.repository.id, f.owner.id))!, new Date())
+    expect(permission).toMatchObject({ write: true, canUpdateMain: false, activityBranches: { ordinary: false, practice: initial.branchName } })
+    await prisma.classMember.update({ where: { classId_studentId: { classId: f.activity.classId, studentId: f.owner.id } }, data: { status: 'REMOVED' } })
+    expect((await runGit(['fetch', 'origin'], work, authorization)).code).not.toBe(0)
+    await expect(practiceService.enter(f.owner, f.activity.id)).rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  it('rejects pre-release, draft feedback and ungraded results, while an explicitly released empty feedback unlocks practice', async () => {
+    const f = await practiceFixture('')
+    expect(await practiceService.availability(f.owner, f.activity.id)).toEqual({ available: true })
+    await prisma.submissionFeedback.create({ data: { submissionId: f.submissionId, instructorId: f.primary.id, feedbackText: 'Draft only' } })
+    expect(await practiceService.availability(f.owner, f.activity.id)).toEqual({ available: false })
+    await expect(practiceService.enter(f.owner, f.activity.id)).rejects.toMatchObject({ statusCode: 404 })
+    await prisma.submissionFeedback.update({ where: { submissionId: f.submissionId }, data: { releasedAt: new Date(), releasedById: f.primary.id } })
+    expect(await practiceService.availability(f.owner, f.activity.id)).toEqual({ available: true })
+    await prisma.activitySubmission.update({ where: { id: f.submissionId }, data: { gradingModeSnapshot: 'COMPLETION', totalPointsSnapshot: null, automatedMaximum: null, instructorMaximum: null, instructorPoints: null, originalAutomatedScore: null, releasedFinalScore: null } })
+    expect(await practiceService.availability(f.owner, f.activity.id)).toEqual({ available: false })
+    await prisma.activitySubmission.update({ where: { id: f.submissionId }, data: { gradingModeSnapshot: 'GRADED', totalPointsSnapshot: 100, automatedMaximum: 70, instructorMaximum: 30, instructorPoints: 20, originalAutomatedScore: 70, releasedFinalScore: 90 } })
+    for (const submissionStatus of ['QUEUED', 'ASSESSING', 'ASSESSED', 'REVIEWED'] as const) {
+      await prisma.activitySubmission.update({ where: { id: f.submissionId }, data: { submissionStatus, releasedAt: null, releasedFinalScore: null } })
+      expect(await practiceService.availability(f.owner, f.activity.id)).toEqual({ available: false })
+    }
+    const auth = await issue(f.owner, f.repository.id, ['READ', 'WRITE'])
+    const clients = path.join(storageRoot, 'clients', crypto.randomUUID()); await mkdir(clients, { recursive: true })
+    const work = path.join(clients, 'ordinary')
+    expect((await runGit(['clone', remoteUrl(f.repository.id), work], clients, auth)).code).toBe(0)
+    await clientCommit(work, 'class Main {}')
+    expect((await runGit(['push', 'origin', 'HEAD:main'], work, auth)).code).toBe(0)
+    expect((await runGit(['push', 'origin', 'HEAD:practice/unreleased'], work, auth)).code).not.toBe(0)
+  })
+
+  it('handles missing pre-deadline Git repositories through the existing provisioning worker', async () => {
+    const f = await practiceFixture()
+    // Fixture-only removal of its empty repository lets entry exercise late provisioning.
+    await prisma.repositoryProvisioningJob.deleteMany({ where: { repositoryId: f.repository.id } })
+    await prisma.repositoryMember.deleteMany({ where: { repositoryId: f.repository.id } })
+    await prisma.repository.delete({ where: { id: f.repository.id } })
+    await prisma.programmingActivity.update({ where: { id: f.activity.id }, data: { dueDate: new Date(0) } })
+    await practiceService.enter(f.owner, f.activity.id)
+    const queue = createPostgresRepositoryProvisioningQueue(prisma)
+    const job = await queue.claimNext({ workerId: crypto.randomUUID(), now: new Date(Date.now() + 1000), leaseMs: 60000 })
+    if (!job) throw new Error('LATE_PROVISIONING_MISSING')
+    await createRepositoryProvisioningService({ queue, git, storage, logger }).process(job)
+    await processPractice()
+    expect(await practiceService.get(f.owner, f.activity.id)).toMatchObject({ ready: true, sourceCode: f.activity.starterCode })
+  })
+
+  it('initializes an empty entry file when the saved practice starter snapshot is blank', async () => {
+    const f = await practiceFixture()
+    const entered = await practiceService.enter(f.owner, f.activity.id)
+    // Current authoring requires a non-empty starter; cover the defensive blank
+    // snapshot path without weakening that separate assignment contract.
+    await prisma.activityPracticeWorkspace.update({ where: { id: entered.workspaceId }, data: { starterCode: '' } })
+    await prisma.activityPracticeGitJob.updateMany({ where: { workspaceId: entered.workspaceId }, data: { content: '' } })
+    await processPractice()
+    expect(await practiceService.get(f.owner, f.activity.id)).toMatchObject({ ready: true, sourceCode: '' })
+  })
+
+  it('rejects stale browser saves after an external push and stale native clients without losing either source', async () => {
+    const f = await practiceFixture(), initial = await enterPractice(f)
+    const auth = await issue(f.owner, f.repository.id, ['READ', 'WRITE'])
+    const a = await practiceClient(f, initial.branchName, auth), b = await practiceClient(f, initial.branchName, auth)
+    await clientCommit(a, 'class Main { int first = 1; }')
+    expect((await runGit(['push', 'origin', initial.branchName], a, auth)).code).toBe(0)
+    await clientCommit(b, 'class Main { int other = 2; }')
+    expect((await runGit(['push', 'origin', initial.branchName], b, auth)).code).not.toBe(0)
+    const saved = await practiceService.save(f.owner, f.activity.id, { operation: 'SAVE', sourceCode: 'class Main { int browser = 3; }', expectedHead: initial.head!, requestKey: crypto.randomUUID() })
+    await processPractice()
+    expect(await practiceService.getJob(f.owner, f.activity.id, saved.id)).toMatchObject({ status: 'CONFLICTED' })
+    expect((await practiceService.get(f.owner, f.activity.id)).sourceCode).toContain('first')
+  })
+
+  it('fences archival through publication and recovers a worker interruption from its durable Git receipt', async () => {
+    const f = await practiceFixture()
+    await practiceService.enter(f.owner, f.activity.id)
+    const interrupted = createActivityPracticeWorker({ prisma, logger, writer: { ...practiceWriter, publish: async (job, head) => { await practiceWriter.publish(job, head); throw new Error('SIMULATED_INTERRUPTION') } } })
+    await processPractice(interrupted)
+    const job = await prisma.activityPracticeGitJob.findFirstOrThrow()
+    expect(job).toMatchObject({ status: 'PENDING', publishStarted: true })
+    await prisma.class.update({ where: { id: f.activity.classId }, data: { status: 'ARCHIVED' } })
+    await prisma.activityPracticeGitJob.update({ where: { id: job.id }, data: { availableAt: new Date(0) } })
+    expect(await practiceWorker.processNext(crypto.randomUUID())).toBe(true)
+    expect(await prisma.activityPracticeGitJob.findUniqueOrThrow({ where: { id: job.id } })).toMatchObject({ status: 'SUCCEEDED' })
+    await expect(practiceService.get(f.owner, f.activity.id)).rejects.toMatchObject({ statusCode: 404 })
+    await expect(issue(f.owner, f.repository.id, ['READ', 'WRITE'])).rejects.toBeDefined()
+  })
+
+  it('serializes a native receive against class archival and rejects later pushes', async () => {
+    const f = await practiceFixture(), initial = await enterPractice(f)
+    const auth = await issue(f.owner, f.repository.id, ['READ', 'WRITE']), work = await practiceClient(f, initial.branchName, auth)
+    await clientCommit(work, 'class Main { int beforeArchive = 1; }')
+    let release!: () => void, admitted!: () => void
+    const gate = new Promise<void>(resolve => { release = resolve }), entered = new Promise<void>(resolve => { admitted = resolve })
+    const transport = createGitTransportService({ enabled: true, credentialService, repository: transportRepository, storage, logger, backend: { execute: async input => { if (input.routeSuffix === 'git-receive-pack') { admitted(); await gate }; await backend.execute(input) } } })
+    const endpoint = await startLoopbackServer(transport)
+    try {
+      const push = runGit(['push', `${endpoint.origin}/api/v1/git/repositories/${f.repository.id}`, initial.branchName], work, auth)
+      await entered
+      let archived = false
+      const archive = prisma.class.update({ where: { id: f.activity.classId }, data: { status: 'ARCHIVED' } }).then(() => { archived = true })
+      await new Promise(resolve => setTimeout(resolve, 100))
+      expect(archived).toBe(false)
+      release()
+      const result = await push
+      expect(result.code, result.stderr).toBe(0)
+      await archive
+      expect((await runGit(['push', 'origin', initial.branchName], work, auth)).code).not.toBe(0)
+    } finally { release(); await new Promise<void>(resolve => endpoint.server.close(() => resolve())) }
+  })
+})
+
 beforeAll(async () => {
   await backend.initialize()
   const started = await startLoopbackServer()
@@ -307,6 +564,173 @@ afterAll(async () => {
 })
 
 describe('authenticated Git Smart HTTP', () => {
+  it.each(javaSourceCases.filter(c => ['Unicode and comment-like strings', 'CRLF and tabs', 'missing final newline', 'markers inside comments'].includes(c.name)))('preserves $name through native push and explicit submission', async ({ source }) => {
+    const f = await provisionActivityWorkspace()
+    const authorization = await issue(f.owner, f.repository.id, ['READ', 'WRITE'])
+    const clients = path.join(storageRoot, 'clients', crypto.randomUUID()), work = path.join(clients, 'source-roundtrip')
+    await mkdir(clients, { recursive: true })
+    expect((await runGit(['clone', remoteUrl(f.repository.id), work], clients, authorization)).code).toBe(0)
+    expect((await runGit(['checkout', '-b', 'main'], work)).code).toBe(0)
+    await writeFile(path.join(work, 'Main.java'), source, 'utf8')
+    expect((await runGit(['add', 'Main.java'], work)).code).toBe(0)
+    expect((await runGit(['commit', '-m', 'Preserve submitted source'], work)).code).toBe(0)
+    expect((await runGit(['push', 'origin', 'main'], work, authorization)).code).toBe(0)
+    const loaded = await contentService.file(f.owner, f.repository.id, { path: 'Main.java' })
+    expect(loaded.content).toBe(source)
+    const submissions = createSubmissionService({ repository: createPrismaSubmissionRepository(prisma), logger,
+      config: { mode: 'local_process', sourceLimitBytes: 100_000, practiceRunTtlHours: 24, practiceRunsPerMinute: 5, practiceMaxActivePerActivity: 1 } })
+    const created = await submissions.create(f.owner, f.activity.id, loaded.content, crypto.randomUUID())
+    const id = (created.submission as { id: string }).id
+    expect((await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })).sourceCode).toBe(source)
+    expect(await submissions.get(f.primary, id)).toMatchObject({ sourceCode: source })
+  })
+
+  it('rejects a browser checkpoint when a native push wins the race without merging or overwriting either source', async () => {
+    const f = await provisionActivityWorkspace()
+    const writer = createGitActivityCheckpointWriter({ git, resolveRepository: (id, locator) => storage.resolveManagedRepository(id, locator) })
+    const input = { repositoryId: f.repository.id, storagePath: f.repository.storagePath!, studentId: f.owner.id,
+      entryFilePath: 'Main.java', defaultBranch: 'main', sourceCode: 'class Main { int original = 0; }\n',
+      expectedHeadCommitHash: null, checkpointId: crypto.randomUUID() }
+    const first = await writer.write(input)
+    const authorization = await issue(f.owner, f.repository.id, ['READ', 'WRITE'])
+    const clients = path.join(storageRoot, 'clients', crypto.randomUUID())
+    const work = path.join(clients, 'checkpoint-race')
+    await mkdir(clients, { recursive: true })
+    expect((await runGit(['clone', remoteUrl(f.repository.id), work], clients, authorization)).code).toBe(0)
+    const external = 'class Main { int external = 1; }\n'
+    const browser = 'class Main { int browser = 2; }\n'
+    await expect(writer.write({ ...input, checkpointId: crypto.randomUUID(), sourceCode: browser,
+      expectedHeadCommitHash: first.commitHash, beforePush: async () => {
+        await writeFile(path.join(work, 'Main.java'), external)
+        expect((await runGit(['commit', '-am', 'Concurrent native push'], work)).code).toBe(0)
+        expect((await runGit(['push', 'origin', 'main'], work, authorization)).code).toBe(0)
+      } })).rejects.toMatchObject({ code: 'CHECKPOINT_HEAD_CHANGED', conflict: true })
+    expect((await contentService.file(f.owner, f.repository.id, { path: 'Main.java' })).content).toBe(external)
+    expect((await contentService.file(f.owner, f.repository.id, { path: 'Main.java', commitId: first.commitHash })).content).toBe(input.sourceCode)
+    expect(await prisma.activitySubmission.count()).toBe(0)
+    expect(await prisma.executionJob.count()).toBe(0)
+  })
+
+  it('traces client merge markers unchanged through push, repository read and immutable submission', async () => {
+    const f = await provisionActivityWorkspace()
+    const authorization = await issue(f.owner, f.repository.id, ['READ', 'WRITE'])
+    const clients = path.join(storageRoot, 'clients', crypto.randomUUID())
+    const work = path.join(clients, 'merge-markers')
+    await mkdir(clients, { recursive: true })
+    expect((await runGit(['clone', remoteUrl(f.repository.id), work], clients, authorization)).code).toBe(0)
+    expect((await runGit(['checkout', '-b', 'main'], work)).code).toBe(0)
+    async function commit(source: string) {
+      await writeFile(path.join(work, 'Main.java'), source)
+      expect((await runGit(['add', 'Main.java'], work)).code).toBe(0)
+      expect((await runGit(['commit', '-m', 'Student edit'], work)).code).toBe(0)
+    }
+    await commit('class Main { int value = 0; }\n')
+    expect((await runGit(['push', 'origin', 'main'], work, authorization)).code).toBe(0)
+    expect((await runGit(['checkout', '-b', 'feature/conflict'], work)).code).toBe(0)
+    await commit('class Main { int value = 1; }\n')
+    expect((await runGit(['checkout', 'main'], work)).code).toBe(0)
+    await commit('class Main { int value = 2; }\n')
+    expect((await runGit(['merge', 'feature/conflict'], work)).code).not.toBe(0)
+    const studentSource = await readFile(path.join(work, 'Main.java'), 'utf8')
+    expect(studentSource).toContain('<<<<<<< HEAD')
+    expect((await runGit(['add', 'Main.java'], work)).code).toBe(0)
+    expect((await runGit(['commit', '-m', 'Commit student merge content'], work)).code).toBe(0)
+    expect((await runGit(['push', 'origin', 'main'], work, authorization)).code).toBe(0)
+    const loaded = await contentService.file(f.owner, f.repository.id, { path: 'Main.java' })
+    expect(loaded.content).toBe(studentSource)
+    const submissions = createSubmissionService({ repository: createPrismaSubmissionRepository(prisma), logger,
+      config: { mode: 'local_process', sourceLimitBytes: 100_000, practiceRunTtlHours: 24, practiceRunsPerMinute: 5, practiceMaxActivePerActivity: 1 } })
+    const { sourceCode } = createSubmissionSchema.parse({ sourceCode: loaded.content })
+    const created = await submissions.create(f.owner, f.activity.id, sourceCode, crypto.randomUUID())
+    const id = (created.submission as { id: string }).id
+    expect((await prisma.activitySubmission.findUniqueOrThrow({ where: { id } })).sourceCode).toBe(studentSource)
+    expect(await submissions.get(f.primary, id)).toMatchObject({ sourceCode: studentSource })
+  })
+
+  it('keeps official attempts, assessment and released review immutable through later real pushes', async () => {
+    const f = await provisionActivityWorkspace()
+    await prisma.programmingActivity.update({ where: { id: f.activity.id }, data: { maxAttempts: 2 } })
+    await prisma.testCase.create({ data: { activityId: f.activity.id, name: 'Saved example', testCaseOrder: 1, inputData: null, expectedOutput: 'original\n', points: 70, isHidden: false } })
+    const submissions = createSubmissionService({ repository: createPrismaSubmissionRepository(prisma), logger,
+      config: { mode: 'local_process', sourceLimitBytes: 100_000, practiceRunTtlHours: 24, practiceRunsPerMinute: 5, practiceMaxActivePerActivity: 1 } })
+    const authorization = await issue(f.owner, f.repository.id, ['READ', 'WRITE'])
+    const clients = path.join(storageRoot, 'clients', crypto.randomUUID())
+    const work = path.join(clients, 'academic-lifecycle')
+    await mkdir(clients, { recursive: true })
+    expect((await runGit(['clone', remoteUrl(f.repository.id), work], clients, authorization)).code).toBe(0)
+    expect((await runGit(['checkout', '-b', 'main'], work)).code).toBe(0)
+    async function push(source: string, branch = 'main') {
+      await writeFile(path.join(work, 'Main.java'), source)
+      expect((await runGit(['add', 'Main.java'], work)).code).toBe(0)
+      expect((await runGit(['commit', '-m', `Lifecycle ${crypto.randomUUID()}`], work)).code).toBe(0)
+      const result = await runGit(['push', 'origin', `HEAD:${branch}`], work, authorization)
+      expect(result.code, result.stderr).toBe(0)
+    }
+    const original = 'class Main { public static void main(String[] args) { System.out.println("original"); } }\n'
+    await push(original)
+    expect(await prisma.activitySubmission.count()).toBe(0)
+    expect(await prisma.executionJob.count()).toBe(0)
+    const loaded = await contentService.file(f.owner, f.repository.id, { path: 'Main.java' })
+    expect(loaded.content).toBe(original)
+    const payload = createSubmissionSchema.parse({ sourceCode: loaded.content })
+    const first = await submissions.create(f.owner, f.activity.id, payload.sourceCode, crypto.randomUUID())
+    const id = (first.submission as { id: string }).id
+    async function evidence() {
+      return prisma.activitySubmission.findUniqueOrThrow({ where: { id }, include: { execution: { include: { testCaseResults: true } }, feedback: true, scoreCorrections: true } })
+    }
+    const queued = await evidence()
+    expect(queued.sourceCode).toBe(original)
+    await push('class Main { int queuedChange = 1; }\n')
+    expect(await evidence()).toEqual(queued)
+    const queue = createPostgresExecutionQueue(prisma)
+    const job = await queue.claimNext({ workerId: crypto.randomUUID(), now: new Date(), leaseMs: 60_000 })
+    if (!job) throw new Error('ASSESSMENT_FIXTURE_NOT_CLAIMED')
+    expect(job.sourceCode).toBe(original)
+    const running = await evidence()
+    await push('class Main { int runningChange = 2; }\n')
+    expect(await evidence()).toEqual(running)
+    // Deterministic worker result; real javac/runtime is covered by the separate Java suite.
+    expect(await queue.complete(job, { compileStatus: 'SUCCESS', runtimeStatus: 'PASSED', compilerOutput: null,
+      cases: job.cases.map(c => ({ id: c.id, status: 'PASSED', actualOutput: 'original\n', errorMessage: null, executionTimeMs: 1, automatedPoints: c.maximumPoints ?? 0 })) }, new Date())).toBe(true)
+    const assessed = await evidence()
+    expect(Number(assessed.originalAutomatedScore)).toBe(70)
+    await push('class Main { int assessedChange = 3; }\n')
+    expect(await evidence()).toEqual(assessed)
+    await submissions.review(f.primary, id, { expectedUpdatedAt: assessed.updatedAt, instructorPoints: 20, feedbackText: 'Review belongs to the saved attempt.' })
+    const reviewed = await evidence()
+    await push('class Main { int reviewedChange = 4; }\n')
+    expect(await evidence()).toEqual(reviewed)
+    await submissions.release(f.primary, id, { expectedUpdatedAt: reviewed.updatedAt })
+    const released = await evidence()
+    expect(Number(released.releasedFinalScore)).toBe(90)
+    // Literal markers are legitimate source data: neither transport nor submission may strip them.
+    const markers = '/*\n<<<<<<< HEAD\noriginal\n=======\nstudent branch\n>>>>>>> feature/student\n*/\nclass Main {}\n'
+    await push(markers)
+    expect(await evidence()).toEqual(released)
+    expect(await submissions.get(f.primary, id)).toMatchObject({ sourceCode: original })
+    const latest = await contentService.file(f.owner, f.repository.id, { path: 'Main.java' })
+    expect(latest.content).toBe(markers)
+    const second = await submissions.create(f.owner, f.activity.id, latest.content, crypto.randomUUID())
+    const secondId = (second.submission as { id: string }).id
+    expect(await prisma.activitySubmission.findUniqueOrThrow({ where: { id: secondId } })).toMatchObject({ attemptNumber: 2, sourceCode: markers })
+    expect(await submissions.get(f.primary, secondId)).toMatchObject({ sourceCode: markers })
+    await push('class Main { int allowanceExhausted = 5; }\n')
+    await expect(submissions.create(f.owner, f.activity.id, 'class Main {}', crypto.randomUUID())).rejects.toMatchObject({ code: 'ATTEMPT_LIMIT_REACHED' })
+    const main = await contentService.summary(f.owner, f.repository.id)
+    await push('class Main { int feature = 6; }\n', 'feature/student')
+    expect((await contentService.summary(f.owner, f.repository.id)).latestCommit?.commitId).toBe(main.latestCommit?.commitId)
+    expect(await prisma.activitySubmission.count()).toBe(2)
+    expect(await prisma.executionJob.count()).toBe(2)
+    expect(await evidence()).toEqual(released)
+    const readonly = await issue(f.primary, f.repository.id, ['READ'])
+    expect((await runGit(['push', 'origin', 'HEAD:feature/forbidden'], work, readonly)).code).not.toBe(0)
+    for (const data of [{ dueDate: new Date(Date.now() - 1_000) }, { status: 'CLOSED' as const, closedAt: new Date(), dueDate: new Date(Date.now() + 86_400_000) }]) {
+      await prisma.programmingActivity.update({ where: { id: f.activity.id }, data })
+      expect((await runGit(['push', 'origin', `HEAD:feature/blocked-${crypto.randomUUID()}`], work, authorization)).code).not.toBe(0)
+      expect((await runGit(['fetch', 'origin'], work, authorization)).code).toBe(0)
+    }
+  })
+
   it('runs the Activity Workspace two-clone save/resume workflow without academic submission', async () => {
     const fixture = await provisionActivityWorkspace()
     const ownerAuthorization = await issue(fixture.owner, fixture.repository.id, ['READ', 'WRITE'])
@@ -742,6 +1166,27 @@ describe('authenticated Git Smart HTTP', () => {
     expect((await collaboration.groupContext(member, created.repository.id)).permissions).toMatchObject({ canRead: true, canWrite: false })
     expect((await runGit(['push', 'origin', 'HEAD:feature/after-review'], memberWork, memberAuthorization)).code).not.toBe(0)
     expect(await prisma.activitySubmission.count()).toBe(0)
+
+    const ready = await collaboration.get(owner, created.repository.id)
+    const feedback = await collaboration.createFeedbackDraft(instructor, created.repository.id, { feedbackText: 'Please revise the implementation.' })
+    const changes = await collaboration.requestChanges(instructor, created.repository.id, {
+      expectedUpdatedAt: ready.updatedAt, feedbackId: feedback.feedbackId, expectedFeedbackUpdatedAt: feedback.updatedAt,
+    })
+    expect(changes.reviewStatus).toBe('CHANGES_REQUESTED')
+    await prisma.projectTask.update({ where: { id: projectTask.id }, data: { dueDate: new Date(Date.now() - 1_000) } })
+    expect((await runGit(['push', 'origin', 'HEAD:feature/late-revision'], memberWork, memberAuthorization)).code).not.toBe(0)
+    await prisma.projectTask.update({ where: { id: projectTask.id }, data: { dueDate: new Date(Date.now() + 86_400_000) } })
+    expect((await runGit(['push', 'origin', 'HEAD:feature/revision'], memberWork, memberAuthorization)).code).toBe(0)
+    const resubmitted = await collaboration.readyForReview(owner, created.repository.id, { expectedUpdatedAt: changes.updatedAt })
+    // Review may complete after cutoff; source mutations may not.
+    await prisma.projectTask.update({ where: { id: projectTask.id }, data: { dueDate: new Date(Date.now() - 1_000) } })
+    expect((await runGit(['push', 'origin', 'HEAD:feature/after-deadline'], ownerWork, ownerAuthorization)).code).not.toBe(0)
+    const approved = await collaboration.approve(instructor, created.repository.id, { expectedUpdatedAt: resubmitted.updatedAt })
+    await prisma.projectTask.update({ where: { id: projectTask.id }, data: { dueDate: new Date(Date.now() + 86_400_000) } })
+    expect((await runGit(['push', 'origin', 'HEAD:feature/after-approval'], ownerWork, ownerAuthorization)).code).not.toBe(0)
+    await collaboration.archive(instructor, created.repository.id, { expectedUpdatedAt: approved.updatedAt })
+    expect((await runGit(['fetch', 'origin'], memberWork, memberAuthorization)).code).toBe(0)
+    expect((await runGit(['push', 'origin', 'HEAD:feature/after-archive'], memberWork, memberAuthorization)).code).not.toBe(0)
 
     const repositoryMember = await prisma.repositoryMember.findUniqueOrThrow({
       where: { repositoryId_studentId: { repositoryId: created.repository.id, studentId: member.id } },
