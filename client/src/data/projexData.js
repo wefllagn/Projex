@@ -89,7 +89,14 @@ export const routeCatalog = [
         group: 'Class Membership',
         status: 'Backend connected',
         summary:
-          'Authorized active and archived classes use server-owned IDs and student-safe projections; join codes are never exposed.',
+          'Authorized active classes and existing class details use student-safe projections.',
+      },
+      {
+        path: 'archived-classes',
+        label: 'Archived Classes',
+        group: 'Class Membership',
+        status: 'Backend connected',
+        summary: 'Read-only classes the student is authorized to access.',
       },
       {
         path: 'todo',
@@ -282,7 +289,14 @@ export const routeCatalog = [
         group: 'Class Management',
         status: 'Backend connected',
         summary:
-          'Owned active and archived classes use server-owned IDs; unsupported stream behavior is explicitly deferred.',
+          'Authorized active classes and existing class details use server-owned IDs.',
+      },
+      {
+        path: 'archived-classes',
+        label: 'Archived Classes',
+        group: 'Class Management',
+        status: 'Backend connected',
+        summary: 'Authorized archived classes with restoration through Class Info for the primary instructor.',
       },
       {
         path: 'people',

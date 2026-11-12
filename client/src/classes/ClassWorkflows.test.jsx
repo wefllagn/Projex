@@ -243,9 +243,11 @@ describe('instructor class workflows', () => {
   it('does not expose or copy an inactive previous join code', async () => {
     const inactiveCode = 'OLDX-CODE-YZ'
     const client = {
-      get: vi.fn((path) => path.startsWith('/classes?')
-        ? Promise.resolve({ data: [{ ...classRecord, status: 'ARCHIVED' }], pagination })
-        : Promise.resolve({ data: { classId, classCode: inactiveCode, active: false, changedAt: '2026-08-03T00:00:00.000Z' } })),
+      get: vi.fn(async (path) => {
+        if (path.startsWith('/classes?')) return { data: [], pagination }
+        if (path === `/classes/${classId}`) return { data: { ...classRecord, status: 'ARCHIVED' } }
+        return { data: { classId, classCode: inactiveCode, active: false, changedAt: '2026-08-03T00:00:00.000Z' } }
+      }),
       post: vi.fn(),
       patch: vi.fn(),
     }
@@ -344,9 +346,17 @@ it('keeps Instructor Home focused on the class catalog without fetching a review
 
 it('shows a date-only creation fact and archives only after explicit overlay confirmation', async () => {
   const record = { ...classRecord, instructor: { ...classRecord.instructor, userId: auth.user.id } }
+  let current = record
   const client = {
-    get: vi.fn(path => Promise.resolve(path.endsWith('/staff') ? { data: { primary: record.instructor, coInstructors: [] } } : { data: [record], pagination })),
-    post: vi.fn().mockResolvedValue({ data: { ...record, status: 'ARCHIVED' } }),
+    get: vi.fn(async (path) => {
+      if (path.endsWith('/staff')) return { data: { primary: record.instructor, coInstructors: [] } }
+      if (path === `/classes/${classId}`) return { data: current }
+      return { data: current.status === 'ACTIVE' ? [current] : [], pagination }
+    }),
+    post: vi.fn(async () => {
+      current = { ...record, status: 'ARCHIVED' }
+      return { data: current }
+    }),
   }
   const user = userEvent.setup()
   renderWorkflow({ client, entry: `/instructor/class-info?classId=${classId}`, role: 'INSTRUCTOR', page: <InstructorRoutePage pagePath="class-info" /> })

@@ -3,6 +3,7 @@ import StudentPracticeWorkspace from '../submissions/StudentPracticeWorkspace.js
 import ClassIdentityBadge from '../classes/ClassIdentityBadge.jsx'
 import GroupBrowserEditor from '../repositories/GroupBrowserEditor.jsx'
 import ClassCardGrid from '../classes/ClassCardGrid.jsx'
+import ArchivedClassList from '../classes/ArchivedClassList.jsx'
 import ClassOverviewCard from '../classes/ClassOverviewCard.jsx'
 import StudentWorkOverview from '../activities/StudentWorkOverview.jsx'
 import AppDialog from '../components/AppDialog.jsx'
@@ -49,8 +50,9 @@ function ClassHeader({ activeTab }) {
             <h1>{selectedClass?.className || 'Select a class'}</h1>
             <div className="student-course-meta">
               {selectedClass && <span>{classOfferingLabel(selectedClass)}</span>}
-              {selectedClass && <span>{selectedClass.instructor.fullName}</span>}
+              {selectedClass?.instructor?.fullName && <span>{selectedClass.instructor.fullName}</span>}
               {selectedClass?.status === 'ARCHIVED' && <span>Archived</span>}
+              {selectedClass?.status === 'PREPARED' && <span>Prepared</span>}
             </div>
           </div>
         </div>
@@ -443,6 +445,11 @@ export function StudentRoutePage({ pagePath }) {
     gradebook: <StudentClassPage activeTab="gradebook"><Gradebook /></StudentClassPage>,
     dashboard: <HomeDashboardPage />,
     classes: <StudentClassesPage />,
+    'archived-classes': (
+      <StudentGlobalPage title="Archived Classes">
+        <ArchivedClassList role="student" />
+      </StudentGlobalPage>
+    ),
     todo: <StudentTodoPage />,
     'join-class': <Navigate to="/student?join=code" replace />,
     invitations: (
