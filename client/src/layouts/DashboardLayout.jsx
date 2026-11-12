@@ -415,7 +415,6 @@ function StudentDashboardLayout() {
           <StudentSidebarLink to="/student/todo" icon="todo">
             To-do
           </StudentSidebarLink>
-          <StudentSidebarLink to="/student/archived-classes" icon="archived">Archived Classes</StudentSidebarLink>
 
           <div className="student-sidebar__group">
             <p>My classes</p>
@@ -438,6 +437,7 @@ function StudentDashboardLayout() {
 
           <div className="student-sidebar__lower">
             <StudentSidebarLink to="/student/repositories" icon="repository">My Repositories</StudentSidebarLink>
+            <StudentSidebarLink to="/student/archived-classes" icon="archived">Archived Classes</StudentSidebarLink>
           </div>
         </nav>
         <AcademicSidebarSignout />
