@@ -110,6 +110,15 @@ export function createSubmissionController(service: SubmissionService) {
         next(error)
       }
     },
+    compareSimilarity: async (request: Request, response: Response, next: NextFunction) => {
+      try {
+        const { submissionId } = parseRequest(submissionParamsSchema, request.params)
+        const result = await service.compareSimilarity(request.auth!.user, submissionId)
+        response.status(200).json(successResponse(result, request.requestId))
+      } catch (error) {
+        next(error)
+      }
+    },
     correctScore: async (
       request: Request,
       response: Response,

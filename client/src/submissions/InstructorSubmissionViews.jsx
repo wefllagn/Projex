@@ -1,5 +1,6 @@
 import useConfirmation from '../components/useConfirmation.jsx'
 import SubmissionSections from './SubmissionSections.jsx'
+import InstructorSimilarityPanel from './InstructorSimilarityPanel.jsx'
 import { submissionStatusLabel } from './submission-display.js'
 import AppDialog from '../components/AppDialog.jsx'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -423,7 +424,10 @@ export function InstructorSubmissionReview({ api = activityApi, submissions = su
 
       {record.failureResolution && <section className="submission-resolution instructor-resolution-record"><h2>Infrastructure resolution</h2><p>{formatStatus(record.failureResolution.resolutionType)}</p><p>{record.failureResolution.reason}</p><dl><div><dt>Resolved</dt><dd>{formatDate(record.failureResolution.resolvedAt)}</dd></div>{record.failureResolution.replacementExpiresAt && <div><dt>Replacement expiration</dt><dd>{formatDate(record.failureResolution.replacementExpiresAt)}</dd></div>}<div><dt>Replacement status</dt><dd>{record.failureResolution.replacementConsumedAt ? `Consumed ${formatDate(record.failureResolution.replacementConsumedAt)}` : record.failureResolution.replacementExpiresAt ? 'Unconsumed; the server enforces expiration when the student submits' : 'No replacement granted'}</dd></div></dl></section>}
         </> },
-        { id: 'source', label: 'Submitted code', content: <section className="instructor-code-card"><div className="instructor-section-title"><h3>Immutable submitted source</h3><span>Read-only</span></div><pre>{record.sourceCode || 'No source snapshot was returned.'}</pre></section> },
+        { id: 'source', label: 'Submitted code', content: <>
+          <section className="instructor-code-card"><div className="instructor-section-title"><h3>Immutable submitted source</h3><span>Read-only</span></div><pre>{record.sourceCode || 'No source snapshot was returned.'}</pre></section>
+          <InstructorSimilarityPanel key={key} submissions={submissions} submissionId={submissionId} activityId={activityId} classId={selectedClass.id} />
+        </> },
         { id: 'tests', label: 'Test results', content: <AssessmentEvidence record={record} /> },
         { id: 'tools', label: 'Tools & history', content: <>
           <section className="instructor-testcase-panel instructor-review-rerun">
