@@ -138,13 +138,13 @@ function SidebarClassLink({ item, to, active }) {
     <Link
       to={to}
       aria-current={active ? 'page' : undefined}
-      aria-label={`${item.className} · ${classOfferingLabel(item)}${item.status === 'ARCHIVED' ? ' · Archived' : ''}`}
+      aria-label={`${item.className} · ${classOfferingLabel(item)}`}
       className={active ? 'student-class-link is-active' : 'student-class-link'}
     >
       <ClassIdentityBadge className="student-class-dot" classRecord={item} />
       <span className="student-class-link__text">
         <strong>{item.className}</strong>
-        <small>{classOfferingLabel(item)}{item.status === 'ARCHIVED' ? ' · Archived' : ''}</small>
+        <small>{classOfferingLabel(item)}</small>
       </span>
     </Link>
   )
@@ -336,6 +336,7 @@ function InstructorDashboardLayout() {
           <StudentSidebarLink to="/instructor/review-queues" icon="review">
             To Review
           </StudentSidebarLink>
+          <StudentSidebarLink to="/instructor/archived-classes" icon="archived">Archived Classes</StudentSidebarLink>
 
           <div className="student-sidebar__group">
             <p>My classes</p>
@@ -414,6 +415,7 @@ function StudentDashboardLayout() {
           <StudentSidebarLink to="/student/todo" icon="todo">
             To-do
           </StudentSidebarLink>
+          <StudentSidebarLink to="/student/archived-classes" icon="archived">Archived Classes</StudentSidebarLink>
 
           <div className="student-sidebar__group">
             <p>My classes</p>

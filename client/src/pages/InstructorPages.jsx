@@ -3,6 +3,7 @@ import ClassIdentityBadge from '../classes/ClassIdentityBadge.jsx'
 import AppDialog from '../components/AppDialog.jsx'
 import AcademicEmptyState from '../components/AcademicEmptyState.jsx'
 import ClassCardGrid from '../classes/ClassCardGrid.jsx'
+import ArchivedClassList from '../classes/ArchivedClassList.jsx'
 import ClassOverviewCard from '../classes/ClassOverviewCard.jsx'
 import AccountMenu from '../components/AccountMenu.jsx'
 import useConfirmation from '../components/useConfirmation.jsx'
@@ -36,6 +37,8 @@ import {
   RepositorySelectionRequired,
 } from '../repositories/RepositoryFoundationViews.jsx'
 
+const classStatusLabel = { ACTIVE: 'Active', ARCHIVED: 'Archived', PREPARED: 'Prepared' }
+
 function InstructorUserArea() {
   return (
     <div className="student-user-area instructor-user-area">
@@ -63,7 +66,7 @@ function InstructorClassHeader({ activeTab }) {
             <h1>{selectedClass?.className || 'Select a class'}</h1>
             <div className="student-course-meta">
               {selectedClass && <span>{classOfferingLabel(selectedClass)}</span>}
-              {selectedClass && <span>{selectedClass.status === 'ARCHIVED' ? 'Archived' : 'Active'}</span>}
+              {selectedClass && <span>{classStatusLabel[selectedClass.status]}</span>}
             </div>
           </div>
         </div>
@@ -392,7 +395,7 @@ function ClassInfoForm({ classRecord }) {
       const response = archive
         ? await api.archiveClass(classRecord.id)
         : await api.restoreClass(classRecord.id)
-      upsertClass(response.data)
+      upsertClass(response.data, { lifecycleChanged: true })
       setMessage(archive
         ? 'Class archived. Its join code is now inactive.'
         : 'Class restored. Rotate the join code before accepting new joins.')
@@ -413,7 +416,7 @@ function ClassInfoForm({ classRecord }) {
         <div><dt>Program</dt><dd>{classRecord.program ? classRecord.program.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, value => value.toUpperCase()) : '—'}</dd></div>
         <div><dt>Schedule</dt><dd>{classRecord.schedule || '—'}</dd></div>
         <div><dt>Room</dt><dd>{classRecord.room || '—'}</dd></div>
-        <div><dt>Status</dt><dd>{classRecord.status === 'ACTIVE' ? 'Active' : 'Archived'}</dd></div>
+        <div><dt>Status</dt><dd>{classStatusLabel[classRecord.status]}</dd></div>
         <div><dt>Date Created</dt><dd>{new Date(classRecord.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</dd></div>
       </dl>
       {official && <p className="academic-dialog-hint">Contact Admin to correct catalog details.</p>}
@@ -574,6 +577,15 @@ export function InstructorRoutePage({ pagePath }) {
     gradebook: <InstructorClassPage activeTab="gradebook"><Gradebook /></InstructorClassPage>,
     dashboard: <InstructorDashboard />,
     classes: <InstructorClassesPage />,
+    'archived-classes': (
+      <div className="student-global-page">
+        <header className="student-home-topbar"><InstructorUserArea /></header>
+        <main className="student-global-content">
+          <div className="student-global-heading"><div><h1>Archived Classes</h1></div></div>
+          <ArchivedClassList role="instructor" />
+        </main>
+      </div>
+    ),
     'review-queues': <InstructorReviewQueuePage />,
     activity: <InstructorActivitiesPage />,
     'activity/new': <CreateActivityPage mode="create" />,

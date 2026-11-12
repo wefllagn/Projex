@@ -3,13 +3,14 @@ import { classOfferingLabel } from './class-links.js'
 
 export default function ClassOverviewCard({ classRecord }) {
   const archived = classRecord.status === 'ARCHIVED'
+  const statusLabel = { ACTIVE: 'Active', ARCHIVED: 'Archived', PREPARED: 'Prepared' }[classRecord.status]
   const instructor = classRecord.instructor?.fullName ?? 'Not assigned'
   const initials = instructor.split(' ').map(part => part.charAt(0)).join('').slice(0, 2)
   return <section className="student-global-panel class-overview-card academic-overview-card">
     <div className="academic-overview-heading">
       <span className="academic-overview-icon" aria-hidden="true"><ProjexIcon name="classes" size={28} /></span>
       <div>
-        <span className={`academic-overview-status${archived ? ' is-archived' : ''}`}>{archived ? 'Archived' : 'Active'}</span>
+        <span className={`academic-overview-status${classRecord.status === 'ACTIVE' ? '' : ' is-archived'}`}>{statusLabel}</span>
         <h2>{classRecord.className}</h2>
         <p>{classOfferingLabel(classRecord)}</p>
       </div>
