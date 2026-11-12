@@ -25,6 +25,7 @@ import {
   submissionAttemptLabel,
 } from './submission-credit.js'
 import { isOrdinarySubmissionOpen } from '../activities/activity.types.js'
+import { compareJavaSubmissions, similarityResult } from './submission-similarity.js'
 
 export interface ExecutionFeatureConfig {
   practiceWorkspaceEnabled?: boolean
@@ -48,6 +49,7 @@ export interface SubmissionService {
     query: SubmissionListQuery,
   ): Promise<{ submissions: unknown[]; pagination: PaginationMeta }>
   get(caller: SafeUserProfile, submissionId: string): Promise<unknown>
+  compareSimilarity(caller: SafeUserProfile, submissionId: string): Promise<unknown>
   getAttemptState(
     caller: SafeUserProfile,
     activityId: string,
@@ -534,7 +536,24 @@ export function createSubmissionService(dependencies: {
   now?: () => Date
 }): SubmissionService {
   const { repository, logger, config, now = () => new Date() } = dependencies
+  let comparisonsInFlight = 0
   return {
+    async compareSimilarity(caller, submissionId) {
+      requireInstructor(caller)
+      if (comparisonsInFlight >= 2) {
+        throw error(429, 'RATE_LIMIT_EXCEEDED', 'Similarity comparisons are busy. Try again later.')
+      }
+
+      comparisonsInFlight += 1
+      try {
+        const result = await repository.loadSimilarity(submissionId, caller.id)
+        if (result.kind === 'not_found') throw error(404, 'SUBMISSION_NOT_FOUND', 'Submission not found.')
+        if (result.kind === 'workload_limit') return { submissionId, ...similarityResult('workload_limit') }
+        return { submissionId, activityId: result.activityId, ...compareJavaSubmissions(result.input) }
+      } finally {
+        comparisonsInFlight -= 1
+      }
+    },
     async create(caller, activityId, sourceCode, idempotencyKey) {
       requireExecutionEnabled(config)
       if (caller.role !== 'STUDENT' || caller.status !== 'ACTIVE') {

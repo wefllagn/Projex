@@ -1,5 +1,6 @@
 import { Router, type RequestHandler } from 'express'
 import { requireJson } from '../../middleware/require-json.js'
+import { createRateLimiter } from '../../middleware/rate-limit.js'
 import { requireAnyRole } from '../auth/auth.authorization.js'
 import { createSubmissionController } from './submission.controller.js'
 import type { SubmissionService } from './submission.service.js'
@@ -23,6 +24,11 @@ export function createSubmissionRouter(dependencies: {
     dependencies.requireCsrf,
     requireAnyRole(['INSTRUCTOR']),
   ]
+  const similarityRateLimit = createRateLimiter({
+    windowMs: 60_000,
+    max: 6,
+    key: (request) => request.auth!.user.id,
+  })
 
   router.post(
     '/activities/:activityId/submissions',
@@ -65,6 +71,17 @@ export function createSubmissionRouter(dependencies: {
     '/submissions/:submissionId',
     dependencies.requireAuthentication,
     controller.get,
+  )
+  router.get(
+    '/submissions/:submissionId/similarity',
+    (_request, response, next) => {
+      response.set('Cache-Control', 'private, no-store')
+      next()
+    },
+    dependencies.requireAuthentication,
+    requireAnyRole(['INSTRUCTOR']),
+    similarityRateLimit,
+    controller.compareSimilarity,
   )
   router.post(
     '/submissions/:submissionId/review-runs',

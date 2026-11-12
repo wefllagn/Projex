@@ -62,6 +62,7 @@ function submissionTransport(overrides = {}) {
   return {
     listSubmissions: vi.fn().mockResolvedValue({ data: [record()], pagination }),
     getSubmission: vi.fn().mockResolvedValue({ data: record() }),
+    compareSimilarity: vi.fn(),
     correctAutomatedScore: vi.fn(),
     saveReview: vi.fn(),
     releaseSubmission: vi.fn(),
@@ -138,6 +139,50 @@ describe('instructor submission queue', () => {
 })
 
 describe('instructor submission review', () => {
+  it('compares official source only on request and links the matched attempt into the existing review', async () => {
+    const peerId = '00000000-0000-4000-8000-000000000021'
+    const submissions = submissionTransport({
+      compareSimilarity: vi.fn().mockResolvedValue({
+        data: {
+          submissionId, activityId, status: 'ready', candidateCount: 2, comparedCount: 1,
+          matches: [{ submissionId: peerId, studentName: 'Synthetic Peer', attemptNumber: 2, percentage: 80, sharedWindows: 40, totalWindows: 50 }],
+        },
+      }),
+      getSubmission: vi.fn((id) => Promise.resolve({ data: record({ id }) })),
+    })
+    renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
+    await userEvent.click(await screen.findByRole('tab', { name: 'Submitted code' }))
+    expect(submissions.compareSimilarity).not.toHaveBeenCalled()
+    expect(screen.getByText(/does not establish plagiarism/)).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Compare Submissions' }))
+    expect(submissions.compareSimilarity).toHaveBeenCalledWith(submissionId, expect.objectContaining({ signal: expect.any(AbortSignal) }))
+    expect(await screen.findByText('80% similarity')).toBeVisible()
+    const link = screen.getByRole('link', { name: 'Synthetic Peer · Attempt 2' })
+    expect(link).toHaveAttribute('href', `/instructor/activity/${activityId}/submissions/${peerId}?classId=${classId}`)
+    await userEvent.click(link)
+    await waitFor(() => expect(submissions.getSubmission).toHaveBeenLastCalledWith(peerId, expect.any(Object)))
+    expect(screen.queryByText('80% similarity')).not.toBeInTheDocument()
+    expect(submissions.compareSimilarity).toHaveBeenCalledTimes(1)
+    expect(submissions.saveReview).not.toHaveBeenCalled()
+    expect(submissions.createReviewRun).not.toHaveBeenCalled()
+  })
+
+  it('keeps the review usable after comparison errors and withholds a percentage for insufficient code', async () => {
+    const submissions = submissionTransport({
+      compareSimilarity: vi.fn()
+        .mockRejectedValueOnce(new ApiError({ status: 503, code: 'SERVICE_UNAVAILABLE' }))
+        .mockResolvedValueOnce({ data: { submissionId, activityId, status: 'insufficient_source', matches: [] } }),
+    })
+    renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
+    await userEvent.click(await screen.findByRole('tab', { name: 'Submitted code' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Compare Submissions' }))
+    expect(await screen.findByRole('alert')).toBeVisible()
+    expect(screen.getByText('Immutable submitted source')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Compare Submissions' }))
+    expect(await screen.findByText(/too little distinct code/)).toBeVisible()
+    expect(screen.queryByText(/% similarity/)).not.toBeInTheDocument()
+  })
+
   it.each(['class Main {}\n', '/*\n<<<<<<< HEAD\nleft\n=======\nright\n>>>>>>> student\n*/\nclass Main {}\n'])('renders the exact immutable source without inserting or stripping markers', async (sourceCode) => {
     const submissions = submissionTransport({ getSubmission: vi.fn().mockResolvedValue({ data: record({ sourceCode }) }) })
     const { container } = renderInstructor(<InstructorSubmissionReview api={activityTransport()} submissions={submissions} />)
@@ -170,7 +215,7 @@ describe('instructor submission review', () => {
     expect(screen.getByText('Hidden')).toBeInTheDocument()
     expect(screen.getByText('HIDDEN-INPUT')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Run Tests' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/similarity/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Java source similarity' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/Hidden boundary points/i)).not.toBeInTheDocument()
     expect(screen.getByText('Saved grade preview')).toBeInTheDocument()
   })

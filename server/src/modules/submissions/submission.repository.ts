@@ -13,6 +13,7 @@ import type {
 import { isOrdinarySubmissionOpen } from '../activities/activity.types.js'
 import { lockPracticePolicy, practiceEligible } from '../activity-practice/practice-policy.js'
 import { CODE_RUN_TEST_NAME } from '../../shared/code-run.js'
+import { SIMILARITY_LIMITS, type SimilarityInput } from './submission-similarity.js'
 import {
   selectCreditedReleasedAttempt,
   type AttemptCreditPolicyValue,
@@ -159,6 +160,11 @@ export type SubmissionMutationResult =
   | { kind: 'expiration_required' }
 
 export interface SubmissionRepository {
+  loadSimilarity(submissionId: string, instructorId: string): Promise<
+    | { kind: 'not_found' }
+    | { kind: 'workload_limit' }
+    | { kind: 'ok'; activityId: string; input: SimilarityInput }
+  >
   createSubmission(input: {
     activityId: string
     studentId: string
@@ -347,6 +353,73 @@ export function createPrismaSubmissionRepository(
     return { kind: 'concurrent_conflict' }
   }
   return {
+    async loadSimilarity(submissionId, instructorId) {
+      return prisma.$transaction(async (transaction) => {
+        await transaction.$executeRaw`SET TRANSACTION READ ONLY`
+        await transaction.$executeRaw`SET LOCAL statement_timeout = '2s'`
+        // Authorize before reading the cohort. Only official submission rows
+        // belong to this query, including when reviewing an archived activity.
+        const reference = await transaction.activitySubmission.findFirst({
+          where: {
+            id: submissionId,
+            activity: {
+              language: 'JAVA',
+              class: {
+                OR: [
+                  { instructorId },
+                  { teachingStaff: { some: { instructorId, status: 'ACTIVE' } } },
+                ],
+              },
+            },
+          },
+          select: {
+            activityId: true,
+            studentId: true,
+            sourceCode: true,
+            activity: { select: { starterCode: true, entryClassName: true } },
+          },
+        })
+        if (!reference) return { kind: 'not_found' } as const
+
+        // Bound the number of peer rows and inspect their byte lengths before
+        // transferring source. The attempt number is unique per student/activity.
+        const peers = await transaction.$queryRaw<Array<{ id: string; bytes: number }>>`
+          SELECT peer.submission_id AS id, octet_length(source.source_code) AS bytes
+          FROM (
+            SELECT DISTINCT ON (student_id) submission_id
+            FROM activity_submissions
+            WHERE activity_id = ${reference.activityId}::uuid
+              AND student_id <> ${reference.studentId}::uuid
+            ORDER BY student_id, attempt_number DESC
+            LIMIT ${SIMILARITY_LIMITS.peers + 1}
+          ) AS peer
+          JOIN activity_submissions AS source ON source.submission_id = peer.submission_id
+        `
+        const referenceBytes = Buffer.byteLength(reference.sourceCode) + Buffer.byteLength(reference.activity.starterCode)
+        if (peers.length > SIMILARITY_LIMITS.peers
+          || peers.reduce((bytes, peer) => bytes + peer.bytes, referenceBytes) > SIMILARITY_LIMITS.sourceBytes) {
+          return { kind: 'workload_limit' } as const
+        }
+
+        const candidates = await transaction.activitySubmission.findMany({
+          where: { activityId: reference.activityId, id: { in: peers.map((peer) => peer.id) } },
+          select: {
+            id: true, attemptNumber: true, submittedAt: true, sourceCode: true,
+            student: { select: { fullName: true } },
+          },
+        })
+        return {
+          kind: 'ok',
+          activityId: reference.activityId,
+          input: {
+            sourceCode: reference.sourceCode,
+            starterCode: reference.activity.starterCode,
+            entryClassName: reference.activity.entryClassName,
+            candidates,
+          },
+        } as const
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 3_000 })
+    },
     createSubmission(input) {
       return retrySubmissionCreation(() => prisma.$transaction(
         async (transaction) => {

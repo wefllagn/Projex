@@ -34,6 +34,9 @@ export function createSubmissionApi(client = apiClient) {
     getSubmission(submissionId, options) {
       return client.get(`/submissions/${submissionId}`, options)
     },
+    compareSimilarity(submissionId, options) {
+      return client.get(`/submissions/${submissionId}/similarity`, options)
+    },
     createReviewRun(submissionId, options) {
       return client.post(`/submissions/${submissionId}/review-runs`, {}, options)
     },
